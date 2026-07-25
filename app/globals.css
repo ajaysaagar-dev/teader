@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ===== Backgrounds ===== */
+  --bg-main: #131415;
+  --bg-sidebar: #0F1011;
+  --bg-panel: #17181A;
+  --bg-card: #1B1C1F;
+  --bg-hover: #222427;
+  --bg-input: #1A1B1D;
+
+  /* ===== Borders ===== */
+  --border-primary: #2A2C30;
+  --border-secondary: #3B3D41;
+
+  /* ===== Text ===== */
+  --text-primary: #CFD4DD;
+  --text-secondary: #9499A0;
+  --text-muted: #787C83;
+  --text-disabled: #585C60;
+
+  /* ===== Accent ===== */
+  --accent-yellow: #DCB001;
+  --accent-yellow-dark: #AE8D05;
+
+  /* ===== Success ===== */
+  --success: #22C55E;
+
+  /* ===== Danger ===== */
+  --danger: #C0393B;
+
+  /* ===== Cyan ===== */
+  --cyan: #0391A1;
+
+  /* ===== Warm Browns (avatars/icons) ===== */
+  --brown-dark: #523226;
+  --brown: #A65952;
+  --beige: #CEAF9C;
+
+  /* ===== Neutral Grays ===== */
+  --gray-100: #DCE0E5;
+  --gray-200: #B6BBC4;
+  --gray-300: #9499A0;
+  --gray-400: #7D8188;
+  --gray-500: #585C60;
+  --gray-600: #3C4145;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: -0.01em;
+    overflow: hidden;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.panel-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+}
+
+.panel-card-hover {
+  transition: all 0.2s ease;
+}
+.panel-card-hover:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-secondary);
 }

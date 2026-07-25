@@ -1,0 +1,87 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  name           String
+  email          String          @unique
+  password       String
+  avatar         String?         @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80")
+  projectMembers ProjectMember[]
+  createdAt      DateTime        @default(now())
+}
+
+model Project {
+  id             Int             @id @default(autoincrement())
+  key            String          @unique
+  name           String
+  description    String?         @db.Text
+  owner_id       Int             @default(1)
+  creatorId      Int?            @default(1)
+  ownerName      String          @default("karri")
+  issues         Issue[]
+  projectMembers ProjectMember[]
+  createdAt      DateTime        @default(now())
+}
+
+model ProjectMember {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime @default(now())
+
+  @@unique([projectId, userId])
+}
+
+model Issue {
+  id             String    @id @default(uuid())
+  key            String    @unique
+  title          String
+  description    String?   @db.Text
+  status         String    @default("todo") // todo, in_progress, needs_review, done
+  priority       String    @default("medium") // critical, high, medium, low
+  assigneeName   String    @default("General (Anyone)")
+  assigneeAvatar String?   @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80")
+  reporterName   String?   @default("karri")
+  reporterAvatar String?   @default("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80")
+  labels         String?   @default("[]") @db.Text
+  sprint         String?   @default("Sprint 24.3")
+  epic           String?   @default("Platform Core")
+  projectId      Int
+  projectRef     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project        String    @default("Teader Platform Core")
+  isFavorite     Boolean   @default(false)
+  subtasks       Subtask[]
+  images         Image[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Subtask {
+  id        String   @id @default(uuid())
+  title     String
+  completed Boolean  @default(false)
+  imageId   String?
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Image {
+  id        String   @id @default(uuid())
+  fileName  String
+  filePath  String
+  url       String
+  taskId    String?
+  subtaskId String?
+  issue     Issue?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
