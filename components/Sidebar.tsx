@@ -25,17 +25,14 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('teader_user');
-        if (cached) return JSON.parse(cached);
-      } catch {}
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem('teader_user');
+      if (cached) setCurrentUser(JSON.parse(cached));
+    } catch {}
+
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -52,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
           router.push('/login');
         }
       })
+
       .catch(() => {
         if (pathname !== '/login' && pathname !== '/register') {
           try {
