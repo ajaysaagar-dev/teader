@@ -7,33 +7,43 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ─── Users ───────────────────────────────────────────────────────────────────
 model User {
   id             Int             @id @default(autoincrement())
   name           String
   email          String          @unique
-  password       String
+  password       String          // bcrypt hash
   avatar         String?         @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80")
   projectMembers ProjectMember[]
+  ownedProjects  Project[]       @relation("ProjectOwner")
+  assignedIssues Issue[]         @relation("IssueAssignee")
+  reportedIssues Issue[]         @relation("IssueReporter")
+  comments       Comment[]
+  activities     Activity[]
   createdAt      DateTime        @default(now())
 }
 
+// ─── Projects ────────────────────────────────────────────────────────────────
 model Project {
   id             Int             @id @default(autoincrement())
   key            String          @unique
   name           String
   description    String?         @db.Text
-  owner_id       Int             @default(1)
-  creatorId      Int?            @default(1)
-  ownerName      String          @default("karri")
+  owner          User            @relation("ProjectOwner", fields: [owner_id], references: [id])
+  owner_id       Int
   issues         Issue[]
+  sprints        Sprint[]
+  labels         Label[]
   projectMembers ProjectMember[]
   createdAt      DateTime        @default(now())
 }
 
+// ─── Project Members ─────────────────────────────────────────────────────────
 model ProjectMember {
   id        Int      @id @default(autoincrement())
   projectId Int
   userId    Int
+  role      String   @default("member") // owner | admin | member | viewer
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   joinedAt  DateTime @default(now())
@@ -41,47 +51,132 @@ model ProjectMember {
   @@unique([projectId, userId])
 }
 
-model Issue {
-  id             String    @id @default(uuid())
-  key            String    @unique
-  title          String
-  description    String?   @db.Text
-  status         String    @default("todo") // todo, in_progress, needs_review, done
-  priority       String    @default("medium") // critical, high, medium, low
-  assigneeName   String    @default("General (Anyone)")
-  assigneeAvatar String?   @default("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80")
-  reporterName   String?   @default("karri")
-  reporterAvatar String?   @default("https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80")
-  labels         String?   @default("[]") @db.Text
-  sprint         String?   @default("Sprint 24.3")
-  epic           String?   @default("Platform Core")
-  projectId      Int
-  projectRef     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  project        String    @default("Teader Platform Core")
-  isFavorite     Boolean   @default(false)
-  subtasks       Subtask[]
-  images         Image[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+// ─── Sprints ─────────────────────────────────────────────────────────────────
+model Sprint {
+  id        Int       @id @default(autoincrement())
+  name      String
+  projectId Int
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  startDate DateTime?
+  endDate   DateTime?
+  issues    Issue[]
+  createdAt DateTime  @default(now())
 }
 
+// ─── Labels ──────────────────────────────────────────────────────────────────
+model Label {
+  id        Int          @id @default(autoincrement())
+  name      String
+  color     String       @default("#787C83")
+  projectId Int
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues    IssueLabel[]
+}
+
+model IssueLabel {
+  id      Int   @id @default(autoincrement())
+  issueId String
+  labelId Int
+  issue   Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, labelId])
+}
+
+// ─── Issues ──────────────────────────────────────────────────────────────────
+model Issue {
+  id          String       @id @default(uuid())
+  key         String       @unique
+  title       String
+  description String?      @db.Text
+  status      String       @default("todo")     // todo | in_progress | needs_review | done
+  priority    String       @default("medium")   // critical | high | medium | low
+  isFavorite  Boolean      @default(false)
+
+  // Assignee / Reporter as FK (replaces denormalized strings)
+  assigneeId    Int?
+  assignee      User?        @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  assigneeName  String       @default("General (Anyone)")  // kept for display fallback
+  assigneeAvatar String?
+
+  reporterId    Int?
+  reporter      User?        @relation("IssueReporter", fields: [reporterId], references: [id])
+  reporterName  String?      @default("karri")             // kept for display fallback
+  reporterAvatar String?
+
+  // Labels — stored as JSON text for backward-compat display, FK via IssueLabel
+  labels       String?      @default("[]") @db.Text
+  issueLabels  IssueLabel[]
+
+  // Epic as free text (Sprint/Epic FK models added above)
+  epic         String?      @default("Platform Core")
+
+  // Sprint FK
+  sprintId     Int?
+  sprintRef    Sprint?      @relation(fields: [sprintId], references: [id])
+  sprint       String?      @default("Sprint 24.3")  // kept for display fallback
+
+  projectId    Int
+  projectRef   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  subtasks     Subtask[]
+  images       Image[]
+  comments     Comment[]
+  activities   Activity[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// ─── Subtasks ────────────────────────────────────────────────────────────────
 model Subtask {
   id        String   @id @default(uuid())
   title     String
   completed Boolean  @default(false)
+  isFolder  Boolean  @default(false)
+  type      String   @default("subtask")  // folder | subtask
+  parentId  String?
   imageId   String?
   issueId   String
   issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
 
+// ─── Images ──────────────────────────────────────────────────────────────────
 model Image {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   fileName  String
   filePath  String
   url       String
   taskId    String?
   subtaskId String?
-  issue     Issue?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  issue     Issue?  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// ─── Comments ────────────────────────────────────────────────────────────────
+model Comment {
+  id        String    @id @default(uuid())
+  body      String    @db.Text
+  issueId   String
+  issue     Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId  Int
+  author    User      @relation(fields: [authorId], references: [id])
+  parentId  String?                     // threaded replies
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("Replies")
+  editedAt  DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// ─── Activity / Audit Log ────────────────────────────────────────────────────
+model Activity {
+  id        String   @id @default(uuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actorId   Int?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  actorName String                       // fallback for system / AI actors
+  type      String                       // status_change | comment | pr_linked | ai_summary | branch_pushed | deployment
+  payload   Json?
   createdAt DateTime @default(now())
 }
