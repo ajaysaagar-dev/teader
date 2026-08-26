@@ -1,5 +1,5 @@
 const mysql = require('mysql2/promise');
-const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const DB_HOST = process.env.MYSQL_HOST || 'localhost';
 const DB_USER = process.env.MYSQL_USER || 'ajaysaagar';
@@ -8,8 +8,9 @@ const DB_NAME = process.env.MYSQL_DATABASE || 'teader_db';
 const DB_PORT = Number(process.env.MYSQL_PORT) || 3306;
 
 function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
 }
+
 
 async function seed() {
   console.log('--- Teader Database Complete Schema & Seed Migration (Infinite Nested Folders & Subtasks) ---');

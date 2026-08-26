@@ -277,30 +277,33 @@ export async function initDB() {
 }
 
 function getInitialSeedUsers() {
+  // Pre-hashed bcrypt hash for 'password123' (cost: 12)
+  const defaultPasswordHash = '$2b$12$lL3YVRs0PjHqNNMDJ8xKbempzfCQcMDdwHZn6k0A7oFtrZpOn82ea';
   return [
     {
       id: 1,
       name: 'karri',
       email: 'karri@teader.io',
-      password: hashPassword('password123'),
+      password: defaultPasswordHash,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     },
     {
       id: 2,
       name: 'jori',
       email: 'jori@teader.io',
-      password: hashPassword('password123'),
+      password: defaultPasswordHash,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     },
     {
       id: 3,
       name: 'ajaysaagar',
       email: 'ajaysaagar@teader.io',
-      password: hashPassword('password123'),
+      password: defaultPasswordHash,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
     },
   ];
 }
+
 
 function getInitialSeedProjects() {
   return [
