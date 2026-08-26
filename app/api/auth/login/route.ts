@@ -21,9 +21,10 @@ export async function POST(req: Request) {
 
   try {
     const user = await loginUserDB(data.email, data.password);
-    await setSessionCookie(user);
-    return NextResponse.json(user);
+    const token = await setSessionCookie(user, data.remember !== false);
+    return NextResponse.json({ ...user, token });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 401 });
   }
+
 }

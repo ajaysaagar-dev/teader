@@ -25,7 +25,15 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('teader_user');
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return null;
+  });
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -33,12 +41,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
       .then((data) => {
         if (data.user) {
           setCurrentUser(data.user);
+          try {
+            localStorage.setItem('teader_user', JSON.stringify(data.user));
+          } catch {}
         } else if (pathname !== '/login' && pathname !== '/register') {
+          try {
+            localStorage.removeItem('teader_user');
+            localStorage.removeItem('teader_token');
+          } catch {}
           router.push('/login');
         }
       })
       .catch(() => {
         if (pathname !== '/login' && pathname !== '/register') {
+          try {
+            localStorage.removeItem('teader_user');
+            localStorage.removeItem('teader_token');
+          } catch {}
           router.push('/login');
         }
       });
@@ -47,6 +66,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
+      try {
+        localStorage.removeItem('teader_user');
+        localStorage.removeItem('teader_token');
+      } catch {}
       toast.success('Logged out successfully');
       router.push('/login');
       router.refresh();
@@ -54,6 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
       toast.error('Logout failed');
     }
   };
+
 
   const pages = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },

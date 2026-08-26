@@ -26,9 +26,10 @@ export async function POST(req: Request) {
       password: data.password,
     });
 
-    await setSessionCookie(user);
-    return NextResponse.json(user, { status: 201 });
+    const token = await setSessionCookie(user, true);
+    return NextResponse.json({ ...user, token }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
+
 }

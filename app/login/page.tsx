@@ -1,16 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldCheck, LogIn, Mail, Lock, Sparkles } from 'lucide-react';
+import { ShieldCheck, LogIn, Mail, Lock, Sparkles, CheckSquare, Square } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if session token or user is already remembered
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem('teader_user');
+      if (savedUser) {
+        // Fast verify with backend
+        fetch('/api/auth/me')
+          .then((res) => {
+            if (res.ok) {
+              router.push('/projects');
+            }
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +39,24 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+        body: JSON.stringify({ 
+          email: email.trim(), 
+          password: password.trim(),
+          remember: rememberMe
+        }),
       });
 
       const data = await res.json();
       if (res.ok) {
+        // Persist session user & token in localStorage to remember login state
+        if (rememberMe) {
+          try {
+            localStorage.setItem('teader_user', JSON.stringify(data));
+            if (data.token) {
+              localStorage.setItem('teader_token', data.token);
+            }
+          } catch {}
+        }
         toast.success(`Welcome back, ${data.name}!`);
         router.push('/projects');
         router.refresh();
@@ -37,6 +68,11 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePresetFill = (presetEmail: string) => {
+    setEmail(presetEmail);
+    setPassword('password123');
   };
 
   return (
@@ -90,14 +126,44 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Quick Preset Credentials hint */}
-          <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-1 text-[11px] text-[#787C83]">
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center justify-between text-xs">
+            <button
+              type="button"
+              onClick={() => setRememberMe((prev) => !prev)}
+              className="flex items-center gap-2 text-[#CFD4DD] hover:text-white cursor-pointer select-none group"
+            >
+              {rememberMe ? (
+                <CheckSquare size={15} className="text-[#DCB001]" />
+              ) : (
+                <Square size={15} className="text-[#787C83] group-hover:text-[#CFD4DD]" />
+              )}
+              <span className="text-[11px] font-medium">Remember me (Keep me signed in)</span>
+            </button>
+          </div>
+
+          {/* Quick Preset Credentials Clickable Hints */}
+          <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-1.5 text-[11px] text-[#787C83]">
             <div className="font-semibold text-[#CFD4DD] flex items-center gap-1">
               <ShieldCheck size={12} className="text-[#DCB001]" />
-              Demo Credentials:
+              Demo Credentials (Click to fill):
             </div>
-            <div className="font-mono text-[10px]">Owner: karri@teader.io / password123</div>
-            <div className="font-mono text-[10px]">Member: jori@teader.io / password123</div>
+            <div className="flex flex-col gap-1 font-mono text-[10px]">
+              <button
+                type="button"
+                onClick={() => handlePresetFill('karri@teader.io')}
+                className="text-left px-2 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#DCB001] transition-colors"
+              >
+                Owner: karri@teader.io / password123
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePresetFill('jori@teader.io')}
+                className="text-left px-2 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#CFD4DD] transition-colors"
+              >
+                Member: jori@teader.io / password123
+              </button>
+            </div>
           </div>
 
           <button

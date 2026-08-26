@@ -20,11 +20,11 @@ export interface SessionUser {
   avatar?: string;
 }
 
-export async function signSession(user: SessionUser): Promise<string> {
+export async function signSession(user: SessionUser, expiresIn: string = '30d'): Promise<string> {
   return new SignJWT({ id: user.id, name: user.name, email: user.email, avatar: user.avatar })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime(expiresIn)
     .sign(SECRET_KEY);
 }
 
@@ -45,19 +45,22 @@ export async function verifySession(token: string): Promise<SessionUser | null> 
 // ─── Cookie Helpers ───────────────────────────────────────────────────────────
 
 const COOKIE_NAME = 'teader_session';
-const COOKIE_OPTS = {
-  httpOnly: true,
-  path: '/',
-  sameSite: 'lax' as const,
-  secure: process.env.NODE_ENV === 'production',
-  maxAge: 60 * 60 * 24 * 7, // 7 days
-};
 
-export async function setSessionCookie(user: SessionUser) {
-  const token = await signSession(user);
+export async function setSessionCookie(user: SessionUser, remember: boolean = true): Promise<string> {
+  const expiresIn = remember ? '30d' : '24h';
+  const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days or 1 day
+  const token = await signSession(user, expiresIn);
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, token, COOKIE_OPTS);
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge,
+  });
+  return token;
 }
+
 
 export async function clearSessionCookie() {
   const cookieStore = await cookies();

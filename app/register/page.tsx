@@ -31,12 +31,19 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (res.ok) {
+        try {
+          localStorage.setItem('teader_user', JSON.stringify(data));
+          if (data.token) {
+            localStorage.setItem('teader_token', data.token);
+          }
+        } catch {}
         toast.success(`Account created for ${data.name}!`);
         router.push('/projects');
         router.refresh();
       } else {
         toast.error(data.error || 'Registration failed');
       }
+
     } catch {
       toast.error('Failed to create account. Please try again.');
     } finally {
