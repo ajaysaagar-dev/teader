@@ -19,10 +19,16 @@ export interface User {
 
 export interface Subtask {
   id: string;
+  issueId?: string;
+  parentId?: string | null;
   title: string;
   completed: boolean;
+  isFolder?: boolean;
+  type?: 'folder' | 'subtask';
+  subtasks?: Subtask[];
   imageId?: string;
   imageUrl?: string;
+  createdAt?: string;
 }
 
 export interface ImageRecord {

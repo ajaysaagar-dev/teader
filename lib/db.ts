@@ -134,18 +134,28 @@ export async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // 5. Create Subtasks Table
+    // 5. Create Subtasks Table with infinite recursive parentId & isFolder support
     await p.query(`
       CREATE TABLE IF NOT EXISTS \`subtasks\` (
         \`id\` VARCHAR(64) PRIMARY KEY,
         \`issueId\` VARCHAR(64) NOT NULL,
+        \`parentId\` VARCHAR(64) DEFAULT NULL,
         \`title\` VARCHAR(255) NOT NULL,
         \`completed\` TINYINT(1) DEFAULT 0,
+        \`isFolder\` TINYINT(1) DEFAULT 0,
+        \`type\` VARCHAR(32) DEFAULT 'subtask',
         \`imageId\` VARCHAR(64) DEFAULT NULL,
         \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`idx_subtasks_parentId\` (\`parentId\`),
         FOREIGN KEY (\`issueId\`) REFERENCES \`issues\`(\`id\`) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
+
+    // Ensure columns exist on existing table
+    try { await p.query(`ALTER TABLE \`subtasks\` ADD COLUMN \`parentId\` VARCHAR(64) DEFAULT NULL;`); } catch {}
+    try { await p.query(`ALTER TABLE \`subtasks\` ADD COLUMN \`isFolder\` TINYINT(1) DEFAULT 0;`); } catch {}
+    try { await p.query(`ALTER TABLE \`subtasks\` ADD COLUMN \`type\` VARCHAR(32) DEFAULT 'subtask';`); } catch {}
+    try { await p.query(`ALTER TABLE \`subtasks\` ADD INDEX \`idx_subtasks_parentId\` (\`parentId\`);`); } catch {}
 
     // 6. Create Images Table
     await p.query(`
@@ -166,10 +176,18 @@ export async function initDB() {
       await seedDefaultUsers(p);
     }
 
+    // Seed Default Projects if Empty
+    const [projectRows]: any = await p.query(`SELECT COUNT(*) as cnt FROM \`projects\``);
+    if (projectRows[0].cnt === 0) {
+      await seedDefaultProjectsAndTasks(p);
+    }
+
     initialized = true;
   } catch (err: any) {
     console.warn('MySQL auto-initialization note:', err.message);
     if (memoryUsersStore.length === 0) memoryUsersStore = getInitialSeedUsers();
+    if (memoryProjectsStore.length === 0) memoryProjectsStore = getInitialSeedProjects();
+    if (memoryIssuesStore.length === 0) memoryIssuesStore = getInitialSeedIssues();
   }
 }
 
@@ -189,6 +207,254 @@ function getInitialSeedUsers() {
       password: hashPassword('password123'),
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     },
+    {
+      id: 3,
+      name: 'ajaysaagar',
+      email: 'ajaysaagar@teader.io',
+      password: hashPassword('password123'),
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    },
+  ];
+}
+
+function getInitialSeedProjects() {
+  return [
+    {
+      id: 1,
+      key: 'PRJTDR9X8K7L6M5N4P3Q2R1S0T9U8V',
+      name: 'Teader Platform Core',
+      description: 'Core backend microservices, real-time WebSocket pipelines, and streaming architecture.',
+      owner_id: 1,
+      creatorId: 1,
+      ownerName: 'karri',
+    },
+    {
+      id: 2,
+      key: 'PRJMOB8Y7X6W5V4U3T2S1R0Q9P8O7N',
+      name: 'Teader Mobile App',
+      description: 'iOS and Android client performance, gesture interactions, and offline caching engine.',
+      owner_id: 1,
+      creatorId: 1,
+      ownerName: 'karri',
+    },
+    {
+      id: 3,
+      key: 'PRJUI7Z6Y5X4W3V2U1T0S9R8Q7P6O5',
+      name: 'Teader UI Refresh',
+      description: 'Design system, dark theme typography, and high-density spatial layouts.',
+      owner_id: 1,
+      creatorId: 1,
+      ownerName: 'karri',
+    },
+  ];
+}
+
+function getInitialSeedIssues() {
+  return [
+    {
+      id: 'issue_2703',
+      key: 'TDR-2703',
+      title: 'Optimize initial workspace load & cold start performance',
+      description: 'Defer non-critical telemetry streams and hydrate core project workspace prior to full background sync to achieve <200ms TTI.',
+      status: 'in_progress',
+      priority: 'high',
+      assigneeName: 'jori',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'karri',
+      reporterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      labels: ['Performance', 'Frontend', 'Optimization'],
+      sprint: 'Sprint 24.3',
+      epic: 'Platform Performance',
+      projectId: 1,
+      project: 'Teader Platform Core',
+      isFavorite: true,
+      subtasks: [
+        { id: 'sub_1', title: 'Implement cached workspace hydration in localStorage/IndexedDB', completed: true },
+        { id: 'sub_2', title: 'Reset dimmed skeleton rows on route reload', completed: true },
+        { id: 'sub_3', title: 'Add performance marks and measure cold launch TTI metrics', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2704',
+      key: 'TDR-2704',
+      title: 'Implement real-time WebSocket subscription engine for task updates',
+      description: 'Establish persistent bi-directional WebSocket connection channels with automatic heartbeat reconnection and state backoff for live collaboration.',
+      status: 'todo',
+      priority: 'medium',
+      assigneeName: 'karri',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'jori',
+      reporterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      labels: ['Realtime', 'Backend', 'WebSockets'],
+      sprint: 'Sprint 24.3',
+      epic: 'Real-time Infrastructure',
+      projectId: 1,
+      project: 'Teader Platform Core',
+      isFavorite: true,
+      subtasks: [
+        { id: 'sub_4', title: 'Setup WebSocket client heartbeats and reconnection backoff', completed: false },
+        { id: 'sub_5', title: 'Add presence tracking and active editor broadcast channels', completed: false },
+        { id: 'sub_6', title: 'Benchmark socket latency under concurrent project updates', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2705',
+      key: 'TDR-2705',
+      title: 'Build automated database migration & schema validation pipeline',
+      description: 'Create transactional schema migrations and automated integrity tests for project keys, subtask relations, and user access roles.',
+      status: 'needs_review',
+      priority: 'critical',
+      assigneeName: 'jori',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'karri',
+      reporterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      labels: ['Database', 'MySQL', 'Prisma', 'DevOps'],
+      sprint: 'Sprint 24.3',
+      epic: 'Database Architecture',
+      projectId: 1,
+      project: 'Teader Platform Core',
+      isFavorite: true,
+      subtasks: [
+        { id: 'sub_7', title: 'Add composite index on project_members (projectId, userId)', completed: true },
+        { id: 'sub_8', title: 'Implement foreign key cascades for deleted project tasks', completed: true },
+        { id: 'sub_9', title: 'Write automated rollback unit tests for schema changes', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2706',
+      key: 'TDR-2706',
+      title: 'Design RESTful OpenAPI v3 specification and Swagger UI docs',
+      description: 'Document full issue CRUD endpoints, project membership APIs, subtask toggles, and user authentication schemas.',
+      status: 'done',
+      priority: 'medium',
+      assigneeName: 'karri',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'jori',
+      reporterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      labels: ['API', 'OpenAPI', 'Documentation'],
+      sprint: 'Sprint 24.3',
+      epic: 'API Architecture',
+      projectId: 1,
+      project: 'Teader Platform Core',
+      isFavorite: false,
+      subtasks: [
+        { id: 'sub_10', title: 'Generate OpenAPI spec JSON endpoint at /api/swagger', completed: true },
+        { id: 'sub_11', title: 'Integrate Swagger UI interactive test console', completed: true },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2707',
+      key: 'MOB-101',
+      title: 'Implement gesture-based Kanban card reordering for mobile touch',
+      description: 'Add fluid haptic feedback and spring physics using Framer Motion gestures for moving tasks between columns on iOS and Android viewports.',
+      status: 'in_progress',
+      priority: 'high',
+      assigneeName: 'jori',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'karri',
+      reporterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      labels: ['Mobile', 'Touch', 'Gestures'],
+      sprint: 'Sprint 24.3',
+      epic: 'Mobile Experience',
+      projectId: 2,
+      project: 'Teader Mobile App',
+      isFavorite: true,
+      subtasks: [
+        { id: 'sub_12', title: 'Configure touch-drag event listeners with horizontal scroll lock', completed: true },
+        { id: 'sub_13', title: 'Add vibration haptic feedback on card drop into new stage', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2708',
+      key: 'MOB-102',
+      title: 'Offline mode mutation queuing and background synchronization',
+      description: 'Queue offline task status changes in IndexedDB and replay with exponential backoff upon network restoration.',
+      status: 'todo',
+      priority: 'critical',
+      assigneeName: 'karri',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'jori',
+      reporterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      labels: ['Offline', 'ServiceWorker', 'Sync'],
+      sprint: 'Sprint 24.3',
+      epic: 'Mobile Experience',
+      projectId: 2,
+      project: 'Teader Mobile App',
+      isFavorite: false,
+      subtasks: [
+        { id: 'sub_14', title: 'Implement optimistic offline task status transitions', completed: false },
+        { id: 'sub_15', title: 'Handle conflict resolution when online task has newer timestamp', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2709',
+      key: 'UI-804',
+      title: 'Refine dark theme design system typography and high-density spacing',
+      description: 'Standardize 8px spatial grid, semantic color tokens, subtle glassmorphic borders (#2A2C30), and WCAG-compliant contrast across all components.',
+      status: 'needs_review',
+      priority: 'high',
+      assigneeName: 'jori',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'karri',
+      reporterAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      labels: ['UI/UX', 'Design System', 'TailwindCSS'],
+      sprint: 'Sprint 24.3',
+      epic: 'Design System',
+      projectId: 3,
+      project: 'Teader UI Refresh',
+      isFavorite: true,
+      subtasks: [
+        { id: 'sub_16', title: 'Audit contrast ratios for secondary and muted typography', completed: true },
+        { id: 'sub_17', title: 'Standardize badge and pill border radius across views', completed: true },
+        { id: 'sub_18', title: 'Ensure smooth 150ms Framer Motion micro-interactions', completed: false },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
+    {
+      id: 'issue_2710',
+      key: 'UI-805',
+      title: 'Add hierarchical tree connector lines and SVG branch guides',
+      description: 'Render clean vertical connecting guide rails for Epics -> Tasks -> Sub-works tree layout with dynamic collapse animations.',
+      status: 'done',
+      priority: 'medium',
+      assigneeName: 'karri',
+      assigneeAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      reporterName: 'jori',
+      reporterAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+      labels: ['Hierarchy', 'Tree', 'Components'],
+      sprint: 'Sprint 24.3',
+      epic: 'Design System',
+      projectId: 3,
+      project: 'Teader UI Refresh',
+      isFavorite: false,
+      subtasks: [
+        { id: 'sub_19', title: 'Implement nested indentation and guide line styling', completed: true },
+        { id: 'sub_20', title: 'Add expand/collapse all toggle controls with animations', completed: true },
+      ],
+      timeline: [],
+      comments: [],
+      images: [],
+    },
   ];
 }
 
@@ -198,6 +464,50 @@ async function seedDefaultUsers(p: mysql.Pool) {
       `INSERT INTO \`users\` (\`id\`, \`name\`, \`email\`, \`password\`, \`avatar\`) VALUES (?, ?, ?, ?, ?)`,
       [u.id, u.name, u.email, u.password, u.avatar]
     );
+  }
+}
+
+async function seedDefaultProjectsAndTasks(p: mysql.Pool) {
+  for (const proj of getInitialSeedProjects()) {
+    await p.query(
+      `INSERT INTO \`projects\` (\`id\`, \`key\`, \`name\`, \`description\`, \`owner_id\`, \`creatorId\`, \`ownerName\`) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [proj.id, proj.key, proj.name, proj.description, proj.owner_id, proj.creatorId, proj.ownerName]
+    );
+    await p.query(`INSERT IGNORE INTO \`project_members\` (\`projectId\`, \`userId\`) VALUES (?, ?)`, [proj.id, 1]);
+    await p.query(`INSERT IGNORE INTO \`project_members\` (\`projectId\`, \`userId\`) VALUES (?, ?)`, [proj.id, 2]);
+    await p.query(`INSERT IGNORE INTO \`project_members\` (\`projectId\`, \`userId\`) VALUES (?, ?)`, [proj.id, 3]);
+  }
+
+  for (const iss of getInitialSeedIssues()) {
+    await p.query(
+      `INSERT INTO \`issues\` (\`id\`, \`key\`, \`title\`, \`description\`, \`status\`, \`priority\`, \`assigneeName\`, \`assigneeAvatar\`, \`reporterName\`, \`reporterAvatar\`, \`labels\`, \`sprint\`, \`epic\`, \`projectId\`, \`project\`, \`isFavorite\`)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        iss.id,
+        iss.key,
+        iss.title,
+        iss.description,
+        iss.status,
+        iss.priority,
+        iss.assigneeName,
+        iss.assigneeAvatar,
+        iss.reporterName,
+        iss.reporterAvatar,
+        JSON.stringify(iss.labels),
+        iss.sprint,
+        iss.epic,
+        iss.projectId,
+        iss.project,
+        iss.isFavorite ? 1 : 0,
+      ]
+    );
+
+    for (const sub of iss.subtasks) {
+      await p.query(
+        `INSERT INTO \`subtasks\` (\`id\`, \`issueId\`, \`title\`, \`completed\`) VALUES (?, ?, ?, ?)`,
+        [sub.id, iss.id, sub.title, sub.completed ? 1 : 0]
+      );
+    }
   }
 }
 
@@ -506,17 +816,10 @@ export async function getAllIssuesDB() {
         role: 'Product Manager',
       },
       tags: ['p0'],
-      subtasks: subtasks
-        .filter((st: any) => st.issueId === iss.id)
-        .map((st: any) => {
-          const matchedImg = images.find((img: any) => img.id === st.imageId || img.subtaskId === st.id);
-          return {
-            ...st,
-            completed: Boolean(st.completed),
-            imageId: st.imageId || matchedImg?.id,
-            imageUrl: matchedImg?.url,
-          };
-        }),
+      subtasks: buildSubtaskTree(
+        subtasks.filter((st: any) => st.issueId === iss.id),
+        images
+      ),
       images: images.filter((img: any) => img.taskId === iss.id),
       timeline: [],
       comments: [],
@@ -524,6 +827,40 @@ export async function getAllIssuesDB() {
   } catch {
     return memoryIssuesStore;
   }
+}
+
+// Recursive Helper to Build Infinite Nested Tree of Subtasks and Folders
+export function buildSubtaskTree(flatSubtasks: any[], images: any[] = []): any[] {
+  const map = new Map<string, any>();
+  const roots: any[] = [];
+
+  flatSubtasks.forEach((st) => {
+    const matchedImg = images.find((img: any) => img.id === st.imageId || img.subtaskId === st.id);
+    map.set(st.id, {
+      id: st.id,
+      issueId: st.issueId,
+      parentId: st.parentId || null,
+      title: st.title,
+      completed: Boolean(st.completed),
+      isFolder: Boolean(st.isFolder),
+      type: st.type || (st.isFolder ? 'folder' : 'subtask'),
+      imageId: st.imageId || matchedImg?.id,
+      imageUrl: matchedImg?.url,
+      createdAt: st.createdAt,
+      subtasks: [],
+    });
+  });
+
+  flatSubtasks.forEach((st) => {
+    const node = map.get(st.id);
+    if (st.parentId && map.has(st.parentId)) {
+      map.get(st.parentId).subtasks.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
 }
 
 export async function createIssueDB(data: {
@@ -535,7 +872,7 @@ export async function createIssueDB(data: {
   labels?: string[];
   project?: string;
   projectId?: number;
-  subtasks?: { id: string; title: string; completed: boolean }[];
+  subtasks?: { id?: string; parentId?: string | null; title: string; completed: boolean; isFolder?: boolean; type?: 'folder' | 'subtask' }[];
 }) {
   await initDB();
   const id = `issue_${Date.now()}`;
@@ -577,8 +914,16 @@ export async function createIssueDB(data: {
 
     for (const sub of subtasks) {
       await p.query(
-        `INSERT INTO \`subtasks\` (\`id\`, \`issueId\`, \`title\`, \`completed\`) VALUES (?, ?, ?, ?)`,
-        [sub.id || `sub_${Date.now()}_${Math.random()}`, id, sub.title, sub.completed ? 1 : 0]
+        `INSERT INTO \`subtasks\` (\`id\`, \`issueId\`, \`parentId\`, \`title\`, \`completed\`, \`isFolder\`, \`type\`) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sub.id || `sub_${Date.now()}_${Math.random()}`,
+          id,
+          sub.parentId || null,
+          sub.title,
+          sub.completed ? 1 : 0,
+          sub.isFolder ? 1 : 0,
+          sub.type || (sub.isFolder ? 'folder' : 'subtask')
+        ]
       );
     }
   } catch {
@@ -614,7 +959,17 @@ export async function createIssueDB(data: {
         email: 'karri@teader.io',
         role: 'Staff Product Manager',
       },
-      subtasks: subtasks.map((st, i) => ({ id: st.id || `sub_${Date.now()}_${i}`, title: st.title, completed: Boolean(st.completed) })),
+      subtasks: buildSubtaskTree(
+        subtasks.map((st, i) => ({
+          id: st.id || `sub_${Date.now()}_${i}`,
+          issueId: id,
+          parentId: st.parentId || null,
+          title: st.title,
+          completed: Boolean(st.completed),
+          isFolder: Boolean(st.isFolder),
+          type: st.type || (st.isFolder ? 'folder' : 'subtask'),
+        }))
+      ),
       images: [],
       timeline: [],
       comments: [],
@@ -627,36 +982,145 @@ export async function createIssueDB(data: {
   return all.find((i: any) => i.id === id);
 }
 
-export async function updateIssueStatusDB(id: string, status: string, title?: string, description?: string) {
+export async function updateIssueStatusDB(
+  id: string,
+  status?: string,
+  title?: string,
+  description?: string,
+  epic?: string,
+  priority?: string
+) {
   await initDB();
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (status !== undefined) {
+    fields.push('`status` = ?');
+    values.push(status);
+  }
+  if (title !== undefined) {
+    fields.push('`title` = ?');
+    values.push(title.trim());
+  }
+  if (description !== undefined) {
+    fields.push('`description` = ?');
+    values.push(description.trim());
+  }
+  if (epic !== undefined) {
+    fields.push('`epic` = ?');
+    values.push(epic.trim());
+  }
+  if (priority !== undefined) {
+    fields.push('`priority` = ?');
+    values.push(priority);
+  }
+
+  if (fields.length === 0) return;
+
   try {
     const p = getPool();
-    if (title && description !== undefined) {
-      await p.query(`UPDATE \`issues\` SET \`status\` = ?, \`title\` = ?, \`description\` = ? WHERE \`id\` = ?`, [status, title, description, id]);
-    } else if (title) {
-      await p.query(`UPDATE \`issues\` SET \`status\` = ?, \`title\` = ? WHERE \`id\` = ?`, [status, title, id]);
-    } else {
-      await p.query(`UPDATE \`issues\` SET \`status\` = ? WHERE \`id\` = ?`, [status, id]);
-    }
+    values.push(id);
+    await p.query(`UPDATE \`issues\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
   } catch {
     const target = memoryIssuesStore.find((i) => i.id === id);
     if (target) {
-      target.status = status;
-      if (title) target.title = title;
-      if (description !== undefined) target.description = description;
+      if (status !== undefined) target.status = status;
+      if (title !== undefined) target.title = title.trim();
+      if (description !== undefined) target.description = description.trim();
+      if (epic !== undefined) target.epic = epic.trim();
+      if (priority !== undefined) target.priority = priority;
     }
   }
 }
 
-export async function addSubtaskDB(issueId: string, title: string) {
+export async function updateSubtaskDB(
+  subId: string,
+  updates: {
+    title?: string;
+    completed?: boolean;
+    parentId?: string | null;
+    issueId?: string;
+  }
+) {
   await initDB();
-  const subId = `sub_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (updates.title !== undefined) {
+    fields.push('`title` = ?');
+    values.push(updates.title.trim());
+  }
+  if (updates.completed !== undefined) {
+    fields.push('`completed` = ?');
+    values.push(updates.completed ? 1 : 0);
+  }
+  if (updates.parentId !== undefined) {
+    fields.push('`parentId` = ?');
+    values.push(updates.parentId);
+  }
+  if (updates.issueId !== undefined) {
+    fields.push('`issueId` = ?');
+    values.push(updates.issueId);
+  }
+
+  if (fields.length === 0) return;
+
+  try {
+    const p = getPool();
+    values.push(subId);
+    await p.query(`UPDATE \`subtasks\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+
+    // If completed was updated and it is a folder, cascade to direct child items
+    if (updates.completed !== undefined) {
+      await p.query(`UPDATE \`subtasks\` SET \`completed\` = ? WHERE \`parentId\` = ?`, [
+        updates.completed ? 1 : 0,
+        subId,
+      ]);
+    }
+  } catch {
+    const updateRecursive = (items: any[]): any => {
+      for (const st of items) {
+        if (st.id === subId) {
+          if (updates.title !== undefined) st.title = updates.title.trim();
+          if (updates.completed !== undefined) {
+            st.completed = updates.completed;
+            if (st.subtasks) {
+              st.subtasks.forEach((c: any) => (c.completed = updates.completed));
+            }
+          }
+          if (updates.parentId !== undefined) st.parentId = updates.parentId;
+          if (updates.issueId !== undefined) st.issueId = updates.issueId;
+          return st;
+        }
+        if (st.subtasks) {
+          const found = updateRecursive(st.subtasks);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    for (const iss of memoryIssuesStore) {
+      if (iss.subtasks) updateRecursive(iss.subtasks);
+    }
+  }
+}
+
+export async function addSubtaskDB(
+  issueId: string,
+  title: string,
+  parentId: string | null = null,
+  isFolder: boolean = false,
+  type: 'folder' | 'subtask' = 'subtask'
+) {
+  await initDB();
+  const subId = isFolder ? `fld_${Date.now()}_${Math.floor(Math.random() * 1000)}` : `sub_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
   try {
     const p = getPool();
     await p.query(
-      `INSERT INTO \`subtasks\` (\`id\`, \`issueId\`, \`title\`, \`completed\`) VALUES (?, ?, ?, 0)`,
-      [subId, issueId, title.trim()]
+      `INSERT INTO \`subtasks\` (\`id\`, \`issueId\`, \`parentId\`, \`title\`, \`completed\`, \`isFolder\`, \`type\`) VALUES (?, ?, ?, ?, 0, ?, ?)`,
+      [subId, issueId, parentId, title.trim(), isFolder ? 1 : 0, type]
     );
 
     const [rows]: any = await p.query(`SELECT \`status\` FROM \`issues\` WHERE \`id\` = ?`, [issueId]);
@@ -666,13 +1130,61 @@ export async function addSubtaskDB(issueId: string, title: string) {
   } catch {
     const target = memoryIssuesStore.find((i) => i.id === issueId);
     if (target) {
-      target.subtasks.push({ id: subId, title: title.trim(), completed: false });
+      const newItem = {
+        id: subId,
+        issueId,
+        parentId,
+        title: title.trim(),
+        completed: false,
+        isFolder,
+        type,
+        subtasks: [],
+      };
+      if (!parentId) {
+        target.subtasks.push(newItem);
+      } else {
+        const findAndInsert = (items: any[]): boolean => {
+          for (const it of items) {
+            if (it.id === parentId) {
+              if (!it.subtasks) it.subtasks = [];
+              it.subtasks.push(newItem);
+              return true;
+            }
+            if (it.subtasks && findAndInsert(it.subtasks)) return true;
+          }
+          return false;
+        };
+        findAndInsert(target.subtasks);
+      }
       if (target.status === 'done') {
         target.status = 'needs_review';
       }
     }
   }
-  return { id: subId, issueId, title: title.trim(), completed: false };
+  return { id: subId, issueId, parentId, title: title.trim(), completed: false, isFolder, type, subtasks: [] };
+}
+
+export async function deleteSubtaskDB(subId: string) {
+  await initDB();
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM \`subtasks\` WHERE \`id\` = ? OR \`parentId\` = ?`, [subId, subId]);
+  } catch {
+    const removeRecursive = (items: any[]) => {
+      const idx = items.findIndex((s) => s.id === subId);
+      if (idx !== -1) {
+        items.splice(idx, 1);
+        return true;
+      }
+      for (const it of items) {
+        if (it.subtasks && removeRecursive(it.subtasks)) return true;
+      }
+      return false;
+    };
+    for (const iss of memoryIssuesStore) {
+      if (iss.subtasks) removeRecursive(iss.subtasks);
+    }
+  }
 }
 
 export async function toggleSubtaskDB(subId: string, completed: boolean) {
@@ -680,6 +1192,9 @@ export async function toggleSubtaskDB(subId: string, completed: boolean) {
   try {
     const p = getPool();
     await p.query(`UPDATE \`subtasks\` SET \`completed\` = ? WHERE \`id\` = ?`, [completed ? 1 : 0, subId]);
+
+    // Also update any child subtasks if this was a folder
+    await p.query(`UPDATE \`subtasks\` SET \`completed\` = ? WHERE \`parentId\` = ?`, [completed ? 1 : 0, subId]);
 
     if (!completed) {
       const [subRows]: any = await p.query(`SELECT \`issueId\` FROM \`subtasks\` WHERE \`id\` = ?`, [subId]);
@@ -692,14 +1207,32 @@ export async function toggleSubtaskDB(subId: string, completed: boolean) {
       }
     }
   } catch {
+    const updateRecursive = (items: any[]) => {
+      for (const st of items) {
+        if (st.id === subId) {
+          st.completed = completed;
+          if (st.subtasks) {
+            const setChild = (children: any[]) => {
+              children.forEach((c) => {
+                c.completed = completed;
+                if (c.subtasks) setChild(c.subtasks);
+              });
+            };
+            setChild(st.subtasks);
+          }
+          return true;
+        }
+        if (st.subtasks && updateRecursive(st.subtasks)) return true;
+      }
+      return false;
+    };
+
     for (const iss of memoryIssuesStore) {
-      const st = iss.subtasks.find((s: any) => s.id === subId);
-      if (st) {
-        st.completed = completed;
+      if (iss.subtasks) {
+        updateRecursive(iss.subtasks);
         if (!completed && iss.status === 'done') {
           iss.status = 'needs_review';
         }
-        break;
       }
     }
   }
