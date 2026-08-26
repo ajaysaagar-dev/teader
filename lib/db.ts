@@ -16,6 +16,7 @@ const DB_PORT = Number(process.env.MYSQL_PORT) || 3306;
 
 let pool: mysql.Pool | null = null;
 let initialized = false;
+let initPromise: Promise<void> | null = null;
 
 export function getPool() {
   if (!pool) {
@@ -26,14 +27,43 @@ export function getPool() {
       database: DB_NAME,
       port: DB_PORT,
       waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
+      connectionLimit: 5,
+      maxIdle: 2,
+      idleTimeout: 30000,
+      connectTimeout: 4000,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
     });
   }
   return pool;
 }
 
-let memoryUsersStore: any[] = [];
+// Pre-hashed bcrypt hash for 'password123' (cost: 12)
+const DEFAULT_PASSWORD_HASH = '$2b$12$lL3YVRs0PjHqNNMDJ8xKbempzfCQcMDdwHZn6k0A7oFtrZpOn82ea';
+
+let memoryUsersStore: any[] = [
+  {
+    id: 1,
+    name: 'karri',
+    email: 'karri@teader.io',
+    password: DEFAULT_PASSWORD_HASH,
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 2,
+    name: 'jori',
+    email: 'jori@teader.io',
+    password: DEFAULT_PASSWORD_HASH,
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 3,
+    name: 'ajaysaagar',
+    email: 'ajaysaagar@teader.io',
+    password: DEFAULT_PASSWORD_HASH,
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+  },
+];
 let memoryProjectsStore: any[] = [];
 let memoryMembersStore: any[] = [];
 let memoryIssuesStore: any[] = [];
@@ -56,22 +86,14 @@ export function generate30CharKey(): string {
   return result;
 }
 
-// Initialize Database & Tables automatically
-export async function initDB() {
+// Initialize Database & Tables automatically (singleton promise)
+export async function initDB(): Promise<void> {
   if (initialized) return;
+  if (!initPromise) {
+    initPromise = (async () => {
+      try {
+        const p = getPool();
 
-  try {
-    const rootConn = await mysql.createConnection({
-      host: DB_HOST,
-      user: DB_USER,
-      password: DB_PASSWORD,
-      port: DB_PORT,
-    });
-
-    await rootConn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;`);
-    await rootConn.end();
-
-    const p = getPool();
 
     // 1. Create Users Table
     await p.query(`
@@ -267,14 +289,20 @@ export async function initDB() {
       await seedDefaultProjectsAndTasks(p);
     }
 
-    initialized = true;
-  } catch (err: any) {
-    console.warn('MySQL auto-initialization note:', err.message);
-    if (memoryUsersStore.length === 0) memoryUsersStore = getInitialSeedUsers();
-    if (memoryProjectsStore.length === 0) memoryProjectsStore = getInitialSeedProjects();
-    if (memoryIssuesStore.length === 0) memoryIssuesStore = getInitialSeedIssues();
+        initialized = true;
+      } catch (err: any) {
+        console.warn('MySQL initialization note:', err.message);
+        if (memoryUsersStore.length === 0) memoryUsersStore = getInitialSeedUsers();
+        if (memoryProjectsStore.length === 0) memoryProjectsStore = getInitialSeedProjects();
+        if (memoryIssuesStore.length === 0) memoryIssuesStore = getInitialSeedIssues();
+      } finally {
+        initialized = true;
+      }
+    })();
   }
+  return initPromise;
 }
+
 
 function getInitialSeedUsers() {
   // Pre-hashed bcrypt hash for 'password123' (cost: 12)
@@ -648,22 +676,27 @@ export async function loginUserDB(email: string, passwordUnhashed: string) {
 
       // ─── Migration: re-hash sha256 passwords to bcrypt on successful login ───
       if (/^[a-f0-9]{64}$/.test(user.password)) {
-        const newHash = await hashPassword(passwordUnhashed);
-        await p.query(`UPDATE \`users\` SET \`password\` = ? WHERE \`id\` = ?`, [newHash, user.id]);
+        try {
+          const newHash = await hashPassword(passwordUnhashed);
+          await p.query(`UPDATE \`users\` SET \`password\` = ? WHERE \`id\` = ?`, [newHash, user.id]);
+        } catch {}
       }
 
       return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
     }
   } catch (err: any) {
     if (err.message === 'Invalid email or password') throw err;
-    // Fallback to in-memory store
-    const user = memoryUsersStore.find((u) => u.email === emailLower);
-    if (user && (await verifyPassword(passwordUnhashed, user.password))) {
-      return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
-    }
   }
+
+  // Fallback to in-memory store (e.g. if DB is unreachable, empty, or during offline dev)
+  const memUser = memoryUsersStore.find((u) => u.email === emailLower);
+  if (memUser && (await verifyPassword(passwordUnhashed, memUser.password))) {
+    return { id: memUser.id, name: memUser.name, email: memUser.email, avatar: memUser.avatar };
+  }
+
   throw new Error('Invalid email or password');
 }
+
 
 
 export async function getUserByIdDB(id: number | string) {
