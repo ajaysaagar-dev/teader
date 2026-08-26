@@ -116,7 +116,7 @@ const RecursiveSubtaskNode: React.FC<{
   onDeleteSubtask?: (issueId: string, subtaskId: string) => void;
   onRenameSubtask?: (issueId: string, subtaskId: string, newTitle: string) => void;
   onMoveSubtask?: (subtaskId: string, newParentId: string | null, targetIssueId: string) => void;
-}> = ({
+}> = React.memo(({
   node,
   issueId,
   level = 0,
@@ -452,9 +452,11 @@ const RecursiveSubtaskNode: React.FC<{
       </AnimatePresence>
     </div>
   );
-};
+});
 
-export const TreeView: React.FC<TreeViewProps> = ({
+RecursiveSubtaskNode.displayName = 'RecursiveSubtaskNode';
+
+export const TreeView: React.FC<TreeViewProps> = React.memo(({
   issues,
   projectName = 'Project Tree',
   projectKey = 'PRJ',
@@ -1147,4 +1149,6 @@ export const TreeView: React.FC<TreeViewProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TreeView.displayName = 'TreeView';

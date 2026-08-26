@@ -15,10 +15,12 @@ import {
   Camera,
   Image as ImageIcon,
   Folder,
-  FolderPlus
+  FolderPlus,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { AIAssistantPanel } from '@/components/AIAssistantPanel';
 
 interface IssueDetailViewProps {
   issue: Issue;
@@ -37,6 +39,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [isAddingSubwork, setIsAddingSubwork] = useState(false);
   const [uploadingSubtaskId, setUploadingSubtaskId] = useState<string | null>(null);
   const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
+  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/issue/${issue.key}`);
@@ -230,6 +233,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 text-[11px] text-[#787C83] font-mono">
+          <button
+            onClick={() => setIsAIPanelOpen((prev) => !prev)}
+            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] text-[#DCB001] border border-[#DCB001]/40 rounded-md font-semibold text-xs transition-colors shadow-sm"
+          >
+            <Sparkles size={12} className="text-[#DCB001]" />
+            <span>AI Copilot</span>
+          </button>
+
           <div className="flex items-center gap-0.5">
             <button className="p-0.5 hover:text-[#CFD4DD]"><ChevronUp size={13} /></button>
             <button className="p-0.5 hover:text-[#CFD4DD]"><ChevronDown size={13} /></button>
@@ -514,6 +525,22 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* AI Assistant Drawer Panel */}
+      <AIAssistantPanel
+        isOpen={isAIPanelOpen}
+        onClose={() => setIsAIPanelOpen(false)}
+        issueContext={{
+          id: issue.id,
+          key: issue.key,
+          title: issue.title,
+          status: issue.status,
+          priority: issue.priority,
+          epic: issue.epic,
+          description: issue.description,
+          subtasks: issue.subtasks,
+        }}
+      />
     </div>
   );
 };

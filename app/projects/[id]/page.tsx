@@ -1,14 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AppLayout } from '@/components/AppLayout';
-import { KanbanBoardView } from '@/components/KanbanBoardView';
-import { HierarchicalView } from '@/components/HierarchicalView';
-import { DevStreamView } from '@/components/DevStreamView';
-import { TreeView } from '@/components/TreeView';
-import { IssueDetailView } from '@/components/IssueDetailView';
-import { NewIssueModal } from '@/components/NewIssueModal';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { Issue, Status } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { 
@@ -30,12 +27,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
+// Dynamic lazy-loaded view components for optimal code-splitting and load speed
+const KanbanBoardView = dynamic(
+  () => import('@/components/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const HierarchicalView = dynamic(
+  () => import('@/components/HierarchicalView').then((m) => ({ default: m.HierarchicalView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const DevStreamView = dynamic(
+  () => import('@/components/DevStreamView').then((m) => ({ default: m.DevStreamView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const TreeView = dynamic(
+  () => import('@/components/TreeView').then((m) => ({ default: m.TreeView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const IssueDetailView = dynamic(
+  () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const NewIssueModal = dynamic(
+  () => import('@/components/NewIssueModal').then((m) => ({ default: m.NewIssueModal })),
+  { ssr: false }
+);
+
 interface ProjectItem {
   id: string | number;
   key: string;
   name: string;
   description: string;
   creatorId?: number;
+  owner_id?: number;
   ownerName?: string;
 }
 
@@ -46,21 +70,21 @@ interface MemberItem {
   avatar: string;
 }
 
+function parseViewTab(view?: string): 'board' | 'hierarchy' | 'dev' | 'tree' {
+  if (!view) return 'board';
+  const v = String(view).toLowerCase();
+  if (v === 'tree') return 'tree';
+  if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
+  if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
+  if (v === 'board' || v === 'kanban') return 'board';
+  return 'board';
+}
+
 export default function SingleProjectPage() {
   const params = useParams();
   const router = useRouter();
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
-
-  const parseViewTab = (view?: string): 'board' | 'hierarchy' | 'dev' | 'tree' => {
-    if (!view) return 'board';
-    const v = String(view).toLowerCase();
-    if (v === 'tree') return 'tree';
-    if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
-    if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
-    if (v === 'board' || v === 'kanban') return 'board';
-    return 'board';
-  };
 
   const [activeTab, setActiveTab] = useState<'board' | 'hierarchy' | 'dev' | 'tree'>(() => parseViewTab(viewParam));
 
@@ -70,10 +94,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = (newTab: 'board' | 'hierarchy' | 'dev' | 'tree') => {
+  const handleTabSwitch = useCallback((newTab: 'board' | 'hierarchy' | 'dev' | 'tree') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
-  };
+  }, [projectIdParam, router]);
+
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
@@ -89,14 +114,21 @@ export default function SingleProjectPage() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-
-  const [showProjectKey, setShowProjectKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
+
+  const isFetchingRef = useRef(false);
 
   // Real-time Fetching & User Session
   const fetchProjectData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     try {
       const meRes = await fetch('/api/auth/me');
+      if (meRes.status === 401) {
+        router.push('/login');
+        return;
+      }
       if (meRes.ok) {
         const meData = await meRes.json();
         if (meData.user) setCurrentUser(meData.user);
@@ -106,6 +138,11 @@ export default function SingleProjectPage() {
         fetch('/api/projects', { cache: 'no-store' }),
         fetch('/api/issues', { cache: 'no-store' }),
       ]);
+
+      if (projRes.status === 401 || issueRes.status === 401) {
+        router.push('/login');
+        return;
+      }
 
       let foundProj: ProjectItem | null = null;
       if (projRes.ok) {
@@ -131,7 +168,7 @@ export default function SingleProjectPage() {
       }
 
       setProject((prev) => {
-        if (JSON.stringify(prev) !== JSON.stringify(foundProj)) {
+        if (!prev || prev.id !== foundProj?.id || prev.name !== foundProj?.name || prev.description !== foundProj?.description) {
           return foundProj;
         }
         return prev;
@@ -155,33 +192,96 @@ export default function SingleProjectPage() {
       console.error('Error loading project:', err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [projectIdParam]);
+  }, [projectIdParam, router]);
 
+  // Smart polling: every 30s only when tab is visible
   useEffect(() => {
     fetchProjectData();
-    const interval = setInterval(() => {
-      fetchProjectData();
-    }, 2500);
-    return () => clearInterval(interval);
+    const POLL_INTERVAL = 30_000;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (!intervalId) {
+        intervalId = setInterval(fetchProjectData, POLL_INTERVAL);
+      }
+    };
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        fetchProjectData();
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [fetchProjectData]);
 
-  // Check if current user is the Project Creator
-  const isCreator = currentUser && project && (
-    String(currentUser.id) === String(project.creatorId) ||
-    currentUser.name === project.ownerName
-  );
+  // Global Escape key listener to close detail view or modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isEditProjectModalOpen) {
+          setIsEditProjectModalOpen(false);
+        } else if (isNewIssueModalOpen) {
+          setIsNewIssueModalOpen(false);
+        } else if (selectedIssueId) {
+          setSelectedIssueId(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIssueId, isEditProjectModalOpen, isNewIssueModalOpen]);
 
-  const handleCopyProjectKey = () => {
+  // Memoized checks & derived state
+  const isCreator = useMemo(() => {
+    if (!currentUser || !project) return false;
+    return (
+      String(currentUser.id) === String(project.creatorId) ||
+      String(currentUser.id) === String(project.owner_id) ||
+      currentUser.name === project.ownerName
+    );
+  }, [currentUser, project]);
+
+  const projectIssues = useMemo(() => {
+    if (!project) return [];
+    return issues.filter(
+      (i: any) =>
+        String(i.projectId) === String(project.id) ||
+        i.project === project.name ||
+        (i.project || '').toLowerCase() === project.name.toLowerCase()
+    );
+  }, [issues, project]);
+
+  const selectedIssue = useMemo(() => {
+    return issues.find((i) => i.id === selectedIssueId) || null;
+  }, [issues, selectedIssueId]);
+
+  const handleCopyProjectKey = useCallback(() => {
     if (!project) return;
     navigator.clipboard.writeText(project.key);
     setCopiedKey(true);
     toast.success(`Copied Project Key: ${project.key}`);
     setTimeout(() => setCopiedKey(false), 2000);
-  };
+  }, [project]);
 
   // Real-time Edit Project Handler
-  const handleSaveProjectEdit = async (e: React.FormEvent) => {
+  const handleSaveProjectEdit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!project || !editName.trim() || isSavingEdit) return;
 
@@ -197,10 +297,9 @@ export default function SingleProjectPage() {
       });
 
       if (res.ok) {
-        setProject({ ...project, name: editName.trim(), description: editDesc.trim() });
-        toast.success('Project details updated in real-time in MySQL DB!');
+        setProject((prev) => prev ? { ...prev, name: editName.trim(), description: editDesc.trim() } : null);
+        toast.success('Project details updated!');
         setIsEditProjectModalOpen(false);
-        fetchProjectData();
       } else {
         throw new Error('Failed to update project');
       }
@@ -209,18 +308,19 @@ export default function SingleProjectPage() {
     } finally {
       setIsSavingEdit(false);
     }
-  };
+  }, [project, editName, editDesc, isSavingEdit]);
 
-  // Status Switch Handler with Strict Creator Check
-  const handleUpdateStatus = async (issueId: string, newStatus: Status) => {
+  // Status Switch Handler with Optimistic Update
+  const handleUpdateStatus = useCallback(async (issueId: string, newStatus: Status) => {
     const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
     if (newStatus === 'done' && !isCreator) {
-      toast.error(`Permission Denied: Only the creator of this project (${project?.ownerName || 'Creator'}) can approve and move tasks to Done.`);
+      toast.error(`Permission Denied: Only the creator of this project (${project?.ownerName || 'Creator'}) can move tasks to Done.`);
       return;
     }
 
+    const previousIssues = issues;
     setIssues((prev) =>
       prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i))
     );
@@ -235,13 +335,13 @@ export default function SingleProjectPage() {
       if (!res.ok) throw new Error('Failed to update DB');
       toast.success(`Updated status to ${newStatus.replace('_', ' ')}`);
     } catch {
-      toast.error('Error updating MySQL database');
-      fetchProjectData();
+      toast.error('Error updating status in database');
+      setIssues(previousIssues);
     }
-  };
+  }, [issues, isCreator, project]);
 
   // Add New Task in Active Selected Project
-  const handleAddNewTaskToColumn = async (title: string, status: Status) => {
+  const handleAddNewTaskToColumn = useCallback(async (title: string, status: Status) => {
     if (!project) return;
 
     try {
@@ -266,12 +366,12 @@ export default function SingleProjectPage() {
         throw new Error('Failed to create task');
       }
     } catch {
-      toast.error('Failed to save task to MySQL DB');
+      toast.error('Failed to save task to database');
     }
-  };
+  }, [project]);
 
-  // Handle Subtask Toggle (Recursive)
-  const handleToggleSubtask = async (issueId: string, subId: string, nextCompleted: boolean) => {
+  // Handle Subtask Toggle (Recursive Optimistic Update)
+  const handleToggleSubtask = useCallback(async (issueId: string, subId: string, nextCompleted: boolean) => {
     const toggleRecursive = (items: any[]): any[] =>
       items.map((st) => {
         if (st.id === subId) {
@@ -314,10 +414,10 @@ export default function SingleProjectPage() {
       toast.error('Failed to update subtask');
       fetchProjectData();
     }
-  };
+  }, [fetchProjectData]);
 
-  // Handle Add Subtask or Nested Folder
-  const handleAddSubtask = async (
+  // Handle Add Subtask or Nested Folder (Optimistic Update)
+  const handleAddSubtask = useCallback(async (
     issueId: string,
     title: string,
     parentId: string | null = null,
@@ -332,31 +432,94 @@ export default function SingleProjectPage() {
       });
 
       if (res.ok) {
+        const createdSub = await res.json();
+        setIssues((prev) =>
+          prev.map((iss) => {
+            if (iss.id !== issueId) return iss;
+            const currentSubtasks = iss.subtasks || [];
+            
+            const insertInTree = (nodes: any[]): any[] => {
+              if (!parentId) return [...nodes, { ...createdSub, subtasks: [] }];
+              return nodes.map((node) => {
+                if (node.id === parentId) {
+                  return {
+                    ...node,
+                    subtasks: [...(node.subtasks || []), { ...createdSub, subtasks: [] }],
+                  };
+                }
+                if (node.subtasks && node.subtasks.length > 0) {
+                  return { ...node, subtasks: insertInTree(node.subtasks) };
+                }
+                return node;
+              });
+            };
+
+            return {
+              ...iss,
+              subtasks: insertInTree(currentSubtasks),
+            };
+          })
+        );
         toast.success(isFolder ? 'Folder created!' : 'Subtask added!');
-        fetchProjectData();
       } else {
         throw new Error('Failed to create subtask');
       }
     } catch {
       toast.error('Failed to save to database');
     }
-  };
+  }, []);
 
-  // Handle Delete Subtask / Folder
-  const handleDeleteSubtask = async (issueId: string, subId: string) => {
+  // Handle Delete Subtask / Folder (Optimistic Update)
+  const handleDeleteSubtask = useCallback(async (issueId: string, subId: string) => {
+    const removeFromTree = (nodes: any[]): any[] =>
+      nodes
+        .filter((n) => n.id !== subId)
+        .map((n) => ({
+          ...n,
+          subtasks: n.subtasks ? removeFromTree(n.subtasks) : [],
+        }));
+
+    setIssues((prev) =>
+      prev.map((iss) => {
+        if (iss.id !== issueId) return iss;
+        return {
+          ...iss,
+          subtasks: removeFromTree(iss.subtasks || []),
+        };
+      })
+    );
+
     try {
       const res = await fetch(`/api/subtasks?id=${subId}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Item deleted');
-        fetchProjectData();
+      } else {
+        throw new Error('Failed to delete');
       }
     } catch {
       toast.error('Failed to delete item');
+      fetchProjectData();
     }
-  };
+  }, [fetchProjectData]);
 
-  // Handle Rename Subtask / Folder
-  const handleRenameSubtask = async (issueId: string, subId: string, newTitle: string) => {
+  // Handle Rename Subtask / Folder (Optimistic Update)
+  const handleRenameSubtask = useCallback(async (issueId: string, subId: string, newTitle: string) => {
+    const renameInTree = (nodes: any[]): any[] =>
+      nodes.map((n) => {
+        if (n.id === subId) return { ...n, title: newTitle };
+        if (n.subtasks && n.subtasks.length > 0) {
+          return { ...n, subtasks: renameInTree(n.subtasks) };
+        }
+        return n;
+      });
+
+    setIssues((prev) =>
+      prev.map((iss) => {
+        if (iss.id !== issueId) return iss;
+        return { ...iss, subtasks: renameInTree(iss.subtasks || []) };
+      })
+    );
+
     try {
       const res = await fetch('/api/subtasks', {
         method: 'PATCH',
@@ -365,15 +528,17 @@ export default function SingleProjectPage() {
       });
       if (res.ok) {
         toast.success('Renamed successfully!');
-        fetchProjectData();
+      } else {
+        throw new Error('Failed');
       }
     } catch {
-      toast.error('Failed to rename subtask');
+      toast.error('Failed to rename item');
+      fetchProjectData();
     }
-  };
+  }, [fetchProjectData]);
 
   // Handle Drag & Drop to Move Subtask / Folder (Switch Parent)
-  const handleMoveSubtask = async (subId: string, newParentId: string | null, targetIssueId: string) => {
+  const handleMoveSubtask = useCallback(async (subId: string, newParentId: string | null, targetIssueId: string) => {
     try {
       const res = await fetch('/api/subtasks', {
         method: 'PATCH',
@@ -381,7 +546,7 @@ export default function SingleProjectPage() {
         body: JSON.stringify({ subId, parentId: newParentId, issueId: targetIssueId }),
       });
       if (res.ok) {
-        toast.success(newParentId ? 'Moved into folder/parent!' : 'Moved to task root!');
+        toast.success(newParentId ? 'Moved into folder!' : 'Moved to root!');
         fetchProjectData();
       } else {
         toast.error('Failed to move item');
@@ -389,10 +554,14 @@ export default function SingleProjectPage() {
     } catch {
       toast.error('Failed to move item');
     }
-  };
+  }, [fetchProjectData]);
 
-  // Handle Rename Issue / Task
-  const handleRenameIssue = async (issueId: string, newTitle: string) => {
+  // Handle Rename Issue / Task (Optimistic Update)
+  const handleRenameIssue = useCallback(async (issueId: string, newTitle: string) => {
+    setIssues((prev) =>
+      prev.map((iss) => (iss.id === issueId ? { ...iss, title: newTitle } : iss))
+    );
+
     try {
       const res = await fetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
@@ -400,16 +569,26 @@ export default function SingleProjectPage() {
         body: JSON.stringify({ title: newTitle }),
       });
       if (res.ok) {
-        toast.success('Task renamed successfully!');
-        fetchProjectData();
+        toast.success('Task renamed!');
+      } else {
+        throw new Error('Failed');
       }
     } catch {
       toast.error('Failed to rename task');
+      fetchProjectData();
     }
-  };
+  }, [fetchProjectData]);
 
-  // Handle Rename Epic
-  const handleRenameEpic = async (oldEpicName: string, newEpicName: string) => {
+  // Handle Rename Epic (Optimistic Update)
+  const handleRenameEpic = useCallback(async (oldEpicName: string, newEpicName: string) => {
+    setIssues((prev) =>
+      prev.map((iss) =>
+        (iss.epic || 'General Tasks') === oldEpicName
+          ? { ...iss, epic: newEpicName }
+          : iss
+      )
+    );
+
     try {
       const matching = issues.filter((i) => (i.epic || 'General Tasks') === oldEpicName);
       await Promise.all(
@@ -422,28 +601,18 @@ export default function SingleProjectPage() {
         )
       );
       toast.success(`Epic renamed to "${newEpicName}"!`);
-      fetchProjectData();
     } catch {
       toast.error('Failed to rename epic');
+      fetchProjectData();
     }
-  };
+  }, [issues, fetchProjectData]);
 
-  const projectIssues = project
-    ? issues.filter(
-        (i: any) =>
-          String(i.projectId) === String(project.id) ||
-          i.project === project.name ||
-          (i.project || '').toLowerCase() === project.name.toLowerCase()
-      )
-    : [];
-
-  const selectedIssue = issues.find((i) => i.id === selectedIssueId);
-
-  if (loading) {
+  if (loading && issues.length === 0 && !project) {
     return (
       <AppLayout>
-        <div className="flex-1 flex items-center justify-center bg-[#131415] text-[#787C83] font-mono text-xs">
-          Loading project workspace...
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+          <ProjectPageHeaderSkeleton />
+          <KanbanBoardSkeleton />
         </div>
       </AppLayout>
     );
@@ -475,9 +644,11 @@ export default function SingleProjectPage() {
               {isCreator && (
                 <button
                   onClick={() => {
-                    setEditName(project.name);
-                    setEditDesc(project.description || '');
-                    setIsEditProjectModalOpen(true);
+                    if (project) {
+                      setEditName(project.name);
+                      setEditDesc(project.description || '');
+                      setIsEditProjectModalOpen(true);
+                    }
                   }}
                   className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
                   title="Edit Project Details (Creator Only)"
@@ -608,95 +779,97 @@ export default function SingleProjectPage() {
           </div>
         </div>
 
-        {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board */}
-        {selectedIssue ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
-              <button
-                onClick={() => setSelectedIssueId(null)}
-                className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
-              >
-                <ArrowLeft size={12} />
-                <span>Back to {activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
-                <select
-                  value={selectedIssue.status}
-                  onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
-                  className="bg-[#131415] text-xs text-[#DCB001] border border-[#2A2C30] rounded px-2 py-0.5 outline-none cursor-pointer font-semibold"
+        {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board with Error Boundaries */}
+        <ErrorBoundary>
+          {selectedIssue ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
+                <button
+                  onClick={() => setSelectedIssueId(null)}
+                  className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
                 >
-                  <option value="todo">Todo</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="needs_review">Needs Review</option>
-                  <option value="done">Done (Creator Only)</option>
-                </select>
-              </div>
-            </div>
+                  <ArrowLeft size={12} />
+                  <span>Back to {activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
+                </button>
 
-            <IssueDetailView
-              issue={selectedIssue}
-              onUpdateIssue={(updated) => setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-              onOpenDiffModal={() => {}}
-              currentRole={isCreator ? 'owner' : 'member'}
-            />
-          </div>
-        ) : activeTab === 'tree' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <TreeView
-              issues={projectIssues}
-              projectName={project?.name}
-              projectKey={project?.key}
-              onSelectIssue={(id) => setSelectedIssueId(id)}
-              onUpdateIssueStatus={handleUpdateStatus}
-              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              onToggleSubtask={handleToggleSubtask}
-              onAddSubtask={handleAddSubtask}
-              onDeleteSubtask={handleDeleteSubtask}
-              onRenameSubtask={handleRenameSubtask}
-              onMoveSubtask={handleMoveSubtask}
-              onRenameIssue={handleRenameIssue}
-              onRenameEpic={handleRenameEpic}
-            />
-          </div>
-        ) : activeTab === 'dev' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <DevStreamView
-              issues={projectIssues}
-              onSelectIssue={(id) => setSelectedIssueId(id)}
-              onUpdateIssueStatus={handleUpdateStatus}
-              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              onToggleSubtask={handleToggleSubtask}
-              onAddSubtask={handleAddSubtask}
-              currentUser={currentUser}
-            />
-          </div>
-        ) : activeTab === 'hierarchy' ? (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <HierarchicalView
-              issues={projectIssues}
-              onSelectIssue={(id) => setSelectedIssueId(id)}
-              onUpdateIssueStatus={handleUpdateStatus}
-              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              onToggleSubtask={handleToggleSubtask}
-              onAddSubtask={handleAddSubtask}
-            />
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <KanbanBoardView
-              issues={projectIssues}
-              onSelectIssue={(id) => setSelectedIssueId(id)}
-              onUpdateIssueStatus={handleUpdateStatus}
-              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              onAddNewTaskToColumn={handleAddNewTaskToColumn}
-            />
-          </div>
-        )}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
+                  <select
+                    value={selectedIssue.status}
+                    onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
+                    className="bg-[#131415] text-xs text-[#DCB001] border border-[#2A2C30] rounded px-2 py-0.5 outline-none cursor-pointer font-semibold"
+                  >
+                    <option value="todo">Todo</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="needs_review">Needs Review</option>
+                    <option value="done">Done (Creator Only)</option>
+                  </select>
+                </div>
+              </div>
+
+              <IssueDetailView
+                issue={selectedIssue}
+                onUpdateIssue={(updated) => setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
+                onOpenDiffModal={() => {}}
+                currentRole={isCreator ? 'owner' : 'member'}
+              />
+            </div>
+          ) : activeTab === 'tree' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <TreeView
+                issues={projectIssues}
+                projectName={project?.name}
+                projectKey={project?.key}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onUpdateIssueStatus={handleUpdateStatus}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                onToggleSubtask={handleToggleSubtask}
+                onAddSubtask={handleAddSubtask}
+                onDeleteSubtask={handleDeleteSubtask}
+                onRenameSubtask={handleRenameSubtask}
+                onMoveSubtask={handleMoveSubtask}
+                onRenameIssue={handleRenameIssue}
+                onRenameEpic={handleRenameEpic}
+              />
+            </div>
+          ) : activeTab === 'dev' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <DevStreamView
+                issues={projectIssues}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onUpdateIssueStatus={handleUpdateStatus}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                onToggleSubtask={handleToggleSubtask}
+                onAddSubtask={handleAddSubtask}
+                currentUser={currentUser}
+              />
+            </div>
+          ) : activeTab === 'hierarchy' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <HierarchicalView
+                issues={projectIssues}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onUpdateIssueStatus={handleUpdateStatus}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                onToggleSubtask={handleToggleSubtask}
+                onAddSubtask={handleAddSubtask}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <KanbanBoardView
+                issues={projectIssues}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onUpdateIssueStatus={handleUpdateStatus}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                onAddNewTaskToColumn={handleAddNewTaskToColumn}
+              />
+            </div>
+          )}
+        </ErrorBoundary>
 
         {/* New Issue Modal */}
-        {project && (
+        {project && isNewIssueModalOpen && (
           <NewIssueModal
             isOpen={isNewIssueModalOpen}
             onClose={() => setIsNewIssueModalOpen(false)}
@@ -767,7 +940,7 @@ export default function SingleProjectPage() {
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm"
+                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-50"
                       >
                         Save Changes
                       </button>

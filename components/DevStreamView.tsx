@@ -45,7 +45,7 @@ interface DevStreamViewProps {
 
 type DevFilter = 'all' | 'my_tasks' | 'in_progress' | 'needs_review' | 'critical';
 
-export const DevStreamView: React.FC<DevStreamViewProps> = ({
+export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
   issues,
   onSelectIssue,
   onUpdateIssueStatus,
@@ -586,4 +586,6 @@ export const DevStreamView: React.FC<DevStreamViewProps> = ({
       </div>
     </div>
   );
-};
+});
+
+DevStreamView.displayName = 'DevStreamView';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Issue, Status } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { 
@@ -25,7 +25,7 @@ interface KanbanBoardViewProps {
   onAddNewTaskToColumn?: (title: string, status: Status) => void;
 }
 
-export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
+export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   issues,
   onSelectIssue,
   onUpdateIssueStatus,
@@ -38,21 +38,24 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
   const [addingToCol, setAddingToCol] = useState<Status | null>(null);
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
 
-  // Filter Issues
-  const filteredIssues = issues.filter((issue) => {
-    const queryMatch =
-      filterQuery === '' ||
-      issue.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      issue.key.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      (issue.labels || []).some((l) => l.toLowerCase().includes(filterQuery.toLowerCase()));
+  // Memoized Filtered Issues
+  const filteredIssues = useMemo(() => {
+    const query = filterQuery.toLowerCase().trim();
+    return issues.filter((issue) => {
+      const queryMatch =
+        query === '' ||
+        issue.title.toLowerCase().includes(query) ||
+        issue.key.toLowerCase().includes(query) ||
+        (issue.labels || []).some((l) => l.toLowerCase().includes(query));
 
-    const priorityMatch =
-      selectedPriority === 'all' || issue.priority === selectedPriority;
+      const priorityMatch =
+        selectedPriority === 'all' || issue.priority === selectedPriority;
 
-    return queryMatch && priorityMatch;
-  });
+      return queryMatch && priorityMatch;
+    });
+  }, [issues, filterQuery, selectedPriority]);
 
-  const columns: { id: Status; title: string; count: number; color: string }[] = [
+  const columns: { id: Status; title: string; count: number; color: string }[] = useMemo(() => [
     {
       id: 'todo',
       title: 'Todo',
@@ -77,9 +80,9 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
       count: filteredIssues.filter((i) => i.status === 'done').length,
       color: '#22C55E',
     },
-  ];
+  ], [filteredIssues]);
 
-  const handleInlineAddSubmit = (status: Status, e: React.FormEvent) => {
+  const handleInlineAddSubmit = useCallback((status: Status, e: React.FormEvent) => {
     e.preventDefault();
     if (!inlineTaskTitle.trim()) return;
     if (onAddNewTaskToColumn) {
@@ -87,7 +90,8 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
     }
     setInlineTaskTitle('');
     setAddingToCol(null);
-  };
+  }, [inlineTaskTitle, onAddNewTaskToColumn]);
+
 
   return (
     <div className="flex-1 h-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none">
@@ -465,5 +469,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = ({
       )}
     </div>
   );
-};
+});
+
+KanbanBoardView.displayName = 'KanbanBoardView';
 

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
+import { ProjectsGridSkeleton } from '@/components/ui/Skeleton';
 import { 
   FolderKanban, 
   Plus, 
@@ -109,10 +110,25 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchDataFromDB();
-    const interval = setInterval(() => {
-      fetchDataFromDB();
-    }, 2500);
-    return () => clearInterval(interval);
+    const POLL_INTERVAL = 30_000; // 30s — only poll when tab is visible
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (!intervalId) {
+        intervalId = setInterval(fetchDataFromDB, POLL_INTERVAL);
+      }
+    };
+    const stopPolling = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) stopPolling(); else { fetchDataFromDB(); startPolling(); }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stopPolling(); document.removeEventListener('visibilitychange', onVisibility); };
   }, [fetchDataFromDB]);
 
   const handleOpenCreateModal = () => {
@@ -260,12 +276,36 @@ export default function ProjectsPage() {
     }
   };
 
-  const filteredProjects = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProjects = useMemo(
+    () => projects.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    [projects, searchQuery]
   );
+
+  // Show skeleton on first load only
+  if (loading && projects.length === 0) {
+    return (
+      <AppLayout>
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+          <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+            <div className="w-32 h-4 bg-[#2A2C30] animate-pulse rounded" />
+            <div className="flex gap-2">
+              <div className="w-28 h-7 bg-[#2A2C30] animate-pulse rounded-lg" />
+              <div className="w-32 h-7 bg-[#2A2C30] animate-pulse rounded-lg" />
+            </div>
+          </div>
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="w-80 h-10 bg-[#1B1C1F] border border-[#2A2C30] animate-pulse rounded-xl mb-6" />
+            <ProjectsGridSkeleton />
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -316,6 +356,30 @@ export default function ProjectsPage() {
           </div>
 
           {/* Projects Grid */}
+          {filteredProjects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-[#1B1C1F] border border-[#2A2C30] flex items-center justify-center mb-4">
+                <FolderKanban size={24} className="text-[#787C83]" />
+              </div>
+              <h3 className="text-sm font-bold text-[#CFD4DD] mb-1">
+                {searchQuery ? 'No projects match your search' : 'No projects yet'}
+              </h3>
+              <p className="text-xs text-[#787C83] mb-5 max-w-xs">
+                {searchQuery
+                  ? `Clear your search or try a different term`
+                  : `Create your first project or join an existing one with a project key`}
+              </p>
+              {!searchQuery && (
+                <button
+                  onClick={handleOpenCreateModal}
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg transition-colors"
+                >
+                  <Plus size={14} />
+                  Create Project
+                </button>
+              )}
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProjects.map((proj) => {
               const projTaskCount = issues.filter(
@@ -395,6 +459,7 @@ export default function ProjectsPage() {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* Create Project Modal */}

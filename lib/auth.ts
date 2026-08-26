@@ -89,12 +89,16 @@ export async function hashPassword(plain: string): Promise<string> {
 export async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
   // Support old sha256 hashed passwords during migration window
   if (/^[a-f0-9]{64}$/.test(hashed)) {
-    const crypto = await import('crypto');
-    const sha256 = crypto.createHash('sha256').update(plain).digest('hex');
-    return sha256 === hashed;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const sha256Hex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    return sha256Hex === hashed;
   }
   return bcrypt.compare(plain, hashed);
 }
+
 
 // ─── Route Auth Guard ─────────────────────────────────────────────────────────
 

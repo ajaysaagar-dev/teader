@@ -37,7 +37,7 @@ interface HierarchicalViewProps {
 
 type GroupByMode = 'epic' | 'status' | 'assignee' | 'flat';
 
-export const HierarchicalView: React.FC<HierarchicalViewProps> = ({
+export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
   issues,
   onSelectIssue,
   onUpdateIssueStatus,
@@ -590,4 +590,6 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = ({
       </div>
     </div>
   );
-};
+});
+
+HierarchicalView.displayName = 'HierarchicalView';
