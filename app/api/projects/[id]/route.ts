@@ -1,16 +1,25 @@
 import { NextResponse } from 'next/server';
 import { deleteProjectDB, updateProjectDB } from '@/lib/db';
+import { getSessionFromCookie } from '@/lib/auth';
+import { parseBody, UpdateProjectSchema } from '@/lib/validation';
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const resolvedParams = await params;
+  const { data, error } = await parseBody(req, UpdateProjectSchema);
+  if (error) {
+    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+  }
+
   try {
-    const resolvedParams = await params;
-    const body = await req.json();
     const result = await updateProjectDB(resolvedParams.id, {
-      name: body.name,
-      description: body.description,
+      name: data.name,
+      description: data.description,
     });
     return NextResponse.json(result);
   } catch (err: any) {
@@ -22,6 +31,9 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const resolvedParams = await params;
     const result = await deleteProjectDB(resolvedParams.id);

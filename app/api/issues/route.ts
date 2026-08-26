@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getAllIssuesDB, createIssueDB } from '@/lib/db';
+import { getSessionFromCookie } from '@/lib/auth';
+import { parseBody, CreateIssueSchema } from '@/lib/validation';
 
 export async function GET() {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const issues = await getAllIssuesDB();
     return NextResponse.json(issues);
@@ -11,21 +16,25 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    if (!body.title) {
-      return NextResponse.json({ error: 'Title is required' }, { status: 400 });
-    }
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { data, error } = await parseBody(req, CreateIssueSchema);
+  if (error) {
+    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+  }
+
+  try {
     const created = await createIssueDB({
-      title: body.title,
-      description: body.description,
-      status: body.status || 'todo',
-      priority: body.priority || 'medium',
-      project: body.project,
-      projectId: body.projectId ? Number(body.projectId) : undefined,
-      labels: body.labels,
-      subtasks: body.subtasks,
+      title: data.title,
+      description: data.description,
+      status: data.status || 'todo',
+      priority: data.priority || 'medium',
+      project: data.project,
+      projectId: data.projectId,
+      labels: data.labels,
+      subtasks: data.subtasks,
+      assigneeName: data.assigneeName,
     });
 
     return NextResponse.json(created, { status: 201 });

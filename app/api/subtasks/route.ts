@@ -1,19 +1,24 @@
 import { NextResponse } from 'next/server';
-import { addSubtaskDB, updateSubtaskDB, toggleSubtaskDB, deleteSubtaskDB } from '@/lib/db';
+import { addSubtaskDB, updateSubtaskDB, deleteSubtaskDB } from '@/lib/db';
+import { getSessionFromCookie } from '@/lib/auth';
+import { parseBody, AddSubtaskSchema, UpdateSubtaskSchema } from '@/lib/validation';
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    if (!body.issueId || !body.title) {
-      return NextResponse.json({ error: 'issueId and title are required' }, { status: 400 });
-    }
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { data, error } = await parseBody(req, AddSubtaskSchema);
+  if (error) {
+    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+  }
+
+  try {
     const subtask = await addSubtaskDB(
-      body.issueId,
-      body.title,
-      body.parentId || null,
-      Boolean(body.isFolder),
-      body.type || (body.isFolder ? 'folder' : 'subtask')
+      data.issueId,
+      data.title,
+      data.parentId || null,
+      Boolean(data.isFolder),
+      data.type || (data.isFolder ? 'folder' : 'subtask')
     );
     return NextResponse.json(subtask, { status: 201 });
   } catch (err: any) {
@@ -22,26 +27,29 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-  try {
-    const body = await req.json();
-    if (!body.subId) {
-      return NextResponse.json({ error: 'subId is required' }, { status: 400 });
-    }
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    await updateSubtaskDB(body.subId, {
-      title: body.title,
-      completed: body.completed,
-      parentId: body.parentId !== undefined ? body.parentId : undefined,
-      issueId: body.issueId,
+  const { data, error } = await parseBody(req, UpdateSubtaskSchema);
+  if (error) {
+    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+  }
+
+  try {
+    await updateSubtaskDB(data.subId, {
+      title: data.title,
+      completed: data.completed,
+      parentId: data.parentId !== undefined ? data.parentId : undefined,
+      issueId: data.issueId,
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      subId: body.subId, 
-      completed: body.completed,
-      title: body.title,
-      parentId: body.parentId,
-      issueId: body.issueId
+    return NextResponse.json({
+      success: true,
+      subId: data.subId,
+      completed: data.completed,
+      title: data.title,
+      parentId: data.parentId,
+      issueId: data.issueId,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -49,6 +57,9 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { searchParams } = new URL(req.url);
     const subId = searchParams.get('id') || (await req.json().catch(() => ({})))?.subId;

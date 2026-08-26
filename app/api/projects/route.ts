@@ -1,25 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAllProjectsDB, createProjectDB } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getSessionFromCookie } from '@/lib/auth';
+import { parseBody, CreateProjectSchema } from '@/lib/validation';
 
 export async function GET(req: Request) {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { searchParams } = new URL(req.url);
-    let userId = searchParams.get('userId');
-
-    if (!userId) {
-      const cookieStore = await cookies();
-      const userCookie = cookieStore.get('teader_user');
-      if (userCookie && userCookie.value) {
-        try {
-          const parsed = JSON.parse(userCookie.value);
-          if (parsed && parsed.id) {
-            userId = String(parsed.id);
-          }
-        } catch {}
-      }
-    }
-
+    const userId = searchParams.get('userId') || String(session.id);
     const projects = await getAllProjectsDB(userId ? Number(userId) : undefined);
     return NextResponse.json(projects);
   } catch (err: any) {
@@ -28,42 +18,35 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    if (!body.name || !body.key) {
-      return NextResponse.json({ error: 'Project Name and Key are required' }, { status: 400 });
-    }
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('teader_user');
-    let owner_id = body.owner_id || body.creatorId;
-    let ownerName = body.ownerName;
+  const { data, error } = await parseBody(req, CreateProjectSchema);
+  if (error) {
+    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+  }
 
-    if (userCookie && userCookie.value) {
-      try {
-        const parsed = JSON.parse(userCookie.value);
-        if (parsed && parsed.id) {
-          owner_id = parsed.id;
-          ownerName = parsed.name;
-        }
-      } catch {}
-    }
+  const owner_id = session.id;
+  const ownerName = session.name;
 
-    const keyUpper = body.key.trim().toUpperCase();
+  const keyUpper = (data.key || '').trim().toUpperCase() || undefined;
+
+  if (keyUpper) {
     const existingProjects = await getAllProjectsDB();
-    const isDuplicate = existingProjects.some((p: any) => p.key.toUpperCase() === keyUpper);
-
+    const isDuplicate = (existingProjects as any[]).some((p: any) => p.key.toUpperCase() === keyUpper);
     if (isDuplicate) {
       return NextResponse.json(
         { error: `Project Key '${keyUpper}' is already taken. Please use a unique key.` },
         { status: 400 }
       );
     }
+  }
 
+  try {
     const created = await createProjectDB({
       key: keyUpper,
-      name: body.name,
-      description: body.description,
+      name: data.name,
+      description: data.description,
       owner_id,
       creatorId: owner_id,
       ownerName,
