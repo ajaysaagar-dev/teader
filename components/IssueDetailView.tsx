@@ -13,7 +13,9 @@ import {
   CheckSquare,
   Plus,
   Camera,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Folder,
+  FolderPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -240,12 +242,60 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         {/* Left Column */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#CFD4DD] tracking-tight">
+            <h1
+              contentEditable
+              suppressContentEditableWarning
+              onBlur={async (e) => {
+                const newTitle = e.currentTarget.textContent?.trim();
+                if (newTitle && newTitle !== issue.title) {
+                  onUpdateIssue({ ...issue, title: newTitle });
+                  try {
+                    await fetch(`/api/issues/${issue.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ title: newTitle }),
+                    });
+                    toast.success('Task title updated');
+                  } catch {
+                    toast.error('Failed to update title');
+                  }
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  (e.target as HTMLElement).blur();
+                }
+              }}
+              className="text-2xl font-bold text-[#CFD4DD] tracking-tight hover:bg-[#1B1C1F] focus:bg-[#131415] focus:outline-none focus:ring-1 focus:ring-[#DCB001] px-1 py-0.5 rounded transition-all cursor-text"
+              title="Click or edit to rename task title"
+            >
               {issue.title}
             </h1>
           </div>
 
-          <div className="text-sm text-[#9499A0] leading-relaxed font-normal">
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            onBlur={async (e) => {
+              const newDesc = e.currentTarget.textContent?.trim();
+              if (newDesc !== undefined && newDesc !== issue.description) {
+                onUpdateIssue({ ...issue, description: newDesc });
+                try {
+                  await fetch(`/api/issues/${issue.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: newDesc }),
+                  });
+                  toast.success('Description updated');
+                } catch {
+                  toast.error('Failed to update description');
+                }
+              }
+            }}
+            className="text-sm text-[#9499A0] leading-relaxed font-normal hover:bg-[#1B1C1F] focus:bg-[#131415] focus:outline-none focus:ring-1 focus:ring-[#DCB001]/60 px-1 py-0.5 rounded transition-all cursor-text"
+            title="Click or edit to modify description"
+          >
             {issue.description || 'No description provided.'}
           </div>
 
@@ -298,46 +348,72 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             </div>
 
             <div className="divide-y divide-[#2A2C30] pt-1 space-y-2">
-              {issue.subtasks.map((st: any) => (
-                <div key={st.id} className="py-2 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="flex items-center gap-3 text-xs text-[#9499A0] hover:text-[#CFD4DD] cursor-pointer group transition-colors flex-1">
-                      <input
-                        type="checkbox"
-                        checked={st.completed}
-                        onChange={() => handleToggleSubtask(st.id)}
-                        className="w-4 h-4 rounded border-[#3B3D41] bg-[#1A1B1D] text-[#DCB001] focus:ring-0 cursor-pointer accent-[#DCB001]"
-                      />
-                      <span className={st.completed ? 'line-through text-[#787C83]' : ''}>
-                        {st.title}
-                      </span>
-                    </label>
+              {(() => {
+                const renderDetailItem = (st: any, depth = 0): React.ReactNode => (
+                  <div key={st.id} className="py-2 space-y-2">
+                    <div
+                      className="flex items-center justify-between"
+                      style={{ paddingLeft: `${depth * 16}px` }}
+                    >
+                      <label className="flex items-center gap-3 text-xs text-[#9499A0] hover:text-[#CFD4DD] cursor-pointer group transition-colors flex-1">
+                        {st.isFolder || st.type === 'folder' ? (
+                          <Folder size={14} className="text-[#DCB001] shrink-0" />
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={st.completed}
+                            onChange={() => handleToggleSubtask(st.id)}
+                            className="w-4 h-4 rounded border-[#3B3D41] bg-[#1A1B1D] text-[#DCB001] focus:ring-0 cursor-pointer accent-[#DCB001]"
+                          />
+                        )}
+                        <span className={`truncate ${
+                          st.isFolder || st.type === 'folder'
+                            ? 'font-bold text-white'
+                            : st.completed
+                            ? 'line-through text-[#787C83]'
+                            : ''
+                        }`}>
+                          {st.title}
+                        </span>
+                      </label>
 
-                    {/* Image Upload Button for Sub-task */}
-                    <label className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#222427] border border-[#DCB001]/30 rounded cursor-pointer transition-colors">
-                      <Camera size={11} />
-                      <span>{uploadingSubtaskId === st.id ? 'Uploading...' : 'Attach Image'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageFileUpload(e, st.id)}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-
-                  {/* Sub-task Image Preview */}
-                  {st.imageUrl && (
-                    <div className="ml-7 pt-1">
-                      <img
-                        src={st.imageUrl}
-                        alt="Sub-task image"
-                        className="w-32 h-20 object-cover rounded-lg border border-[#2A2C30] hover:scale-105 transition-transform"
-                      />
+                      {/* Image Upload Button for Sub-task */}
+                      {!st.isFolder && (
+                        <label className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#222427] border border-[#DCB001]/30 rounded cursor-pointer transition-colors">
+                          <Camera size={11} />
+                          <span>{uploadingSubtaskId === st.id ? 'Uploading...' : 'Attach Image'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageFileUpload(e, st.id)}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* Sub-task Image Preview */}
+                    {st.imageUrl && (
+                      <div className="ml-7 pt-1">
+                        <img
+                          src={st.imageUrl}
+                          alt="Sub-task image"
+                          className="w-32 h-20 object-cover rounded-lg border border-[#2A2C30] hover:scale-105 transition-transform"
+                        />
+                      </div>
+                    )}
+
+                    {/* Nested Subtask Children */}
+                    {st.subtasks && st.subtasks.length > 0 && (
+                      <div className="border-l border-[#2A2C30] ml-3 pl-2 space-y-1">
+                        {st.subtasks.map((child: any) => renderDetailItem(child, depth + 1))}
+                      </div>
+                    )}
+                  </div>
+                );
+
+                return issue.subtasks.map((st: any) => renderDetailItem(st));
+              })()}
             </div>
           </div>
 
