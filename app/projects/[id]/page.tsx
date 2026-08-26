@@ -21,13 +21,18 @@ import {
   Layers,
   LayoutGrid,
   Terminal,
-  FolderTree
+  FolderTree,
+  BarChart3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 
 // Dynamic lazy-loaded view components for optimal code-splitting and load speed
+const ProjectOverviewView = dynamic(
+  () => import('@/components/ProjectOverviewView').then((m) => ({ default: m.ProjectOverviewView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const KanbanBoardView = dynamic(
   () => import('@/components/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -70,14 +75,15 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'board' | 'hierarchy' | 'dev' | 'tree' {
-  if (!view) return 'board';
+function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' {
+  if (!view) return 'overview';
   const v = String(view).toLowerCase();
+  if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'tree') return 'tree';
   if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
   if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
   if (v === 'board' || v === 'kanban') return 'board';
-  return 'board';
+  return 'overview';
 }
 
 export default function SingleProjectPage() {
@@ -86,7 +92,7 @@ export default function SingleProjectPage() {
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
 
-  const [activeTab, setActiveTab] = useState<'board' | 'hierarchy' | 'dev' | 'tree'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -94,10 +100,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'board' | 'hierarchy' | 'dev' | 'tree') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
   }, [projectIdParam, router]);
+
 
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -676,8 +683,21 @@ export default function SingleProjectPage() {
             )}
           </div>
 
-          {/* Center / Right: Tab Switcher (Board vs. Hierarchical vs. Dev Stream vs. Tree) */}
+          {/* Center / Right: Tab Switcher (Overview vs. Board vs. Hierarchical vs. Tree vs. Dev Stream) */}
           <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5">
+            <button
+              onClick={() => handleTabSwitch('overview')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Overview & Analytics"
+            >
+              <BarChart3 size={13} />
+              <span>Overview</span>
+            </button>
+
             <button
               onClick={() => handleTabSwitch('board')}
               className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
@@ -732,6 +752,7 @@ export default function SingleProjectPage() {
               <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
             </button>
           </div>
+
 
           {/* Right: Creator, Stacked Members, Sync Pulse & Actions */}
           <div className="flex items-center gap-2 text-xs shrink-0">
@@ -789,7 +810,8 @@ export default function SingleProjectPage() {
                   className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
                 >
                   <ArrowLeft size={12} />
-                  <span>Back to {activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
+                  <span>Back to {activeTab === 'overview' ? 'Overview' : activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
+
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -814,9 +836,20 @@ export default function SingleProjectPage() {
                 currentRole={isCreator ? 'owner' : 'member'}
               />
             </div>
+          ) : activeTab === 'overview' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <ProjectOverviewView
+                issues={projectIssues}
+                project={project}
+                members={joinedMembers}
+                onNavigateTab={handleTabSwitch}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              />
+            </div>
           ) : activeTab === 'tree' ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <TreeView
+
                 issues={projectIssues}
                 projectName={project?.name}
                 projectKey={project?.key}
