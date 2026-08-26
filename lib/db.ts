@@ -1,11 +1,17 @@
 import mysql from 'mysql2/promise';
-import crypto from 'crypto';
 
-// MySQL Connection Config
-const DB_HOST = process.env.MYSQL_HOST || 'localhost';
-const DB_USER = process.env.MYSQL_USER || 'ajaysaagar';
-const DB_PASSWORD = process.env.MYSQL_PASSWORD || 'aass209c';
-const DB_NAME = process.env.MYSQL_DATABASE || 'teader_db';
+// MySQL Connection Config — all credentials must be set via environment variables.
+// Hardcoded fallbacks have been intentionally removed.
+if (!process.env.MYSQL_USER || !process.env.MYSQL_PASSWORD || !process.env.MYSQL_DATABASE) {
+  throw new Error(
+    '[teader] Required env vars MYSQL_USER, MYSQL_PASSWORD, and MYSQL_DATABASE must be set. ' +
+    'See .env.example for reference.'
+  );
+}
+const DB_HOST = process.env.MYSQL_HOST ?? 'localhost';
+const DB_USER = process.env.MYSQL_USER;
+const DB_PASSWORD = process.env.MYSQL_PASSWORD;
+const DB_NAME = process.env.MYSQL_DATABASE;
 const DB_PORT = Number(process.env.MYSQL_PORT) || 3306;
 
 let pool: mysql.Pool | null = null;
@@ -33,8 +39,12 @@ let memoryMembersStore: any[] = [];
 let memoryIssuesStore: any[] = [];
 let memoryImagesStore: any[] = [];
 
-export function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+import crypto from 'crypto';
+import { hashPassword, verifyPassword } from './auth';
+
+/** @deprecated sha256 — used only to compare old hashes during the bcrypt migration window */
+function legacySha256(plain: string): string {
+  return crypto.createHash('sha256').update(plain).digest('hex');
 }
 
 export function generate30CharKey(): string {
@@ -170,7 +180,82 @@ export async function initDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 
-    // Seed Default Admin Users if Empty
+    // 7. Add `role` column to project_members (P1-5)
+    try { await p.query(`ALTER TABLE \`project_members\` ADD COLUMN \`role\` VARCHAR(32) NOT NULL DEFAULT 'member';`); } catch {}
+
+    // 8. Create Comments table (P1-2)
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`comments\` (
+        \`id\` VARCHAR(64) PRIMARY KEY,
+        \`body\` TEXT NOT NULL,
+        \`issueId\` VARCHAR(64) NOT NULL,
+        \`authorId\` INT NOT NULL,
+        \`parentId\` VARCHAR(64) DEFAULT NULL,
+        \`editedAt\` TIMESTAMP NULL DEFAULT NULL,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`idx_comments_issueId\` (\`issueId\`),
+        FOREIGN KEY (\`issueId\`) REFERENCES \`issues\`(\`id\`) ON DELETE CASCADE,
+        FOREIGN KEY (\`authorId\`) REFERENCES \`users\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 9. Create Activity / Audit log table (P1-3)
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`activities\` (
+        \`id\` VARCHAR(64) PRIMARY KEY,
+        \`issueId\` VARCHAR(64) NOT NULL,
+        \`actorId\` INT DEFAULT NULL,
+        \`actorName\` VARCHAR(128) NOT NULL DEFAULT 'system',
+        \`type\` VARCHAR(64) NOT NULL,
+        \`payload\` JSON DEFAULT NULL,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`idx_activities_issueId\` (\`issueId\`),
+        FOREIGN KEY (\`issueId\`) REFERENCES \`issues\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 10. Create Labels table (P1-4)
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`labels\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(128) NOT NULL,
+        \`color\` VARCHAR(32) NOT NULL DEFAULT '#787C83',
+        \`projectId\` INT NOT NULL,
+        FOREIGN KEY (\`projectId\`) REFERENCES \`projects\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 11. Create IssueLabel join table (P1-4)
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`issue_labels\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`issueId\` VARCHAR(64) NOT NULL,
+        \`labelId\` INT NOT NULL,
+        UNIQUE KEY \`unique_issue_label\` (\`issueId\`, \`labelId\`),
+        FOREIGN KEY (\`issueId\`) REFERENCES \`issues\`(\`id\`) ON DELETE CASCADE,
+        FOREIGN KEY (\`labelId\`) REFERENCES \`labels\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 12. Create Sprints table (P1-6)
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`sprints\` (
+        \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+        \`name\` VARCHAR(128) NOT NULL,
+        \`projectId\` INT NOT NULL,
+        \`startDate\` DATE DEFAULT NULL,
+        \`endDate\` DATE DEFAULT NULL,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (\`projectId\`) REFERENCES \`projects\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 13. Add assigneeId / reporterId / sprintId FK columns to issues (P1-1)
+    try { await p.query(`ALTER TABLE \`issues\` ADD COLUMN \`assigneeId\` INT DEFAULT NULL;`); } catch {}
+    try { await p.query(`ALTER TABLE \`issues\` ADD COLUMN \`reporterId\` INT DEFAULT NULL;`); } catch {}
+    try { await p.query(`ALTER TABLE \`issues\` ADD COLUMN \`sprintId\` INT DEFAULT NULL;`); } catch {}
+
+
     const [userRows]: any = await p.query(`SELECT COUNT(*) as cnt FROM \`users\``);
     if (userRows[0].cnt === 0) {
       await seedDefaultUsers(p);
@@ -516,7 +601,7 @@ export async function registerUserDB(data: { name: string; email: string; passwo
   await initDB();
   const name = data.name.trim();
   const email = data.email.toLowerCase().trim();
-  const hashedPassword = hashPassword(data.password);
+  const hashedPassword = await hashPassword(data.password); // bcrypt
   const avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
 
   try {
@@ -544,29 +629,39 @@ export async function registerUserDB(data: { name: string; email: string; passwo
 export async function loginUserDB(email: string, passwordUnhashed: string) {
   await initDB();
   const emailLower = email.toLowerCase().trim();
-  const hashedPassword = hashPassword(passwordUnhashed);
 
   try {
     const p = getPool();
     const [rows]: any = await p.query(
-      `SELECT * FROM \`users\` WHERE \`email\` = ? AND \`password\` = ?`,
-      [emailLower, hashedPassword]
+      `SELECT * FROM \`users\` WHERE \`email\` = ?`,
+      [emailLower]
     );
 
     if (rows && rows.length > 0) {
       const user = rows[0];
+      const isValid = await verifyPassword(passwordUnhashed, user.password);
+
+      if (!isValid) throw new Error('Invalid email or password');
+
+      // ─── Migration: re-hash sha256 passwords to bcrypt on successful login ───
+      if (/^[a-f0-9]{64}$/.test(user.password)) {
+        const newHash = await hashPassword(passwordUnhashed);
+        await p.query(`UPDATE \`users\` SET \`password\` = ? WHERE \`id\` = ?`, [newHash, user.id]);
+      }
+
       return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
     }
-  } catch {
-    const user = memoryUsersStore.find(
-      (u) => u.email === emailLower && u.password === hashedPassword
-    );
-    if (user) {
+  } catch (err: any) {
+    if (err.message === 'Invalid email or password') throw err;
+    // Fallback to in-memory store
+    const user = memoryUsersStore.find((u) => u.email === emailLower);
+    if (user && (await verifyPassword(passwordUnhashed, user.password))) {
       return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
     }
   }
   throw new Error('Invalid email or password');
 }
+
 
 export async function getUserByIdDB(id: number | string) {
   await initDB();
