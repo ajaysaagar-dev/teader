@@ -1209,33 +1209,59 @@ export async function updateSubtaskDB(
       ]);
     }
   } catch {
-    const updateRecursive = (items: any[]): any => {
-      for (const st of items) {
-        if (st.id === subId) {
-          if (updates.title !== undefined) st.title = updates.title.trim();
-          if (updates.completed !== undefined) {
-            st.completed = updates.completed;
-            if (st.subtasks) {
-              st.subtasks.forEach((c: any) => (c.completed = updates.completed));
-            }
-          }
-          if (updates.parentId !== undefined) st.parentId = updates.parentId;
-          if (updates.issueId !== undefined) st.issueId = updates.issueId;
-          return st;
-        }
-        if (st.subtasks) {
-          const found = updateRecursive(st.subtasks);
-          if (found) return found;
+    // Failover: Extract node and re-insert into new parent or root
+    let extracted: any = null;
+    const removeMem = (items: any[]): any[] => {
+      const res: any[] = [];
+      for (const item of items) {
+        if (item.id === subId) {
+          extracted = item;
+        } else {
+          const copy = { ...item };
+          if (copy.subtasks) copy.subtasks = removeMem(copy.subtasks);
+          res.push(copy);
         }
       }
-      return null;
+      return res;
     };
 
     for (const iss of memoryIssuesStore) {
-      if (iss.subtasks) updateRecursive(iss.subtasks);
+      if (iss.subtasks) iss.subtasks = removeMem(iss.subtasks);
+    }
+
+    if (extracted) {
+      if (updates.title !== undefined) extracted.title = updates.title.trim();
+      if (updates.completed !== undefined) extracted.completed = updates.completed;
+      if (updates.parentId !== undefined) extracted.parentId = updates.parentId;
+      if (updates.issueId !== undefined) extracted.issueId = updates.issueId;
+
+      const targetIss = memoryIssuesStore.find((i) => i.id === (updates.issueId || extracted.issueId));
+      if (targetIss) {
+        if (!targetIss.subtasks) targetIss.subtasks = [];
+        if (!updates.parentId) {
+          targetIss.subtasks.push(extracted);
+        } else {
+          const insertMem = (items: any[]): boolean => {
+            for (const it of items) {
+              if (it.id === updates.parentId) {
+                if (!it.subtasks) it.subtasks = [];
+                it.isFolder = true;
+                it.subtasks.push(extracted);
+                return true;
+              }
+              if (it.subtasks && insertMem(it.subtasks)) return true;
+            }
+            return false;
+          };
+          if (!insertMem(targetIss.subtasks)) {
+            targetIss.subtasks.push(extracted);
+          }
+        }
+      }
     }
   }
 }
+
 
 export async function addSubtaskDB(
   issueId: string,

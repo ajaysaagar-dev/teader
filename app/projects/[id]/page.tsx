@@ -544,8 +544,87 @@ export default function SingleProjectPage() {
     }
   }, [fetchProjectData]);
 
+  // Pure helper to move a node (subtask or folder) to a new parent folder or task root
+  const moveNodeInIssues = (
+    currentIssues: Issue[],
+    subId: string,
+    newParentId: string | null,
+    targetIssueId: string
+  ): Issue[] => {
+    let extractedNode: any = null;
+
+    // 1. Remove the node from wherever it currently lives
+    const removeRecursive = (items: any[]): any[] => {
+      const result: any[] = [];
+      for (const item of items) {
+        if (item.id === subId) {
+          extractedNode = { ...item };
+        } else {
+          const copy = { ...item };
+          if (copy.subtasks && copy.subtasks.length > 0) {
+            copy.subtasks = removeRecursive(copy.subtasks);
+          }
+          result.push(copy);
+        }
+      }
+      return result;
+    };
+
+    const strippedIssues = currentIssues.map((iss) => ({
+      ...iss,
+      subtasks: removeRecursive(iss.subtasks || []),
+    }));
+
+    if (!extractedNode) {
+      return currentIssues;
+    }
+
+    // 2. Update node's parent and target issue attributes
+    extractedNode.parentId = newParentId;
+    extractedNode.issueId = targetIssueId;
+
+    // 3. Insert the node into target issue (at root or inside newParentId folder)
+    const insertRecursive = (items: any[]): any[] => {
+      return items.map((item) => {
+        if (item.id === newParentId) {
+          return {
+            ...item,
+            isFolder: true,
+            subtasks: [...(item.subtasks || []), extractedNode],
+          };
+        }
+        if (item.subtasks && item.subtasks.length > 0) {
+          return {
+            ...item,
+            subtasks: insertRecursive(item.subtasks),
+          };
+        }
+        return item;
+      });
+    };
+
+    return strippedIssues.map((iss) => {
+      if (iss.id !== targetIssueId) return iss;
+
+      if (!newParentId) {
+        return {
+          ...iss,
+          subtasks: [...(iss.subtasks || []), extractedNode],
+        };
+      } else {
+        return {
+          ...iss,
+          subtasks: insertRecursive(iss.subtasks || []),
+        };
+      }
+    });
+  };
+
   // Handle Drag & Drop to Move Subtask / Folder (Switch Parent)
   const handleMoveSubtask = useCallback(async (subId: string, newParentId: string | null, targetIssueId: string) => {
+    // 1. Optimistic UI update immediately
+    setIssues((prev) => moveNodeInIssues(prev, subId, newParentId, targetIssueId));
+
     try {
       const res = await fetch('/api/subtasks', {
         method: 'PATCH',
@@ -553,15 +632,17 @@ export default function SingleProjectPage() {
         body: JSON.stringify({ subId, parentId: newParentId, issueId: targetIssueId }),
       });
       if (res.ok) {
-        toast.success(newParentId ? 'Moved into folder!' : 'Moved to root!');
-        fetchProjectData();
+        toast.success(newParentId ? 'Moved into folder!' : 'Moved to task root!');
       } else {
         toast.error('Failed to move item');
+        fetchProjectData();
       }
     } catch {
       toast.error('Failed to move item');
+      fetchProjectData();
     }
   }, [fetchProjectData]);
+
 
   // Handle Rename Issue / Task (Optimistic Update)
   const handleRenameIssue = useCallback(async (issueId: string, newTitle: string) => {
