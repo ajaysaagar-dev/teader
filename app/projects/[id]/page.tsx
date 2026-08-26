@@ -4,6 +4,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { KanbanBoardView } from '@/components/KanbanBoardView';
+import { HierarchicalView } from '@/components/HierarchicalView';
+import { DevStreamView } from '@/components/DevStreamView';
+import { TreeView } from '@/components/TreeView';
 import { IssueDetailView } from '@/components/IssueDetailView';
 import { NewIssueModal } from '@/components/NewIssueModal';
 import { Issue, Status } from '@/lib/types';
@@ -17,10 +20,15 @@ import {
   ArrowLeft,
   Pencil,
   Crown,
-  Users
+  Plus,
+  Layers,
+  LayoutGrid,
+  Terminal,
+  FolderTree
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 
 interface ProjectItem {
   id: string | number;
@@ -42,7 +50,30 @@ export default function SingleProjectPage() {
   const params = useParams();
   const router = useRouter();
   const projectIdParam = params?.id as string;
+  const viewParam = params?.view as string | undefined;
 
+  const parseViewTab = (view?: string): 'board' | 'hierarchy' | 'dev' | 'tree' => {
+    if (!view) return 'board';
+    const v = String(view).toLowerCase();
+    if (v === 'tree') return 'tree';
+    if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
+    if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
+    if (v === 'board' || v === 'kanban') return 'board';
+    return 'board';
+  };
+
+  const [activeTab, setActiveTab] = useState<'board' | 'hierarchy' | 'dev' | 'tree'>(() => parseViewTab(viewParam));
+
+  useEffect(() => {
+    if (viewParam) {
+      setActiveTab(parseViewTab(viewParam));
+    }
+  }, [viewParam]);
+
+  const handleTabSwitch = (newTab: 'board' | 'hierarchy' | 'dev' | 'tree') => {
+    setActiveTab(newTab);
+    router.push(`/projects/${projectIdParam}/${newTab}`);
+  };
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
@@ -239,6 +270,164 @@ export default function SingleProjectPage() {
     }
   };
 
+  // Handle Subtask Toggle (Recursive)
+  const handleToggleSubtask = async (issueId: string, subId: string, nextCompleted: boolean) => {
+    const toggleRecursive = (items: any[]): any[] =>
+      items.map((st) => {
+        if (st.id === subId) {
+          const setChild = (children: any[]): any[] =>
+            children.map((c) => ({
+              ...c,
+              completed: nextCompleted,
+              subtasks: c.subtasks ? setChild(c.subtasks) : [],
+            }));
+          return {
+            ...st,
+            completed: nextCompleted,
+            subtasks: st.subtasks ? setChild(st.subtasks) : [],
+          };
+        }
+        if (st.subtasks && st.subtasks.length > 0) {
+          return { ...st, subtasks: toggleRecursive(st.subtasks) };
+        }
+        return st;
+      });
+
+    setIssues((prev) =>
+      prev.map((iss) => {
+        if (iss.id !== issueId) return iss;
+        return { ...iss, subtasks: toggleRecursive(iss.subtasks || []) };
+      })
+    );
+
+    try {
+      await fetch('/api/subtasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subId, completed: nextCompleted }),
+      });
+      toast.success(`Marked as ${nextCompleted ? 'completed' : 'incomplete'}`);
+      if (nextCompleted) {
+        confetti({ particleCount: 35, spread: 40, origin: { y: 0.7 } });
+      }
+    } catch {
+      toast.error('Failed to update subtask');
+      fetchProjectData();
+    }
+  };
+
+  // Handle Add Subtask or Nested Folder
+  const handleAddSubtask = async (
+    issueId: string,
+    title: string,
+    parentId: string | null = null,
+    isFolder: boolean = false,
+    type: 'folder' | 'subtask' = 'subtask'
+  ) => {
+    try {
+      const res = await fetch('/api/subtasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issueId, title, parentId, isFolder, type }),
+      });
+
+      if (res.ok) {
+        toast.success(isFolder ? 'Folder created!' : 'Subtask added!');
+        fetchProjectData();
+      } else {
+        throw new Error('Failed to create subtask');
+      }
+    } catch {
+      toast.error('Failed to save to database');
+    }
+  };
+
+  // Handle Delete Subtask / Folder
+  const handleDeleteSubtask = async (issueId: string, subId: string) => {
+    try {
+      const res = await fetch(`/api/subtasks?id=${subId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Item deleted');
+        fetchProjectData();
+      }
+    } catch {
+      toast.error('Failed to delete item');
+    }
+  };
+
+  // Handle Rename Subtask / Folder
+  const handleRenameSubtask = async (issueId: string, subId: string, newTitle: string) => {
+    try {
+      const res = await fetch('/api/subtasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subId, title: newTitle }),
+      });
+      if (res.ok) {
+        toast.success('Renamed successfully!');
+        fetchProjectData();
+      }
+    } catch {
+      toast.error('Failed to rename subtask');
+    }
+  };
+
+  // Handle Drag & Drop to Move Subtask / Folder (Switch Parent)
+  const handleMoveSubtask = async (subId: string, newParentId: string | null, targetIssueId: string) => {
+    try {
+      const res = await fetch('/api/subtasks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subId, parentId: newParentId, issueId: targetIssueId }),
+      });
+      if (res.ok) {
+        toast.success(newParentId ? 'Moved into folder/parent!' : 'Moved to task root!');
+        fetchProjectData();
+      } else {
+        toast.error('Failed to move item');
+      }
+    } catch {
+      toast.error('Failed to move item');
+    }
+  };
+
+  // Handle Rename Issue / Task
+  const handleRenameIssue = async (issueId: string, newTitle: string) => {
+    try {
+      const res = await fetch(`/api/issues/${issueId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (res.ok) {
+        toast.success('Task renamed successfully!');
+        fetchProjectData();
+      }
+    } catch {
+      toast.error('Failed to rename task');
+    }
+  };
+
+  // Handle Rename Epic
+  const handleRenameEpic = async (oldEpicName: string, newEpicName: string) => {
+    try {
+      const matching = issues.filter((i) => (i.epic || 'General Tasks') === oldEpicName);
+      await Promise.all(
+        matching.map((iss) =>
+          fetch(`/api/issues/${iss.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ epic: newEpicName }),
+          })
+        )
+      );
+      toast.success(`Epic renamed to "${newEpicName}"!`);
+      fetchProjectData();
+    } catch {
+      toast.error('Failed to rename epic');
+    }
+  };
+
   const projectIssues = project
     ? issues.filter(
         (i: any) =>
@@ -263,100 +452,180 @@ export default function SingleProjectPage() {
   return (
     <AppLayout>
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
-        {/* Workspace Top Bar */}
-        <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
-          <div className="flex items-center gap-3">
+        {/* Compact Workspace Top Bar with Tab Switcher */}
+        <div className="h-11 px-3.5 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+          {/* Left: Breadcrumbs & Project Identity */}
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => router.push('/projects')}
-              className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1.5 transition-colors"
+              className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors shrink-0"
+              title="Back to Projects"
             >
               <ArrowLeft size={13} />
-              Projects Directory
+              <span>Projects</span>
             </button>
-            <span className="text-[#787C83]">/</span>
-            <span className="text-xs font-bold text-[#CFD4DD] flex items-center gap-2">
-              <FolderKanban size={15} className="text-[#DCB001]" />
-              {project?.name}
-            </span>
+            <span className="text-[#3B3D41]">/</span>
 
-            {isCreator && (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <FolderKanban size={14} className="text-[#DCB001] shrink-0" />
+              <span className="text-xs font-bold text-[#CFD4DD] truncate max-w-[150px] md:max-w-[220px]" title={project?.name}>
+                {project?.name}
+              </span>
+
+              {isCreator && (
+                <button
+                  onClick={() => {
+                    setEditName(project.name);
+                    setEditDesc(project.description || '');
+                    setIsEditProjectModalOpen(true);
+                  }}
+                  className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
+                  title="Edit Project Details (Creator Only)"
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
+            </div>
+
+            {/* Compact Copyable Project Key Pill */}
+            {project && (
               <button
-                onClick={() => {
-                  setEditName(project.name);
-                  setEditDesc(project.description || '');
-                  setIsEditProjectModalOpen(true);
-                }}
-                className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1A1B1D] rounded transition-colors"
-                title="Edit Project Details (Creator Only)"
+                onClick={handleCopyProjectKey}
+                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded text-[10px] font-mono text-[#DCB001] transition-all group shrink-0"
+                title={`Click to copy Project Key: ${project.key}`}
               >
-                <Pencil size={13} />
+                <Key size={10} className="text-[#787C83] group-hover:text-[#DCB001]" />
+                <span className="font-bold truncate max-w-[90px] md:max-w-[120px]">{project.key}</span>
+                {copiedKey ? (
+                  <Check size={11} className="text-[#22C55E]" />
+                ) : (
+                  <Copy size={10} className="text-[#787C83] group-hover:text-white" />
+                )}
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            {/* Project Creator Badge */}
-            <div className="flex items-center gap-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1 text-xs">
-              <Crown size={13} className={isCreator ? 'text-[#22C55E]' : 'text-[#787C83]'} />
-              <span className="text-[11px] text-[#787C83]">Created by:</span>
-              <span className="font-bold text-[#CFD4DD]">{project?.ownerName || 'karri'}</span>
+          {/* Center / Right: Tab Switcher (Board vs. Hierarchical vs. Dev Stream vs. Tree) */}
+          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5">
+            <button
+              onClick={() => handleTabSwitch('board')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'board'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+            >
+              <LayoutGrid size={13} />
+              <span>Board</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('hierarchy')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'hierarchy'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+            >
+              <Layers size={13} />
+              <span>Hierarchical</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('tree')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'tree'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Tree Explorer"
+            >
+              <FolderTree size={13} />
+              <span>Tree</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('dev')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'dev'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Developer Workstation Stream"
+            >
+              <Terminal size={13} />
+              <span>Dev Stream</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+          </div>
+
+          {/* Right: Creator, Stacked Members, Sync Pulse & Actions */}
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            {/* Project Creator Pill */}
+            <div className="hidden lg:flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md px-2 py-0.5 text-[11px]">
+              <Crown size={11} className={isCreator ? 'text-[#22C55E]' : 'text-[#787C83]'} />
+              <span className="text-[#787C83]">by</span>
+              <span className="font-semibold text-[#CFD4DD] truncate max-w-[70px]">{project?.ownerName || 'karri'}</span>
             </div>
 
-            {/* Top Right Show Key Button */}
-            {project && (
-              <div className="flex items-center gap-2">
-                {showProjectKey ? (
-                  <div className="flex items-center gap-2 bg-[#131415] border border-[#DCB001]/50 rounded-lg px-2.5 py-1">
-                    <span className="text-[11px] text-[#787C83]">Project Key:</span>
-                    <span className="font-mono font-bold text-[#DCB001] text-[10px] truncate max-w-[200px]">{project.key}</span>
-                    <button
-                      onClick={handleCopyProjectKey}
-                      className="p-1 text-[#787C83] hover:text-white transition-colors"
-                      title="Copy Key"
-                    >
-                      {copiedKey ? <Check size={13} className="text-[#22C55E]" /> : <Copy size={13} />}
-                    </button>
-                    <button
-                      onClick={() => setShowProjectKey(false)}
-                      className="p-0.5 text-[#787C83] hover:text-white"
-                    >
-                      <X size={12} />
-                    </button>
+            {/* Stacked Project Members */}
+            {joinedMembers.length > 0 && (
+              <div
+                className="hidden md:flex items-center -space-x-1.5 pl-1"
+                title={`Joined Members (${joinedMembers.length}): ${joinedMembers.map((m) => m.name).join(', ')}`}
+              >
+                {joinedMembers.slice(0, 3).map((m) => (
+                  <div key={m.id} className="ring-1 ring-[#1B1C1F] rounded-full">
+                    <Avatar user={{ id: String(m.id), name: m.name, avatar: m.avatar, email: m.email, role: '' }} size="xs" />
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setShowProjectKey(true);
-                      toast.info(`Project Key is: ${project.key}`);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#DCB001] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded-lg shadow-sm transition-all"
-                  >
-                    <Key size={13} />
-                    <span>Show Key</span>
-                  </button>
+                ))}
+                {joinedMembers.length > 3 && (
+                  <div className="w-5 h-5 rounded-full bg-[#2A2C30] border border-[#1B1C1F] flex items-center justify-center text-[9px] font-mono text-[#CFD4DD]">
+                    +{joinedMembers.length - 3}
+                  </div>
                 )}
               </div>
             )}
+
+            {/* Live Sync Indicator */}
+            <div className="hidden xl:flex items-center gap-1 text-[10px] font-mono text-[#787C83] pl-1" title="Real-time MySQL DB Sync Active">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              <span>Live</span>
+            </div>
+
+            {/* Quick + Task Button */}
+            <button
+              onClick={() => setIsNewIssueModalOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-md shadow-sm transition-all"
+            >
+              <Plus size={13} />
+              <span className="hidden sm:inline">New Task</span>
+              <span className="sm:hidden">New</span>
+            </button>
           </div>
         </div>
 
-        {/* Task Details or Kanban Board */}
+        {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board */}
         {selectedIssue ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="px-4 py-2 bg-[#131415] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
+            <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
               <button
                 onClick={() => setSelectedIssueId(null)}
-                className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1"
+                className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
               >
-                ← Back to {project?.name} Board
+                <ArrowLeft size={12} />
+                <span>Back to {activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
               </button>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-[#787C83]">Status:</span>
+                <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
                 <select
                   value={selectedIssue.status}
                   onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
-                  className="bg-[#1A1B1D] text-xs text-[#DCB001] border border-[#2A2C30] rounded px-2.5 py-1 outline-none cursor-pointer font-semibold"
+                  className="bg-[#131415] text-xs text-[#DCB001] border border-[#2A2C30] rounded px-2 py-0.5 outline-none cursor-pointer font-semibold"
                 >
                   <option value="todo">Todo</option>
                   <option value="in_progress">In Progress</option>
@@ -373,6 +642,47 @@ export default function SingleProjectPage() {
               currentRole={isCreator ? 'owner' : 'member'}
             />
           </div>
+        ) : activeTab === 'tree' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <TreeView
+              issues={projectIssues}
+              projectName={project?.name}
+              projectKey={project?.key}
+              onSelectIssue={(id) => setSelectedIssueId(id)}
+              onUpdateIssueStatus={handleUpdateStatus}
+              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              onToggleSubtask={handleToggleSubtask}
+              onAddSubtask={handleAddSubtask}
+              onDeleteSubtask={handleDeleteSubtask}
+              onRenameSubtask={handleRenameSubtask}
+              onMoveSubtask={handleMoveSubtask}
+              onRenameIssue={handleRenameIssue}
+              onRenameEpic={handleRenameEpic}
+            />
+          </div>
+        ) : activeTab === 'dev' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <DevStreamView
+              issues={projectIssues}
+              onSelectIssue={(id) => setSelectedIssueId(id)}
+              onUpdateIssueStatus={handleUpdateStatus}
+              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              onToggleSubtask={handleToggleSubtask}
+              onAddSubtask={handleAddSubtask}
+              currentUser={currentUser}
+            />
+          </div>
+        ) : activeTab === 'hierarchy' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <HierarchicalView
+              issues={projectIssues}
+              onSelectIssue={(id) => setSelectedIssueId(id)}
+              onUpdateIssueStatus={handleUpdateStatus}
+              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              onToggleSubtask={handleToggleSubtask}
+              onAddSubtask={handleAddSubtask}
+            />
+          </div>
         ) : (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <KanbanBoardView
@@ -384,32 +694,6 @@ export default function SingleProjectPage() {
             />
           </div>
         )}
-
-        {/* Opened Project Footer Bar showing Joined Members */}
-        <div className="px-6 py-2.5 bg-[#0F1011] border-t border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 text-xs text-[#787C83] font-semibold">
-              <Users size={14} className="text-[#DCB001]" />
-              <span>Joined Project Members ({joinedMembers.length}):</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {joinedMembers.map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-lg text-xs"
-                >
-                  <Avatar user={{ id: String(m.id), name: m.name, avatar: m.avatar, email: m.email, role: '' }} size="xs" />
-                  <span className="font-mono text-[11px] text-[#CFD4DD]">{m.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="text-[11px] font-mono text-[#787C83]">
-            Real-time MySQL Sync Active 🟢
-          </div>
-        </div>
 
         {/* New Issue Modal */}
         {project && (
