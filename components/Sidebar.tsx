@@ -84,26 +84,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
     { href: '/docs', label: 'API Docs (Swagger)', icon: FileCode },
   ];
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+
   return (
-    <aside
-      className={`h-full bg-[#0F1011] text-[#9499A0] flex flex-col justify-between select-none transition-all duration-200 ${
-        collapsed ? 'w-16' : 'w-60'
-      } shrink-0 overflow-hidden text-xs font-sans border-r border-[#2A2C30]`}
-    >
-      <div className="flex flex-col p-2 space-y-4">
-        {/* Top App Header */}
-        <div className="flex items-center justify-between px-2 py-2 border-b border-[#2A2C30]/50">
-          <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[#CFD4DD]">
-            <div className="w-5 h-5 rounded bg-[#DCB001] text-[#0F1011] flex items-center justify-center font-bold text-[11px] shrink-0">
-              T
-            </div>
-            {!collapsed && (
-              <span className="font-bold text-sm text-[#CFD4DD] flex items-center gap-1">
-                Teader <ChevronDown size={12} className="text-[#787C83]" />
-              </span>
-            )}
-          </Link>
-        </div>
+    <>
+      <aside
+        className={`h-full bg-[#0F1011] text-[#9499A0] flex flex-col justify-between select-none transition-all duration-200 ${
+          collapsed ? 'w-16' : 'w-60'
+        } shrink-0 overflow-hidden text-xs font-sans border-r border-[#2A2C30]`}
+      >
+        <div className="flex flex-col p-2 space-y-4">
+          {/* Top App Header */}
+          <div className="flex items-center justify-between px-2 py-2 border-b border-[#2A2C30]/50">
+            <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[#CFD4DD]">
+              <div className="w-5 h-5 rounded bg-[#DCB001] text-[#0F1011] flex items-center justify-center font-bold text-[11px] shrink-0">
+                T
+              </div>
+              {!collapsed && (
+                <span className="font-bold text-sm text-[#CFD4DD] flex items-center gap-1">
+                  Teader <ChevronDown size={12} className="text-[#787C83]" />
+                </span>
+              )}
+            </Link>
+          </div>
+
 
         {/* Sidebar Navigation Links */}
         <div className="space-y-1">
@@ -164,5 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
         </div>
       )}
     </aside>
+    </>
   );
 };
+
