@@ -14,7 +14,8 @@ import {
   CheckSquare,
   LayoutGrid,
   List,
-  ChevronRight
+  ChevronRight,
+  GripVertical
 } from 'lucide-react';
 
 interface KanbanBoardViewProps {
@@ -37,6 +38,9 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [addingToCol, setAddingToCol] = useState<Status | null>(null);
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
+  const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<Status | null>(null);
+
 
   // Memoized Filtered Issues
   const filteredIssues = useMemo(() => {
@@ -266,205 +270,259 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
           </div>
         </div>
       ) : (
-        /* High-Density Kanban Board Columns Grid */
+        /* High-Density Kanban Board Columns Grid with Drag & Drop */
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 overflow-y-auto min-h-0">
-          {columns.map((col) => (
-            <div
-              key={col.id}
-              className="bg-[#1B1C1F] border border-[#2A2C30] rounded-lg flex flex-col max-h-full overflow-hidden"
-            >
-              {/* Column Header */}
-              <div className="px-2.5 py-1.5 border-b border-[#2A2C30] flex items-center justify-between shrink-0 bg-[#17181A]">
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: col.color }}
-                  />
-                  <span className="font-semibold text-[11px] text-[#CFD4DD] uppercase tracking-wider">
-                    {col.title}
-                  </span>
-                  <span className="text-[10px] font-mono text-[#787C83] bg-[#131415] px-1.5 py-0.2 rounded border border-[#2A2C30]">
-                    {col.count}
-                  </span>
+          {columns.map((col) => {
+            const isColumnOver = dragOverColId === col.id;
+
+            return (
+              <div
+                key={col.id}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverColId !== col.id) setDragOverColId(col.id);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setDragOverColId(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const droppedId = e.dataTransfer.getData('text/plain') || draggedIssueId;
+                  if (droppedId) {
+                    onUpdateIssueStatus(droppedId, col.id);
+                  }
+                  setDraggedIssueId(null);
+                  setDragOverColId(null);
+                }}
+                className={`bg-[#1B1C1F] border rounded-lg flex flex-col max-h-full overflow-hidden transition-all duration-150 ${
+                  isColumnOver
+                    ? 'border-[#DCB001] bg-[#1F2023] ring-2 ring-[#DCB001]/20'
+                    : 'border-[#2A2C30]'
+                }`}
+              >
+                {/* Column Header */}
+                <div className={`px-2.5 py-1.5 border-b border-[#2A2C30] flex items-center justify-between shrink-0 transition-colors ${
+                  isColumnOver ? 'bg-[#222427]' : 'bg-[#17181A]'
+                }`}>
+                  <div className="flex items-center gap-1.5">
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: col.color }}
+                    />
+                    <span className="font-semibold text-[11px] text-[#CFD4DD] uppercase tracking-wider">
+                      {col.title}
+                    </span>
+                    <span className="text-[10px] font-mono text-[#787C83] bg-[#131415] px-1.5 py-0.2 rounded border border-[#2A2C30]">
+                      {col.count}
+                    </span>
+                  </div>
+
+                  {/* Quick inline add trigger */}
+                  {onAddNewTaskToColumn && (
+                    <button
+                      onClick={() => {
+                        if (addingToCol === col.id) {
+                          setAddingToCol(null);
+                        } else {
+                          setAddingToCol(col.id);
+                          setInlineTaskTitle('');
+                        }
+                      }}
+                      className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
+                      title={`Add task to ${col.title}`}
+                    >
+                      <Plus size={13} />
+                    </button>
+                  )}
                 </div>
 
-                {/* Quick inline add trigger */}
-                {onAddNewTaskToColumn && (
-                  <button
-                    onClick={() => {
-                      if (addingToCol === col.id) {
-                        setAddingToCol(null);
-                      } else {
-                        setAddingToCol(col.id);
-                        setInlineTaskTitle('');
-                      }
-                    }}
-                    className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
-                    title={`Add task to ${col.title}`}
-                  >
-                    <Plus size={13} />
-                  </button>
-                )}
-              </div>
-
-              {/* Column Body / Cards List */}
-              <div className="flex-1 p-2 space-y-2 overflow-y-auto">
-                {/* Inline Quick Add Card */}
-                {addingToCol === col.id && (
-                  <form
-                    onSubmit={(e) => handleInlineAddSubmit(col.id, e)}
-                    className="p-2 bg-[#131415] border border-[#DCB001]/50 rounded-lg space-y-1.5"
-                  >
-                    <input
-                      type="text"
-                      autoFocus
-                      value={inlineTaskTitle}
-                      onChange={(e) => setInlineTaskTitle(e.target.value)}
-                      placeholder="What needs to be done?"
-                      className="w-full bg-transparent text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none"
-                    />
-                    <div className="flex items-center justify-end gap-1.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setAddingToCol(null)}
-                        className="px-2 py-0.5 text-[10px] text-[#787C83] hover:text-white"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={!inlineTaskTitle.trim()}
-                        className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] rounded text-[10px] font-bold disabled:opacity-40"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {/* Task Cards */}
-                {filteredIssues
-                  .filter((i) => i.status === col.id)
-                  .map((issue) => {
-                    const completedSubCount = (issue.subtasks || []).filter((st) => st.completed).length;
-                    const issueAny = issue as any;
-                    const assigneeUser = issue.assignee || {
-                      id: 'usr_default',
-                      name: issueAny.assigneeName || 'User',
-                      avatar: issueAny.assigneeAvatar,
-                      email: '',
-                      role: '',
-                    };
-
-                    return (
-                      <div
-                        key={issue.id}
-                        onClick={() => onSelectIssue(issue.id)}
-                        className="p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-lg cursor-pointer space-y-2 transition-all shadow-sm group"
-                      >
-                        {/* Key & Priority */}
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-[11px] font-bold text-[#DCB001]">
-                            {issue.key}
-                          </span>
-                          <span
-                            className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase ${
-                              issue.priority === 'critical'
-                                ? 'bg-[#C0393B]/20 text-[#C0393B] border border-[#C0393B]/40'
-                                : issue.priority === 'high'
-                                ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/40'
-                                : 'bg-[#2A2C30] text-[#787C83]'
-                            }`}
-                          >
-                            {issue.priority}
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
-                          {issue.title}
-                        </h4>
-
-                        {/* Subtasks progress indicator */}
-                        {(issue.subtasks || []).length > 0 && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
-                            <CheckSquare size={11} className="text-[#DCB001]" />
-                            <span>
-                              {completedSubCount}/{(issue.subtasks || []).length} sub-works
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Card Footer */}
-                        <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-1.5 truncate max-w-[120px]">
-                            <Avatar user={assigneeUser} size="xs" />
-                            <span className="text-[10px] text-[#787C83] font-mono truncate">
-                              {assigneeUser.name}
-                            </span>
-                          </div>
-
-                          {/* Quick Stage Action Buttons on Hover */}
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {col.id === 'todo' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onUpdateIssueStatus(issue.id, 'in_progress');
-                                }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded flex items-center gap-0.5"
-                                title="Start Progress"
-                              >
-                                <Play size={9} /> Start
-                              </button>
-                            )}
-
-                            {col.id === 'in_progress' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onUpdateIssueStatus(issue.id, 'needs_review');
-                                }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#3B82F6]/40 rounded flex items-center gap-0.5"
-                                title="Submit for Review"
-                              >
-                                <Eye size={9} /> Review
-                              </button>
-                            )}
-
-                            {col.id === 'needs_review' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onUpdateIssueStatus(issue.id, 'done');
-                                }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#22C55E] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#22C55E]/40 rounded flex items-center gap-0.5"
-                                title="Approve & Complete"
-                              >
-                                <CheckCircle2 size={9} /> Approve
-                              </button>
-                            )}
-
-                            {col.id === 'done' && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onUpdateIssueStatus(issue.id, 'todo');
-                                }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#787C83] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#2A2C30] rounded flex items-center gap-0.5"
-                                title="Reopen Task"
-                              >
-                                <RotateCcw size={9} /> Reopen
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                {/* Column Body / Cards List */}
+                <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                  {/* Inline Quick Add Card */}
+                  {addingToCol === col.id && (
+                    <form
+                      onSubmit={(e) => handleInlineAddSubmit(col.id, e)}
+                      className="p-2 bg-[#131415] border border-[#DCB001]/50 rounded-lg space-y-1.5"
+                    >
+                      <input
+                        type="text"
+                        autoFocus
+                        value={inlineTaskTitle}
+                        onChange={(e) => setInlineTaskTitle(e.target.value)}
+                        placeholder="What needs to be done?"
+                        className="w-full bg-transparent text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none"
+                      />
+                      <div className="flex items-center justify-end gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setAddingToCol(null)}
+                          className="px-2 py-0.5 text-[10px] text-[#787C83] hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={!inlineTaskTitle.trim()}
+                          className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] rounded text-[10px] font-bold disabled:opacity-40"
+                        >
+                          Add
+                        </button>
                       </div>
-                    );
-                  })}
+                    </form>
+                  )}
+
+                  {/* Task Cards */}
+                  {filteredIssues
+                    .filter((i) => i.status === col.id)
+                    .map((issue) => {
+                      const completedSubCount = (issue.subtasks || []).filter((st) => st.completed).length;
+                      const issueAny = issue as any;
+                      const assigneeUser = issue.assignee || {
+                        id: 'usr_default',
+                        name: issueAny.assigneeName || 'User',
+                        avatar: issueAny.assigneeAvatar,
+                        email: '',
+                        role: '',
+                      };
+                      const isDragging = draggedIssueId === issue.id;
+
+                      return (
+                        <div
+                          key={issue.id}
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', issue.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggedIssueId(issue.id);
+                          }}
+                          onDragEnd={() => {
+                            setDraggedIssueId(null);
+                            setDragOverColId(null);
+                          }}
+                          onClick={() => onSelectIssue(issue.id)}
+                          className={`p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-all duration-150 shadow-sm group select-none ${
+                            isDragging
+                              ? 'opacity-30 border-dashed border-[#DCB001] scale-[0.98]'
+                              : 'border-[#2A2C30] hover:border-[#DCB001]/40'
+                          }`}
+                        >
+                          {/* Key, Priority & Drag Handle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <GripVertical size={11} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0" />
+                              <span className="font-mono text-[11px] font-bold text-[#DCB001]">
+                                {issue.key}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase ${
+                                issue.priority === 'critical'
+                                  ? 'bg-[#C0393B]/20 text-[#C0393B] border border-[#C0393B]/40'
+                                  : issue.priority === 'high'
+                                  ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/40'
+                                  : 'bg-[#2A2C30] text-[#787C83]'
+                              }`}
+                            >
+                              {issue.priority}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
+                            {issue.title}
+                          </h4>
+
+                          {/* Subtasks progress indicator */}
+                          {(issue.subtasks || []).length > 0 && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
+                              <CheckSquare size={11} className="text-[#DCB001]" />
+                              <span>
+                                {completedSubCount}/{(issue.subtasks || []).length} sub-works
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Card Footer */}
+                          <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1.5 truncate max-w-[120px]">
+                              <Avatar user={assigneeUser} size="xs" />
+                              <span className="text-[10px] text-[#787C83] font-mono truncate">
+                                {assigneeUser.name}
+                              </span>
+                            </div>
+
+                            {/* Quick Stage Action Buttons on Hover */}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {col.id === 'todo' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateIssueStatus(issue.id, 'in_progress');
+                                  }}
+                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded flex items-center gap-0.5"
+                                  title="Start Progress"
+                                >
+                                  <Play size={9} /> Start
+                                </button>
+                              )}
+
+                              {col.id === 'in_progress' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateIssueStatus(issue.id, 'needs_review');
+                                  }}
+                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#3B82F6]/40 rounded flex items-center gap-0.5"
+                                  title="Submit for Review"
+                                >
+                                  <Eye size={9} /> Review
+                                </button>
+                              )}
+
+                              {col.id === 'needs_review' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateIssueStatus(issue.id, 'done');
+                                  }}
+                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#22C55E] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#22C55E]/40 rounded flex items-center gap-0.5"
+                                  title="Approve & Complete"
+                                >
+                                  <CheckCircle2 size={9} /> Approve
+                                </button>
+                              )}
+
+                              {col.id === 'done' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateIssueStatus(issue.id, 'todo');
+                                  }}
+                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#787C83] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#2A2C30] rounded flex items-center gap-0.5"
+                                  title="Reopen Task"
+                                >
+                                  <RotateCcw size={9} /> Reopen
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {/* Drop Placeholder Slot Indicator */}
+                  {isColumnOver && (
+                    <div className="p-3 border-2 border-dashed border-[#DCB001]/60 bg-[#DCB001]/5 rounded-lg text-center text-[10px] font-mono text-[#DCB001] animate-pulse">
+                      Drop to move to {col.title}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -472,4 +530,5 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 });
 
 KanbanBoardView.displayName = 'KanbanBoardView';
+
 
