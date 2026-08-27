@@ -30,6 +30,7 @@ import {
   Link as LinkIcon,
   Table as TableIcon,
   Minus,
+  Cloud,
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
@@ -505,7 +506,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   };
 
   // Handle Save Doc Content to Server .md File
-  const handleSaveDoc = async () => {
+  const handleSaveDoc = useCallback(async () => {
     if (!selectedDocId) return;
 
     setIsSaving(true);
@@ -524,7 +525,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         setDocs((prev) =>
           prev.map((d) => (d.id === selectedDocId ? { ...d, title: activeTitle.trim(), updatedAt: data.updatedAt } : d))
         );
-        toast.success(`Saved to server file: ${activeDoc?.fileName || '.md'}`);
+        toast.success(`☁️ Saved to cloud: ${activeDoc?.fileName || '.md'}`);
       } else {
         toast.error('Failed to save document to server');
       }
@@ -533,7 +534,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [selectedDocId, projectId, activeTitle, activeContent, activeDoc]);
+
+  // Global Ctrl+S / Cmd+S Shortcut to Save on Cloud
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSaveDoc();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSaveDoc]);
+
 
   // Handle Delete Doc
   const handleDeleteDoc = async (docId: string, docFileName: string, e: React.MouseEvent) => {
@@ -755,15 +770,20 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   </button>
                 </div>
 
-                {/* Save Button */}
+                {/* Save to Cloud Button */}
                 <button
                   onClick={handleSaveDoc}
                   disabled={isSaving}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                  title="Save to Cloud (Ctrl + S)"
                 >
-                  <Save size={13} />
+                  <Cloud size={13} />
                   <span>{isSaving ? 'Saving...' : 'Save .md'}</span>
+                  <span className="hidden sm:inline-block text-[10px] opacity-75 font-mono ml-0.5 bg-black/15 px-1 py-0.2 rounded">
+                    Ctrl+S
+                  </span>
                 </button>
+
               </div>
             </div>
 
