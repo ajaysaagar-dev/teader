@@ -49,17 +49,18 @@ conn.on('ready', () => {
     fi
 
     # Create .env on server
+    # Create .env on server
     cat << 'EOF' > .env
-POSTGRES_HOST=178.238.226.206
+POSTGRES_HOST=127.0.0.1
 POSTGRES_PORT=5432
 POSTGRES_USER=ajaysaagar
 POSTGRES_PASSWORD=aass209c
 POSTGRES_DATABASE=ajaysaagar
-DATABASE_URL="postgresql://ajaysaagar:aass209c@178.238.226.206:5432/ajaysaagar"
+DATABASE_URL="postgresql://ajaysaagar:aass209c@127.0.0.1:5432/ajaysaagar"
 JWT_SECRET=0c51217d7a628ef407f4af35b6e7d6560051e7ef41582dac2121fafdf459c03f2c119fd8a202d1681e7bc99b20d5fb1cb02b55baaa2f256ae0b34cca6e121b0e
 PORT=3000
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL="http://178.238.226.206"
+NEXT_PUBLIC_APP_URL="https://teader.vedipocketpc.online"
 EOF
 
     echo "=== 3. Installing Dependencies & Building Next.js ==="
@@ -72,11 +73,25 @@ EOF
     pm2 save
     pm2 startup || true
 
-    echo "=== 5. Configuring Nginx Reverse Proxy (Port 80 -> Port 3000) ==="
-    cat << 'EOF' > /etc/nginx/sites-available/teader
+    echo "=== 5. Configuring Nginx Reverse Proxy & SSL ==="
+    if [ -f "/etc/letsencrypt/live/teader.vedipocketpc.online/fullchain.pem" ]; then
+      cat << 'EOF' > /etc/nginx/sites-available/teader
 server {
     listen 80;
-    server_name 178.238.226.206 _;
+    listen [::]:80;
+    server_name teader.vedipocketpc.online 178.238.226.206 _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name teader.vedipocketpc.online 178.238.226.206;
+
+    ssl_certificate /etc/letsencrypt/live/teader.vedipocketpc.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/teader.vedipocketpc.online/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     client_max_body_size 50M;
 
@@ -93,10 +108,12 @@ server {
     }
 }
 EOF
+    fi
 
     ln -sf /etc/nginx/sites-available/teader /etc/nginx/sites-enabled/default
     nginx -t
     systemctl restart nginx
+
 
     # Ensure Firewall opens 80, 443, 3000, 22
     ufw allow 22/tcp || true
