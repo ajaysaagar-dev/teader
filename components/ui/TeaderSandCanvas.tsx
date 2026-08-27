@@ -64,7 +64,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
     offscreen.height = canvas.height;
     const offCtx = offscreen.getContext('2d');
 
-    const fontSize = Math.min(canvas.width * 0.16, 130);
+    const fontSize = Math.min(Math.max(canvas.width * 0.22, 90), 220);
 
     if (offCtx) {
       offCtx.fillStyle = '#FFFFFF';
@@ -74,9 +74,8 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
       offCtx.fillText('teader', canvas.width / 2, canvas.height / 2);
 
       // Subtitle below
-      offCtx.font = `600 ${Math.max(13, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
-      offCtx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
-
+      offCtx.font = `600 ${Math.max(16, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
+      offCtx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.62);
 
       const imgData = offCtx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
@@ -107,7 +106,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
               flutterAmp: 1.2 + Math.random() * 3.5,
               flutterPhase: Math.random() * Math.PI * 2,
               curveFactor: (Math.random() - 0.5) * 0.04,
-              size: 1.4 + Math.random() * 2.2,
+              size: 1.5 + Math.random() * 2.5,
               color: BUTTERFLY_COLORS[Math.floor(Math.random() * BUTTERFLY_COLORS.length)],
               alpha: 1,
               delay: 850 + Math.random() * 600, // Stay solid bold text first, then smoothly dissolve
@@ -122,7 +121,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const elapsed = Date.now() - startTime;
 
-      // ─── Phase 1: Draw Thick Solid Bold "TEADER" Text ────────────
+      // ─── Phase 1: Draw Thick Solid Bold "teader" Text ────────────
       // Stays fully solid for the first 800ms, then fades out smoothly as particles disperse
       const textFadeStart = 800;
       const textFadeEnd = 1300;
@@ -140,14 +139,14 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
 
         // Glowing outer drop shadow
         ctx.shadowColor = '#DCB001';
-        ctx.shadowBlur = 28;
+        ctx.shadowBlur = 32;
 
         // Gradient fill for bold solid typography
         const textGrad = ctx.createLinearGradient(
-          canvas.width / 2 - 200, 
-          canvas.height / 2 - 50, 
-          canvas.width / 2 + 200, 
-          canvas.height / 2 + 50
+          canvas.width / 2 - fontSize * 1.5, 
+          canvas.height / 2 - fontSize * 0.5, 
+          canvas.width / 2 + fontSize * 1.5, 
+          canvas.height / 2 + fontSize * 0.5
         );
         textGrad.addColorStop(0, '#DCB001');
         textGrad.addColorStop(0.5, '#FDE047');
@@ -160,14 +159,14 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
         ctx.fillText('teader', canvas.width / 2, canvas.height / 2);
 
         // Subtitle
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 12;
         ctx.fillStyle = '#CFD4DD';
-        ctx.font = `600 ${Math.max(13, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
-        ctx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
-
+        ctx.font = `600 ${Math.max(16, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
+        ctx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.62);
 
         ctx.restore();
       }
+
 
       // ─── Phase 2: Butterfly Flying Style Particles ─────────────────
       let activeCount = 0;

@@ -290,14 +290,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* ─── Main Content Canvas Area (Only shown if logged in) ──────── */}
       {isCheckingAuth && !currentUser ? (
         <div className="flex-1 flex flex-col items-center justify-center bg-[#0A0B0D] space-y-4 select-none">
-          <div className="text-center space-y-1">
-            <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#DCB001] via-[#FDE047] to-[#F59E0B] font-prompt tracking-tight">
+          <div className="text-center space-y-2">
+            <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#DCB001] via-[#FDE047] to-[#F59E0B] font-prompt tracking-tight drop-shadow-[0_0_35px_rgba(220,176,1,0.35)]">
               teader
             </h1>
-            <p className="text-xs font-mono text-[#8E939D] tracking-[0.25em] uppercase font-prompt">
+            <p className="text-sm sm:text-base font-semibold text-[#8E939D] tracking-[0.4em] uppercase font-prompt">
               workspace
             </p>
           </div>
+
           <div className="flex items-center gap-2 text-xs font-mono text-[#787C83] pt-2">
             <Loader2 size={14} className="animate-spin text-[#DCB001]" />
             <span>Verifying workspace session...</span>
