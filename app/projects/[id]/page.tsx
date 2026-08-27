@@ -8,6 +8,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status } from '@/lib/types';
+import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+
 
 import { Avatar } from '@/components/ui/Avatar';
 import { 
@@ -139,12 +141,26 @@ export default function SingleProjectPage() {
 
 
 
-  const [project, setProject] = useState<ProjectItem | null>(null);
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [project, setProject] = useState<ProjectItem | null>(() => getLocalCache(`project_${projectIdParam}`, null));
+  const [issues, setIssues] = useState<Issue[]>(() => getLocalCache(`issues_${projectIdParam}`, []));
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getLocalCache(`issues_${projectIdParam}`, null));
+
+  // Sync state to local cache immediately on any mutation
+  useEffect(() => {
+    if (issues.length > 0) {
+      setLocalCache(`issues_${projectIdParam}`, issues);
+    }
+  }, [issues, projectIdParam]);
+
+  useEffect(() => {
+    if (project) {
+      setLocalCache(`project_${projectIdParam}`, project);
+    }
+  }, [project, projectIdParam]);
+
 
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);

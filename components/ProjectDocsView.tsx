@@ -39,6 +39,8 @@ import {
 
 import { toast } from 'sonner';
 import { RandomLoadingText } from './ui/RandomLoadingText';
+import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+
 
 
 interface ProjectDocsViewProps {
@@ -379,19 +381,45 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   projectName = 'Project Workspace',
   projectKey = 'PRJ',
 }) => {
-  const [docs, setDocs] = useState<ProjectDoc[]>([]);
-  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [activeContent, setActiveContent] = useState<string>('');
-  const [activeTitle, setActiveTitle] = useState<string>('');
+  const [docs, setDocs] = useState<ProjectDoc[]>(() => getLocalCache(`docs_${projectId}`, []));
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(() => {
+    const cached = getLocalCache<ProjectDoc[]>(`docs_${projectId}`, []);
+    return cached.length > 0 ? cached[0].id : null;
+  });
+  const [activeContent, setActiveContent] = useState<string>(() => {
+    const cached = getLocalCache<ProjectDoc[]>(`docs_${projectId}`, []);
+    if (cached.length > 0) {
+      return getLocalCache(`doc_content_${cached[0].id}`, '');
+    }
+    return '';
+  });
+  const [activeTitle, setActiveTitle] = useState<string>(() => {
+    const cached = getLocalCache<ProjectDoc[]>(`docs_${projectId}`, []);
+    return cached.length > 0 ? cached[0].title : '';
+  });
   const [viewMode, setViewMode] = useState<'editor' | 'split' | 'preview'>('split');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => getLocalCache<ProjectDoc[]>(`docs_${projectId}`, []).length === 0);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [copiedFile, setCopiedFile] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync docs list to cache
+  useEffect(() => {
+    if (docs.length > 0) {
+      setLocalCache(`docs_${projectId}`, docs);
+    }
+  }, [docs, projectId]);
+
+  // Sync active doc content to cache immediately
+  useEffect(() => {
+    if (selectedDocId && activeContent) {
+      setLocalCache(`doc_content_${selectedDocId}`, activeContent);
+    }
+  }, [selectedDocId, activeContent]);
 
   // 1. Fetch all docs for this project
   const fetchDocsList = useCallback(async (selectNewestId?: string) => {
@@ -400,6 +428,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       if (res.ok) {
         const data: ProjectDoc[] = await res.json();
         setDocs(data);
+        setLocalCache(`docs_${projectId}`, data);
         if (data.length > 0) {
           const targetId = selectNewestId || selectedDocId || data[0].id;
           const targetDoc = data.find((d) => d.id === targetId) || data[0];
@@ -413,6 +442,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       setLoading(false);
     }
   }, [projectId, selectedDocId]);
+
 
   useEffect(() => {
     fetchDocsList();

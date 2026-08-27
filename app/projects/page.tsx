@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { ProjectsGridSkeleton } from '@/components/ui/Skeleton';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
+import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+
 import { 
   FolderKanban, 
   Plus, 
@@ -43,11 +45,25 @@ function generate30CharKeyClient(): string {
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [issues, setIssues] = useState<any[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>(() => getLocalCache('projects_list', []));
+  const [issues, setIssues] = useState<any[]>(() => getLocalCache('all_issues_list', []));
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => getLocalCache<ProjectItem[]>('projects_list', []).length === 0);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync projects and issues to cache
+  useEffect(() => {
+    if (projects.length > 0) {
+      setLocalCache('projects_list', projects);
+    }
+  }, [projects]);
+
+  useEffect(() => {
+    if (issues.length > 0) {
+      setLocalCache('all_issues_list', issues);
+    }
+  }, [issues]);
+
 
   // Modals state
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
