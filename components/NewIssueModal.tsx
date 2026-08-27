@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Priority, Status, Issue } from '@/lib/types';
-import { X, Trash2, CheckSquare, Lock } from 'lucide-react';
+import { 
+  X, 
+  Trash2, 
+  CheckSquare, 
+  Lock, 
+  Sparkles, 
+  FileText, 
+  Calendar, 
+  Clock, 
+  Layers, 
+  Check 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -15,6 +26,57 @@ interface NewIssueModalProps {
   defaultProjectId?: number | string;
   isProjectLocked?: boolean;
 }
+
+const TEMPLATES = [
+  {
+    id: 'blank',
+    name: 'Blank Task',
+    title: '',
+    description: '',
+    labels: 'Platform Core',
+    priority: 'medium' as Priority,
+    subworks: [],
+  },
+  {
+    id: 'bug',
+    name: '🐛 Bug Report',
+    title: '[Bug]: ',
+    description: '### Steps to Reproduce\n1. \n2. \n3. \n\n### Expected Behavior\n\n### Actual Behavior\n\n### Environment\n- OS:\n- Browser:',
+    labels: 'Bug, High Priority',
+    priority: 'high' as Priority,
+    subworks: [
+      'Reproduce issue in development',
+      'Identify root cause and write fix',
+      'Add regression test suite',
+    ],
+  },
+  {
+    id: 'feature',
+    name: '✨ Feature Request',
+    title: '[Feature]: ',
+    description: '### User Story\nAs a [user], I want to [action] so that [benefit].\n\n### Acceptance Criteria\n- [ ] Given...\n- [ ] When...\n- [ ] Then...',
+    labels: 'Feature, Enhancement',
+    priority: 'medium' as Priority,
+    subworks: [
+      'Design UI mockups & token spec',
+      'Implement API endpoints & validation',
+      'Build React client components',
+    ],
+  },
+  {
+    id: 'refactor',
+    name: '🧹 Tech Debt / Refactor',
+    title: '[Refactor]: ',
+    description: '### Context & Motivation\n\n### Scope of Changes\n\n### Non-breaking verification',
+    labels: 'Refactor, Performance',
+    priority: 'low' as Priority,
+    subworks: [
+      'Benchmark existing performance',
+      'Refactor components and optimize memoization',
+      'Verify all Vitest tests pass',
+    ],
+  },
+];
 
 export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   isOpen,
@@ -30,6 +92,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [priority, setPriority] = useState<Priority>('medium');
   const [assigneeName, setAssigneeName] = useState('General (Anyone)');
   const [labels, setLabels] = useState<string>('Platform Core, Backend');
+  const [dueDate, setDueDate] = useState('');
+  const [estimatedHours, setEstimatedHours] = useState(2);
+  const [selectedTemplate, setSelectedTemplate] = useState('blank');
+
+  // AI Prompt Prompt State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiInput, setShowAiInput] = useState(false);
 
   const [joinedMembers, setJoinedMembers] = useState<{ id: number | string; name: string }[]>([]);
   const [subworks, setSubworks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
@@ -55,6 +125,69 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   }, [isOpen, defaultProjectId]);
 
   if (!isOpen) return null;
+
+  const handleApplyTemplate = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    const tmpl = TEMPLATES.find((t) => t.id === templateId);
+    if (!tmpl) return;
+
+    setTitle(tmpl.title);
+    setDescription(tmpl.description);
+    setLabels(tmpl.labels);
+    setPriority(tmpl.priority);
+    setSubworks(
+      tmpl.subworks.map((title, i) => ({
+        id: `sub_tmpl_${i}_${Date.now()}`,
+        title,
+        completed: false,
+      }))
+    );
+    toast.info(`Applied "${tmpl.name}" template`);
+  };
+
+  const handleGenerateWithAi = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Please enter a description for the AI to parse');
+      return;
+    }
+
+    setIsAiLoading(true);
+    try {
+      const res = await fetch('/api/ai/parse-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+      });
+
+      if (res.ok) {
+        const parsed = await res.json();
+        if (parsed.title) setTitle(parsed.title);
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.priority) setPriority(parsed.priority);
+        if (parsed.assigneeName) setAssigneeName(parsed.assigneeName);
+        if (parsed.labels) setLabels(parsed.labels.join(', '));
+        if (parsed.estimatedHours) setEstimatedHours(parsed.estimatedHours);
+        if (parsed.subtasks && Array.isArray(parsed.subtasks)) {
+          setSubworks(
+            parsed.subtasks.map((st: any, i: number) => ({
+              id: `sub_ai_${i}_${Date.now()}`,
+              title: st.title,
+              completed: false,
+            }))
+          );
+        }
+        setShowAiInput(false);
+        setAiPrompt('');
+        toast.success('Generated task structure with AI! ✨');
+      } else {
+        toast.error('AI parsing failed');
+      }
+    } catch {
+      toast.error('Network error calling AI assistant');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleAddSubwork = () => {
     if (!newSubworkTitle.trim()) return;
@@ -89,6 +222,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           status: 'todo',
           priority,
           assigneeName,
+          dueDate: dueDate || undefined,
+          estimatedHours: Number(estimatedHours) || undefined,
           project: targetProjectName,
           projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
           labels: labels.split(',').map((l) => l.trim()).filter(Boolean),
@@ -99,98 +234,259 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       if (res.ok) {
         const createdIssue = await res.json();
         onCreateIssue(createdIssue);
-        toast.success(`Task ${createdIssue.key} created in ${targetProjectName}!`);
+        toast.success(`Task ${createdIssue.key || ''} created successfully!`);
+        onClose();
       } else {
-        throw new Error('Failed to create in DB');
+        const err = await res.json();
+        toast.error(err.error || 'Failed to create task');
       }
     } catch {
-      toast.error('Error saving task');
+      toast.error('Network error while creating task');
     } finally {
       setIsSubmitting(false);
     }
-
-    setTitle('');
-    setDescription('');
-    setSubworks([]);
-    setAssigneeName('General (Anyone)');
-    onClose();
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none">
+      <div 
+        role="dialog"
+        aria-modal="true"
+        aria-label="Create New Task"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none"
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="w-full max-w-xl bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          exit={{ opacity: 0, scale: 0.96, y: 10 }}
+          className="w-full max-w-2xl bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A2C30] bg-[#17181A]">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[#787C83]">
-                Create Task in
+              <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+                {projectKey}
               </span>
-              <span className="text-xs font-bold text-[#DCB001] bg-[#1A1B1D] px-2 py-0.5 rounded border border-[#2A2C30]">
-                ToDo Section
-              </span>
-
-              <div className="flex items-center gap-1.5 bg-[#1A1B1D] border border-[#DCB001]/40 rounded px-2.5 py-0.5 text-xs text-[#DCB001] font-bold">
-                <Lock size={12} className="text-[#DCB001]" />
-                <span>{projectKey} {defaultProjectName ? `(${defaultProjectName})` : ''}</span>
-              </div>
+              <h2 className="text-sm font-bold text-white tracking-tight">Create New Task</h2>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1 text-[#787C83] hover:text-white rounded hover:bg-[#222427] transition-colors"
-            >
-              <X size={16} />
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAiInput((prev) => !prev)}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 hover:bg-[#DCB001]/20 rounded-lg text-xs font-semibold transition-all"
+              >
+                <Sparkles size={12} />
+                <span>{showAiInput ? 'Hide AI' : '✨ AI Quick Fill'}</span>
+              </button>
+
+              <button onClick={onClose} className="text-[#787C83] hover:text-white p-1 rounded-lg">
+                <X size={16} />
+              </button>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
-            {/* Title Field */}
+          {/* AI Quick Input Box (§4.1) */}
+          {showAiInput && (
+            <div className="p-4 bg-[#131415] border-b border-[#2A2C30] space-y-2">
+              <label className="text-[11px] font-mono text-[#DCB001] font-bold uppercase tracking-wider flex items-center gap-1">
+                <Sparkles size={12} /> Natural-Language Prompt
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Fix OAuth redirect crash in Safari, high priority, assign to jori, labels: auth, frontend"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleGenerateWithAi();
+                  }}
+                  className="flex-1 bg-[#1B1C1F] border border-[#DCB001]/50 text-xs text-white px-3 py-1.5 rounded-lg outline-none placeholder-[#787C83]"
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateWithAi}
+                  disabled={isAiLoading}
+                  className="px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded-lg transition-all disabled:opacity-50 shrink-0"
+                >
+                  {isAiLoading ? 'Parsing...' : 'Fill Form'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Form Body */}
+          <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 font-sans text-xs">
+            {/* Templates Selector (§1.4) */}
             <div>
-              <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
-                Task Title <span className="text-[#C0393B]">*</span>
+              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1.5">
+                Issue Template
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {TEMPLATES.map((tmpl) => (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    onClick={() => handleApplyTemplate(tmpl.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left transition-all border ${
+                      selectedTemplate === tmpl.id
+                        ? 'bg-[#2A2C30] text-[#DCB001] border-[#DCB001]/50 shadow-sm'
+                        : 'bg-[#131415] text-[#CFD4DD] border-[#2A2C30] hover:bg-[#1A1B1D]'
+                    }`}
+                  >
+                    {tmpl.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Task Title */}
+            <div>
+              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                Title <span className="text-[#EF4444]">*</span>
               </label>
               <input
                 type="text"
                 autoFocus
+                required
+                placeholder="Task title..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Implement user authentication pipeline"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
               />
             </div>
 
-            {/* Description Field */}
+            {/* Description */}
             <div>
-              <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
-                Description
+              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                Description & Markdown
               </label>
               <textarea
+                rows={4}
+                placeholder="Provide task details, acceptance criteria, or repro steps..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                placeholder="Add detailed task description..."
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors resize-none"
+                className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
               />
             </div>
 
-            {/* Sub-works Checklist Section */}
-            <div className="p-3.5 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#CFD4DD]">
-                  <CheckSquare size={14} className="text-[#DCB001]" />
-                  <span>Sub-works / Subtasks ({subworks.length})</span>
-                </div>
-                <span className="text-[10px] text-[#787C83]">Addable before creating task</span>
+            {/* Grid for Priority, Assignee, Estimate & Due Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              {/* Priority */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                  Priority
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none capitalize cursor-pointer"
+                >
+                  <option value="critical">Critical (P0)</option>
+                  <option value="high">High (P1)</option>
+                  <option value="medium">Medium (P2)</option>
+                  <option value="low">Low (P3)</option>
+                </select>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Assignee */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                  Assignee
+                </label>
+                <select
+                  value={assigneeName}
+                  onChange={(e) => setAssigneeName(e.target.value)}
+                  className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none cursor-pointer"
+                >
+                  <option value="General (Anyone)">General (Anyone)</option>
+                  {joinedMembers.map((m) => (
+                    <option key={m.id} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                  <option value="karri">karri</option>
+                  <option value="jori">jori</option>
+                </select>
+              </div>
+
+              {/* Estimate */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                  Estimate (hrs)
+                </label>
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={estimatedHours}
+                  onChange={(e) => setEstimatedHours(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono"
+                />
+              </div>
+
+              {/* Due Date */}
+              <div>
+                <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Labels */}
+            <div>
+              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                Labels (Comma-separated)
+              </label>
+              <input
+                type="text"
+                value={labels}
+                onChange={(e) => setLabels(e.target.value)}
+                placeholder="UI, Frontend, Security..."
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-3 py-1.5 text-white outline-none font-mono"
+              />
+            </div>
+
+            {/* Sub-tasks Checklist */}
+            <div className="space-y-2 pt-1 border-t border-[#2A2C30]/50">
+              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                Sub-tasks ({subworks.length})
+              </label>
+
+              {/* Subtask list */}
+              {subworks.length > 0 && (
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {subworks.map((sw) => (
+                    <div
+                      key={sw.id}
+                      className="flex items-center justify-between px-2.5 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg text-xs"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <CheckSquare size={12} className="text-[#DCB001]" />
+                        <span className="text-[#CFD4DD] truncate">{sw.title}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubwork(sw.id)}
+                        className="text-[#787C83] hover:text-[#EF4444]"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-2">
                 <input
                   type="text"
+                  placeholder="Add a sub-work item..."
                   value={newSubworkTitle}
                   onChange={(e) => setNewSubworkTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -199,94 +495,34 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                       handleAddSubwork();
                     }
                   }}
-                  placeholder="Enter a sub-work item & press Add..."
-                  className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded px-2.5 py-1 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001]"
+                  className="flex-1 bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1 text-white outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddSubwork}
-                  className="px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2C30] text-[#CFD4DD] border border-[#3B3D41] rounded text-xs font-semibold"
+                  className="px-3 py-1 bg-[#222427] hover:bg-[#2A2C30] text-[#CFD4DD] rounded-lg font-semibold"
                 >
-                  + Add
+                  Add
                 </button>
-              </div>
-
-              {subworks.length > 0 && (
-                <div className="divide-y divide-[#2A2C30] pt-1">
-                  {subworks.map((sw) => (
-                    <div key={sw.id} className="flex items-center justify-between py-1.5 text-xs text-[#CFD4DD]">
-                      <span className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001]" />
-                        {sw.title}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveSubwork(sw.id)}
-                        className="text-[#787C83] hover:text-[#C0393B] p-0.5 transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Metadata Fields */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-medium text-[#787C83] mb-1">Priority</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as Priority)}
-                  className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="critical" className="bg-[#1B1C1F]">🔥 Critical</option>
-                  <option value="high" className="bg-[#1B1C1F]">⚡ High</option>
-                  <option value="medium" className="bg-[#1B1C1F]">↗ Medium</option>
-                  <option value="low" className="bg-[#1B1C1F]">↘ Low</option>
-                </select>
-              </div>
-
-              {/* Assignee Dropdown showing Joined Members (Default: General (Anyone)) */}
-              <div>
-                <label className="block text-[11px] font-medium text-[#787C83] mb-1">Assign Task To</label>
-                <select
-                  value={assigneeName}
-                  onChange={(e) => setAssigneeName(e.target.value)}
-                  className="w-full bg-[#131415] border border-[#DCB001]/40 rounded-lg px-2.5 py-1.5 text-[#DCB001] outline-none font-semibold cursor-pointer"
-                >
-                  <option value="General (Anyone)" className="bg-[#1B1C1F] text-[#DCB001]">
-                    🌐 General (Anyone)
-                  </option>
-                  {joinedMembers.map((m) => (
-                    <option key={m.id} value={m.name} className="bg-[#1B1C1F] text-[#CFD4DD]">
-                      👤 {m.name}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
-            {/* Footer Actions */}
-            <div className="flex items-center justify-between pt-4 border-t border-[#2A2C30]">
-              <span className="text-[11px] text-[#787C83]">Task will be added to ToDo section</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-3.5 py-1.5 text-xs text-[#787C83] hover:text-white rounded-lg hover:bg-[#222427] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!title.trim() || isSubmitting}
-                  className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-50 transition-all"
-                >
-                  Create Task
-                </button>
-              </div>
+            {/* Submit Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#2A2C30]">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-[#17181A] hover:bg-[#222427] text-[#787C83] hover:text-white rounded-xl font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-xl font-bold transition-all shadow-md disabled:opacity-50"
+              >
+                {isSubmitting ? 'Creating...' : 'Create Task'}
+              </button>
             </div>
           </form>
         </motion.div>

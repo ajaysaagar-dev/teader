@@ -815,8 +815,14 @@ export async function getImagesForTaskDB(taskId: string) {
   }
 }
 
+export async function getProjectByIdDB(id: string | number) {
+  const projects = await getAllProjectsDB();
+  return projects.find((p: any) => String(p.id) === String(id) || String(p.key).toLowerCase() === String(id).toLowerCase()) || null;
+}
+
 // Projects Data Access Helpers
 export async function getAllProjectsDB(userId?: number | string) {
+
   await initDB();
   try {
     const p = getPool();
@@ -1115,54 +1121,100 @@ export async function createIssueDB(data: {
 
 export async function updateIssueStatusDB(
   id: string,
-  status?: string,
+  statusOrUpdates?: string | any,
   title?: string,
   description?: string,
   epic?: string,
   priority?: string
 ) {
   await initDB();
+  const updates: any = typeof statusOrUpdates === 'object' && statusOrUpdates !== null
+    ? statusOrUpdates
+    : {
+        status: statusOrUpdates,
+        title,
+        description,
+        epic,
+        priority,
+      };
+
   const fields: string[] = [];
   const values: any[] = [];
 
-  if (status !== undefined) {
+  if (updates.status !== undefined) {
     fields.push('`status` = ?');
-    values.push(status);
+    values.push(updates.status);
   }
-  if (title !== undefined) {
+  if (updates.title !== undefined) {
     fields.push('`title` = ?');
-    values.push(title.trim());
+    values.push(updates.title.trim());
   }
-  if (description !== undefined) {
+  if (updates.description !== undefined) {
     fields.push('`description` = ?');
-    values.push(description.trim());
+    values.push(updates.description.trim());
   }
-  if (epic !== undefined) {
+  if (updates.epic !== undefined) {
     fields.push('`epic` = ?');
-    values.push(epic.trim());
+    values.push(updates.epic.trim());
   }
-  if (priority !== undefined) {
+  if (updates.priority !== undefined) {
     fields.push('`priority` = ?');
-    values.push(priority);
+    values.push(updates.priority);
   }
-
-  if (fields.length === 0) return;
+  if (updates.assigneeName !== undefined) {
+    fields.push('`assigneeName` = ?');
+    values.push(updates.assigneeName);
+  }
+  if (updates.dueDate !== undefined) {
+    fields.push('`dueDate` = ?');
+    values.push(updates.dueDate);
+  }
+  if (updates.estimatedHours !== undefined) {
+    fields.push('`estimatedHours` = ?');
+    values.push(updates.estimatedHours);
+  }
+  if (updates.loggedHours !== undefined) {
+    fields.push('`loggedHours` = ?');
+    values.push(updates.loggedHours);
+  }
+  if (updates.labels !== undefined) {
+    fields.push('`labels` = ?');
+    values.push(JSON.stringify(updates.labels));
+  }
 
   try {
     const p = getPool();
-    values.push(id);
-    await p.query(`UPDATE \`issues\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
-  } catch {
-    const target = memoryIssuesStore.find((i) => i.id === id);
-    if (target) {
-      if (status !== undefined) target.status = status;
-      if (title !== undefined) target.title = title.trim();
-      if (description !== undefined) target.description = description.trim();
-      if (epic !== undefined) target.epic = epic.trim();
-      if (priority !== undefined) target.priority = priority;
+    if (fields.length > 0) {
+      values.push(id);
+      await p.query(`UPDATE \`issues\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
     }
+  } catch {
+    // Failover to memory store
+  }
+
+  // Always sync memory store
+  const target = memoryIssuesStore.find((i) => i.id === id);
+  if (target) {
+    if (updates.status !== undefined) target.status = updates.status;
+    if (updates.title !== undefined) target.title = updates.title.trim();
+    if (updates.description !== undefined) target.description = updates.description.trim();
+    if (updates.epic !== undefined) target.epic = updates.epic.trim();
+    if (updates.priority !== undefined) target.priority = updates.priority;
+    if (updates.assigneeName !== undefined) {
+      target.assigneeName = updates.assigneeName;
+      if (target.assignee) target.assignee.name = updates.assigneeName;
+    }
+    if (updates.dueDate !== undefined) target.dueDate = updates.dueDate;
+    if (updates.estimatedHours !== undefined) target.estimatedHours = updates.estimatedHours;
+    if (updates.loggedHours !== undefined) target.loggedHours = updates.loggedHours;
+    if (updates.labels !== undefined) target.labels = updates.labels;
+    if (updates.blockedBy !== undefined) target.blockedBy = updates.blockedBy;
+    if (updates.blocks !== undefined) target.blocks = updates.blocks;
+    if (updates.timeEntries !== undefined) target.timeEntries = updates.timeEntries;
+    if (updates.customFields !== undefined) target.customFields = updates.customFields;
   }
 }
+
 
 export async function updateSubtaskDB(
   subId: string,

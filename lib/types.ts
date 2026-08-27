@@ -102,6 +102,27 @@ export interface PullRequest {
   checks: { name: string; status: 'passed' | 'failed' | 'running' }[];
 }
 
+export interface TimeEntry {
+  id: string;
+  userId?: string | number;
+  userName?: string;
+  durationMinutes: number;
+  note?: string;
+  createdAt: string;
+}
+
+export interface AutomationRule {
+  id: string;
+  projectId?: number | string;
+  name: string;
+  trigger: 'status_changed' | 'issue_created' | 'priority_changed' | 'subtasks_completed';
+  conditionField?: string;
+  conditionValue?: string;
+  action: 'complete_subtasks' | 'set_priority' | 'assign_user' | 'change_status' | 'notify_lead';
+  actionValue?: string;
+  enabled: boolean;
+}
+
 export interface Issue {
   id: string;
   key: string;
@@ -122,6 +143,10 @@ export interface Issue {
   dueDate?: string;
   estimatedHours?: number;
   loggedHours?: number;
+  blockedBy?: string[];
+  blocks?: string[];
+  timeEntries?: TimeEntry[];
+  customFields?: Record<string, string | number | boolean>;
   sprint?: string;
   epic?: string;
   team?: string;
@@ -151,6 +176,7 @@ export interface Project {
   issueCount?: number;
   completedCount?: number;
   lead?: User;
+  automations?: AutomationRule[];
 }
 
 export interface NavigationItem {
@@ -161,3 +187,4 @@ export interface NavigationItem {
   shortcut?: string;
   category: 'main' | 'favorites' | 'recent' | 'workspace';
 }
+

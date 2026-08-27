@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Issue, Status } from '@/lib/types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Issue, Status, Priority, TimeEntry } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { 
   Star, 
@@ -16,7 +16,19 @@ import {
   Image as ImageIcon,
   Folder,
   FolderPlus,
-  Sparkles
+  Sparkles,
+  Clock,
+  Play,
+  Square,
+  AlertTriangle,
+  ShieldAlert,
+  Calendar,
+  Layers,
+  MessageSquare,
+  Send,
+  Trash2,
+  Tag,
+  Hash
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -41,11 +53,33 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
+  // Time tracking & live timer state
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [newBlockerKey, setNewBlockerKey] = useState('');
+  const [isAddingBlocker, setIsAddingBlocker] = useState(false);
+
+  // Timer interval effect
+  useEffect(() => {
+    let interval: any = null;
+    if (isTimerRunning) {
+      interval = setInterval(() => {
+        setTimerSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/issue/${issue.key}`);
-    setCopiedLink(true);
-    toast.success(`Copied link for ${issue.key}`);
-    setTimeout(() => setCopiedLink(false), 2000);
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(`${window.location.origin}/issue/${issue.key}`);
+      setCopiedLink(true);
+      toast.success(`Copied link for ${issue.key}`);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   // Status transition handler with Project Owner restriction
@@ -55,7 +89,12 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       return;
     }
 
-    onUpdateIssue({ ...issue, status: newStatus });
+    if (issue.blockedBy && issue.blockedBy.length > 0 && newStatus === 'in_progress') {
+      toast.warning(`Notice: This task is currently blocked by: ${issue.blockedBy.join(', ')}`);
+    }
+
+    const updated = { ...issue, status: newStatus };
+    onUpdateIssue(updated);
     try {
       await fetch(`/api/issues/${issue.id}`, {
         method: 'PATCH',
@@ -66,6 +105,137 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     } catch {
       toast.error('Failed to update status');
     }
+  };
+
+  // Priority transition handler
+  const handlePriorityChange = async (newPriority: Priority) => {
+    const updated = { ...issue, priority: newPriority };
+    onUpdateIssue(updated);
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: newPriority }),
+      });
+      toast.success(`Priority set to ${newPriority}`);
+    } catch {
+      toast.error('Failed to update priority');
+    }
+  };
+
+  // Due Date handler
+  const handleDueDateChange = async (dateStr: string) => {
+    const updated = { ...issue, dueDate: dateStr };
+    onUpdateIssue(updated);
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: dateStr }),
+      });
+      toast.success('Due date updated');
+    } catch {}
+  };
+
+  // Estimate handler
+  const handleEstimateChange = async (hours: number) => {
+    const updated = { ...issue, estimatedHours: hours };
+    onUpdateIssue(updated);
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estimatedHours: hours }),
+      });
+      toast.success('Estimate updated');
+    } catch {}
+  };
+
+  // Toggle Live Timer
+  const handleToggleTimer = async () => {
+    if (isTimerRunning) {
+      // Stopping timer: Log minutes
+      const minutesSpent = Math.max(1, Math.round(timerSeconds / 60));
+      const newEntry: TimeEntry = {
+        id: `time_${Date.now()}`,
+        durationMinutes: minutesSpent,
+        note: `Work session on ${issue.key}`,
+        createdAt: new Date().toISOString(),
+        userName: 'Current User',
+      };
+
+      const updatedEntries = [...(issue.timeEntries || []), newEntry];
+      const newLoggedHours = Number(((issue.loggedHours || 0) + minutesSpent / 60).toFixed(2));
+
+      const updated = {
+        ...issue,
+        timeEntries: updatedEntries,
+        loggedHours: newLoggedHours,
+      };
+
+      onUpdateIssue(updated);
+      setIsTimerRunning(false);
+      setTimerSeconds(0);
+      toast.success(`Logged ${minutesSpent} min to ${issue.key}`);
+
+      try {
+        await fetch(`/api/issues/${issue.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            timeEntries: updatedEntries,
+            loggedHours: newLoggedHours,
+          }),
+        });
+      } catch {}
+    } else {
+      setIsTimerRunning(true);
+      toast.info('Live time tracker started');
+    }
+  };
+
+  // Add Blocker Dependency
+  const handleAddBlocker = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const key = newBlockerKey.trim().toUpperCase();
+    if (!key) return;
+
+    const currentBlockers = issue.blockedBy || [];
+    if (currentBlockers.includes(key)) {
+      toast.error('Blocker is already added');
+      return;
+    }
+
+    const updatedBlockers = [...currentBlockers, key];
+    const updated = { ...issue, blockedBy: updatedBlockers };
+    onUpdateIssue(updated);
+    setNewBlockerKey('');
+    setIsAddingBlocker(false);
+    toast.success(`Added blocker ${key}`);
+
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedBy: updatedBlockers }),
+      });
+    } catch {}
+  };
+
+  // Remove Blocker Dependency
+  const handleRemoveBlocker = async (keyToRemove: string) => {
+    const updatedBlockers = (issue.blockedBy || []).filter((k) => k !== keyToRemove);
+    const updated = { ...issue, blockedBy: updatedBlockers };
+    onUpdateIssue(updated);
+    toast.success(`Removed blocker ${keyToRemove}`);
+
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockedBy: updatedBlockers }),
+      });
+    } catch {}
   };
 
   // Toggle Subtask Completion in DB
@@ -121,19 +291,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     setNewSubworkTitle('');
     setIsAddingSubwork(false);
 
-    let nextStatus = issue.status;
-    if (issue.status === 'done') {
-      nextStatus = 'needs_review';
-      toast.info('New incomplete sub-work added: Task status automatically moved to Needs Review');
-      try {
-        await fetch(`/api/issues/${issue.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'needs_review' }),
-        });
-      } catch {}
-    }
-
     try {
       const res = await fetch('/api/subtasks', {
         method: 'POST',
@@ -149,25 +306,22 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           id: `sub_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
           title: newTitle,
           completed: false,
+          issueId: issue.id,
         };
       }
 
       onUpdateIssue({
         ...issue,
-        status: nextStatus,
-        subtasks: [...issue.subtasks, newSub],
+        subtasks: [...(issue.subtasks || []), newSub],
       });
-      toast.success('Sub-work added to database!');
+      toast.success('Subtask added');
     } catch {
-      toast.error('Failed to add sub-work');
+      toast.error('Failed to add subtask');
     }
   };
 
-  // Image Upload Handler for Sub-tasks & Main Task
-  const handleImageFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    subtaskId?: string
-  ) => {
+  // Image Upload Handler
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, subtaskId?: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -179,266 +333,281 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       formData.append('file', file);
       formData.append('taskId', issue.id);
       if (subtaskId) formData.append('subtaskId', subtaskId);
-      formData.append('taskName', issue.title);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      const uploadedImg = await res.json();
       if (res.ok) {
-        toast.success(`Image uploaded and stored in database: ${uploadedImg.fileName}`);
-
+        const imageRecord = await res.json();
+        toast.success('Image attached successfully');
         if (subtaskId) {
-          const updatedSubs = issue.subtasks.map((st) =>
-            st.id === subtaskId ? { ...st, imageId: uploadedImg.id, imageUrl: uploadedImg.url } : st
-          );
-          onUpdateIssue({ ...issue, subtasks: updatedSubs });
+          onUpdateIssue({
+            ...issue,
+            subtasks: (issue.subtasks || []).map((st) =>
+              st.id === subtaskId ? { ...st, imageUrl: imageRecord.url, imageId: imageRecord.id } : st
+            ),
+          });
         } else {
-          const existingImages = (issue as any).images || [];
-          onUpdateIssue({ ...issue, images: [...existingImages, uploadedImg] } as any);
+          onUpdateIssue({
+            ...issue,
+            images: [...(issue.images || []), imageRecord],
+          });
         }
       } else {
-        throw new Error(uploadedImg.error || 'Upload failed');
+        toast.error('Failed to upload image');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Image upload failed');
+    } catch {
+      toast.error('Upload failed');
     } finally {
       setUploadingSubtaskId(null);
       setIsUploadingTaskImg(false);
     }
   };
 
-  const completedSubtasksCount = issue.subtasks.filter((st) => st.completed).length;
-  const subtasksPercent =
-    issue.subtasks.length > 0
-      ? Math.round((completedSubtasksCount / issue.subtasks.length) * 100)
-      : 0;
+  const completedCount = (issue.subtasks || []).filter((st) => st.completed).length;
+  const totalSubtasks = (issue.subtasks || []).length;
+  const issueImages = issue.images || [];
 
-  const issueImages = (issue as any).images || [];
+  const formatTimer = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const isBlocked = (issue.blockedBy || []).length > 0;
 
   return (
-    <div className="flex-1 h-full bg-[#131415] text-[#CFD4DD] rounded-xl border border-[#2A2C30] m-2 overflow-hidden flex flex-col relative font-sans text-xs">
-      {/* Panel Top Bar */}
-      <div className="h-11 border-b border-[#2A2C30] px-4 flex items-center justify-between shrink-0 bg-[#131415]">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-[#CFD4DD]">{issue.title}</span>
-          <button className="text-[#DCB001] hover:scale-110 transition-transform">
-            <Star size={13} className="fill-[#DCB001]" />
-          </button>
-          <button className="text-[#787C83] hover:text-[#CFD4DD]">
-            <MoreHorizontal size={14} />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 text-[11px] text-[#787C83] font-mono">
-          <button
-            onClick={() => setIsAIPanelOpen((prev) => !prev)}
-            className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] text-[#DCB001] border border-[#DCB001]/40 rounded-md font-semibold text-xs transition-colors shadow-sm"
-          >
-            <Sparkles size={12} className="text-[#DCB001]" />
-            <span>AI Copilot</span>
-          </button>
-
-          <div className="flex items-center gap-0.5">
-            <button className="p-0.5 hover:text-[#CFD4DD]"><ChevronUp size={13} /></button>
-            <button className="p-0.5 hover:text-[#CFD4DD]"><ChevronDown size={13} /></button>
+    <div className="flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] overflow-y-auto font-sans select-none">
+      {/* Top Warning Banner if Task is Blocked */}
+      {isBlocked && (
+        <div className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 flex items-center justify-between text-xs text-[#EF4444] font-medium">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={15} />
+            <span>This task has active blocking dependencies: <strong>{issue.blockedBy!.join(', ')}</strong></span>
           </div>
+          <span className="text-[10px] font-mono uppercase bg-[#EF4444]/20 px-2 py-0.5 rounded border border-[#EF4444]/40">
+            Blocked
+          </span>
         </div>
-      </div>
+      )}
 
-      {/* Main Content Body */}
-      <div className="flex-1 overflow-y-auto p-6 grid grid-cols-12 gap-8">
-        {/* Left Column */}
+      {/* Main Container */}
+      <div className="p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-12 gap-6">
+        {/* Left / Center Content Column */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div>
-            <h1
-              contentEditable
-              suppressContentEditableWarning
-              onBlur={async (e) => {
-                const newTitle = e.currentTarget.textContent?.trim();
-                if (newTitle && newTitle !== issue.title) {
-                  onUpdateIssue({ ...issue, title: newTitle });
-                  try {
-                    await fetch(`/api/issues/${issue.id}`, {
-                      method: 'PATCH',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ title: newTitle }),
-                    });
-                    toast.success('Task title updated');
-                  } catch {
-                    toast.error('Failed to update title');
-                  }
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  (e.target as HTMLElement).blur();
-                }
-              }}
-              className="text-2xl font-bold text-[#CFD4DD] tracking-tight hover:bg-[#1B1C1F] focus:bg-[#131415] focus:outline-none focus:ring-1 focus:ring-[#DCB001] px-1 py-0.5 rounded transition-all cursor-text"
-              title="Click or edit to rename task title"
-            >
+          {/* Header Row */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded">
+                  {issue.key}
+                </span>
+                {issue.epic && (
+                  <span className="font-mono text-[11px] text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/30 px-2 py-0.5 rounded flex items-center gap-1">
+                    <Layers size={10} /> {issue.epic}
+                  </span>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                {/* AI Copilot Button */}
+                <button
+                  onClick={() => setIsAIPanelOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[#1F2023] hover:bg-[#2A2C30] text-[#DCB001] border border-[#DCB001]/30 rounded-lg text-xs font-bold transition-all shadow-sm group"
+                >
+                  <Sparkles size={13} className="text-[#DCB001] group-hover:rotate-12 transition-transform" />
+                  <span>AI Copilot</span>
+                </button>
+
+                {/* Copy Link Button */}
+                <button
+                  onClick={handleCopyLink}
+                  className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors"
+                  title="Copy Task Link"
+                >
+                  {copiedLink ? <Check size={14} className="text-[#22C55E]" /> : <Link size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Task Title */}
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
               {issue.title}
             </h1>
           </div>
 
-          <div
-            contentEditable
-            suppressContentEditableWarning
-            onBlur={async (e) => {
-              const newDesc = e.currentTarget.textContent?.trim();
-              if (newDesc !== undefined && newDesc !== issue.description) {
-                onUpdateIssue({ ...issue, description: newDesc });
-                try {
-                  await fetch(`/api/issues/${issue.id}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ description: newDesc }),
-                  });
-                  toast.success('Description updated');
-                } catch {
-                  toast.error('Failed to update description');
-                }
-              }
-            }}
-            className="text-sm text-[#9499A0] leading-relaxed font-normal hover:bg-[#1B1C1F] focus:bg-[#131415] focus:outline-none focus:ring-1 focus:ring-[#DCB001]/60 px-1 py-0.5 rounded transition-all cursor-text"
-            title="Click or edit to modify description"
-          >
-            {issue.description || 'No description provided.'}
+          {/* Description Block */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
+            <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block">Description</span>
+            <p className="text-xs sm:text-sm text-[#CFD4DD] leading-relaxed whitespace-pre-wrap">
+              {issue.description || 'No description provided for this task.'}
+            </p>
           </div>
 
-          {/* Sub-works Checklist & Image Attachments */}
-          <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">
+          {/* Task Dependencies Section (§1.1) */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CheckSquare size={16} className="text-[#DCB001]" />
-                <h3 className="text-xs font-semibold text-[#CFD4DD]">Sub-works & Checklist</h3>
+                <ShieldAlert size={15} className="text-[#DCB001]" />
+                <h3 className="text-xs font-semibold text-white">Dependencies & Blocking Relations</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-[#787C83]">
-                  {completedSubtasksCount} of {issue.subtasks.length} completed ({subtasksPercent}%)
-                </span>
-                <button
-                  onClick={() => setIsAddingSubwork(!isAddingSubwork)}
-                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#CFD4DD] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded"
-                >
-                  <Plus size={12} />
-                  <span>Add Sub-work</span>
-                </button>
-              </div>
+              <button
+                onClick={() => setIsAddingBlocker(true)}
+                className="text-[11px] text-[#DCB001] hover:underline flex items-center gap-1 font-mono"
+              >
+                <Plus size={12} /> Add Blocker
+              </button>
             </div>
 
-            {isAddingSubwork && (
-              <form onSubmit={handleAddSubworkRealtime} className="flex items-center gap-2 pt-1">
+            {/* Add Blocker Form */}
+            {isAddingBlocker && (
+              <form onSubmit={handleAddBlocker} className="flex items-center gap-2 pt-1">
                 <input
                   type="text"
+                  placeholder="Enter blocking task key (e.g. CORE-101)..."
+                  value={newBlockerKey}
+                  onChange={(e) => setNewBlockerKey(e.target.value)}
                   autoFocus
-                  value={newSubworkTitle}
-                  onChange={(e) => setNewSubworkTitle(e.target.value)}
-                  placeholder="Enter sub-work item & press Enter..."
-                  className="flex-1 bg-[#131415] border border-[#2A2C30] rounded px-2.5 py-1 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001]"
+                  className="flex-1 bg-[#131415] border border-[#DCB001] text-xs text-white px-2.5 py-1 rounded outline-none font-mono"
                 />
-                <button
-                  type="submit"
-                  disabled={!newSubworkTitle.trim()}
-                  className="px-3 py-1 bg-[#1E1E1E] hover:bg-[#2A2C30] text-[#CFD4DD] border border-[#3B3D41] rounded text-xs font-semibold"
-                >
+                <button type="submit" className="px-3 py-1 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded">
                   Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingBlocker(false)}
+                  className="px-2 py-1 text-xs text-[#787C83] hover:text-white"
+                >
+                  Cancel
                 </button>
               </form>
             )}
 
-            <div className="w-full h-1.5 bg-[#1A1B1D] rounded-full overflow-hidden border border-[#2A2C30]">
-              <div
-                className="h-full bg-[#DCB001] transition-all duration-300"
-                style={{ width: `${subtasksPercent}%` }}
-              />
-            </div>
-
-            <div className="divide-y divide-[#2A2C30] pt-1 space-y-2">
-              {(() => {
-                const renderDetailItem = (st: any, depth = 0): React.ReactNode => (
-                  <div key={st.id} className="py-2 space-y-2">
+            {/* Blocker Tags */}
+            <div className="space-y-1.5">
+              {(issue.blockedBy || []).length === 0 ? (
+                <p className="text-xs text-[#787C83] italic">No active blockers on this issue.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {issue.blockedBy!.map((key) => (
                     <div
-                      className="flex items-center justify-between"
-                      style={{ paddingLeft: `${depth * 16}px` }}
+                      key={key}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EF4444]/15 border border-[#EF4444]/30 text-xs font-mono text-[#EF4444]"
                     >
-                      <label className="flex items-center gap-3 text-xs text-[#9499A0] hover:text-[#CFD4DD] cursor-pointer group transition-colors flex-1">
-                        {st.isFolder || st.type === 'folder' ? (
-                          <Folder size={14} className="text-[#DCB001] shrink-0" />
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={st.completed}
-                            onChange={() => handleToggleSubtask(st.id)}
-                            className="w-4 h-4 rounded border-[#3B3D41] bg-[#1A1B1D] text-[#DCB001] focus:ring-0 cursor-pointer accent-[#DCB001]"
-                          />
-                        )}
-                        <span className={`truncate ${
-                          st.isFolder || st.type === 'folder'
-                            ? 'font-bold text-white'
-                            : st.completed
-                            ? 'line-through text-[#787C83]'
-                            : ''
-                        }`}>
-                          {st.title}
-                        </span>
-                      </label>
-
-                      {/* Image Upload Button for Sub-task */}
-                      {!st.isFolder && (
-                        <label className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#222427] border border-[#DCB001]/30 rounded cursor-pointer transition-colors">
-                          <Camera size={11} />
-                          <span>{uploadingSubtaskId === st.id ? 'Uploading...' : 'Attach Image'}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageFileUpload(e, st.id)}
-                            className="hidden"
-                          />
-                        </label>
-                      )}
+                      <AlertTriangle size={12} />
+                      <span>Blocked by {key}</span>
+                      <button
+                        onClick={() => handleRemoveBlocker(key)}
+                        className="hover:text-white ml-1"
+                        title="Remove blocker"
+                      >
+                        &times;
+                      </button>
                     </div>
-
-                    {/* Sub-task Image Preview */}
-                    {st.imageUrl && (
-                      <div className="ml-7 pt-1">
-                        <img
-                          src={st.imageUrl}
-                          alt="Sub-task image"
-                          className="w-32 h-20 object-cover rounded-lg border border-[#2A2C30] hover:scale-105 transition-transform"
-                        />
-                      </div>
-                    )}
-
-                    {/* Nested Subtask Children */}
-                    {st.subtasks && st.subtasks.length > 0 && (
-                      <div className="border-l border-[#2A2C30] ml-3 pl-2 space-y-1">
-                        {st.subtasks.map((child: any) => renderDetailItem(child, depth + 1))}
-                      </div>
-                    )}
-                  </div>
-                );
-
-                return issue.subtasks.map((st: any) => renderDetailItem(st));
-              })()}
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Overall Task Image Attachments Section */}
+          {/* Sub-works & Subtasks Checklist Section */}
+          <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare size={16} className="text-[#DCB001]" />
+                <h3 className="text-xs font-semibold text-[#CFD4DD]">
+                  Sub-tasks & Checklist ({completedCount}/{totalSubtasks})
+                </h3>
+              </div>
+
+              <button
+                onClick={() => setIsAddingSubwork(true)}
+                className="flex items-center gap-1 text-xs font-semibold text-[#DCB001] hover:underline"
+              >
+                <Plus size={13} />
+                <span>Add Subtask</span>
+              </button>
+            </div>
+
+            {/* Inline Add Subtask Input */}
+            {isAddingSubwork && (
+              <form onSubmit={handleAddSubworkRealtime} className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="What needs to be done?"
+                  value={newSubworkTitle}
+                  onChange={(e) => setNewSubworkTitle(e.target.value)}
+                  autoFocus
+                  className="flex-1 bg-[#131415] border border-[#DCB001] text-xs text-white px-2.5 py-1.5 rounded-lg outline-none"
+                />
+                <button type="submit" className="px-3 py-1.5 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-lg">
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingSubwork(false)}
+                  className="px-2.5 py-1.5 text-xs text-[#787C83] hover:text-white"
+                >
+                  Cancel
+                </button>
+              </form>
+            )}
+
+            {/* Subtasks List */}
+            <div className="space-y-2 pt-1">
+              {(issue.subtasks || []).length === 0 && !isAddingSubwork && (
+                <p className="text-xs text-[#787C83] italic">No sub-tasks attached to this issue.</p>
+              )}
+
+              {(issue.subtasks || []).map((st) => (
+                <div
+                  key={st.id}
+                  className="flex items-center justify-between p-2.5 bg-[#131415] hover:bg-[#1A1B1D] border border-[#2A2C30] rounded-lg group transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <button
+                      onClick={() => handleToggleSubtask(st.id)}
+                      className={`w-4 h-4 rounded flex items-center justify-center transition-colors ${
+                        st.completed
+                          ? 'bg-[#22C55E] text-[#0F1011]'
+                          : 'border border-[#787C83] hover:border-[#DCB001]'
+                      }`}
+                    >
+                      {st.completed && <Check size={11} className="stroke-[3]" />}
+                    </button>
+                    <span className={`text-xs truncate ${st.completed ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}`}>
+                      {st.title}
+                    </span>
+                  </div>
+
+                  <label className="text-[#787C83] hover:text-[#DCB001] p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera size={13} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleImageFileUpload(e, st.id)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Task Attachments Section */}
           <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ImageIcon size={16} className="text-[#DCB001]" />
-                <h3 className="text-xs font-semibold text-[#CFD4DD]">Task Attachments & Images ({issueImages.length})</h3>
+                <h3 className="text-xs font-semibold text-[#CFD4DD]">Attachments & Screenshots ({issueImages.length})</h3>
               </div>
 
               <label className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg cursor-pointer transition-all shadow-sm">
                 <Camera size={13} />
-                <span>{isUploadingTaskImg ? 'Uploading...' : 'Attach Task Image'}</span>
+                <span>{isUploadingTaskImg ? 'Uploading...' : 'Upload Image'}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -448,47 +617,101 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               </label>
             </div>
 
-            {issueImages.length > 0 && (
+            {issueImages.length > 0 ? (
               <div className="grid grid-cols-3 gap-3 pt-2">
                 {issueImages.map((img: any) => (
                   <div key={img.id} className="relative group rounded-lg overflow-hidden border border-[#2A2C30]">
-                    <img
-                      src={img.url}
-                      alt={img.fileName}
-                      className="w-full h-24 object-cover"
-                    />
+                    <img src={img.url} alt={img.fileName} className="w-full h-24 object-cover" />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-[10px] font-mono text-white truncate">
                       <span className="truncate">{img.fileName}</span>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : (
+              <p className="text-xs text-[#787C83] italic pt-1">No attachments uploaded yet.</p>
             )}
           </div>
         </div>
 
-        {/* Right Metadata Column */}
+        {/* Right Properties & Time Tracking Sidebar */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="flex items-center justify-between pb-3 border-b border-[#2A2C30]">
-            <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider">Properties</span>
-            <div className="flex items-center gap-1">
+          {/* Time Tracking Card (§1.5) */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#2A2C30]">
+              <div className="flex items-center gap-2">
+                <Clock size={15} className="text-[#DCB001]" />
+                <span className="text-xs font-bold text-white">Time Tracking</span>
+              </div>
+              <span className="text-[11px] font-mono text-[#DCB001] font-bold">
+                {issue.loggedHours || 0}h logged
+              </span>
+            </div>
+
+            {/* Live Timer Widget */}
+            <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl flex items-center justify-between">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-mono text-[#787C83] uppercase tracking-wider block">Live Session</span>
+                <span className="text-base font-mono font-bold text-white">
+                  {isTimerRunning ? formatTimer(timerSeconds) : '00:00'}
+                </span>
+              </div>
+
               <button
-                onClick={handleCopyLink}
-                className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] rounded hover:bg-[#1B1C1F] transition-colors"
-                title="Copy Link"
+                onClick={handleToggleTimer}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition-all ${
+                  isTimerRunning
+                    ? 'bg-[#EF4444] hover:bg-[#dc2626] text-white animate-pulse'
+                    : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
+                }`}
               >
-                {copiedLink ? <Check size={13} className="text-[#22C55E]" /> : <Link size={13} />}
+                {isTimerRunning ? <Square size={12} /> : <Play size={12} />}
+                <span>{isTimerRunning ? 'Stop Timer' : 'Start Timer'}</span>
               </button>
+            </div>
+
+            {/* Estimate & Progress */}
+            <div className="space-y-1.5 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#787C83]">Estimate:</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={issue.estimatedHours || 0}
+                    onChange={(e) => handleEstimateChange(parseFloat(e.target.value) || 0)}
+                    className="w-14 bg-[#131415] border border-[#2A2C30] text-right text-xs text-[#DCB001] font-mono rounded px-1.5 py-0.5 outline-none"
+                  />
+                  <span className="text-[#787C83] font-mono">hrs</span>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="w-full bg-[#131415] h-2 rounded-full overflow-hidden border border-[#2A2C30]">
+                <div
+                  className="bg-[#DCB001] h-full transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, issue.estimatedHours ? ((issue.loggedHours || 0) / issue.estimatedHours) * 100 : 0)}%`,
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4 text-xs">
+          {/* Properties Card */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4 text-xs">
+            <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block pb-2 border-b border-[#2A2C30]">
+              Task Properties
+            </span>
+
+            {/* Status Selector */}
             <div>
               <span className="text-[#787C83] block mb-1">Status</span>
               <select
                 value={issue.status}
                 onChange={(e) => handleStatusChange(e.target.value as Status)}
-                className="w-full bg-[#1B1C1F] border border-[#2A2C30] text-[#DCB001] font-semibold rounded-lg p-2 outline-none cursor-pointer"
+                className="w-full bg-[#131415] border border-[#2A2C30] text-[#DCB001] font-semibold rounded-lg p-2 outline-none cursor-pointer"
               >
                 <option value="todo">Todo</option>
                 <option value="in_progress">In Progress</option>
@@ -497,9 +720,38 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               </select>
             </div>
 
+            {/* Priority Selector */}
+            <div>
+              <span className="text-[#787C83] block mb-1">Priority</span>
+              <select
+                value={issue.priority}
+                onChange={(e) => handlePriorityChange(e.target.value as Priority)}
+                className="w-full bg-[#131415] border border-[#2A2C30] text-white font-medium rounded-lg p-2 outline-none cursor-pointer capitalize"
+              >
+                <option value="critical">Critical (P0)</option>
+                <option value="high">High (P1)</option>
+                <option value="medium">Medium (P2)</option>
+                <option value="low">Low (P3)</option>
+              </select>
+            </div>
+
+            {/* Due Date */}
+            <div>
+              <span className="text-[#787C83] block mb-1 flex items-center gap-1">
+                <Calendar size={12} /> Due Date
+              </span>
+              <input
+                type="date"
+                value={issue.dueDate ? issue.dueDate.split('T')[0] : ''}
+                onChange={(e) => handleDueDateChange(e.target.value)}
+                className="w-full bg-[#131415] border border-[#2A2C30] text-white font-mono rounded-lg p-2 outline-none cursor-pointer"
+              />
+            </div>
+
+            {/* Assigned User */}
             <div>
               <span className="text-[#787C83] block mb-1">Assigned To</span>
-              <div className="flex items-center gap-2 p-2 bg-[#1B1C1F] border border-[#2A2C30] rounded-lg">
+              <div className="flex items-center gap-2 p-2 bg-[#131415] border border-[#2A2C30] rounded-lg">
                 <Avatar
                   user={{
                     id: 'usr_assigned',
@@ -516,9 +768,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               </div>
             </div>
 
+            {/* Project */}
             <div>
-              <span className="text-[#787C83] block mb-1">Project</span>
-              <div className="p-2 bg-[#1B1C1F] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
+              <span className="text-[#787C83] block mb-1">Project Workspace</span>
+              <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
                 {issue.project} ({issue.key.split('-')[0]})
               </div>
             </div>

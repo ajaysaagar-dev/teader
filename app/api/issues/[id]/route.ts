@@ -17,20 +17,14 @@ export async function PATCH(
   }
 
   try {
-    await updateIssueStatusDB(
-      resolvedParams.id,
-      data.status,
-      data.title,
-      data.description,
-      data.epic,
-      data.priority
-    );
+    await updateIssueStatusDB(resolvedParams.id, data);
 
     return NextResponse.json({
       success: true,
       id: resolvedParams.id,
       ...data,
     });
+
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

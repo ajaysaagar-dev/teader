@@ -20,10 +20,18 @@ export const RegisterSchema = z.object({
 export const CreateIssueSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   description: z.string().max(10000).optional(),
-  status: z.enum(['todo', 'in_progress', 'needs_review', 'done']).optional(),
-  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  status: z.enum(['todo', 'in_progress', 'needs_review', 'done', 'blocked', 'cancelled', 'merged']).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
   assigneeName: z.string().max(128).optional(),
   labels: z.array(z.string()).optional(),
+  epic: z.string().max(128).optional(),
+  sprint: z.string().max(128).optional(),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().optional(),
+  loggedHours: z.number().optional(),
+  blockedBy: z.array(z.string()).optional(),
+  blocks: z.array(z.string()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
   project: z.string().optional(),
   projectId: z.number().int().positive().optional(),
   subtasks: z
@@ -41,12 +49,35 @@ export const CreateIssueSchema = z.object({
 });
 
 export const UpdateIssueSchema = z.object({
-  status: z.enum(['todo', 'in_progress', 'needs_review', 'done']).optional(),
+  status: z.enum(['todo', 'in_progress', 'needs_review', 'done', 'blocked', 'cancelled', 'merged']).optional(),
   title: z.string().min(1).max(255).optional(),
   description: z.string().max(10000).optional(),
   epic: z.string().max(128).optional(),
-  priority: z.enum(['critical', 'high', 'medium', 'low']).optional(),
+  sprint: z.string().max(128).optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low', 'none']).optional(),
+  assigneeName: z.string().max(128).optional(),
+  labels: z.array(z.string()).optional(),
+  dueDate: z.string().optional(),
+  estimatedHours: z.number().optional(),
+  loggedHours: z.number().optional(),
+  blockedBy: z.array(z.string()).optional(),
+  blocks: z.array(z.string()).optional(),
+  customFields: z.record(z.string(), z.any()).optional(),
+
+  timeEntries: z
+    .array(
+      z.object({
+        id: z.string(),
+        userId: z.union([z.string(), z.number()]).optional(),
+        userName: z.string().optional(),
+        durationMinutes: z.number(),
+        note: z.string().optional(),
+        createdAt: z.string(),
+      })
+    )
+    .optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'At least one field must be provided' });
+
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
