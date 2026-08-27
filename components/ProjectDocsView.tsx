@@ -31,9 +31,12 @@ import {
   Table as TableIcon,
   Minus,
   Cloud,
+  Undo2,
+  Redo2,
   CheckCircle2,
   ExternalLink
 } from 'lucide-react';
+
 import { toast } from 'sonner';
 
 interface ProjectDocsViewProps {
@@ -413,6 +416,51 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     fetchDocsList();
   }, [fetchDocsList]);
 
+  // Undo / Redo History Stack
+  const historyRef = useRef<string[]>([]);
+  const historyIndexRef = useRef<number>(-1);
+  const isUndoRedoRef = useRef<boolean>(false);
+
+  const pushToHistory = useCallback((content: string) => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    const curIdx = historyIndexRef.current;
+    const history = historyRef.current;
+
+    if (curIdx >= 0 && history[curIdx] === content) return;
+
+    const nextHistory = history.slice(0, curIdx + 1);
+    nextHistory.push(content);
+    if (nextHistory.length > 80) nextHistory.shift();
+
+    historyRef.current = nextHistory;
+    historyIndexRef.current = nextHistory.length - 1;
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    if (curIdx > 0) {
+      const prevContent = historyRef.current[curIdx - 1];
+      historyIndexRef.current = curIdx - 1;
+      isUndoRedoRef.current = true;
+      setActiveContent(prevContent);
+      toast.info('Undo (Ctrl+Z)');
+    }
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    const curIdx = historyIndexRef.current;
+    if (curIdx < historyRef.current.length - 1) {
+      const nextContent = historyRef.current[curIdx + 1];
+      historyIndexRef.current = curIdx + 1;
+      isUndoRedoRef.current = true;
+      setActiveContent(nextContent);
+      toast.info('Redo (Ctrl+Y)');
+    }
+  }, []);
+
   // 2. Fetch selected document content from server .md file
   useEffect(() => {
     if (!selectedDocId) return;
@@ -424,6 +472,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         if (isMounted && data.content !== undefined) {
           setActiveContent(data.content);
           setActiveTitle(data.title);
+          historyRef.current = [data.content];
+          historyIndexRef.current = 0;
         }
       })
       .catch(() => {});
@@ -463,12 +513,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     const updated = currentVal.substring(0, start) + replacement + currentVal.substring(end);
     setActiveContent(updated);
+    pushToHistory(updated);
 
     // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
     }, 20);
+  };
+
+  // Handle Textarea Change with History Debounce
+  const handleContentChange = (newVal: string) => {
+    setActiveContent(newVal);
+    pushToHistory(newVal);
   };
 
   // Handle Create New Doc File
@@ -496,6 +553,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         setSelectedDocId(created.id);
         setActiveTitle(created.title);
         setActiveContent(created.content || '');
+        historyRef.current = [created.content || ''];
+        historyIndexRef.current = 0;
         toast.success(`Created unique .md file: ${created.fileName}`);
       } else {
         toast.error('Failed to create doc file');
@@ -536,18 +595,38 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   }, [selectedDocId, projectId, activeTitle, activeContent, activeDoc]);
 
-  // Global Ctrl+S / Cmd+S Shortcut to Save on Cloud
+  // Global Keyboard Shortcuts (Ctrl+S for Save, Ctrl+Z for Undo, Ctrl+Y for Redo)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S / Cmd+S => Save on Cloud
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSaveDoc();
+        return;
+      }
+
+      // Ctrl+Z / Cmd+Z => Undo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      // Ctrl+Shift+Z or Ctrl+Y => Redo
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey) ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y')
+      ) {
+        e.preventDefault();
+        handleRedo();
+        return;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSaveDoc]);
+  }, [handleSaveDoc, handleUndo, handleRedo]);
+
 
 
   // Handle Delete Doc
@@ -795,7 +874,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   <textarea
                     ref={textareaRef}
                     value={activeContent}
-                    onChange={(e) => setActiveContent(e.target.value)}
+                    onChange={(e) => handleContentChange(e.target.value)}
                     placeholder="Write markdown documentation here..."
                     className="w-full h-full p-4 bg-[#17181A] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
                   />
@@ -817,7 +896,32 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             {/* Literal Markdown Symbols Formatting Bar at Bottom Middle */}
             {(viewMode === 'editor' || viewMode === 'split') && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#17181A]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-xl px-3 py-1.5 flex flex-row flex-nowrap items-center gap-1.5 text-xs text-[#CFD4DD] overflow-x-auto max-w-[95vw] whitespace-nowrap select-none custom-scrollbar">
+                {/* Undo Button */}
+                <button
+                  type="button"
+                  onClick={handleUndo}
+                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none"
+                  title="Undo (Ctrl + Z)"
+                >
+                  <Undo2 size={12} />
+                  <span>Undo</span>
+                </button>
+
+                {/* Redo Button */}
+                <button
+                  type="button"
+                  onClick={handleRedo}
+                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none"
+                  title="Redo (Ctrl + Y / Ctrl + Shift + Z)"
+                >
+                  <Redo2 size={12} />
+                  <span>Redo</span>
+                </button>
+
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5 shrink-0" />
+
                 <span className="text-[10px] font-mono text-[#787C83] uppercase px-1 shrink-0 hidden xl:inline">Symbols:</span>
+
 
                 {/* # Heading 1 */}
                 <button
