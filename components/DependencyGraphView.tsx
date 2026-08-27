@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+
 import { Issue, Status, Priority } from '@/lib/types';
 import { 
   GitFork, 
@@ -96,7 +97,6 @@ function parseBlockedBy(blockedBy: any): string[] {
 }
 
 export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.memo(({
-
   issues,
   onSelectIssue,
 }) => {
@@ -104,6 +104,32 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const [scale, setScale] = useState(1);
   const [selectedUserFilter, setSelectedUserFilter] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'timeline_branches' | 'dag_pipeline'>('timeline_branches');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Smooth Horizontal Scrolling on Mouse Wheel (Up / Down -> Left / Right)
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Don't intercept if holding Ctrl/Cmd (allow zooming)
+      if (e.ctrlKey || e.metaKey) return;
+
+      if (Math.abs(e.deltaY) > 0) {
+        e.preventDefault();
+        el.scrollBy({
+          left: e.deltaY * 1.3,
+          behavior: 'auto',
+        });
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
 
   // Compute User List & Summary
   const userList = useMemo(() => {
@@ -415,7 +441,11 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       </div>
 
       {/* SVG Timeline Canvas Area */}
-      <div className="flex-1 overflow-auto bg-[#0E0F11] relative custom-scrollbar">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto bg-[#0E0F11] relative custom-scrollbar"
+      >
+
         <div
           style={{
             transform: `scale(${scale})`,
