@@ -43,6 +43,22 @@ interface IssueDetailViewProps {
   currentRole?: string;
 }
 
+function parseBlockedBy(blockedBy: any): string[] {
+  if (!blockedBy) return [];
+  if (Array.isArray(blockedBy)) return blockedBy.map(String);
+  if (typeof blockedBy === 'string') {
+    const trimmed = blockedBy.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   issue,
   onUpdateIssue,
@@ -74,24 +90,20 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
   // Timer interval effect
   useEffect(() => {
-    let interval: any = null;
+    let interval: any;
     if (isTimerRunning) {
       interval = setInterval(() => {
         setTimerSeconds((prev) => prev + 1);
       }, 1000);
-    } else {
-      clearInterval(interval);
     }
     return () => clearInterval(interval);
   }, [isTimerRunning]);
 
   const handleCopyLink = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(`${window.location.origin}/issue/${issue.key}`);
-      setCopiedLink(true);
-      toast.success(`Copied link for ${issue.key}`);
-      setTimeout(() => setCopiedLink(false), 2000);
-    }
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedLink(true);
+    toast.success('Task link copied to clipboard');
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   // Status transition handler with Project Owner restriction
@@ -101,8 +113,9 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       return;
     }
 
-    if (issue.blockedBy && issue.blockedBy.length > 0 && newStatus === 'in_progress') {
-      toast.warning(`Notice: This task is currently blocked by: ${issue.blockedBy.join(', ')}`);
+    const blockers = parseBlockedBy(issue.blockedBy);
+    if (blockers.length > 0 && newStatus === 'in_progress') {
+      toast.warning(`Notice: This task is currently blocked by: ${blockers.join(', ')}`);
     }
 
     const updated = { ...issue, status: newStatus };
@@ -113,6 +126,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
+
       toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
     } catch {
       toast.error('Failed to update status');
@@ -212,7 +226,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     const key = newBlockerKey.trim().toUpperCase();
     if (!key) return;
 
-    const currentBlockers = issue.blockedBy || [];
+    const currentBlockers = parseBlockedBy(issue.blockedBy);
     if (currentBlockers.includes(key)) {
       toast.error('Blocker is already added');
       return;
@@ -236,7 +250,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
   // Remove Blocker Dependency
   const handleRemoveBlocker = async (keyToRemove: string) => {
-    const updatedBlockers = (issue.blockedBy || []).filter((k) => k !== keyToRemove);
+    const updatedBlockers = parseBlockedBy(issue.blockedBy).filter((k) => k !== keyToRemove);
     const updated = { ...issue, blockedBy: updatedBlockers };
     onUpdateIssue(updated);
     toast.success(`Removed blocker ${keyToRemove}`);
@@ -249,6 +263,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       });
     } catch {}
   };
+
 
   // Toggle Subtask Completion in DB
   const handleToggleSubtask = async (subId: string) => {
@@ -392,7 +407,8 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const isBlocked = (issue.blockedBy || []).length > 0;
+  const activeBlockers = parseBlockedBy(issue.blockedBy);
+  const isBlocked = activeBlockers.length > 0;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] overflow-y-auto font-sans select-none">
@@ -401,13 +417,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         <div className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 flex items-center justify-between text-xs text-[#EF4444] font-medium">
           <div className="flex items-center gap-2">
             <ShieldAlert size={15} />
-            <span>This task has active blocking dependencies: <strong>{issue.blockedBy!.join(', ')}</strong></span>
+            <span>This task has active blocking dependencies: <strong>{activeBlockers.join(', ')}</strong></span>
           </div>
           <span className="text-[10px] font-mono uppercase bg-[#EF4444]/20 px-2 py-0.5 rounded border border-[#EF4444]/40">
             Blocked
           </span>
         </div>
       )}
+
 
       {/* Main Container */}
       <div className="p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-12 gap-6">
@@ -569,11 +586,11 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Blocker Tags */}
             <div className="space-y-1.5">
-              {(issue.blockedBy || []).length === 0 ? (
+              {parseBlockedBy(issue.blockedBy).length === 0 ? (
                 <p className="text-xs text-[#787C83] italic">No active blockers on this issue.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {issue.blockedBy!.map((key) => (
+                  {parseBlockedBy(issue.blockedBy).map((key) => (
                     <div
                       key={key}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EF4444]/15 border border-[#EF4444]/30 text-xs font-mono text-[#EF4444]"
@@ -592,6 +609,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 </div>
               )}
             </div>
+
           </div>
 
           {/* Sub-works & Subtasks Checklist Section */}

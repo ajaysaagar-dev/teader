@@ -78,7 +78,25 @@ function getUserColor(userName: string): string {
   return USER_BRANCH_COLORS[index];
 }
 
+function parseBlockedBy(blockedBy: any): string[] {
+
+  if (!blockedBy) return [];
+  if (Array.isArray(blockedBy)) return blockedBy.map(String);
+  if (typeof blockedBy === 'string') {
+    const trimmed = blockedBy.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.memo(({
+
   issues,
   onSelectIssue,
 }) => {
@@ -190,7 +208,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       const toNode = nodeMap.get(iss.key);
       if (!toNode) return;
 
-      (iss.blockedBy || []).forEach((fromKey) => {
+      parseBlockedBy(iss.blockedBy).forEach((fromKey) => {
         const fromNode = nodeMap.get(fromKey);
         if (fromNode) {
           const edgeId = `dep_${fromKey}_${iss.key}`;
@@ -210,6 +228,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
         }
       });
     });
+
 
     // 2. Sequential Branch Continuity Links (User Workflow Line)
     const userNodes = new Map<string, TimelineNode[]>();
@@ -290,11 +309,12 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     const hoveredNode = nodes.find((n) => n.id === hoveredNodeId);
     if (hoveredNode) {
       activeKeys.add(hoveredNode.issue.key);
-      (hoveredNode.issue.blockedBy || []).forEach((k) => activeKeys.add(k));
+      parseBlockedBy(hoveredNode.issue.blockedBy).forEach((k) => activeKeys.add(k));
       edges
         .filter((e) => e.fromKey === hoveredNode.issue.key)
         .forEach((e) => activeKeys.add(e.toKey));
     }
+
 
     return activeKeys;
   }, [hoveredNodeId, nodes, edges]);
@@ -588,7 +608,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           {filteredNodes.map((node) => {
             const isHovered = hoveredNodeId === node.id;
             const isRelated = activeHighlightedKeys.has(node.issue.key);
-            const isBlocked = (node.issue.blockedBy || []).length > 0;
+            const isBlocked = parseBlockedBy(node.issue.blockedBy).length > 0;
+
             const isDone = node.issue.status === 'done';
 
             return (

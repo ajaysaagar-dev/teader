@@ -701,14 +701,28 @@ export async function getAllIssuesDB() {
         labels = iss.labels ? String(iss.labels).split(',').map((l) => l.trim()) : [];
       }
 
+      let blockedBy: string[] = [];
+      try {
+        if (Array.isArray(iss.blockedBy)) {
+          blockedBy = iss.blockedBy;
+        } else if (typeof iss.blockedBy === 'string' && iss.blockedBy.trim()) {
+          const parsed = JSON.parse(iss.blockedBy);
+          blockedBy = Array.isArray(parsed) ? parsed : [];
+        }
+      } catch {
+        blockedBy = iss.blockedBy ? String(iss.blockedBy).split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+      }
+
       return {
         ...iss,
         labels,
+        blockedBy,
         estimatedHours: Number(iss.estimatedHours) || 0,
         loggedHours: Number(iss.loggedHours) || 0,
         subtasks: buildSubtaskTree(subtasksMap.get(iss.id) || []),
         images: imagesMap.get(iss.id) || [],
       };
+
     });
   } catch {
     return memoryIssuesStore;

@@ -82,15 +82,16 @@ export function areIssuesEqual(a: Issue, b: Issue): boolean {
 
   if (!areSubtreesEqual(a.subtasks || [], b.subtasks || [])) return false;
 
-  // Compare blockedBy array
-  const aBlocked = a.blockedBy || [];
-  const bBlocked = b.blockedBy || [];
+  // Compare blockedBy array safely
+  const aBlocked = Array.isArray(a.blockedBy) ? a.blockedBy : [];
+  const bBlocked = Array.isArray(b.blockedBy) ? b.blockedBy : [];
   if (aBlocked.length !== bBlocked.length) return false;
   for (let i = 0; i < aBlocked.length; i++) {
     if (aBlocked[i] !== bBlocked[i]) return false;
   }
 
   return true;
+
 }
 
 /**
