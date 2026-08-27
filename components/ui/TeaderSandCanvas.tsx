@@ -3,26 +3,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface Particle {
+interface ButterflyParticle {
   x: number;
   y: number;
   originX: number;
   originY: number;
-  vx: number;
-  vy: number;
+  baseAngle: number;
+  baseSpeed: number;
+  flutterFreq: number;
+  flutterAmp: number;
+  flutterPhase: number;
+  curveFactor: number;
   size: number;
   color: string;
   alpha: number;
   delay: number;
 }
 
-const SAND_COLORS = [
+const BUTTERFLY_COLORS = [
   '#DCB001', // Primary Golden Amber
-  '#FDE047', // Radiant Gold
-  '#F59E0B', // Warm Amber
-  '#FBBF24', // Sun Sand
-  '#FEF08A', // Pale Gold
+  '#FDE047', // Radiant Sun Gold
+  '#F59E0B', // Amber Honey
+  '#FBBF24', // Warm Topaz
+  '#FEF08A', // Pale Shimmer
   '#FFFFFF', // Stardust White
+  '#38BDF8', // Ethereal Cyan Glint
 ];
 
 export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
@@ -30,7 +35,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
   const [isOverlayVisible, setIsOverlayVisible] = useState(true);
 
   useEffect(() => {
-    // 1. Log bold formatted banner to browser console
+    // 1. DevTools Console Banner
     console.log(
       '%c TEADER %c High-Velocity Engineering & Task Platform %c ⚡ 0ms Optimistic UI ',
       'background: #DCB001; color: #0A0B0D; font-weight: 900; font-size: 22px; padding: 6px 14px; border-radius: 6px; text-transform: uppercase;',
@@ -44,7 +49,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
     if (!ctx) return;
 
     let animationFrameId: number;
-    let particles: Particle[] = [];
+    let particles: ButterflyParticle[] = [];
     let startTime = Date.now();
 
     const resize = () => {
@@ -53,14 +58,15 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
     };
     resize();
 
-    // 2. Render off-screen bold "TEADER" text to sample sand particle positions
+    // 2. Render solid bold "TEADER" text to extract particle pixel positions
     const offscreen = document.createElement('canvas');
     offscreen.width = canvas.width;
     offscreen.height = canvas.height;
     const offCtx = offscreen.getContext('2d');
 
+    const fontSize = Math.min(canvas.width * 0.16, 130);
+
     if (offCtx) {
-      const fontSize = Math.min(canvas.width * 0.18, 140);
       offCtx.fillStyle = '#FFFFFF';
       offCtx.font = `900 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       offCtx.textAlign = 'center';
@@ -68,36 +74,42 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
       offCtx.fillText('TEADER', canvas.width / 2, canvas.height / 2);
 
       // Subtitle below
-      offCtx.font = `700 ${Math.max(14, fontSize * 0.16)}px monospace`;
+      offCtx.font = `700 ${Math.max(12, fontSize * 0.15)}px monospace`;
       offCtx.fillText('HIGH-VELOCITY PLATFORM', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
 
       const imgData = offCtx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
 
-      // Sample particles with step density
-      const step = Math.max(3, Math.floor(canvas.width / 400));
+      // Sample particle mesh
+      const step = Math.max(3, Math.floor(canvas.width / 450));
       for (let y = 0; y < canvas.height; y += step) {
         for (let x = 0; x < canvas.width; x += step) {
           const index = (y * canvas.width + x) * 4;
           const alpha = data[index + 3];
 
           if (alpha > 128) {
-            // Random explosive outward velocity + 360-degree angle
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 1.5 + Math.random() * 6.5;
-            const delay = 600 + Math.random() * 800; // time before dissolving
+            // Random 360-degree direction with varied speeds for butterfly flight
+            const baseAngle = Math.random() * Math.PI * 2;
+            const isFastGlider = Math.random() < 0.25;
+            const baseSpeed = isFastGlider 
+              ? 3.5 + Math.random() * 4.5 
+              : 1.2 + Math.random() * 2.8;
 
             particles.push({
-              x: x + (Math.random() - 0.5) * 2,
-              y: y + (Math.random() - 0.5) * 2,
+              x,
+              y,
               originX: x,
               originY: y,
-              vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 2,
-              vy: Math.sin(angle) * speed + (Math.random() - 0.5) * 2 - 0.5,
-              size: 1.2 + Math.random() * 2.2,
-              color: SAND_COLORS[Math.floor(Math.random() * SAND_COLORS.length)],
+              baseAngle,
+              baseSpeed,
+              flutterFreq: 0.04 + Math.random() * 0.08,
+              flutterAmp: 1.2 + Math.random() * 3.5,
+              flutterPhase: Math.random() * Math.PI * 2,
+              curveFactor: (Math.random() - 0.5) * 0.04,
+              size: 1.4 + Math.random() * 2.2,
+              color: BUTTERFLY_COLORS[Math.floor(Math.random() * BUTTERFLY_COLORS.length)],
               alpha: 1,
-              delay,
+              delay: 850 + Math.random() * 600, // Stay solid bold text first, then smoothly dissolve
             });
           }
         }
@@ -109,30 +121,81 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const elapsed = Date.now() - startTime;
 
+      // ─── Phase 1: Draw Thick Solid Bold "TEADER" Text ────────────
+      // Stays fully solid for the first 800ms, then fades out smoothly as particles disperse
+      const textFadeStart = 800;
+      const textFadeEnd = 1300;
+      let textAlpha = 1;
+
+      if (elapsed > textFadeEnd) {
+        textAlpha = 0;
+      } else if (elapsed > textFadeStart) {
+        textAlpha = 1 - (elapsed - textFadeStart) / (textFadeEnd - textFadeStart);
+      }
+
+      if (textAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+
+        // Glowing outer drop shadow
+        ctx.shadowColor = '#DCB001';
+        ctx.shadowBlur = 28;
+
+        // Gradient fill for bold solid typography
+        const textGrad = ctx.createLinearGradient(
+          canvas.width / 2 - 200, 
+          canvas.height / 2 - 50, 
+          canvas.width / 2 + 200, 
+          canvas.height / 2 + 50
+        );
+        textGrad.addColorStop(0, '#DCB001');
+        textGrad.addColorStop(0.5, '#FDE047');
+        textGrad.addColorStop(1, '#F59E0B');
+
+        ctx.fillStyle = textGrad;
+        ctx.font = `900 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TEADER', canvas.width / 2, canvas.height / 2);
+
+        // Subtitle
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#CFD4DD';
+        ctx.font = `700 ${Math.max(12, fontSize * 0.15)}px monospace`;
+        ctx.fillText('HIGH-VELOCITY PLATFORM', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
+
+        ctx.restore();
+      }
+
+      // ─── Phase 2: Butterfly Flying Style Particles ─────────────────
       let activeCount = 0;
 
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
 
         if (elapsed > p.delay) {
-          // Dissolve & Flow like sand in all directions
-          p.x += p.vx;
-          p.y += p.vy;
+          const flightTime = elapsed - p.delay;
 
-          // Turbulence / wind curl
-          p.vx += (Math.random() - 0.5) * 0.15;
-          p.vy += (Math.random() - 0.5) * 0.15;
+          // Butterfly wing flutter oscillation perpendicular to heading
+          p.baseAngle += p.curveFactor;
+          const flutter = Math.sin(flightTime * p.flutterFreq + p.flutterPhase) * p.flutterAmp;
 
-          // Friction / drag
-          p.vx *= 0.985;
-          p.vy *= 0.985;
+          // Velocity components with harmonic fluttering
+          const vx = Math.cos(p.baseAngle) * p.baseSpeed + Math.cos(p.baseAngle + Math.PI / 2) * flutter;
+          const vy = Math.sin(p.baseAngle) * p.baseSpeed + Math.sin(p.baseAngle + Math.PI / 2) * flutter;
 
-          // Alpha fadeout
-          p.alpha = Math.max(0, p.alpha - 0.012);
+          p.x += vx;
+          p.y += vy;
+
+          // Air drag & smooth graceful fade out
+          p.baseSpeed *= 0.992;
+          p.alpha = Math.max(0, p.alpha - 0.009);
+        } else if (elapsed > 700) {
+          // Subtle shimmer right before take-off
+          p.alpha = 0.6 + Math.sin(elapsed * 0.02) * 0.4;
         } else {
-          // Subtle breathing / glimmer while holding text shape
-          const shimmer = Math.sin((elapsed + p.originX) * 0.01) * 0.2;
-          p.alpha = Math.min(1, 0.85 + shimmer);
+          // Hide particles during solid text phase
+          p.alpha = 0;
         }
 
         if (p.alpha > 0.01) {
@@ -140,6 +203,8 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
           ctx.save();
           ctx.globalAlpha = p.alpha;
           ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 6;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
           ctx.fill();
@@ -147,8 +212,8 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
         }
       }
 
-      // Once most particles have dissolved, fade out intro canvas
-      if (elapsed > 2800 || activeCount === 0) {
+      // ─── Phase 3: Transition Out ──────────────────────────────────
+      if (elapsed > 3500 || (elapsed > 1500 && activeCount === 0)) {
         setIsOverlayVisible(false);
         if (onComplete) onComplete();
       } else {
@@ -158,9 +223,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
 
     animationFrameId = requestAnimationFrame(render);
 
-    const handleResize = () => {
-      resize();
-    };
+    const handleResize = () => resize();
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -175,14 +238,14 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.7 }}
           onClick={() => setIsOverlayVisible(false)}
-          className="fixed inset-0 z-[100] bg-[#0A0B0D]/95 backdrop-blur-md flex items-center justify-center pointer-events-auto cursor-pointer"
+          className="fixed inset-0 z-[100] bg-[#0A0B0D]/95 backdrop-blur-md flex items-center justify-center pointer-events-auto cursor-pointer select-none"
           title="Click to skip animation"
         >
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
           <div className="absolute bottom-8 text-[11px] font-mono text-[#787C83] animate-pulse">
-            Click anywhere to enter • Sand Dissolve Intro
+            Click anywhere to enter • Butterfly Particle Intro
           </div>
         </motion.div>
       )}
