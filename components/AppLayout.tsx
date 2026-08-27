@@ -176,13 +176,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <div className="flex items-center gap-3">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 mr-2 group">
-            <div className="w-6 h-6 rounded-md bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-xs shadow-[0_0_10px_rgba(220,176,1,0.25)] transition-transform group-hover:scale-105">
-              T
+            <div className="w-6 h-6 rounded-md bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-xs shadow-[0_0_10px_rgba(220,176,1,0.25)] transition-transform group-hover:scale-105 font-prompt">
+              t
             </div>
-            <span className="font-bold text-sm text-white tracking-tight flex items-center gap-1">
-              Teader
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="font-extrabold text-sm text-white tracking-tight font-prompt">
+                teader
+              </span>
+              <span className="text-[8px] font-mono text-[#787C83] tracking-widest uppercase font-prompt">
+                workspace
+              </span>
+            </div>
           </Link>
+
 
           <span className="w-px h-4 bg-[#2A2C30] mr-1 hidden sm:inline" />
 
@@ -283,15 +289,21 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* ─── Main Content Canvas Area (Only shown if logged in) ──────── */}
       {isCheckingAuth && !currentUser ? (
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#0E0F11] space-y-4">
-          <div className="w-11 h-11 rounded-xl bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 flex items-center justify-center font-bold animate-pulse shadow-[0_0_20px_rgba(220,176,1,0.2)]">
-            <span className="text-lg font-mono">T</span>
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#0A0B0D] space-y-4 select-none">
+          <div className="text-center space-y-1">
+            <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#DCB001] via-[#FDE047] to-[#F59E0B] font-prompt tracking-tight">
+              teader
+            </h1>
+            <p className="text-xs font-mono text-[#8E939D] tracking-[0.25em] uppercase font-prompt">
+              workspace
+            </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-[#8E939D]">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#787C83] pt-2">
             <Loader2 size={14} className="animate-spin text-[#DCB001]" />
             <span>Verifying workspace session...</span>
           </div>
         </div>
+
       ) : !currentUser ? null : (
         <main className="flex-1 flex flex-col min-w-0 h-[calc(100vh-48px)] overflow-hidden">
           {children}

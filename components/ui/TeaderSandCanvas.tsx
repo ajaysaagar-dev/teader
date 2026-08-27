@@ -68,14 +68,15 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
 
     if (offCtx) {
       offCtx.fillStyle = '#FFFFFF';
-      offCtx.font = `900 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      offCtx.font = `900 ${fontSize}px 'Prompt', var(--font-prompt), sans-serif`;
       offCtx.textAlign = 'center';
       offCtx.textBaseline = 'middle';
-      offCtx.fillText('TEADER', canvas.width / 2, canvas.height / 2);
+      offCtx.fillText('teader', canvas.width / 2, canvas.height / 2);
 
       // Subtitle below
-      offCtx.font = `700 ${Math.max(12, fontSize * 0.15)}px monospace`;
-      offCtx.fillText('HIGH-VELOCITY PLATFORM', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
+      offCtx.font = `600 ${Math.max(13, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
+      offCtx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
+
 
       const imgData = offCtx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imgData.data;
@@ -153,16 +154,17 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
         textGrad.addColorStop(1, '#F59E0B');
 
         ctx.fillStyle = textGrad;
-        ctx.font = `900 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        ctx.font = `900 ${fontSize}px 'Prompt', var(--font-prompt), sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('TEADER', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('teader', canvas.width / 2, canvas.height / 2);
 
         // Subtitle
         ctx.shadowBlur = 10;
         ctx.fillStyle = '#CFD4DD';
-        ctx.font = `700 ${Math.max(12, fontSize * 0.15)}px monospace`;
-        ctx.fillText('HIGH-VELOCITY PLATFORM', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
+        ctx.font = `600 ${Math.max(13, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
+        ctx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.65);
+
 
         ctx.restore();
       }

@@ -84,12 +84,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-base shadow-[0_0_15px_rgba(220,176,1,0.3)] transition-transform group-hover:scale-105">
-                T
+              <div className="w-8 h-8 rounded-lg bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-base shadow-[0_0_15px_rgba(220,176,1,0.3)] transition-transform group-hover:scale-105 font-prompt">
+                t
               </div>
-              <span className="font-bold text-lg text-white tracking-tight flex items-center gap-1">
-                Teader <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">v2.0</span>
+              <span className="font-extrabold text-xl text-white tracking-tight flex items-center gap-1 font-prompt">
+                teader <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">v2.0</span>
               </span>
+
             </Link>
 
             <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#9BA1A6]">
