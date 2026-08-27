@@ -270,6 +270,19 @@ export async function initDB(): Promise<void> {
           );
         `);
 
+        // 11. Create Project Channels Table for Dynamic Channel Management
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_channels" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "name" VARCHAR(64) NOT NULL,
+            "description" TEXT,
+            "creatorId" INT DEFAULT 1,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "unique_project_channel_name" UNIQUE ("projectId", "name")
+          );
+        `);
+
 
         // Seed default users if table is empty
         const userCheck = await p.query(`SELECT COUNT(*) as cnt FROM "users"`);
@@ -1274,14 +1287,20 @@ export async function createProjectMessageDB(
   return fallbackMsg;
 }
 
-export async function deleteProjectMessageDB(messageId: number, userId: number): Promise<boolean> {
+export async function deleteProjectMessageDB(messageId: number, userId: number, isUserAdmin: boolean = false): Promise<boolean> {
   await initDB();
   try {
     const p = getPool();
-    const res = await p.query(
-      `DELETE FROM "project_messages" WHERE "id" = $1 AND ("userId" = $2 OR $2 = 1) RETURNING "id"`,
-      [messageId, userId]
-    );
+    let query = `DELETE FROM "project_messages" WHERE "id" = $1`;
+    const params: any[] = [messageId];
+
+    if (!isUserAdmin && userId !== 1) {
+      query += ` AND "userId" = $2`;
+      params.push(userId);
+    }
+    query += ` RETURNING "id"`;
+
+    const res = await p.query(query, params);
     if (res.rowCount && res.rowCount > 0) {
       memoryProjectMessagesStore = memoryProjectMessagesStore.filter((m) => m.id !== messageId);
       return true;
@@ -1289,6 +1308,178 @@ export async function deleteProjectMessageDB(messageId: number, userId: number):
   } catch {}
 
   memoryProjectMessagesStore = memoryProjectMessagesStore.filter((m) => m.id !== messageId);
+  return true;
+}
+
+// ─── Dynamic Project Channels Management ────────────────────────────────────
+
+export interface ProjectChannel {
+  id: number;
+  projectId: number;
+  name: string;
+  description?: string;
+  creatorId?: number;
+  createdAt: string;
+}
+
+let memoryProjectChannelsStore: ProjectChannel[] = [];
+
+export async function getProjectChannelsDB(projectId: number): Promise<ProjectChannel[]> {
+  await initDB();
+  const defaultDefs = [
+    { name: 'general', desc: 'General project discussions and team syncs' },
+    { name: 'dev-stream', desc: 'Autonomous coding agent updates & commits' },
+    { name: 'architecture', desc: 'System design, schemas & API reviews' },
+    { name: 'qa-sync', desc: 'Bug reports, test results & QA verification' },
+  ];
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `SELECT "id", "projectId", "name", "description", "creatorId", "createdAt" 
+       FROM "project_channels" 
+       WHERE "projectId" = $1 
+       ORDER BY "id" ASC`,
+      [projectId]
+    );
+
+    if (res.rows && res.rows.length > 0) {
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        projectId: r.projectId,
+        name: r.name,
+        description: r.description || '',
+        creatorId: r.creatorId || 1,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+      }));
+    }
+
+    // Seed default channels for this project if table is empty for project
+    for (const d of defaultDefs) {
+      await p.query(
+        `INSERT INTO "project_channels" ("projectId", "name", "description", "creatorId") 
+         VALUES ($1, $2, $3, $4) ON CONFLICT ("projectId", "name") DO NOTHING`,
+        [projectId, d.name, d.desc, 1]
+      );
+    }
+
+    const seededRes = await p.query(
+      `SELECT "id", "projectId", "name", "description", "creatorId", "createdAt" 
+       FROM "project_channels" 
+       WHERE "projectId" = $1 
+       ORDER BY "id" ASC`,
+      [projectId]
+    );
+
+    if (seededRes.rows && seededRes.rows.length > 0) {
+      return seededRes.rows.map((r: any) => ({
+        id: r.id,
+        projectId: r.projectId,
+        name: r.name,
+        description: r.description || '',
+        creatorId: r.creatorId || 1,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+      }));
+    }
+  } catch {}
+
+  // In-memory fallback
+  const list = memoryProjectChannelsStore.filter((c) => c.projectId === projectId);
+  if (list.length > 0) return list;
+
+  const now = new Date().toISOString();
+  const seeded = defaultDefs.map((d, i) => ({
+    id: Date.now() + i,
+    projectId,
+    name: d.name,
+    description: d.desc,
+    creatorId: 1,
+    createdAt: now,
+  }));
+  memoryProjectChannelsStore.push(...seeded);
+  return seeded;
+}
+
+export async function createProjectChannelDB(
+  projectId: number,
+  name: string,
+  description: string = '',
+  creatorId: number = 1
+): Promise<ProjectChannel> {
+  await initDB();
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-_]/g, '-')
+    .replace(/^-+|-+$/g, '') || 'new-channel';
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `INSERT INTO "project_channels" ("projectId", "name", "description", "creatorId") 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING "id", "projectId", "name", "description", "creatorId", "createdAt"`,
+      [projectId, cleanName, description.trim(), creatorId]
+    );
+    if (res.rows && res.rows[0]) {
+      const r = res.rows[0];
+      const ch: ProjectChannel = {
+        id: r.id,
+        projectId: r.projectId,
+        name: r.name,
+        description: r.description || '',
+        creatorId: r.creatorId,
+        createdAt: new Date(r.createdAt).toISOString(),
+      };
+      memoryProjectChannelsStore.push(ch);
+      return ch;
+    }
+  } catch {}
+
+  const fallbackCh: ProjectChannel = {
+    id: Date.now(),
+    projectId,
+    name: cleanName,
+    description: description.trim(),
+    creatorId,
+    createdAt: new Date().toISOString(),
+  };
+  memoryProjectChannelsStore.push(fallbackCh);
+  return fallbackCh;
+}
+
+export async function deleteProjectChannelDB(projectId: number, channelName: string): Promise<boolean> {
+  await initDB();
+  const cleanName = channelName.toLowerCase().trim();
+  if (cleanName === 'general') {
+    throw new Error('The default #general channel cannot be deleted');
+  }
+
+  try {
+    const p = getPool();
+    await p.query(
+      `DELETE FROM "project_messages" WHERE "projectId" = $1 AND "channel" = $2`,
+      [projectId, cleanName]
+    );
+    const res = await p.query(
+      `DELETE FROM "project_channels" WHERE "projectId" = $1 AND "name" = $2`,
+      [projectId, cleanName]
+    );
+    memoryProjectChannelsStore = memoryProjectChannelsStore.filter(
+      (c) => !(c.projectId === projectId && c.name === cleanName)
+    );
+    memoryProjectMessagesStore = memoryProjectMessagesStore.filter(
+      (m) => !(m.projectId === projectId && m.channel === cleanName)
+    );
+    return (res.rowCount || 0) > 0;
+  } catch {}
+
+  memoryProjectChannelsStore = memoryProjectChannelsStore.filter(
+    (c) => !(c.projectId === projectId && c.name === cleanName)
+  );
+  memoryProjectMessagesStore = memoryProjectMessagesStore.filter(
+    (m) => !(m.projectId === projectId && m.channel === cleanName)
+  );
   return true;
 }
 
