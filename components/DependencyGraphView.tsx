@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { Issue, Status, Priority } from '@/lib/types';
 import { 
   GitFork, 
+  GitBranch, 
+  GitCommit, 
+  GitMerge, 
   ShieldAlert, 
   CheckCircle2, 
   Clock, 
@@ -12,7 +15,11 @@ import {
   ZoomOut, 
   RotateCcw,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  User,
+  Calendar,
+  Filter,
+  Check
 } from 'lucide-react';
 
 interface DependencyGraphViewProps {
@@ -21,22 +28,54 @@ interface DependencyGraphViewProps {
   onOpenNewIssue?: () => void;
 }
 
-interface Node {
+interface TimelineNode {
   id: string;
   issue: Issue;
   x: number;
   y: number;
   width: number;
   height: number;
-  layer: number;
+  timeSlot: number;
+  trackIndex: number;
+  userColor: string;
+  userName: string;
+  dateStr: string;
 }
 
-interface Edge {
+interface TimelineEdge {
   id: string;
   fromKey: string;
   toKey: string;
-  fromNode: Node;
-  toNode: Node;
+  fromNode: TimelineNode;
+  toNode: TimelineNode;
+  color: string;
+  actionType: 'dependency' | 'branch' | 'merge' | 'sequence';
+  user: string;
+}
+
+// ─── Vibrant Palette for User Branch Colors (Plastic SCM / Unity Style) ───────
+const USER_BRANCH_COLORS = [
+  '#06B6D4', // Vibrant Cyan
+  '#10B981', // Emerald Green
+  '#A855F7', // Electric Purple
+  '#F59E0B', // Golden Amber
+  '#F43F5E', // Rose / Coral
+  '#3B82F6', // Royal Blue
+  '#84CC16', // Lime
+  '#EC4899', // Pink
+  '#14B8A6', // Teal
+  '#EAB308', // Yellow
+];
+
+function getUserColor(userName: string): string {
+  if (!userName || userName === 'Unassigned') return '#787C83';
+  let hash = 0;
+  for (let i = 0; i < userName.length; i++) {
+    hash = (hash << 5) - hash + userName.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % USER_BRANCH_COLORS.length;
+  return USER_BRANCH_COLORS[index];
 }
 
 export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.memo(({
@@ -45,104 +84,205 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
 }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
+  const [selectedUserFilter, setSelectedUserFilter] = useState<string | null>(null);
+  const [layoutMode, setLayoutMode] = useState<'timeline_branches' | 'dag_pipeline'>('timeline_branches');
 
-  // Build DAG Node Layout
-  const { nodes, edges, maxLayer, maxPerLayer } = useMemo(() => {
+  // Compute User List & Summary
+  const userList = useMemo(() => {
+    const usersMap = new Map<string, { name: string; color: string; count: number }>();
+    issues.forEach((iss) => {
+      const uName = iss.assigneeName || iss.reporterName || 'Unassigned';
+      if (!usersMap.has(uName)) {
+        usersMap.set(uName, {
+          name: uName,
+          color: getUserColor(uName),
+          count: 0,
+        });
+      }
+      usersMap.get(uName)!.count += 1;
+    });
+    return Array.from(usersMap.values());
+  }, [issues]);
+
+  // Compute Horizontal Timeline & Smooth Branch Connections
+  const { nodes, edges, timeHeaders, canvasWidth, canvasHeight, tracks } = useMemo(() => {
+    if (issues.length === 0) {
+      return { nodes: [], edges: [], timeHeaders: [], canvasWidth: 1000, canvasHeight: 600, tracks: [] };
+    }
+
     const keyMap = new Map<string, Issue>();
     issues.forEach((i) => keyMap.set(i.key, i));
 
-    // Calculate topological depth/layer for each issue
-    const layers = new Map<string, number>();
+    // Sort issues chronologically by createdAt (or fallback to ID/index)
+    const sortedIssues = [...issues].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeA !== timeB) return timeA - timeB;
+      return String(a.key).localeCompare(String(b.key));
+    });
 
-    const getDepth = (iss: Issue, visited = new Set<string>()): number => {
-      if (visited.has(iss.key)) return 0; // prevent circular recursion
-      visited.add(iss.key);
-
-      const blockers = (iss.blockedBy || []).filter((k) => keyMap.has(k));
-      if (blockers.length === 0) return 0;
-
-      let maxBlockerDepth = 0;
-      for (const bKey of blockers) {
-        const blockerIssue = keyMap.get(bKey);
-        if (blockerIssue) {
-          maxBlockerDepth = Math.max(maxBlockerDepth, getDepth(blockerIssue, new Set(visited)) + 1);
-        }
+    // Determine Tracks (Lanes) based on Assignee / User or Epics
+    const trackNames: string[] = [];
+    sortedIssues.forEach((iss) => {
+      const lane = iss.assigneeName || iss.epic || 'Main Branch';
+      if (!trackNames.includes(lane)) {
+        trackNames.push(lane);
       }
-      return maxBlockerDepth;
-    };
-
-    issues.forEach((iss) => {
-      layers.set(iss.key, getDepth(iss));
     });
 
-    // Group issues by layer
-    const layerGroups = new Map<number, Issue[]>();
-    let maxL = 0;
-    layers.forEach((layer, key) => {
-      maxL = Math.max(maxL, layer);
-      if (!layerGroups.has(layer)) layerGroups.set(layer, []);
-      const iss = keyMap.get(key);
-      if (iss) layerGroups.get(layer)!.push(iss);
-    });
-
+    // Dimensions
     const NODE_WIDTH = 220;
-    const NODE_HEIGHT = 80;
-    const HORIZONTAL_GAP = 140;
-    const VERTICAL_GAP = 30;
+    const NODE_HEIGHT = 74;
+    const COLUMN_WIDTH = 280;
+    const ROW_HEIGHT = 120;
+    const START_X = 100;
+    const START_Y = 90;
 
-    const computedNodes: Node[] = [];
-    const nodeMap = new Map<string, Node>();
-    let maxCountInLayer = 1;
+    // Build timeline slots
+    const computedNodes: TimelineNode[] = [];
+    const nodeMap = new Map<string, TimelineNode>();
+    const timeSlotsMap = new Map<number, string>();
 
-    layerGroups.forEach((group, layer) => {
-      maxCountInLayer = Math.max(maxCountInLayer, group.length);
-      group.forEach((iss, index) => {
-        const node: Node = {
-          id: iss.id,
-          issue: iss,
-          x: 60 + layer * (NODE_WIDTH + HORIZONTAL_GAP),
-          y: 60 + index * (NODE_HEIGHT + VERTICAL_GAP),
-          width: NODE_WIDTH,
-          height: NODE_HEIGHT,
-          layer,
-        };
-        computedNodes.push(node);
-        nodeMap.set(iss.key, node);
-      });
+    sortedIssues.forEach((iss, index) => {
+      const lane = iss.assigneeName || iss.epic || 'Main Branch';
+      let trackIndex = trackNames.indexOf(lane);
+      if (trackIndex === -1) trackIndex = 0;
+
+      // In DAG pipeline mode, slot depends on topological depth; in Timeline mode, it's chronological
+      const timeSlot = index;
+      const x = START_X + timeSlot * COLUMN_WIDTH;
+      const y = START_Y + trackIndex * ROW_HEIGHT;
+
+      const userName = iss.assigneeName || iss.reporterName || 'Unassigned';
+      const userColor = getUserColor(userName);
+
+      let dateLabel = `Step ${index + 1}`;
+      if (iss.createdAt) {
+        const d = new Date(iss.createdAt);
+        dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+      timeSlotsMap.set(timeSlot, dateLabel);
+
+      const node: TimelineNode = {
+        id: iss.id,
+        issue: iss,
+        x,
+        y,
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT,
+        timeSlot,
+        trackIndex,
+        userColor,
+        userName,
+        dateStr: dateLabel,
+      };
+
+      computedNodes.push(node);
+      nodeMap.set(iss.key, node);
     });
 
-    // Compute Edges
-    const computedEdges: Edge[] = [];
-    issues.forEach((iss) => {
+    // Compute Timeline Edges (Dependencies + Sequential Branch Links)
+    const computedEdges: TimelineEdge[] = [];
+    const edgeSet = new Set<string>();
+
+    // 1. Dependency Blocking Links
+    sortedIssues.forEach((iss) => {
       const toNode = nodeMap.get(iss.key);
       if (!toNode) return;
 
       (iss.blockedBy || []).forEach((fromKey) => {
         const fromNode = nodeMap.get(fromKey);
         if (fromNode) {
-          computedEdges.push({
-            id: `edge_${fromKey}_${iss.key}`,
-            fromKey,
-            toKey: iss.key,
-            fromNode,
-            toNode,
-          });
+          const edgeId = `dep_${fromKey}_${iss.key}`;
+          if (!edgeSet.has(edgeId)) {
+            edgeSet.add(edgeId);
+            computedEdges.push({
+              id: edgeId,
+              fromKey,
+              toKey: iss.key,
+              fromNode,
+              toNode,
+              color: '#EF4444', // Red for dependency blocker
+              actionType: 'dependency',
+              user: toNode.userName,
+            });
+          }
         }
       });
     });
 
+    // 2. Sequential Branch Continuity Links (User Workflow Line)
+    const userNodes = new Map<string, TimelineNode[]>();
+    computedNodes.forEach((node) => {
+      const u = node.userName;
+      if (!userNodes.has(u)) userNodes.set(u, []);
+      userNodes.get(u)!.push(node);
+    });
+
+    userNodes.forEach((nodesList, uName) => {
+      const uColor = getUserColor(uName);
+      for (let i = 0; i < nodesList.length - 1; i++) {
+        const fromN = nodesList[i];
+        const toN = nodesList[i + 1];
+        const edgeId = `seq_${fromN.issue.key}_${toN.issue.key}`;
+        if (!edgeSet.has(edgeId)) {
+          edgeSet.add(edgeId);
+          computedEdges.push({
+            id: edgeId,
+            fromKey: fromN.issue.key,
+            toKey: toN.issue.key,
+            fromNode: fromN,
+            toNode: toN,
+            color: uColor,
+            actionType: toN.issue.status === 'done' ? 'merge' : 'branch',
+            user: uName,
+          });
+        }
+      }
+    });
+
+    // 3. Trunk Baseline if isolated nodes exist
+    if (computedNodes.length > 1 && computedEdges.length === 0) {
+      for (let i = 0; i < computedNodes.length - 1; i++) {
+        const fromN = computedNodes[i];
+        const toN = computedNodes[i + 1];
+        computedEdges.push({
+          id: `trunk_${fromN.issue.key}_${toN.issue.key}`,
+          fromKey: fromN.issue.key,
+          toKey: toN.issue.key,
+          fromNode: fromN,
+          toNode: toN,
+          color: fromN.userColor,
+          actionType: 'branch',
+          user: fromN.userName,
+        });
+      }
+    }
+
+    const timeHeadersList = Array.from(timeSlotsMap.entries()).map(([slot, label]) => ({
+      slot,
+      x: START_X + slot * COLUMN_WIDTH,
+      label,
+    }));
+
+    const totalWidth = Math.max(1200, START_X + sortedIssues.length * COLUMN_WIDTH + 200);
+    const totalHeight = Math.max(700, START_Y + trackNames.length * ROW_HEIGHT + 160);
+
     return {
       nodes: computedNodes,
       edges: computedEdges,
-      maxLayer: maxL,
-      maxPerLayer: maxCountInLayer,
+      timeHeaders: timeHeadersList,
+      canvasWidth: totalWidth,
+      canvasHeight: totalHeight,
+      tracks: trackNames.map((name, idx) => ({
+        name,
+        y: START_Y + idx * ROW_HEIGHT,
+        color: getUserColor(name),
+      })),
     };
-  }, [issues]);
+  }, [issues, layoutMode]);
 
-  const svgWidth = Math.max(900, (maxLayer + 1) * 360 + 120);
-  const svgHeight = Math.max(600, maxPerLayer * 110 + 140);
-
-  // Determine active dependencies to highlight on hover
+  // Determine active highlights on hover
   const activeHighlightedKeys = useMemo(() => {
     if (!hoveredNodeId) return new Set<string>();
     const activeKeys = new Set<string>();
@@ -150,9 +290,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     const hoveredNode = nodes.find((n) => n.id === hoveredNodeId);
     if (hoveredNode) {
       activeKeys.add(hoveredNode.issue.key);
-      // Add its blockers
       (hoveredNode.issue.blockedBy || []).forEach((k) => activeKeys.add(k));
-      // Add issues it blocks
       edges
         .filter((e) => e.fromKey === hoveredNode.issue.key)
         .forEach((e) => activeKeys.add(e.toKey));
@@ -161,68 +299,163 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     return activeKeys;
   }, [hoveredNodeId, nodes, edges]);
 
+  // Filter nodes based on user filter if active
+  const filteredNodes = useMemo(() => {
+    if (!selectedUserFilter) return nodes;
+    return nodes.filter((n) => n.userName === selectedUserFilter);
+  }, [nodes, selectedUserFilter]);
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden">
-      {/* Top Toolbar */}
-      <div className="h-11 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+    <div className="flex-1 flex flex-col h-full bg-[#101113] text-[#CFD4DD] font-sans select-none overflow-hidden">
+      {/* Top Toolbar (Unity Version Control / Plastic SCM Explorer Style) */}
+      <div className="h-12 px-4 bg-[#161719] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+        {/* Left: Brand & Branch Explorer Title */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-            <GitFork size={15} className="text-[#DCB001]" />
-            <span>Dependency Graph & DAG Pipeline</span>
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-[#DCB001]/15 border border-[#DCB001]/40 flex items-center justify-center text-[#DCB001]">
+              <GitFork size={14} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-white tracking-tight">
+                <span>Branch Explorer & Timeline Graph</span>
+                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#1B1C1F] border border-[#2A2C30] text-[#787C83] rounded">
+                  Unity VCS Style
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1 text-[11px] font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
-            <span>{edges.length} Active Blocking Relations</span>
+          <span className="w-px h-4 bg-[#2A2C30] mx-1 hidden sm:inline" />
+
+          {/* User / Action Legend Pills */}
+          <div className="hidden md:flex items-center gap-1.5 overflow-x-auto max-w-[45vw] custom-scrollbar py-1">
+            {userList.map((u) => {
+              const isSelected = selectedUserFilter === u.name;
+              return (
+                <button
+                  key={u.name}
+                  onClick={() => setSelectedUserFilter(isSelected ? null : u.name)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono transition-all shrink-0 border ${
+                    isSelected
+                      ? 'bg-white/10 text-white border-white/40 shadow-sm'
+                      : 'bg-[#131415] hover:bg-[#1C1D20] text-[#9BA1A6] border-[#2A2C30]'
+                  }`}
+                  style={{ borderLeftColor: u.color, borderLeftWidth: 3 }}
+                  title={`Filter by ${u.name} (${u.count} tasks)`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: u.color }}
+                  />
+                  <span className="truncate max-w-[80px]">{u.name}</span>
+                  <span className="text-[10px] opacity-70">({u.count})</span>
+                  {isSelected && <Check size={11} className="text-white" />}
+                </button>
+              );
+            })}
+            {selectedUserFilter && (
+              <button
+                onClick={() => setSelectedUserFilter(null)}
+                className="text-[10px] text-[#DCB001] hover:underline font-mono px-1.5 shrink-0"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Zoom Controls */}
-        <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
-          <button
-            onClick={() => setScale((s) => Math.max(0.6, s - 0.1))}
-            className="p-1 text-[#787C83] hover:text-white rounded"
-            title="Zoom Out"
-          >
-            <ZoomOut size={13} />
-          </button>
-          <span className="px-1.5 text-[10px] font-mono text-[#CFD4DD]">{Math.round(scale * 100)}%</span>
-          <button
-            onClick={() => setScale((s) => Math.min(1.5, s + 0.1))}
-            className="p-1 text-[#787C83] hover:text-white rounded"
-            title="Zoom In"
-          >
-            <ZoomIn size={13} />
-          </button>
-          <button
-            onClick={() => setScale(1)}
-            className="p-1 text-[#787C83] hover:text-white rounded ml-1 border-l border-[#2A2C30]"
-            title="Reset Zoom"
-          >
-            <RotateCcw size={12} />
-          </button>
+        {/* Right: Controls & Zoom */}
+        <div className="flex items-center gap-2">
+          {/* Zoom Controls */}
+          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
+            <button
+              onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
+              className="p-1 text-[#787C83] hover:text-white rounded"
+              title="Zoom Out"
+            >
+              <ZoomOut size={13} />
+            </button>
+            <span className="px-1.5 text-[10px] font-mono text-[#CFD4DD]">{Math.round(scale * 100)}%</span>
+            <button
+              onClick={() => setScale((s) => Math.min(1.5, s + 0.1))}
+              className="p-1 text-[#787C83] hover:text-white rounded"
+              title="Zoom In"
+            >
+              <ZoomIn size={13} />
+            </button>
+            <button
+              onClick={() => setScale(1)}
+              className="p-1 text-[#787C83] hover:text-white rounded ml-1 border-l border-[#2A2C30]"
+              title="Reset Zoom"
+            >
+              <RotateCcw size={12} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* SVG Canvas Area */}
-      <div className="flex-1 overflow-auto bg-[#101112] relative custom-scrollbar">
+      {/* SVG Timeline Canvas Area */}
+      <div className="flex-1 overflow-auto bg-[#0E0F11] relative custom-scrollbar">
         <div
           style={{
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
-            width: svgWidth,
-            height: svgHeight,
+            width: canvasWidth,
+            height: canvasHeight,
           }}
-          className="relative transition-transform duration-100"
+          className="relative transition-transform duration-100 min-h-full"
         >
-          {/* SVG Arrows for Edges */}
+          {/* Background Timeline Grid & Track Lanes */}
           <svg
             className="absolute inset-0 pointer-events-none"
-            width={svgWidth}
-            height={svgHeight}
+            width={canvasWidth}
+            height={canvasHeight}
           >
+            {/* Timeline Vertical Columns */}
+            {timeHeaders.map((hdr) => (
+              <g key={`grid_col_${hdr.slot}`}>
+                <line
+                  x1={hdr.x + 110}
+                  y1={45}
+                  x2={hdr.x + 110}
+                  y2={canvasHeight - 20}
+                  stroke="#1B1C1F"
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+              </g>
+            ))}
+
+            {/* Horizontal Track Lane Guides */}
+            {tracks.map((track, idx) => (
+              <g key={`track_${track.name}_${idx}`}>
+                <line
+                  x1={40}
+                  y1={track.y + 37}
+                  x2={canvasWidth - 40}
+                  y2={track.y + 37}
+                  stroke="#1A1B1E"
+                  strokeWidth={1.5}
+                />
+                {/* Lane Label */}
+                <text
+                  x={50}
+                  y={track.y + 30}
+                  fill={track.color}
+                  fontSize="10"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                  opacity="0.4"
+                >
+                  {track.name.toUpperCase()} LANE
+                </text>
+              </g>
+            ))}
+
+            {/* Arrow & Marker Definitions */}
             <defs>
               <marker
-                id="arrow-default"
+                id="arrow-dep"
                 viewBox="0 0 10 10"
                 refX="6"
                 refY="5"
@@ -230,55 +463,129 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 markerHeight="6"
                 orient="auto-start-reverse"
               >
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="#DCB001" opacity="0.7" />
+                <path d="M 0 1 L 8 5 L 0 9 z" fill="#EF4444" />
               </marker>
+
               <marker
-                id="arrow-highlight"
+                id="arrow-merge"
                 viewBox="0 0 10 10"
                 refX="6"
                 refY="5"
-                markerWidth="7"
-                markerHeight="7"
+                markerWidth="6"
+                markerHeight="6"
                 orient="auto-start-reverse"
               >
-                <path d="M 0 1 L 8 5 L 0 9 z" fill="#EF4444" />
+                <path d="M 0 1 L 8 5 L 0 9 z" fill="#22C55E" />
               </marker>
+
+              {/* Dynamic User Gradient Markers */}
+              {USER_BRANCH_COLORS.map((clr, idx) => (
+                <linearGradient
+                  key={`grad_${idx}`}
+                  id={`grad_user_${idx}`}
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" stopColor={clr} stopOpacity="0.8" />
+                  <stop offset="100%" stopColor={clr} stopOpacity="1" />
+                </linearGradient>
+              ))}
             </defs>
 
+            {/* Render Smooth Cubic Bezier Curves (Plastic SCM Branch Splines) */}
             {edges.map((edge) => {
               const startX = edge.fromNode.x + edge.fromNode.width;
               const startY = edge.fromNode.y + edge.fromNode.height / 2;
               const endX = edge.toNode.x;
               const endY = edge.toNode.y + edge.toNode.height / 2;
 
-              const dx = endX - startX;
+              const dx = Math.max(40, endX - startX);
               const cp1X = startX + dx * 0.5;
               const cp1Y = startY;
-              const cp2X = startX + dx * 0.5;
+              const cp2X = endX - dx * 0.5;
               const cp2Y = endY;
 
               const pathData = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
+
               const isHighlighted =
                 activeHighlightedKeys.has(edge.fromKey) &&
                 activeHighlightedKeys.has(edge.toKey);
 
+              const isDependency = edge.actionType === 'dependency';
+              const isMerge = edge.actionType === 'merge';
+
+              const strokeColor = isHighlighted
+                ? '#DCB001'
+                : isDependency
+                ? '#EF4444'
+                : isMerge
+                ? '#22C55E'
+                : edge.color;
+
               return (
-                <path
-                  key={edge.id}
-                  d={pathData}
-                  fill="none"
-                  stroke={isHighlighted ? '#EF4444' : '#DCB001'}
-                  strokeWidth={isHighlighted ? 2.5 : 1.5}
-                  strokeDasharray={isHighlighted ? 'none' : '4 3'}
-                  opacity={isHighlighted ? 1 : 0.4}
-                  markerEnd={isHighlighted ? 'url(#arrow-highlight)' : 'url(#arrow-default)'}
-                />
+                <g key={edge.id} className="transition-opacity duration-200">
+                  {/* Subtle Glow Backdrop for active paths */}
+                  {(isHighlighted || isMerge) && (
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke={strokeColor}
+                      strokeWidth={6}
+                      strokeOpacity={0.25}
+                    />
+                  )}
+
+                  {/* Main Spline Curve */}
+                  <path
+                    d={pathData}
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={isHighlighted ? 3 : isDependency ? 1.75 : 2}
+                    strokeDasharray={isDependency ? '4 3' : 'none'}
+                    strokeOpacity={isHighlighted ? 1 : 0.65}
+                    markerEnd={isDependency ? 'url(#arrow-dep)' : isMerge ? 'url(#arrow-merge)' : undefined}
+                  />
+
+                  {/* Branch Fork / Junction Node Circle */}
+                  <circle
+                    cx={startX}
+                    cy={startY}
+                    r={3.5}
+                    fill={strokeColor}
+                    stroke="#101113"
+                    strokeWidth={1.5}
+                  />
+                  <circle
+                    cx={endX}
+                    cy={endY}
+                    r={3.5}
+                    fill={strokeColor}
+                    stroke="#101113"
+                    strokeWidth={1.5}
+                  />
+                </g>
               );
             })}
           </svg>
 
-          {/* Interactive Node Cards */}
-          {nodes.map((node) => {
+          {/* Timeline Header Bar across top of canvas */}
+          <div className="absolute top-3 left-0 right-0 h-9 flex items-center px-4 pointer-events-none">
+            {timeHeaders.map((hdr) => (
+              <div
+                key={`hdr_${hdr.slot}`}
+                style={{ position: 'absolute', left: hdr.x + 40 }}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#161719] border border-[#2A2C30] text-[10px] font-mono text-[#9BA1A6] shadow-sm pointer-events-auto"
+              >
+                <Calendar size={10} className="text-[#DCB001]" />
+                <span>{hdr.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Interactive Timeline Branch Nodes */}
+          {filteredNodes.map((node) => {
             const isHovered = hoveredNodeId === node.id;
             const isRelated = activeHighlightedKeys.has(node.issue.key);
             const isBlocked = (node.issue.blockedBy || []).length > 0;
@@ -296,50 +603,67 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   top: node.y,
                   width: node.width,
                   height: node.height,
+                  borderLeftColor: node.userColor,
+                  borderLeftWidth: 4,
                 }}
-                className={`p-3 rounded-xl border transition-all cursor-pointer shadow-md flex flex-col justify-between ${
+                className={`p-2.5 rounded-xl border transition-all cursor-pointer shadow-lg flex flex-col justify-between group ${
                   isHovered
-                    ? 'bg-[#1F2023] border-[#DCB001] ring-2 ring-[#DCB001]/30 z-20 scale-105'
+                    ? 'bg-[#1F2023] border-[#DCB001] ring-2 ring-[#DCB001]/30 z-30 scale-105 shadow-2xl'
                     : isRelated
-                    ? 'bg-[#1B1C1F] border-[#EF4444] ring-1 ring-[#EF4444]/20 z-10'
-                    : 'bg-[#17181A] border-[#2A2C30] hover:border-[#DCB001]/60 z-0'
+                    ? 'bg-[#1B1C1F] border-[#DCB001]/70 ring-1 ring-[#DCB001]/20 z-20'
+                    : 'bg-[#151618] border-[#2A2C30] hover:border-[#4B4E56] z-10'
                 }`}
               >
-                {/* Node Top Row */}
+                {/* Node Top Row: Key + User + Status Indicator */}
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="font-mono text-[11px] font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.2 rounded">
+                    <span
+                      className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border bg-[#101113] border-[#2A2C30]"
+                      style={{ color: node.userColor }}
+                    >
                       {node.issue.key}
                     </span>
-                    {isBlocked && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-mono text-[#EF4444] bg-[#EF4444]/15 px-1 py-0.2 rounded border border-[#EF4444]/30">
-                        <ShieldAlert size={9} /> Blocked
-                      </span>
-                    )}
+
+                    {/* Assignee Avatar / Name Chip */}
+                    <div
+                      className="flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono truncate max-w-[90px] border border-white/5"
+                      style={{ backgroundColor: `${node.userColor}15`, color: node.userColor }}
+                      title={`Assigned to ${node.userName}`}
+                    >
+                      <User size={9} />
+                      <span className="truncate">{node.userName}</span>
+                    </div>
                   </div>
 
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      isDone
-                        ? 'bg-[#22C55E]'
-                        : node.issue.priority === 'critical'
-                        ? 'bg-[#EF4444] animate-pulse'
-                        : 'bg-[#DCB001]'
-                    }`}
-                  />
+                  {/* Status Indicator */}
+                  <div className="flex items-center gap-1">
+                    {isBlocked && (
+                      <span className="flex items-center gap-0.5 text-[9px] font-mono text-[#EF4444] bg-[#EF4444]/15 px-1 py-0.2 rounded border border-[#EF4444]/30">
+                        <ShieldAlert size={8} /> Blocked
+                      </span>
+                    )}
+
+                    <span
+                      className={`w-2 h-2 rounded-full shrink-0 ${
+                        isDone
+                          ? 'bg-[#22C55E]'
+                          : node.issue.priority === 'critical'
+                          ? 'bg-[#EF4444] animate-pulse'
+                          : 'bg-[#DCB001]'
+                      }`}
+                    />
+                  </div>
                 </div>
 
-                {/* Node Title */}
-                <div className="text-xs font-semibold text-white truncate group-hover:text-[#DCB001]">
+                {/* Node Task Title */}
+                <div className="text-xs font-semibold text-white truncate group-hover:text-[#DCB001] transition-colors leading-tight">
                   {node.issue.title}
                 </div>
 
-                {/* Node Footer */}
+                {/* Node Footer: Timeline Stage & Hours */}
                 <div className="flex items-center justify-between text-[10px] font-mono text-[#787C83]">
                   <span className="capitalize">{node.issue.status.replace('_', ' ')}</span>
-                  {node.issue.estimatedHours ? (
-                    <span>{node.issue.estimatedHours}h est</span>
-                  ) : null}
+                  <span className="text-[#9BA1A6]">{node.dateStr}</span>
                 </div>
               </div>
             );
@@ -351,3 +675,5 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
 });
 
 DependencyGraphView.displayName = 'DependencyGraphView';
+
+export default DependencyGraphView;
