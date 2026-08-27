@@ -97,11 +97,6 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [estimatedHours, setEstimatedHours] = useState(2);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
-  // AI Prompt State
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [showAiInput, setShowAiInput] = useState(false);
-
   const [joinedMembers, setJoinedMembers] = useState<{ id: number | string; name: string }[]>([]);
   const [existingIssues, setExistingIssues] = useState<{ id: string; key: string; title: string }[]>([]);
   const [subworks, setSubworks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
@@ -173,51 +168,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     toast.info(`Applied "${tmpl.name}" template`);
   };
 
-  const handleGenerateWithAi = async () => {
-    if (!aiPrompt.trim()) {
-      toast.error('Please enter a description for the AI to parse');
-      return;
-    }
-
-    setIsAiLoading(true);
-    try {
-      const res = await fetch('/api/ai/parse-issue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt.trim() }),
-      });
-
-      if (res.ok) {
-        const parsed = await res.json();
-        if (parsed.title) setTitle(parsed.title);
-        if (parsed.description) setDescription(parsed.description);
-        if (parsed.priority) setPriority(parsed.priority);
-        if (parsed.assigneeName) setAssigneeName(parsed.assigneeName);
-        if (parsed.labels) setLabels(parsed.labels.join(', '));
-        if (parsed.estimatedHours) setEstimatedHours(parsed.estimatedHours);
-        if (parsed.subtasks && Array.isArray(parsed.subtasks)) {
-          setSubworks(
-            parsed.subtasks.map((st: any, i: number) => ({
-              id: `sub_ai_${i}_${Date.now()}`,
-              title: st.title,
-              completed: false,
-            }))
-          );
-        }
-        setShowAiInput(false);
-        setAiPrompt('');
-        toast.success('Generated task structure with AI! ✨');
-      } else {
-        toast.error('AI parsing failed');
-      }
-    } catch {
-      toast.error('Network error calling AI assistant');
-    } finally {
-      setIsAiLoading(false);
-    }
-  };
-
   const handleAddSubwork = () => {
+
     if (!newSubworkTitle.trim()) return;
     setSubworks((prev) => [
       ...prev,
@@ -298,53 +250,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
               <h2 className="text-sm font-bold text-white tracking-tight">Create New Task</h2>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAiInput((prev) => !prev)}
-                className="flex items-center gap-1.5 px-2.5 py-1 bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 hover:bg-[#DCB001]/20 rounded-lg text-xs font-semibold transition-all"
-              >
-                <Sparkles size={12} />
-                <span>{showAiInput ? 'Hide AI' : '✨ AI Quick Fill'}</span>
-              </button>
-
-              <button onClick={onClose} className="text-[#787C83] hover:text-white p-1 rounded-lg">
-                <X size={16} />
-              </button>
-            </div>
+            <button onClick={onClose} className="text-[#787C83] hover:text-white p-1 rounded-lg">
+              <X size={16} />
+            </button>
           </div>
-
-          {/* AI Quick Input Box (§4.1) */}
-          {showAiInput && (
-            <div className="p-4 bg-[#131415] border-b border-[#2A2C30] space-y-2">
-              <label className="text-[11px] font-mono text-[#DCB001] font-bold uppercase tracking-wider flex items-center gap-1">
-                <Sparkles size={12} /> Natural-Language Prompt
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. Fix OAuth redirect crash in Safari, high priority, assign to jori, labels: auth, frontend"
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleGenerateWithAi();
-                  }}
-                  className="flex-1 bg-[#1B1C1F] border border-[#DCB001]/50 text-xs text-white px-3 py-1.5 rounded-lg outline-none placeholder-[#787C83]"
-                />
-                <button
-                  type="button"
-                  onClick={handleGenerateWithAi}
-                  disabled={isAiLoading}
-                  className="px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded-lg transition-all disabled:opacity-50 shrink-0"
-                >
-                  {isAiLoading ? 'Parsing...' : 'Fill Form'}
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Form Body */}
           <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 font-sans text-xs">
+
             {/* Templates Selector (§1.4) */}
             <div>
               <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1.5">

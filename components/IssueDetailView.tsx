@@ -32,9 +32,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
-import { AIAssistantPanel } from '@/components/AIAssistantPanel';
 
 interface IssueDetailViewProps {
+
   issue: Issue;
   onUpdateIssue: (updated: Issue) => void;
   onOpenDiffModal: () => void;
@@ -51,9 +51,9 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [isAddingSubwork, setIsAddingSubwork] = useState(false);
   const [uploadingSubtaskId, setUploadingSubtaskId] = useState<string | null>(null);
   const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
-  const [isAIPanelOpen, setIsAIPanelOpen] = useState(false);
 
   // Time tracking & live timer state
+
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [newCommentText, setNewCommentText] = useState('');
@@ -413,15 +413,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
-                {/* AI Copilot Button */}
-                <button
-                  onClick={() => setIsAIPanelOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[#1F2023] hover:bg-[#2A2C30] text-[#DCB001] border border-[#DCB001]/30 rounded-lg text-xs font-bold transition-all shadow-sm group"
-                >
-                  <Sparkles size={13} className="text-[#DCB001] group-hover:rotate-12 transition-transform" />
-                  <span>AI Copilot</span>
-                </button>
-
                 {/* Copy Link Button */}
                 <button
                   onClick={handleCopyLink}
@@ -432,6 +423,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 </button>
               </div>
             </div>
+
 
             {/* Task Title */}
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
@@ -778,22 +770,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           </div>
         </div>
       </div>
-
-      {/* AI Assistant Drawer Panel */}
-      <AIAssistantPanel
-        isOpen={isAIPanelOpen}
-        onClose={() => setIsAIPanelOpen(false)}
-        issueContext={{
-          id: issue.id,
-          key: issue.key,
-          title: issue.title,
-          status: issue.status,
-          priority: issue.priority,
-          epic: issue.epic,
-          description: issue.description,
-          subtasks: issue.subtasks,
-        }}
-      />
     </div>
   );
 };
+
