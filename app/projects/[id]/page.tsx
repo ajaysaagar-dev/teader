@@ -42,8 +42,10 @@ import {
   Loader2,
   MessageSquare,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Settings
 } from 'lucide-react';
+
 
 
 
@@ -88,10 +90,15 @@ const ProjectConversationView = dynamic(
   () => import('@/components/ProjectConversationView').then((m) => ({ default: m.ProjectConversationView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectSettingsView = dynamic(
+  () => import('@/components/ProjectSettingsView').then((m) => ({ default: m.ProjectSettingsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+
 
 const NewIssueModal = dynamic(
   () => import('@/components/NewIssueModal').then((m) => ({ default: m.NewIssueModal })),
@@ -123,7 +130,7 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' {
+function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings' {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
@@ -131,6 +138,7 @@ function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev'
   if (v === 'graph' || v === 'dependencies' || v === 'dag') return 'graph';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
   if (v === 'conversation' || v === 'chat' || v === 'messages' || v === 'discuss') return 'conversation';
+  if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
   if (v === 'tree') return 'tree';
   if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
   if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
@@ -144,7 +152,7 @@ export default function SingleProjectPage() {
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -152,10 +160,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
   }, [projectIdParam, router]);
+
 
 
 
@@ -1216,8 +1225,22 @@ export default function SingleProjectPage() {
               <span>Dev Stream</span>
               <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
             </button>
+
+            <button
+              onClick={() => handleTabSwitch('settings')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'settings'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Settings & Danger Zone"
+            >
+              <Settings size={13} />
+              <span>Settings</span>
+            </button>
           </div>
         </div>
+
 
 
 
@@ -1322,7 +1345,6 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'dev' ? (
-
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <DevStreamView
                 issues={projectIssues}
@@ -1334,7 +1356,29 @@ export default function SingleProjectPage() {
                 currentUser={currentUser}
               />
             </div>
+          ) : activeTab === 'settings' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <ProjectSettingsView
+                project={project}
+                members={joinedMembers}
+                isCreator={isCreator}
+                currentUser={currentUser}
+                onOpenDeleteModal={() => {
+                  setConfirmDeleteName('');
+                  setConfirmDeleteKey('');
+                  setIsDeleteProjectModalOpen(true);
+                }}
+                onOpenEditModal={() => {
+                  if (project) {
+                    setEditName(project.name);
+                    setEditDesc(project.description || '');
+                    setIsEditProjectModalOpen(true);
+                  }
+                }}
+              />
+            </div>
           ) : activeTab === 'hierarchy' ? (
+
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <HierarchicalView
                 issues={projectIssues}
