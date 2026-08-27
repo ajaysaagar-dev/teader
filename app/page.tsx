@@ -24,7 +24,9 @@ import {
   Lock,
   LogOut,
   User,
-  LayoutDashboard
+  LayoutDashboard,
+  Download,
+  Laptop
 } from 'lucide-react';
 import { TeaderSandCanvas } from '@/components/ui/TeaderSandCanvas';
 import { toast } from 'sonner';
@@ -97,12 +99,22 @@ export default function LandingPage() {
             </nav>
           </div>
 
-          {/* Auth Header Buttons */}
+          {/* Auth Header Buttons & Download App */}
           <div className="flex items-center gap-3">
+            <a
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              download
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16181C] hover:bg-[#1E2025] text-[#CFD4DD] hover:text-white border border-[#2A2C30] hover:border-[#DCB001]/40 text-xs font-medium transition-all shadow-sm"
+              title="Download Desktop App for Windows"
+            >
+              <Download size={13} className="text-[#DCB001]" />
+              <span>Download App</span>
+            </a>
+
             {isLoggedIn ? (
               <>
                 {/* Logged in view: User badge + Launch Dashboard + Logout button */}
-                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#16181C] border border-[#2A2C30] text-xs font-mono">
+                <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#16181C] border border-[#2A2C30] text-xs font-mono">
                   <div className="w-4 h-4 rounded-full bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center text-[10px] font-bold">
                     {(currentUser.name || 'U').charAt(0).toUpperCase()}
                   </div>
@@ -185,10 +197,22 @@ export default function LandingPage() {
               <ArrowRight size={16} />
             </Link>
 
+            <a
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              download
+              className="flex items-center gap-3 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001] text-white font-semibold text-sm transition-all shadow-sm group hover:scale-105"
+            >
+              <Download size={16} className="text-[#DCB001] group-hover:-translate-y-0.5 transition-transform" />
+              <div className="flex flex-col text-left">
+                <span className="leading-tight font-bold">Download Workspace</span>
+                <span className="text-[10px] text-[#8E939D] font-mono leading-tight">Windows (.exe) • 873 KB</span>
+              </div>
+            </a>
+
             {!isLoggedIn && (
               <Link
                 href="/register"
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-semibold text-sm transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#16181C]/70 hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-medium text-sm transition-all shadow-sm"
               >
                 <span>Create Account</span>
               </Link>
@@ -197,7 +221,7 @@ export default function LandingPage() {
             {isLoggedIn && (
               <Link
                 href="/projects"
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-semibold text-sm transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#16181C]/70 hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-medium text-sm transition-all shadow-sm"
               >
                 <FolderKanban size={15} className="text-[#DCB001]" />
                 <span>View Projects</span>
@@ -498,7 +522,7 @@ export default function LandingPage() {
             Experience the speed of Teader with instant task management, branch explorer timeline graphs, and markdown docs.
           </p>
 
-          <div className="pt-4 flex items-center justify-center gap-4">
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/dashboard"
               className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_30px_rgba(220,176,1,0.3)] hover:scale-105"
@@ -506,6 +530,15 @@ export default function LandingPage() {
               <span>{isLoggedIn ? 'Launch Workspace' : 'Get Started Free'}</span>
               <ArrowRight size={16} />
             </Link>
+
+            <a
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              download
+              className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001] text-white font-semibold text-sm transition-all shadow-sm group hover:scale-105"
+            >
+              <Download size={16} className="text-[#DCB001] group-hover:-translate-y-0.5 transition-transform" />
+              <span>Download Workspace (873 KB)</span>
+            </a>
           </div>
         </div>
       </section>
@@ -518,6 +551,14 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-5">
+            <a
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              download
+              className="text-[#DCB001] hover:underline flex items-center gap-1"
+            >
+              <Download size={11} />
+              <span>Download App</span>
+            </a>
             <Link href="/dashboard" className="hover:text-[#CFD4DD] transition-colors">Dashboard</Link>
             <Link href="/projects" className="hover:text-[#CFD4DD] transition-colors">Projects</Link>
             {!isLoggedIn && (
