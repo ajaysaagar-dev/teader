@@ -794,146 +794,148 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               )}
             </div>
 
-            {/* Horizontal Markdown Symbols Formatting Toolbar at Bottom Middle */}
+            {/* Literal Markdown Symbols Formatting Bar at Bottom Middle */}
             {(viewMode === 'editor' || viewMode === 'split') && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#1B1C1F]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-1 text-[#CFD4DD] transition-all">
-                {/* Heading 1 */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#17181A]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs text-[#CFD4DD] overflow-x-auto max-w-[95vw] custom-scrollbar">
+                <span className="text-[10px] font-mono text-[#787C83] uppercase px-1 hidden xl:inline">Symbols:</span>
+
+                {/* # Heading 1 */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('# ', '', 'Heading 1')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Heading 1 (# )"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  title="Heading 1: # Heading"
                 >
-                  <Heading1 size={14} />
+                  #
                 </button>
 
-                {/* Heading 2 */}
+                {/* ## Heading 2 */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('## ', '', 'Heading 2')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Heading 2 (## )"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  title="Heading 2: ## Heading"
                 >
-                  <Heading2 size={14} />
+                  ##
                 </button>
 
-                {/* Heading 3 */}
+                {/* ### Heading 3 */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('### ', '', 'Heading 3')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Heading 3 (### )"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  title="Heading 3: ### Heading"
                 >
-                  <Heading3 size={14} />
+                  ###
                 </button>
 
-                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
 
-                {/* Bold */}
+                {/* **bold** */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('**', '**', 'bold text')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Bold (**text**)"
+                  onClick={() => handleInsertSymbol('**', '**', 'bold')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-white transition-all"
+                  title="Bold: **bold**"
                 >
-                  <Bold size={14} />
+                  **bold**
                 </button>
 
-                {/* Italic */}
+                {/* *italic* */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('*', '*', 'italic text')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Italic (*text*)"
+                  onClick={() => handleInsertSymbol('*', '*', 'italic')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono italic text-xs text-[#CFD4DD] transition-all"
+                  title="Italic: *italic*"
                 >
-                  <Italic size={14} />
+                  *italic*
                 </button>
 
-                {/* Strikethrough */}
+                {/* ~~strike~~ */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('~~', '~~', 'strikethrough')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Strikethrough (~~text~~)"
+                  onClick={() => handleInsertSymbol('~~', '~~', 'strike')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono line-through text-xs text-[#787C83] transition-all"
+                  title="Strikethrough: ~~strike~~"
                 >
-                  <Strikethrough size={14} />
+                  ~~strike~~
                 </button>
 
-                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
 
-                {/* Inline Code */}
+                {/* `code` */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('`', '`', 'code')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Inline Code (`code`)"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#DCB001] transition-all"
+                  title="Inline Code: `code`"
                 >
-                  <Code size={14} />
+                  `code`
                 </button>
 
-                {/* Code Block */}
+                {/* ```block``` */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('```ts\n', '\n```', '// code block')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Code Block (```lang)"
+                  onClick={() => handleInsertSymbol('```ts\n', '\n```', '// code')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#787C83] hover:text-white transition-all"
+                  title="Code Block: ```lang\ncode\n```"
                 >
-                  <FileCode2 size={14} />
+                  ```{` `}```
                 </button>
 
-                {/* Bullet List */}
+                {/* - list */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('- ', '', 'List item')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Bullet List (- item)"
+                  onClick={() => handleInsertSymbol('- ', '', 'item')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  title="Bullet List: - item"
                 >
-                  <List size={14} />
+                  - list
                 </button>
 
-                {/* Numbered List */}
+                {/* 1. list */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('1. ', '', 'Numbered item')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Numbered List (1. item)"
+                  onClick={() => handleInsertSymbol('1. ', '', 'item')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  title="Numbered List: 1. item"
                 >
-                  <ListOrdered size={14} />
+                  1. list
                 </button>
 
-                {/* Task Item */}
+                {/* - [ ] task */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('- [ ] ', '', 'Task item')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Task Checkbox (- [ ] task)"
+                  onClick={() => handleInsertSymbol('- [ ] ', '', 'task')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#DCB001] transition-all"
+                  title="Task Checkbox: - [ ] task"
                 >
-                  <CheckSquare size={14} />
+                  - [ ]
                 </button>
 
-                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
 
-                {/* Blockquote */}
+                {/* > quote */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('> ', '', 'Quote text')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Blockquote (> quote)"
+                  onClick={() => handleInsertSymbol('> ', '', 'quote')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  title="Blockquote: > quote"
                 >
-                  <Quote size={14} />
+                  {`> quote`}
                 </button>
 
-                {/* Link */}
+                {/* [link] */}
                 <button
                   type="button"
-                  onClick={() => handleInsertSymbol('[', '](https://example.com)', 'Link title')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Link ([title](url))"
+                  onClick={() => handleInsertSymbol('[', '](https://example.com)', 'title')}
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#58A6FF] transition-all"
+                  title="Link: [title](url)"
                 >
-                  <LinkIcon size={14} />
+                  [link]
                 </button>
 
-                {/* Table */}
+                {/* | table | */}
                 <button
                   type="button"
                   onClick={() =>
@@ -943,23 +945,24 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       ''
                     )
                   }
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Table (| Col 1 | Col 2 |)"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  title="Table: | Col 1 | Col 2 |"
                 >
-                  <TableIcon size={14} />
+                  | table |
                 </button>
 
-                {/* Horizontal Divider */}
+                {/* --- */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('\n---\n', '', '')}
-                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
-                  title="Horizontal Divider (---)"
+                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#787C83] hover:text-white transition-all"
+                  title="Horizontal Divider: ---"
                 >
-                  <Minus size={14} />
+                  ---
                 </button>
               </div>
             )}
+
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-3">
