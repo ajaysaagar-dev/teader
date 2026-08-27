@@ -271,14 +271,19 @@ export default function SingleProjectPage() {
 
     try {
       const meRes = await fetch('/api/auth/me');
-      if (meRes.status === 401) {
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.user) {
+          setCurrentUser(meData.user);
+        } else {
+          router.push('/login');
+          return;
+        }
+      } else {
         router.push('/login');
         return;
       }
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        if (meData.user) setCurrentUser(meData.user);
-      }
+
 
       const [projRes, issueRes] = await Promise.all([
         fetch('/api/projects', { cache: 'no-store' }),
