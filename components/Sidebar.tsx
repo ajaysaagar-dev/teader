@@ -11,7 +11,8 @@ import {
   FileCode,
   LogOut,
   ShieldCheck,
-  User
+  User,
+  UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -79,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
 
   const pages = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/my-work', label: 'My Work', icon: UserCheck },
     { href: '/initiatives', label: 'Initiatives', icon: Layers },
     { href: '/projects', label: 'Projects', icon: FolderKanban },
     { href: '/docs', label: 'API Docs (Swagger)', icon: FileCode },
