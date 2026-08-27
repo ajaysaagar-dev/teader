@@ -106,29 +106,55 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const [layoutMode, setLayoutMode] = useState<'timeline_branches' | 'dag_pipeline'>('timeline_branches');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Smooth Horizontal Scrolling on Mouse Wheel (Up / Down -> Left / Right)
+  // Ultra-Smooth Inertial Horizontal Scrolling on Mouse Wheel
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
+
+    let animationFrameId: number | null = null;
+    let targetScrollLeft = el.scrollLeft;
+    let isScrolling = false;
+
+    const smoothScrollLoop = () => {
+      if (!el) return;
+      const current = el.scrollLeft;
+      const diff = targetScrollLeft - current;
+
+      if (Math.abs(diff) > 0.5) {
+        el.scrollLeft += diff * 0.2; // Smooth exponential interpolation
+        animationFrameId = requestAnimationFrame(smoothScrollLoop);
+      } else {
+        el.scrollLeft = targetScrollLeft;
+        isScrolling = false;
+        animationFrameId = null;
+      }
+    };
 
     const handleWheel = (e: WheelEvent) => {
       // Don't intercept if holding Ctrl/Cmd (allow zooming)
       if (e.ctrlKey || e.metaKey) return;
 
-      if (Math.abs(e.deltaY) > 0) {
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (Math.abs(delta) > 0) {
         e.preventDefault();
-        el.scrollBy({
-          left: e.deltaY * 1.3,
-          behavior: 'auto',
-        });
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        const currentPos = isScrolling ? targetScrollLeft : el.scrollLeft;
+        targetScrollLeft = Math.max(0, Math.min(maxScroll, currentPos + delta * 1.5));
+
+        if (!isScrolling) {
+          isScrolling = true;
+          animationFrameId = requestAnimationFrame(smoothScrollLoop);
+        }
       }
     };
 
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
       el.removeEventListener('wheel', handleWheel);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, []);
+
 
 
   // Compute User List & Summary
@@ -443,8 +469,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       {/* SVG Timeline Canvas Area */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-auto bg-[#0E0F11] relative custom-scrollbar"
+        className="flex-1 overflow-auto bg-[#0E0F11] relative graph-scrollbar custom-scrollbar"
       >
+
 
         <div
           style={{

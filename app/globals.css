@@ -56,21 +56,42 @@
   }
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbars - Extra thick and easy to grab */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 12px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #101113;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-secondary);
-  border-radius: 3px;
+  background: #3B3E45;
+  border-radius: 6px;
+  border: 2px solid #101113;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: #DCB001;
 }
+
+/* Dedicated timeline & graph view thick scrollbar handle */
+.graph-scrollbar::-webkit-scrollbar {
+  height: 15px;
+  width: 12px;
+}
+.graph-scrollbar::-webkit-scrollbar-track {
+  background: #0C0D0F;
+  border-top: 1px solid #222428;
+}
+.graph-scrollbar::-webkit-scrollbar-thumb {
+  background: #4E525C;
+  border-radius: 8px;
+  border: 3px solid #0C0D0F;
+}
+.graph-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #DCB001;
+}
+
 
 .panel-card {
   background-color: var(--bg-card);

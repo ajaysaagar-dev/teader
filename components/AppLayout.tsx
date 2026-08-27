@@ -1,11 +1,28 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { Sidebar } from '@/components/Sidebar';
+import React, { useState, useEffect, Suspense, useCallback } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { 
+  LayoutDashboard, 
+  FolderKanban, 
+  User, 
+  Search, 
+  Plus, 
+  HelpCircle, 
+  LogOut, 
+  ShieldCheck, 
+  Check, 
+  X, 
+  Sparkles,
+  Command,
+  ChevronDown
+} from 'lucide-react';
 import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { Issue, FileDiff } from '@/lib/types';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 
 const NewIssueModal = dynamic(() => import('@/components/NewIssueModal').then(m => ({ default: m.NewIssueModal })), { ssr: false });
@@ -35,16 +52,54 @@ const SAMPLE_DIFFS: FileDiff[] = [
   },
 ];
 
-
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
-  // Fetch real data for Command Palette
+  // Load user session
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('teader_user');
+      if (cached) setCurrentUser(JSON.parse(cached));
+    } catch {}
+
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setCurrentUser(data.user);
+          try {
+            localStorage.setItem('teader_user', JSON.stringify(data.user));
+          } catch {}
+        } else if (pathname !== '/login' && pathname !== '/register') {
+          try {
+            localStorage.removeItem('teader_user');
+            localStorage.removeItem('teader_token');
+          } catch {}
+          router.push('/login');
+        }
+      })
+      .catch(() => {
+        if (pathname !== '/login' && pathname !== '/register') {
+          try {
+            localStorage.removeItem('teader_user');
+            localStorage.removeItem('teader_token');
+          } catch {}
+          router.push('/login');
+        }
+      });
+  }, [pathname, router]);
+
+  // Fetch data for command palette
   useEffect(() => {
     Promise.all([
       fetch('/api/issues').then(r => r.ok ? r.json() : []).catch(() => []),
@@ -74,6 +129,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       } else if (e.key === 'Escape') {
         setIsCommandPaletteOpen(false);
         setIsShortcutsModalOpen(false);
+        setIsAccountModalOpen(false);
       }
     };
 
@@ -86,21 +142,227 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     toast.success(`Created ${newIssue.key}`);
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      try {
+        localStorage.removeItem('teader_user');
+        localStorage.removeItem('teader_token');
+      } catch {}
+      toast.success('Logged out successfully');
+      setIsAccountModalOpen(false);
+      router.push('/login');
+    } catch {
+      toast.error('Logout failed');
+    }
+  };
+
+  const isDashboardActive = pathname === '/dashboard' || pathname === '/';
+  const isProjectsActive = pathname.startsWith('/projects');
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased">
-      <Sidebar
-        onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
-      />
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased select-none">
+      {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
+      <header className="h-12 px-4 bg-[#111215] border-b border-[#24262B] flex items-center justify-between shrink-0 z-40">
+        {/* Top Left: Logo & Navigation Tabs (Dashboard, Projects, Account) */}
+        <div className="flex items-center gap-3">
+          {/* Logo */}
+          <Link href="/dashboard" className="flex items-center gap-2 mr-2 group">
+            <div className="w-6 h-6 rounded-md bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-xs shadow-[0_0_10px_rgba(220,176,1,0.25)] transition-transform group-hover:scale-105">
+              T
+            </div>
+            <span className="font-bold text-sm text-white tracking-tight flex items-center gap-1">
+              Teader
+            </span>
+          </Link>
 
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          {children}
-        </main>
-      </div>
+          <span className="w-px h-4 bg-[#2A2C30] mr-1 hidden sm:inline" />
 
-      {/* Command Palette */}
+          {/* Top Tabs: Dashboard, Projects, Account */}
+          <nav className="flex items-center gap-1 bg-[#0B0C0E] p-0.5 rounded-lg border border-[#222428]">
+            {/* Tab: Dashboard */}
+            <Link
+              href="/dashboard"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                isDashboardActive
+                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
+                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+              }`}
+            >
+              <LayoutDashboard size={13} className={isDashboardActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <span>Dashboard</span>
+            </Link>
+
+            {/* Tab: Projects */}
+            <Link
+              href="/projects"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                isProjectsActive
+                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
+                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+              }`}
+            >
+              <FolderKanban size={13} className={isProjectsActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <span>Projects</span>
+            </Link>
+
+            {/* Tab: Account */}
+            <button
+              onClick={() => setIsAccountModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                isAccountModalOpen
+                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
+                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+              }`}
+            >
+              <User size={13} className="text-[#06B6D4]" />
+              <span>Account</span>
+              {currentUser && (
+                <span className="text-[10px] text-[#DCB001] font-mono font-bold hidden md:inline">
+                  ({currentUser.name})
+                </span>
+              )}
+            </button>
+          </nav>
+        </div>
+
+        {/* Top Right: Global Controls */}
+        <div className="flex items-center gap-2">
+          {/* Command Palette Button */}
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-[#16171A] hover:bg-[#202226] border border-[#2A2C30] text-[#787C83] hover:text-[#CFD4DD] rounded-lg text-xs transition-all"
+            title="Search workspace (Ctrl + K)"
+          >
+            <Search size={12} />
+            <span className="text-[11px] font-mono">Quick Search...</span>
+            <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-[#0B0C0E] border border-[#2A2C30] rounded text-[#8E939D]">
+              ⌘K
+            </kbd>
+          </button>
+
+          {/* New Task Button */}
+          <button
+            onClick={() => setIsNewIssueModalOpen(true)}
+            className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[#0A0B0D] bg-[#DCB001] hover:bg-[#E5B800] rounded-lg shadow-sm transition-all hover:scale-105"
+            title="Create New Task (C)"
+          >
+            <Plus size={13} className="stroke-[3]" />
+            <span className="hidden sm:inline">New Task</span>
+          </button>
+
+          {/* Keyboard Shortcuts */}
+          <button
+            onClick={() => setIsShortcutsModalOpen(true)}
+            className="p-1.5 text-[#787C83] hover:text-white rounded-lg hover:bg-[#1C1D21] transition-colors"
+            title="Keyboard Shortcuts (?)"
+          >
+            <HelpCircle size={15} />
+          </button>
+
+          {/* User Profile Avatar / Logout Trigger */}
+          <button
+            onClick={() => setIsAccountModalOpen(true)}
+            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-[#1C1D21] transition-colors"
+            title="View Account"
+          >
+            <div className="w-6 h-6 rounded-full bg-[#DCB001]/20 border border-[#DCB001]/40 flex items-center justify-center text-[#DCB001] font-mono font-bold text-[11px]">
+              {(currentUser?.name || 'U').charAt(0).toUpperCase()}
+            </div>
+          </button>
+        </div>
+      </header>
+
+      {/* ─── Main Content Canvas Area (100% Full-Width Canvas) ─────── */}
+      <main className="flex-1 flex flex-col min-w-0 h-[calc(100vh-48px)] overflow-hidden">
+        {children}
+      </main>
+
+      {/* ─── Account Settings Modal (Top Tab 'Account') ─────────────── */}
+      <AnimatePresence>
+        {isAccountModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md bg-[#16181B] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2C30] bg-[#111215]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center font-bold">
+                    <User size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-tight">Account & Profile</h3>
+                    <p className="text-[11px] font-mono text-[#787C83]">Active Session Credentials</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAccountModalOpen(false)}
+                  className="text-[#787C83] hover:text-white transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Profile Body */}
+              <div className="p-6 space-y-4">
+                {/* User Info Card */}
+                <div className="p-4 rounded-xl bg-[#101114] border border-[#24262B] flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-[#DCB001] text-[#0A0B0D] font-bold text-lg flex items-center justify-center font-mono shadow-md">
+                    {(currentUser?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
+                    <p className="text-xs font-mono text-[#787C83] truncate">{currentUser?.email || 'test@teader.io'}</p>
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-medium border border-[#22C55E]/30">
+                      <ShieldCheck size={10} /> Authenticated
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workspace Role & Status */}
+                <div className="space-y-2 text-xs font-mono">
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
+                    <span className="text-[#787C83]">Workspace Role</span>
+                    <span className="text-[#DCB001] font-bold capitalize">{currentUser?.role || 'Project Lead'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
+                    <span className="text-[#787C83]">Database Connection</span>
+                    <span className="text-[#22C55E] font-medium">PostgreSQL 178.238.226.206</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
+                    <span className="text-[#787C83]">Client Caching</span>
+                    <span className="text-[#06B6D4] font-medium">0ms Optimistic SWR Active</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
+                <button
+                  onClick={() => setIsAccountModalOpen(false)}
+                  className="px-4 py-2 text-xs font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
+                >
+                  Close
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#EF4444]/15 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/30 text-xs font-bold transition-all shadow-sm"
+                >
+                  <LogOut size={13} />
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Command Palette Modal */}
       <CommandPalette
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
