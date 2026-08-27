@@ -50,9 +50,9 @@ jobs:
         with:
           host: ${{ secrets.VPS_HOST || '178.238.226.206' }}
           username: ${{ secrets.VPS_USERNAME || 'root' }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD || 'Shri@123' }}
           port: ${{ secrets.VPS_PORT || 22 }}
+
           script_stop: true
           script: |
             echo "🚀 Starting Teader automatic deployment on VPS..."
