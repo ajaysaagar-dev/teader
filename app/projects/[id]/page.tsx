@@ -625,13 +625,12 @@ export default function SingleProjectPage() {
     extractedNode.parentId = newParentId;
     extractedNode.issueId = targetIssueId;
 
-    // 3. Insert the node into target issue (at root or inside newParentId folder)
+    // 3. Insert the node into target issue (at root or inside newParentId parent)
     const insertRecursive = (items: any[]): any[] => {
       return items.map((item) => {
         if (item.id === newParentId) {
           return {
             ...item,
-            isFolder: true,
             subtasks: [...(item.subtasks || []), extractedNode],
           };
         }
@@ -644,6 +643,7 @@ export default function SingleProjectPage() {
         return item;
       });
     };
+
 
     return strippedIssues.map((iss) => {
       if (iss.id !== targetIssueId) return iss;

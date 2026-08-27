@@ -254,23 +254,35 @@ const RecursiveSubtaskNode: React.FC<{
           {isFolder ? (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-[#DCB001] hover:text-[#ffd633] p-0.5 transition-colors flex items-center gap-1"
+              className="text-[#DCB001] hover:text-[#ffd633] p-0.5 transition-colors flex items-center gap-1 shrink-0"
             >
               {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
               {isExpanded ? <FolderOpen size={13} /> : <Folder size={13} />}
             </button>
           ) : (
-            <button
-              onClick={() => onToggleSubtask && onToggleSubtask(issueId, node.id, !node.completed)}
-              className="text-[#787C83] hover:text-[#DCB001] p-0.5 transition-colors"
-            >
-              {node.completed ? (
-                <CheckSquare size={13} className="text-[#22C55E]" />
-              ) : (
-                <Square size={13} />
+            <div className="flex items-center gap-0.5 shrink-0">
+              {hasChildren && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="text-[#787C83] hover:text-[#DCB001] p-0.5 transition-colors"
+                  title={isExpanded ? 'Collapse subtasks' : 'Expand subtasks'}
+                >
+                  {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                </button>
               )}
-            </button>
+              <button
+                onClick={() => onToggleSubtask && onToggleSubtask(issueId, node.id, !node.completed)}
+                className="text-[#787C83] hover:text-[#DCB001] p-0.5 transition-colors"
+              >
+                {node.completed ? (
+                  <CheckSquare size={13} className="text-[#22C55E]" />
+                ) : (
+                  <Square size={13} />
+                )}
+              </button>
+            </div>
           )}
+
 
           {/* Node Title (Inline Editable) */}
           {isEditingTitle ? (
@@ -344,12 +356,13 @@ const RecursiveSubtaskNode: React.FC<{
             </div>
           )}
 
-          {/* Folder Child Count Pill */}
-          {isFolder && children.length > 0 && (
+          {/* Sub-item Count Pill */}
+          {hasChildren && (
             <span className="text-[9px] font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded shrink-0">
               {counts.completed}/{counts.total} sub-items
             </span>
           )}
+
         </div>
 
         {/* Hover Action Buttons: Add Subtask, Add Folder, Delete */}
