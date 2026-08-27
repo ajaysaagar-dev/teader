@@ -39,7 +39,8 @@ import {
 
 import { toast } from 'sonner';
 import { RandomLoadingText } from './ui/RandomLoadingText';
-import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache';
+
 
 
 
@@ -432,8 +433,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       const res = await fetch(`/api/projects/${projectId}/docs`);
       if (res.ok) {
         const data: ProjectDoc[] = await res.json();
-        setDocs(data);
-        setLocalCache(`docs_${projectId}`, data);
+        setDocs((prev) => {
+          const next = reconcileDocs(prev, data);
+          if (next !== prev && next.length > 0) {
+            setLocalCache(`docs_${projectId}`, next);
+          }
+          return next;
+        });
         if (data.length > 0) {
           const targetId = selectNewestId || selectedDocId || data[0].id;
           const targetDoc = data.find((d) => d.id === targetId) || data[0];
@@ -447,6 +453,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       setLoading(false);
     }
   }, [projectId, selectedDocId]);
+
 
 
   useEffect(() => {

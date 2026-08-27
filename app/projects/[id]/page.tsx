@@ -8,7 +8,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status } from '@/lib/types';
-import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
+
 
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -266,9 +267,16 @@ export default function SingleProjectPage() {
       if (issueRes.ok) {
         const issueData = await issueRes.json();
         if (Array.isArray(issueData)) {
-          setIssues(issueData);
+          setIssues((prev) => {
+            const next = reconcileIssues(prev, issueData);
+            if (next !== prev && next.length > 0) {
+              setLocalCache(`issues_${projectIdParam}`, next);
+            }
+            return next;
+          });
         }
       }
+
     } catch (err) {
       console.error('Error loading project:', err);
     } finally {

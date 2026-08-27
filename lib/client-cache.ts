@@ -1,8 +1,11 @@
 'use client';
 
+import { Issue, ProjectDoc } from './types';
+
 /**
- * Client-Side LocalStorage Cache & Optimistic SWR Synchronization Utility
- * Provides 0ms instant UI rendering, offline-resilient local cache, and background server syncing.
+ * Client-Side LocalStorage Cache & Fine-Grained In-Place Diffing / Reconciliation Utility
+ * Provides 0ms instant UI rendering, offline-resilient local cache, and background server syncing
+ * with surgical element-level updates to prevent full page or component re-renders.
  */
 
 export function getLocalCache<T>(key: string, fallback: T): T {
@@ -37,9 +40,138 @@ export function removeLocalCache(key: string): void {
   } catch {}
 }
 
-export function updateLocalCache<T>(key: string, updater: (prev: T) => T, fallback: T): T {
-  const current = getLocalCache<T>(key, fallback);
-  const updated = updater(current);
-  setLocalCache(key, updated);
-  return updated;
+/**
+ * Fine-grained deep equality check between two issues.
+ * Returns true if all fields and recursive subtasks are identical.
+ */
+export function areIssuesEqual(a: Issue, b: Issue): boolean {
+  if (
+    a.id !== b.id ||
+    a.key !== b.key ||
+    a.title !== b.title ||
+    a.status !== b.status ||
+    a.priority !== b.priority ||
+    a.description !== b.description ||
+    a.assigneeName !== b.assigneeName ||
+    a.epic !== b.epic ||
+    a.estimatedHours !== b.estimatedHours ||
+    a.loggedHours !== b.loggedHours ||
+    a.dueDate !== b.dueDate
+  ) {
+    return false;
+  }
+
+  // Compare subtask tree recursively
+  const areSubtreesEqual = (list1: any[], list2: any[]): boolean => {
+    if (list1.length !== list2.length) return false;
+    for (let i = 0; i < list1.length; i++) {
+      const s1 = list1[i];
+      const s2 = list2[i];
+      if (
+        s1.id !== s2.id ||
+        s1.title !== s2.title ||
+        Boolean(s1.completed) !== Boolean(s2.completed) ||
+        Boolean(s1.isFolder) !== Boolean(s2.isFolder)
+      ) {
+        return false;
+      }
+      if (!areSubtreesEqual(s1.subtasks || [], s2.subtasks || [])) return false;
+    }
+    return true;
+  };
+
+  if (!areSubtreesEqual(a.subtasks || [], b.subtasks || [])) return false;
+
+  // Compare blockedBy array
+  const aBlocked = a.blockedBy || [];
+  const bBlocked = b.blockedBy || [];
+  if (aBlocked.length !== bBlocked.length) return false;
+  for (let i = 0; i < aBlocked.length; i++) {
+    if (aBlocked[i] !== bBlocked[i]) return false;
+  }
+
+  return true;
+}
+
+/**
+ * Surgically reconciles incoming server data with current state.
+ * Preserves exact object references for unchanged tasks so React.memo skips re-rendering!
+ */
+export function reconcileIssues(prev: Issue[], incoming: Issue[]): Issue[] {
+  if (prev.length === 0) return incoming;
+  if (incoming.length === 0) return prev;
+
+  let hasAnyChange = false;
+  const prevMap = new Map<string, Issue>();
+  prev.forEach((item) => prevMap.set(String(item.id), item));
+
+  const reconciled: Issue[] = [];
+  const incomingIds = new Set<string>();
+
+  for (const item of incoming) {
+    const itemId = String(item.id);
+    incomingIds.add(itemId);
+
+    const existing = prevMap.get(itemId);
+    if (!existing) {
+      // New item added on server
+      reconciled.push(item);
+      hasAnyChange = true;
+    } else if (areIssuesEqual(existing, item)) {
+      // Unchanged item - preserve exact object reference!
+      reconciled.push(existing);
+    } else {
+      // Modified item - surgical in-place update
+      reconciled.push(item);
+      hasAnyChange = true;
+    }
+  }
+
+  // Check if any items were removed or reordered
+  if (prev.length !== incoming.length) {
+    hasAnyChange = true;
+  } else {
+    for (let i = 0; i < prev.length; i++) {
+      if (prev[i].id !== incoming[i].id) {
+        hasAnyChange = true;
+        break;
+      }
+    }
+  }
+
+  return hasAnyChange ? reconciled : prev;
+}
+
+/**
+ * Reconciles project docs list surgically
+ */
+export function reconcileDocs(prev: ProjectDoc[], incoming: ProjectDoc[]): ProjectDoc[] {
+  if (prev.length === 0) return incoming;
+  if (incoming.length === 0) return prev;
+
+  let hasChange = false;
+  const prevMap = new Map<string, ProjectDoc>();
+  prev.forEach((d) => prevMap.set(String(d.id), d));
+
+  const reconciled: ProjectDoc[] = [];
+  for (const inc of incoming) {
+    const existing = prevMap.get(String(inc.id));
+    if (!existing) {
+      reconciled.push(inc);
+      hasChange = true;
+    } else if (
+      existing.title === inc.title &&
+      existing.fileName === inc.fileName &&
+      existing.updatedAt === inc.updatedAt
+    ) {
+      reconciled.push(existing);
+    } else {
+      reconciled.push(inc);
+      hasChange = true;
+    }
+  }
+
+  if (prev.length !== incoming.length) hasChange = true;
+
+  return hasChange ? reconciled : prev;
 }
