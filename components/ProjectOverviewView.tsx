@@ -144,7 +144,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
   });
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-[#131415] text-[#CFD4DD] p-4 lg:p-6 space-y-6 select-none font-sans">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#131415] text-[#CFD4DD] p-4 lg:p-6 space-y-6 select-none font-sans">
       {/* ─── Hero Overview Header ─────────────────────────────────────────── */}
       <div className="bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl p-5 lg:p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1.5 z-10">

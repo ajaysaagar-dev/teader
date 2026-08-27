@@ -176,9 +176,9 @@ export function ProjectConversationView({
   );
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
+    <div className="flex flex-1 h-full min-h-0 w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
       {/* ─── Left Column: Channel Switcher ─────────────────────────── */}
-      <aside className="w-56 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between select-none">
+      <aside className="w-56 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between select-none h-full min-h-0">
         <div>
           <div className="p-3 border-b border-[#222428] flex items-center justify-between">
             <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] font-medium">
@@ -220,9 +220,9 @@ export function ProjectConversationView({
       </aside>
 
       {/* ─── Center: Main Chat Messages ────────────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 bg-[#0E0F12]">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#0E0F12]">
         {/* Messages Feed */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[#787C83] space-y-2">
               <div className="w-6 h-6 border-2 border-[#DCB001] border-t-transparent rounded-full animate-spin" />
@@ -248,7 +248,7 @@ export function ProjectConversationView({
 
               return (
                 <div
-                  key={msg.id || idx}
+                  key={`msg_${msg.id ?? 'opt'}_${idx}`}
                   className={`group flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
                     isMe ? 'bg-[#15161A]/50 hover:bg-[#18191E]' : 'hover:bg-[#15161A]'
                   }`}
@@ -309,7 +309,7 @@ export function ProjectConversationView({
         </div>
 
         {/* Input Bar */}
-        <div className="p-4 border-t border-[#222428] bg-[#111215]/90">
+        <div className="p-4 border-t border-[#222428] bg-[#111215]/90 shrink-0">
           {showEmojiPicker && (
             <div className="flex items-center gap-1.5 mb-2.5 p-2 bg-[#17181C] border border-[#2A2C30] rounded-xl select-none">
               {EMOJIS.map((emoji) => (
@@ -368,7 +368,7 @@ export function ProjectConversationView({
       </main>
 
       {/* ─── Right Column: Joined Persons ──────────────────────────── */}
-      <aside className="w-64 shrink-0 bg-[#111215] border-l border-[#222428] hidden lg:flex flex-col select-none">
+      <aside className="w-64 shrink-0 bg-[#111215] border-l border-[#222428] hidden lg:flex flex-col select-none h-full min-h-0">
         <div className="p-3.5 border-b border-[#222428] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -398,13 +398,13 @@ export function ProjectConversationView({
               No members found
             </div>
           ) : (
-            filteredMembers.map((m) => {
+            filteredMembers.map((m, idx) => {
               const isOwner = m.role === 'owner';
               const isAdmin = m.role === 'admin';
 
               return (
                 <div
-                  key={m.userId || m.id}
+                  key={`member_${m.userId || m.id}_${idx}`}
                   className="flex items-center gap-2.5 p-2 rounded-xl bg-[#16171B] border border-[#222428] hover:border-[#2C2E35] transition-colors"
                 >
                   <div className="relative shrink-0">

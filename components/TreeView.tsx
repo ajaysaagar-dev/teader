@@ -625,7 +625,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0F1011] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#0F1011] overflow-hidden">
       {/* Top Toolbar */}
       <div className="h-11 px-4 bg-[#131415] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">

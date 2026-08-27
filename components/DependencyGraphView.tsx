@@ -378,7 +378,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   }, [nodes, selectedUserFilter]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#101113] text-[#CFD4DD] font-sans select-none overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#101113] text-[#CFD4DD] font-sans select-none overflow-hidden">
       {/* Top Toolbar (Unity Version Control / Plastic SCM Explorer Style) */}
       <div className="h-12 px-4 bg-[#161719] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
         {/* Left: Brand & Branch Explorer Title */}

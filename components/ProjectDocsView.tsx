@@ -726,9 +726,9 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex h-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden relative">
+    <div className="flex-1 flex h-full min-h-0 w-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden relative">
       {/* Left Sidebar: Document List & Switcher */}
-      <div className="w-64 sm:w-72 bg-[#17181A] border-r border-[#2A2C30] flex flex-col shrink-0 h-full">
+      <div className="w-64 sm:w-72 bg-[#17181A] border-r border-[#2A2C30] flex flex-col shrink-0 h-full min-h-0">
         {/* Sidebar Header */}
         <div className="p-3.5 border-b border-[#2A2C30] space-y-2.5">
           <div className="flex items-center justify-between">
@@ -845,7 +845,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       </div>
 
       {/* Main Workspace Area: Markdown Editor / Split / Preview */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] relative">
+      <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#131415] relative">
         {activeDoc ? (
           <>
             {/* Main Top Header */}
@@ -942,23 +942,23 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             </div>
 
             {/* Document Content Workspace */}
-            <div className="flex-1 flex overflow-hidden pb-14">
+            <div className="flex-1 min-h-0 flex overflow-hidden">
               {/* Markdown Editor Column */}
               {(viewMode === 'editor' || viewMode === 'split') && (
-                <div className={`flex-1 h-full flex flex-col p-4 ${viewMode === 'split' ? 'border-r border-[#2A2C30]' : ''}`}>
+                <div className={`flex-1 h-full min-h-0 flex flex-col p-4 pb-14 ${viewMode === 'split' ? 'border-r border-[#2A2C30]' : ''}`}>
                   <textarea
                     ref={textareaRef}
                     value={activeContent}
                     onChange={(e) => handleContentChange(e.target.value)}
                     placeholder="Write markdown documentation here..."
-                    className="w-full h-full p-4 bg-[#17181A] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
+                    className="w-full h-full flex-1 p-4 bg-[#17181A] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
                   />
                 </div>
               )}
 
               {/* GitHub-Flavored Markdown Preview Column */}
               {(viewMode === 'preview' || viewMode === 'split') && (
-                <div className="flex-1 h-full overflow-y-auto p-6 bg-[#0E0F11] custom-scrollbar">
+                <div className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-16 bg-[#0E0F11] custom-scrollbar">
                   <div className="max-w-4xl mx-auto space-y-1 text-[#CFD4DD] font-sans">
                     <div className="p-6 sm:p-8 bg-[#161719] border border-[#2A2C30] rounded-2xl shadow-xl">
                       {renderGithubMarkdown(activeContent)}

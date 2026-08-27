@@ -214,9 +214,9 @@ export default function ConversationsPage() {
 
   return (
     <AppLayout>
-      <div className="flex h-[calc(100vh-48px)] w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
+      <div className="flex-1 flex h-full min-h-0 w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
         {/* ─── Left Sidebar: Projects & Channels ─────────────────────── */}
-        <aside className="w-64 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between">
+        <aside className="w-64 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between h-full min-h-0">
           <div>
             {/* Project Switcher Header */}
             <div className="p-3 border-b border-[#222428]">
@@ -284,7 +284,7 @@ export default function ConversationsPage() {
         </aside>
 
         {/* ─── Center: Main Conversation Feed ────────────────────────── */}
-        <main className="flex-1 flex flex-col min-w-0 bg-[#0E0F12]">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#0E0F12]">
           {/* Channel Top Header */}
           <div className="h-13 px-5 border-b border-[#222428] bg-[#111215]/80 backdrop-blur flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
@@ -322,7 +322,7 @@ export default function ConversationsPage() {
           </div>
 
           {/* Messages Feed Area */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[#787C83] space-y-2">
                 <div className="w-6 h-6 border-2 border-[#DCB001] border-t-transparent rounded-full animate-spin" />
@@ -348,7 +348,7 @@ export default function ConversationsPage() {
 
                 return (
                   <div
-                    key={msg.id || idx}
+                    key={`msg_${msg.id ?? 'opt'}_${idx}`}
                     className={`group flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
                       isMe ? 'bg-[#15161A]/50 hover:bg-[#18191E]' : 'hover:bg-[#15161A]'
                     }`}
@@ -412,7 +412,7 @@ export default function ConversationsPage() {
           </div>
 
           {/* Bottom Chat Input Bar */}
-          <div className="p-4 border-t border-[#222428] bg-[#111215]/90">
+          <div className="p-4 border-t border-[#222428] bg-[#111215]/90 shrink-0">
             {/* Quick Emoji Bar */}
             {showEmojiPicker && (
               <div className="flex items-center gap-1.5 mb-2.5 p-2 bg-[#17181C] border border-[#2A2C30] rounded-xl">
@@ -472,7 +472,7 @@ export default function ConversationsPage() {
         </main>
 
         {/* ─── Right Sidebar: Joined Persons in this Project ─────────── */}
-        <aside className="w-72 shrink-0 bg-[#111215] border-l border-[#222428] hidden lg:flex flex-col">
+        <aside className="w-72 shrink-0 bg-[#111215] border-l border-[#222428] hidden lg:flex flex-col h-full min-h-0">
           {/* Header */}
           <div className="p-3.5 border-b border-[#222428] space-y-2.5">
             <div className="flex items-center justify-between">
@@ -505,13 +505,13 @@ export default function ConversationsPage() {
                 No members match search
               </div>
             ) : (
-              filteredMembers.map((m) => {
+              filteredMembers.map((m, idx) => {
                 const isOwner = m.role === 'owner';
                 const isAdmin = m.role === 'admin';
 
                 return (
                   <div
-                    key={m.userId || m.id}
+                    key={`member_${m.userId || m.id}_${idx}`}
                     className="flex items-center gap-3 p-2 rounded-xl bg-[#16171B] border border-[#222428] hover:border-[#2C2E35] transition-colors"
                   >
                     <div className="relative shrink-0">

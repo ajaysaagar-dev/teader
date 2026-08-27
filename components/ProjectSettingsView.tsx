@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-
 import {
   Settings,
   Trash2,
@@ -11,13 +10,11 @@ import {
   Pencil,
   Copy,
   Check,
-  CheckCircle2,
   Users,
   Lock,
-  Database,
-  RefreshCw,
+  LogOut,
   FolderKanban,
-  LogOut
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,44 +23,86 @@ interface ProjectSettingsViewProps {
     id: string | number;
     key: string;
     name: string;
-    description: string;
+    description?: string;
     owner_id?: number;
     creatorId?: number;
     ownerName?: string;
   } | null;
-  members: any[];
-  isCreator: boolean;
-  currentUser: any;
-  onOpenDeleteModal: () => void;
-  onOpenLeaveModal: () => void;
-  onOpenEditModal: () => void;
+  members?: any[];
+  isCreator?: boolean;
+  currentUser?: any;
+  onOpenDeleteModal?: () => void;
+  onOpenLeaveModal?: () => void;
+  onOpenEditModal?: () => void;
 }
 
 export function ProjectSettingsView({
   project,
-  members,
-  isCreator,
+  members = [],
+  isCreator = false,
   currentUser,
   onOpenDeleteModal,
   onOpenLeaveModal,
   onOpenEditModal,
-
 }: ProjectSettingsViewProps) {
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const handleCopyKey = () => {
-    if (project?.key) {
-      navigator.clipboard.writeText(project.key);
-      setCopiedKey(true);
-      toast.success(`Copied Project Key: ${project.key}`);
-      setTimeout(() => setCopiedKey(false), 2000);
+  const handleCopyKey = async () => {
+    if (!project?.key) return;
+
+    const keyToCopy = project.key.trim();
+
+    // 1. Standard modern Async Clipboard API (for HTTPS / secure contexts)
+    if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(keyToCopy);
+        setCopiedKey(true);
+        toast.success(`Copied Project Key: ${keyToCopy}`);
+        setTimeout(() => setCopiedKey(false), 2200);
+        return;
+      } catch (err) {
+        console.warn('Clipboard API write failed, trying fallback execCommand', err);
+      }
+    }
+
+    // 2. Production Fallback (works in HTTP, iframe, desktop & legacy contexts)
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = keyToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        setCopiedKey(true);
+        toast.success(`Copied Project Key: ${keyToCopy}`);
+        setTimeout(() => setCopiedKey(false), 2200);
+      } else {
+        throw new Error('execCommand returned false');
+      }
+    } catch {
+      toast.error('Copy failed. Please manually select and copy the key.');
     }
   };
 
   if (!project) return null;
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#0E0F12] text-[#CFD4DD] p-6 lg:p-10 select-none">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#0E0F12] text-[#CFD4DD] p-6 lg:p-10 select-none">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Title */}
         <div className="flex items-center justify-between pb-5 border-b border-[#222428]">
@@ -74,32 +113,32 @@ export function ProjectSettingsView({
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Project Settings</h2>
               <p className="text-xs text-[#787C83]">
-                Manage workspace configuration, keys, team members, and danger zone actions.
+                Manage workspace configuration, access keys, team members, and danger zone actions.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+            <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-lg bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
               {isCreator ? 'Owner Access' : 'Member View'}
             </span>
           </div>
         </div>
 
-        {/* 1. General Project Information Card */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-5">
+        {/* 1. General Project Information & Edit Name Card */}
+        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FolderKanban size={16} className="text-[#DCB001]" />
               <h3 className="text-sm font-bold text-white">General Information</h3>
             </div>
-            {isCreator && (
+            {isCreator && onOpenEditModal && (
               <button
                 onClick={onOpenEditModal}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1E23] hover:bg-[#25272D] text-xs font-semibold text-white border border-[#2E3138] transition-colors"
               >
                 <Pencil size={13} />
-                <span>Edit Details</span>
+                <span>Edit Project Name & Details</span>
               </button>
             )}
           </div>
@@ -130,34 +169,41 @@ export function ProjectSettingsView({
           </div>
         </div>
 
-        {/* 2. Project Key & Collaboration Card */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4">
-          <div className="flex items-center gap-2">
-            <Key size={16} className="text-[#DCB001]" />
-            <h3 className="text-sm font-bold text-white">Project Access Key</h3>
+        {/* 2. Project Access Key & Copy Card */}
+        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key size={16} className="text-[#DCB001]" />
+              <h3 className="text-sm font-bold text-white">Project Access Key</h3>
+            </div>
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+              30-Char Key
+            </span>
           </div>
-          <p className="text-xs text-[#787C83]">
-            Share this 30-character unique key with team members so they can join and collaborate in this project.
+
+          <p className="text-xs text-[#9499A0] leading-relaxed">
+            Share this 30-character unique key with team members so they can join and collaborate in this project workspace.
           </p>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#25272D] max-w-xl">
-            <div className="flex items-center gap-2 font-mono text-xs text-[#DCB001] font-bold truncate mr-3">
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#25272D] max-w-xl hover:border-[#DCB001]/40 transition-colors">
+            <div className="flex items-center gap-2.5 font-mono text-xs text-[#DCB001] font-bold truncate mr-3">
               <Lock size={14} className="text-[#787C83] shrink-0" />
-              <span className="truncate">{project.key}</span>
+              <span className="truncate select-all">{project.key}</span>
             </div>
 
             <button
+              type="button"
               onClick={handleCopyKey}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1D22] hover:bg-[#25272E] text-xs font-mono text-white border border-[#2C2E35] transition-colors shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1D22] hover:bg-[#25272E] text-xs font-mono text-white border border-[#2C2E35] transition-all shrink-0 active:scale-95 shadow-sm"
             >
               {copiedKey ? (
                 <>
                   <Check size={13} className="text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
+                  <span className="text-emerald-400 font-bold">Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy size={13} />
+                  <Copy size={13} className="text-[#DCB001]" />
                   <span>Copy Key</span>
                 </>
               )}
@@ -165,8 +211,8 @@ export function ProjectSettingsView({
           </div>
         </div>
 
-        {/* 3. Team & Joined Members */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4">
+        {/* 3. Collaborators & Joined Members */}
+        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users size={16} className="text-[#DCB001]" />
@@ -204,7 +250,7 @@ export function ProjectSettingsView({
                     </div>
                   </div>
 
-                  {isCurrentUser && (
+                  {isCurrentUser && onOpenLeaveModal && (
                     <button
                       onClick={onOpenLeaveModal}
                       title="Leave this project"
@@ -220,34 +266,36 @@ export function ProjectSettingsView({
         </div>
 
         {/* 4. Danger Zone */}
-        <div className="space-y-4">
-          {/* Leave Project Option (Available for All Joined Members & Collaborators) */}
-          <div className="p-6 rounded-2xl bg-[#181310] border border-[#F97316]/30 space-y-4">
-            <div className="flex items-center gap-2">
-              <LogOut size={18} className="text-[#F97316]" />
-              <h3 className="text-sm font-bold text-[#F97316]">Leave Project Workspace</h3>
-            </div>
-            <p className="text-xs text-[#A89488]">
-              Leave this project workspace. You will be removed from the team members list and this project will no longer appear in your dashboard or project directory unless you rejoin using the Project Key.
-            </p>
+        <div className="space-y-4 pt-2">
+          {/* Leave Project Option (For Joined Collaborators) */}
+          {onOpenLeaveModal && (
+            <div className="p-6 rounded-2xl bg-[#181310] border border-[#F97316]/30 space-y-4">
+              <div className="flex items-center gap-2">
+                <LogOut size={18} className="text-[#F97316]" />
+                <h3 className="text-sm font-bold text-[#F97316]">Leave Project Workspace</h3>
+              </div>
+              <p className="text-xs text-[#A89488]">
+                Leave this project workspace. You will be removed from the team members list and this project will no longer appear in your dashboard unless you rejoin using the Project Key.
+              </p>
 
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-[11px] font-mono text-[#8E8078]">
-                Logged in as {currentUser?.name || 'Member'}
-              </span>
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] font-mono text-[#8E8078]">
+                  Logged in as {currentUser?.name || 'Member'}
+                </span>
 
-              <button
-                onClick={onOpenLeaveModal}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
-              >
-                <LogOut size={14} />
-                <span>Leave Project</span>
-              </button>
+                <button
+                  onClick={onOpenLeaveModal}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                >
+                  <LogOut size={14} />
+                  <span>Leave Project</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Delete Project Option (For Creator / Owner) */}
-          {isCreator && (
+          {isCreator && onOpenDeleteModal && (
             <div className="p-6 rounded-2xl bg-[#181112] border border-[#EF4444]/30 space-y-4">
               <div className="flex items-center gap-2">
                 <AlertTriangle size={18} className="text-[#EF4444]" />
@@ -277,5 +325,3 @@ export function ProjectSettingsView({
     </div>
   );
 }
-
-

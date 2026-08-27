@@ -205,7 +205,7 @@ export default function ProjectsPage() {
         throw new Error(errorData.error || 'Failed to create project');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to create project in MySQL DB');
+      toast.error(err.message || 'Failed to create project');
     } finally {
       setIsSubmittingProj(false);
       setNewProjName('');
@@ -347,7 +347,7 @@ export default function ProjectsPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+      <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
         {/* Top Workspace Header Bar */}
         <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
           <h1 className="text-sm font-bold text-[#CFD4DD] flex items-center gap-2">
@@ -378,7 +378,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Projects Directory List View */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-6">
+        <div className="flex-1 min-h-0 p-6 overflow-y-auto space-y-6">
           <div className="flex items-center justify-between gap-4 max-w-xl bg-[#1B1C1F] p-3 rounded-xl border border-[#2A2C30]">
             <div className="flex items-center gap-2 flex-1">
               <Search size={16} className="text-[#787C83]" />
@@ -645,7 +645,7 @@ export default function ProjectsPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Verifies with MySQL DB</span>
+                    <span className="text-[11px] text-[#787C83]">Instant 30-character key verification</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"

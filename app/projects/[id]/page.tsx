@@ -1288,7 +1288,7 @@ export default function SingleProjectPage() {
         {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board with Error Boundaries */}
         <ErrorBoundary>
           {selectedIssue ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
                 <button
                   onClick={() => setSelectedIssueId(null)}
@@ -1322,7 +1322,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'overview' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectOverviewView
                 issues={projectIssues}
                 project={project}
@@ -1332,7 +1332,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'tree' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <TreeView
 
                 issues={projectIssues}
@@ -1351,7 +1351,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'calendar' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <CalendarView
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
@@ -1359,7 +1359,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'graph' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <DependencyGraphView
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
@@ -1367,7 +1367,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'docs' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectDocsView
                 projectId={project?.id || 1}
                 projectName={project?.name}
@@ -1375,7 +1375,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'conversation' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectConversationView
                 projectId={project?.id || 1}
                 projectName={project?.name}
@@ -1384,7 +1384,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'dev' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <DevStreamView
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
@@ -1396,7 +1396,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : activeTab === 'settings' ? (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectSettingsView
                 project={project}
                 members={joinedMembers}
@@ -1422,7 +1422,7 @@ export default function SingleProjectPage() {
             </div>
           ) : activeTab === 'hierarchy' ? (
 
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <HierarchicalView
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
@@ -1433,7 +1433,7 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <KanbanBoardView
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}

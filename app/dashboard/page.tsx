@@ -207,7 +207,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col h-full bg-[#0E0F11] text-[#CFD4DD] font-sans overflow-y-auto custom-scrollbar select-none">
+      <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0E0F11] text-[#CFD4DD] font-sans overflow-y-auto custom-scrollbar select-none">
         {/* Top Header Banner */}
         <div className="px-6 py-6 border-b border-[#2A2C30] bg-[#141517]/80 backdrop-blur-md shrink-0">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">

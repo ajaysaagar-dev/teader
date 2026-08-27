@@ -18,12 +18,14 @@ import {
   Command,
   ChevronDown,
   Loader2,
-  MessageSquare
+  MessageSquare,
+  Settings
 } from 'lucide-react';
 
 
 import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
+import { SettingsModal } from '@/components/SettingsModal';
 import { Issue, FileDiff } from '@/lib/types';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,6 +71,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Verify authentication before rendering workspace
   useEffect(() => {
@@ -172,28 +175,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased select-none">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased select-none">
       {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
       <header className="h-12 px-4 bg-[#111215] border-b border-[#24262B] flex items-center justify-between shrink-0 z-40">
-        {/* Top Left: Logo & Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
+        {/* Top Left: Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
         <div className="flex items-center gap-3">
-          {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2 mr-2 group">
-            <div className="w-6 h-6 rounded-md bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center font-bold text-xs shadow-[0_0_10px_rgba(220,176,1,0.25)] transition-transform group-hover:scale-105 font-prompt">
-              t
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="font-extrabold text-sm text-white tracking-tight font-prompt">
-                teader
-              </span>
-              <span className="text-[8px] font-mono text-[#787C83] tracking-widest uppercase font-prompt">
-                workspace
-              </span>
-            </div>
-          </Link>
-
-          <span className="w-px h-4 bg-[#2A2C30] mr-1 hidden sm:inline" />
-
           {/* Top Tabs: Dashboard, Projects, Account */}
           <nav className="flex items-center gap-1 bg-[#0B0C0E] p-0.5 rounded-lg border border-[#222428]">
             {/* Tab: Dashboard */}
@@ -238,6 +224,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   ({currentUser.name})
                 </span>
               )}
+            </button>
+
+            {/* Tab: Settings */}
+            <button
+              onClick={() => setIsSettingsModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                isSettingsModalOpen
+                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
+                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+              }`}
+            >
+              <Settings size={13} className={isSettingsModalOpen ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <span>Settings</span>
             </button>
           </nav>
 
@@ -310,7 +309,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
 
       ) : !currentUser ? null : (
-        <main className="flex-1 flex flex-col min-w-0 h-[calc(100vh-48px)] overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
           {children}
         </main>
       )}
@@ -440,6 +439,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           />
         </Suspense>
       )}
+
+      {/* Workspace Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
+      />
     </div>
   );
 };
