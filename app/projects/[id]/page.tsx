@@ -22,7 +22,10 @@ import {
   LayoutGrid,
   Terminal,
   FolderTree,
-  BarChart3
+  BarChart3,
+  Calendar,
+  Zap,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -49,6 +52,10 @@ const TreeView = dynamic(
   () => import('@/components/TreeView').then((m) => ({ default: m.TreeView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const CalendarView = dynamic(
+  () => import('@/components/CalendarView').then((m) => ({ default: m.CalendarView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -57,6 +64,11 @@ const NewIssueModal = dynamic(
   () => import('@/components/NewIssueModal').then((m) => ({ default: m.NewIssueModal })),
   { ssr: false }
 );
+const AutomationsModal = dynamic(
+  () => import('@/components/AutomationsModal').then((m) => ({ default: m.AutomationsModal })),
+  { ssr: false }
+);
+
 
 interface ProjectItem {
   id: string | number;
@@ -75,10 +87,11 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' {
+function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
+  if (v === 'calendar' || v === 'schedule' || v === 'timeline') return 'calendar';
   if (v === 'tree') return 'tree';
   if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
   if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
@@ -92,7 +105,7 @@ export default function SingleProjectPage() {
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -100,10 +113,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
   }, [projectIdParam, router]);
+
 
 
   const [project, setProject] = useState<ProjectItem | null>(null);
@@ -116,6 +130,15 @@ export default function SingleProjectPage() {
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
+
+  const handleExportProject = useCallback((format: 'json' | 'csv' = 'json') => {
+    if (typeof window !== 'undefined') {
+      window.open(`/api/projects/${projectIdParam}/export?format=${format}`, '_blank');
+      toast.success(`Exporting project as ${format.toUpperCase()}...`);
+    }
+  }, [projectIdParam]);
+
 
   // Edit Project Form
   const [editName, setEditName] = useState('');
@@ -820,6 +843,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('calendar')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'calendar'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Deadlines & Calendar"
+            >
+              <Calendar size={13} />
+              <span>Calendar</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('dev')}
               className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                 activeTab === 'dev'
@@ -833,6 +869,7 @@ export default function SingleProjectPage() {
               <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
             </button>
           </div>
+
 
 
           {/* Right: Creator, Stacked Members, Sync Pulse & Actions */}
@@ -869,6 +906,26 @@ export default function SingleProjectPage() {
               <span>Live</span>
             </div>
 
+            {/* Automations Button */}
+            <button
+              onClick={() => setIsAutomationsModalOpen(true)}
+              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#CFD4DD] transition-all"
+              title="Configure Workflow Automations"
+            >
+              <Zap size={12} className="text-[#DCB001]" />
+              <span className="hidden md:inline">Automations</span>
+            </button>
+
+            {/* Export Project Button */}
+            <button
+              onClick={() => handleExportProject('json')}
+              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              title="Export Project (JSON)"
+            >
+              <Download size={12} />
+              <span className="hidden md:inline">Export</span>
+            </button>
+
             {/* Quick + Task Button */}
             <button
               onClick={() => setIsNewIssueModalOpen(true)}
@@ -880,6 +937,7 @@ export default function SingleProjectPage() {
             </button>
           </div>
         </div>
+
 
         {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board with Error Boundaries */}
         <ErrorBoundary>
@@ -946,9 +1004,18 @@ export default function SingleProjectPage() {
                 onRenameEpic={handleRenameEpic}
               />
             </div>
+          ) : activeTab === 'calendar' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <CalendarView
+                issues={projectIssues}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              />
+            </div>
           ) : activeTab === 'dev' ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <DevStreamView
+
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
@@ -994,6 +1061,17 @@ export default function SingleProjectPage() {
             isProjectLocked={true}
           />
         )}
+
+        {/* Workflow Automations Modal */}
+        {project && (
+          <AutomationsModal
+            isOpen={isAutomationsModalOpen}
+            onClose={() => setIsAutomationsModalOpen(false)}
+            projectId={project.id}
+            projectName={project.name}
+          />
+        )}
+
 
         {/* Real-time Edit Project Modal */}
         <AnimatePresence>
