@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   GitFork, 
   Layers, 
@@ -21,14 +22,63 @@ import {
   ExternalLink,
   Users,
   Lock,
-  GitBranch
+  LogOut,
+  User,
+  LayoutDashboard
 } from 'lucide-react';
+import { TeaderSandCanvas } from '@/components/ui/TeaderSandCanvas';
+import { toast } from 'sonner';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'graph' | 'kanban' | 'docs' | 'tree'>('graph');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // Check login state
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('teader_user');
+      if (cached) setCurrentUser(JSON.parse(cached));
+    } catch {}
+
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          setCurrentUser(data.user);
+          try {
+            localStorage.setItem('teader_user', JSON.stringify(data.user));
+          } catch {}
+        } else {
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsCheckingAuth(false));
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      try {
+        localStorage.removeItem('teader_user');
+        localStorage.removeItem('teader_token');
+      } catch {}
+      setCurrentUser(null);
+      toast.success('Logged out successfully');
+    } catch {
+      toast.error('Logout failed');
+    }
+  };
+
+  const isLoggedIn = Boolean(currentUser);
 
   return (
     <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
+      {/* ─── Sand Dissolve Canvas Intro ──────────────────────────────── */}
+      <TeaderSandCanvas />
+
       {/* ─── Navigation Header ────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0B0D]/80 border-b border-[#222428]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -50,20 +100,53 @@ export default function LandingPage() {
             </nav>
           </div>
 
+          {/* Auth Header Buttons */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-3.5 py-1.5 text-xs font-medium text-[#CFD4DD] hover:text-white transition-colors"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.25)] hover:shadow-[0_0_25px_rgba(220,176,1,0.4)] hover:scale-[1.02]"
-            >
-              <span>Launch App</span>
-              <ArrowRight size={13} />
-            </Link>
+            {isLoggedIn ? (
+              <>
+                {/* Logged in view: User badge + Launch Dashboard + Logout button */}
+                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#16181C] border border-[#2A2C30] text-xs font-mono">
+                  <div className="w-4 h-4 rounded-full bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center text-[10px] font-bold">
+                    {(currentUser.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-white font-bold">{currentUser.name}</span>
+                </div>
+
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
+                >
+                  <LayoutDashboard size={13} />
+                  <span>Go to Dashboard</span>
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/30 text-xs font-medium transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut size={13} />
+                  <span>Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Logged out view: Sign In + Get Started */}
+                <Link
+                  href="/login"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#CFD4DD] hover:text-white transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
+                >
+                  <span>Launch App</span>
+                  <ArrowRight size={13} />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -101,16 +184,28 @@ export default function LandingPage() {
               href="/dashboard"
               className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_30px_rgba(220,176,1,0.35)] hover:scale-105"
             >
-              <span>Get Started Free</span>
+              <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}</span>
               <ArrowRight size={16} />
             </Link>
 
-            <Link
-              href="/register"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-semibold text-sm transition-all shadow-sm"
-            >
-              <span>Create Account</span>
-            </Link>
+            {!isLoggedIn && (
+              <Link
+                href="/register"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-semibold text-sm transition-all shadow-sm"
+              >
+                <span>Create Account</span>
+              </Link>
+            )}
+
+            {isLoggedIn && (
+              <Link
+                href="/projects"
+                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-semibold text-sm transition-all shadow-sm"
+              >
+                <FolderKanban size={15} className="text-[#DCB001]" />
+                <span>View Projects</span>
+              </Link>
+            )}
           </div>
 
           {/* Feature Highlights Pills */}
@@ -135,7 +230,7 @@ export default function LandingPage() {
         </div>
 
         {/* ─── Interactive Product Preview Card ────────────────────────── */}
-        <div className="max-w-6xl mx-auto mt-14 rounded-2xl bg-[#121417] border border-[#272A30] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative group">
+        <div id="branch-explorer" className="max-w-6xl mx-auto mt-14 rounded-2xl bg-[#121417] border border-[#272A30] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative group">
           {/* Top Window Bar */}
           <div className="h-11 px-4 bg-[#181A1F] border-b border-[#272A30] flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -260,7 +355,7 @@ export default function LandingPage() {
             )}
 
             {activeTab === 'docs' && (
-              <div className="grid grid-cols-12 gap-4 text-left">
+              <div id="docs" className="grid grid-cols-12 gap-4 text-left">
                 <div className="col-span-4 p-3 rounded-xl bg-[#14161A] border border-[#222428] space-y-1.5 text-xs font-mono">
                   <span className="text-[10px] text-[#787C83]">PROJECT SPECS</span>
                   <div className="p-2 rounded bg-[#1C1E23] text-[#DCB001] font-bold">proj_test_engine_overview.md</div>
@@ -358,6 +453,44 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── Architecture Section ─────────────────────────────────────── */}
+      <section id="architecture" className="py-20 px-6 border-t border-[#1C1E22] bg-[#0A0B0D]">
+        <div className="max-w-7xl mx-auto space-y-12">
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <h2 className="text-xs font-mono uppercase tracking-wider text-[#06B6D4]">Architecture</h2>
+            <p className="text-3xl font-extrabold text-white tracking-tight">
+              Built for speed, resilient to network latency.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
+            <div className="p-5 rounded-xl bg-[#111215] border border-[#222428] space-y-2">
+              <div className="text-[#DCB001] font-mono text-xs font-bold">01 / CACHE-FIRST</div>
+              <h4 className="text-sm font-bold text-white">LocalStorage SWR Layer</h4>
+              <p className="text-xs text-[#787C83]">Hydrates instant cached state on client mount with zero hydration mismatch errors.</p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#111215] border border-[#222428] space-y-2">
+              <div className="text-[#06B6D4] font-mono text-xs font-bold">02 / BACKGROUND SYNC</div>
+              <h4 className="text-sm font-bold text-white">Non-Blocking Persistence</h4>
+              <p className="text-xs text-[#787C83]">Mutations emit 0ms UI feedback and dispatch PostgreSQL writes in background threads.</p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#111215] border border-[#222428] space-y-2">
+              <div className="text-[#22C55E] font-mono text-xs font-bold">03 / SURGICAL RECONCILER</div>
+              <h4 className="text-sm font-bold text-white">Referential Memory Equality</h4>
+              <p className="text-xs text-[#787C83]">Retains exact unchanged object pointers so React.memo skips re-rendering 99% of DOM nodes.</p>
+            </div>
+
+            <div className="p-5 rounded-xl bg-[#111215] border border-[#222428] space-y-2">
+              <div className="text-[#A855F7] font-mono text-xs font-bold">04 / MILITARY VAULT</div>
+              <h4 className="text-sm font-bold text-white">AES-256-GCM Dumps</h4>
+              <p className="text-xs text-[#787C83]">Export whole workspaces as encrypted .teaderdumpfile archives with SHA-256 checksums.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Call To Action Footer ───────────────────────────────────── */}
       <section className="py-20 px-6 border-t border-[#1C1E22] bg-[#08090B] text-center relative overflow-hidden">
         <div className="max-w-4xl mx-auto space-y-6 relative z-10">
@@ -373,7 +506,7 @@ export default function LandingPage() {
               href="/dashboard"
               className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_30px_rgba(220,176,1,0.3)] hover:scale-105"
             >
-              <span>Launch Workspace</span>
+              <span>{isLoggedIn ? 'Launch Workspace' : 'Get Started Free'}</span>
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -393,8 +526,17 @@ export default function LandingPage() {
           <div className="flex items-center gap-5">
             <Link href="/dashboard" className="hover:text-[#CFD4DD] transition-colors">Dashboard</Link>
             <Link href="/projects" className="hover:text-[#CFD4DD] transition-colors">Projects</Link>
-            <Link href="/login" className="hover:text-[#CFD4DD] transition-colors">Sign In</Link>
-            <Link href="/register" className="hover:text-[#CFD4DD] transition-colors">Register</Link>
+            {!isLoggedIn && (
+              <>
+                <Link href="/login" className="hover:text-[#CFD4DD] transition-colors">Sign In</Link>
+                <Link href="/register" className="hover:text-[#CFD4DD] transition-colors">Register</Link>
+              </>
+            )}
+            {isLoggedIn && (
+              <button onClick={handleLogout} className="hover:text-[#EF4444] transition-colors">
+                Sign Out
+              </button>
+            )}
           </div>
         </div>
       </footer>
