@@ -389,9 +389,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isJustSaved, setIsJustSaved] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [copiedFile, setCopiedFile] = useState(false);
+
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -599,11 +601,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   };
 
-  // Handle Save Doc Content to Server .md File
+  // Handle Save Doc Content to Server .md File (Instant UI Feedback + Background Server Sync)
   const handleSaveDoc = useCallback(async () => {
     if (!selectedDocId) return;
 
-    setIsSaving(true);
+    // 1. Immediately show as Saved in UI (0ms) and update local cache
+    setIsJustSaved(true);
+    setLocalCache(`doc_content_${selectedDocId}`, activeContent);
+    setDocs((prev) => {
+      const updated = prev.map((d) => (d.id === selectedDocId ? { ...d, title: activeTitle.trim(), updatedAt: new Date().toISOString() } : d));
+      setLocalCache(`docs_${projectId}`, updated);
+      return updated;
+    });
+    toast.success(`☁️ Saved: ${activeDoc?.fileName || '.md'}`);
+
+    setTimeout(() => {
+      setIsJustSaved(false);
+    }, 2200);
+
+    // 2. Process in background to physical server .md file & database
     try {
       const res = await fetch(`/api/projects/${projectId}/docs/${selectedDocId}`, {
         method: 'PUT',
@@ -619,16 +635,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         setDocs((prev) =>
           prev.map((d) => (d.id === selectedDocId ? { ...d, title: activeTitle.trim(), updatedAt: data.updatedAt } : d))
         );
-        toast.success(`☁️ Saved to cloud: ${activeDoc?.fileName || '.md'}`);
       } else {
-        toast.error('Failed to save document to server');
+        toast.error('Failed to sync document to server');
       }
     } catch {
-      toast.error('Save failed');
-    } finally {
-      setIsSaving(false);
+      toast.error('Network error during background save');
     }
   }, [selectedDocId, projectId, activeTitle, activeContent, activeDoc]);
+
 
   // Global Keyboard Shortcuts (Ctrl+S for Save, Ctrl+Z for Undo, Ctrl+Y for Redo)
   useEffect(() => {
@@ -890,19 +904,32 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   </button>
                 </div>
 
-                {/* Save to Cloud Button */}
+                {/* Save to Cloud Button (Instant Feedback) */}
                 <button
                   onClick={handleSaveDoc}
-                  disabled={isSaving}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all ${
+                    isJustSaved
+                      ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40 scale-105'
+                      : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
+                  }`}
                   title="Save to Cloud (Ctrl + S)"
                 >
-                  <Cloud size={13} />
-                  <span>{isSaving ? 'Saving...' : 'Save .md'}</span>
-                  <span className="hidden sm:inline-block text-[10px] opacity-75 font-mono ml-0.5 bg-black/15 px-1 py-0.2 rounded">
-                    Ctrl+S
-                  </span>
+                  {isJustSaved ? (
+                    <>
+                      <Check size={13} className="text-[#22C55E] stroke-[3]" />
+                      <span>Saved</span>
+                    </>
+                  ) : (
+                    <>
+                      <Cloud size={13} />
+                      <span>Save .md</span>
+                      <span className="hidden sm:inline-block text-[10px] opacity-75 font-mono ml-0.5 bg-black/15 px-1 py-0.2 rounded">
+                        Ctrl+S
+                      </span>
+                    </>
+                  )}
                 </button>
+
 
               </div>
             </div>

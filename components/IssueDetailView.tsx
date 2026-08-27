@@ -476,32 +476,32 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   </button>
                   <button
                     type="button"
-                    disabled={isSavingDesc}
                     onClick={async () => {
-                      setIsSavingDesc(true);
+                      // 1. Immediately update UI and exit edit mode (0ms)
+                      const updatedDescription = descValue;
+                      onUpdateIssue({ ...issue, description: updatedDescription });
+                      setIsEditingDesc(false);
+                      toast.success('Description saved!');
+
+                      // 2. Process in background to database
                       try {
                         const res = await fetch(`/api/issues/${issue.id}`, {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ description: descValue }),
+                          body: JSON.stringify({ description: updatedDescription }),
                         });
-                        if (res.ok) {
-                          onUpdateIssue({ ...issue, description: descValue });
-                          setIsEditingDesc(false);
-                          toast.success('Description updated!');
-                        } else {
-                          toast.error('Failed to update description');
+                        if (!res.ok) {
+                          toast.error('Failed to sync description with database');
                         }
                       } catch {
-                        toast.error('Network error saving description');
-                      } finally {
-                        setIsSavingDesc(false);
+                        toast.error('Network error syncing description');
                       }
                     }}
-                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all disabled:opacity-50"
+                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all"
                   >
-                    {isSavingDesc ? 'Saving...' : 'Save'}
+                    Save
                   </button>
+
                 </div>
               )}
             </div>

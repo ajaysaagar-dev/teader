@@ -361,35 +361,38 @@ export default function SingleProjectPage() {
     setTimeout(() => setCopiedKey(false), 2000);
   }, [project]);
 
-  // Real-time Edit Project Handler
+  // Real-time Edit Project Handler (Instant UI Feedback + Background Server Sync)
   const handleSaveProjectEdit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!project || !editName.trim() || isSavingEdit) return;
+    if (!project || !editName.trim()) return;
 
-    setIsSavingEdit(true);
+    const newName = editName.trim();
+    const newDesc = editDesc.trim();
+
+    // 1. Immediately update UI and close modal (0ms latency)
+    setProject((prev) => prev ? { ...prev, name: newName, description: newDesc } : null);
+    setIsEditProjectModalOpen(false);
+    toast.success('Project details updated!');
+
+    // 2. Process in background to database
     try {
       const res = await fetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: editName.trim(),
-          description: editDesc.trim(),
+          name: newName,
+          description: newDesc,
         }),
       });
 
-      if (res.ok) {
-        setProject((prev) => prev ? { ...prev, name: editName.trim(), description: editDesc.trim() } : null);
-        toast.success('Project details updated!');
-        setIsEditProjectModalOpen(false);
-      } else {
-        throw new Error('Failed to update project');
+      if (!res.ok) {
+        toast.error('Failed to sync project details with server');
       }
     } catch {
-      toast.error('Failed to update project details');
-    } finally {
-      setIsSavingEdit(false);
+      toast.error('Failed to sync project details to database');
     }
-  }, [project, editName, editDesc, isSavingEdit]);
+  }, [project, editName, editDesc]);
+
 
   // Status Switch Handler with Optimistic Update
   const handleUpdateStatus = useCallback(async (issueId: string, newStatus: Status) => {
