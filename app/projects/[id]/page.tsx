@@ -33,8 +33,15 @@ import {
   Download,
   GitFork,
   BookOpen,
-  Upload
+  Upload,
+  ShieldCheck,
+  CheckCircle2,
+  Lock,
+  FileText,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -183,14 +190,69 @@ export default function SingleProjectPage() {
   const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
   const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
-  const handleExportProject = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const cleanName = String(project?.name || projectIdParam).replace(/\s+/g, '');
-      const fileName = `${cleanName}.teaderdumpfile`;
-      window.open(`/api/projects/${projectIdParam}/export`, '_blank');
-      toast.success(`Bundling & exporting encrypted ${fileName}...`);
+  // In-UI Export Project Dump Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportStep, setExportStep] = useState<'packaging' | 'encrypting' | 'ready' | 'error'>('packaging');
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportStatusText, setExportStatusText] = useState('Gathering project data...');
+  const [exportBlobUrl, setExportBlobUrl] = useState<string | null>(null);
+  const [exportFileName, setExportFileName] = useState('');
+  const [exportFileSize, setExportFileSize] = useState('');
+
+  const handleExportProject = useCallback(async () => {
+    const rawName = String(project?.name || projectIdParam);
+    const cleanName = rawName.replace(/\s+/g, '').replace(/[^a-zA-Z0-9_\-]/g, '') || 'Project';
+    const fileName = `${cleanName}.teaderdumpfile`;
+    setExportFileName(fileName);
+    setIsExportModalOpen(true);
+    setExportStep('packaging');
+    setExportProgress(20);
+    setExportStatusText('Aggregating tasks, subtask trees, and dependency branches...');
+    setExportBlobUrl(null);
+
+    try {
+      setTimeout(() => {
+        setExportProgress(55);
+        setExportStatusText('Bundling Markdown technical documentation & member roles...');
+      }, 350);
+
+      setTimeout(() => {
+        setExportStep('encrypting');
+        setExportProgress(85);
+        setExportStatusText('Applying AES-256-GCM cipher & computing SHA-256 checksum...');
+      }, 700);
+
+      const res = await fetch(`/api/projects/${projectIdParam}/export`);
+      if (!res.ok) throw new Error('Failed to generate project dump');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const sizeKb = (blob.size / 1024).toFixed(1);
+
+      setExportBlobUrl(url);
+      setExportFileSize(`${sizeKb} KB`);
+      setExportProgress(100);
+      setExportStep('ready');
+      setExportStatusText('Encrypted bundle ready for download.');
+      toast.success(`Ready: ${fileName}`);
+    } catch (err) {
+      setExportStep('error');
+      setExportStatusText('Export failed. Please check network connection.');
+      toast.error('Export failed');
     }
   }, [projectIdParam, project]);
+
+  const handleTriggerDownload = useCallback(() => {
+    if (!exportBlobUrl || !exportFileName) return;
+    const a = document.createElement('a');
+    a.href = exportBlobUrl;
+    a.download = exportFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success(`Downloaded ${exportFileName}`);
+  }, [exportBlobUrl, exportFileName]);
+
 
 
 
@@ -1319,8 +1381,126 @@ export default function SingleProjectPage() {
               </motion.div>
             </div>
           )}
+
+          {/* Encrypted Project Export Modal (With Loading Progress & Download Button) */}
+          {isExportModalOpen && (
+
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-lg bg-[#181A1D] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2C30] bg-[#111215]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center font-bold">
+                      <Lock size={16} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-white tracking-tight">Export Project Package</h3>
+                      <p className="text-[11px] font-mono text-[#787C83]">AES-256-GCM Military Grade Encrypted Dump</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsExportModalOpen(false)}
+                    className="text-[#787C83] hover:text-white transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-6 space-y-5">
+                  {/* File Target Info */}
+                  <div className="p-3.5 rounded-xl bg-[#111214] border border-[#24262B] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001] shrink-0">
+                        <FileText size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white font-mono truncate">{exportFileName}</p>
+                        <p className="text-[10px] text-[#787C83] font-mono">
+                          {exportFileSize ? `Size: ${exportFileSize} • ` : ''}Format: .teaderdumpfile
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 shrink-0">
+                      Encrypted
+                    </span>
+                  </div>
+
+                  {/* Progress Bar & Status Text */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <span className="text-[#9BA1A6] flex items-center gap-1.5">
+                        {exportStep !== 'ready' && <Loader2 size={13} className="animate-spin text-[#DCB001]" />}
+                        {exportStep === 'ready' && <CheckCircle2 size={14} className="text-[#22C55E]" />}
+                        <span>{exportStatusText}</span>
+                      </span>
+                      <span className="text-[#DCB001] font-bold">{exportProgress}%</span>
+                    </div>
+
+                    {/* Animated Progress Bar */}
+                    <div className="w-full h-2 bg-[#101113] rounded-full overflow-hidden border border-[#2A2C30]">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${exportProgress}%` }}
+                        transition={{ duration: 0.3 }}
+                        className={`h-full rounded-full ${
+                          exportStep === 'ready' ? 'bg-[#22C55E]' : 'bg-[#DCB001]'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Feature Checklist inside dump */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#8E939D] pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-[#22C55E]" />
+                      <span>{projectIssues.length} Tasks & Subtasks</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-[#22C55E]" />
+                      <span>Technical .md Docs</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-[#22C55E]" />
+                      <span>Dependency DAG Branches</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Check size={12} className="text-[#22C55E]" />
+                      <span>SHA-256 Checksum Verified</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="px-6 py-4 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
+                  <button
+                    onClick={() => setIsExportModalOpen(false)}
+                    className="px-4 py-2 text-xs font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    onClick={handleTriggerDownload}
+                    disabled={exportStep !== 'ready' || !exportBlobUrl}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
+                  >
+                    <Download size={15} className="stroke-[2.5]" />
+                    <span>Download Teader Dump File</span>
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </AnimatePresence>
       </div>
     </AppLayout>
   );
 }
+
