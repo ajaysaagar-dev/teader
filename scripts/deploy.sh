@@ -10,10 +10,12 @@ cd "$PROJECT_DIR"
 
 echo "📂 Current Directory: $PROJECT_DIR"
 
-# 1. Pull latest changes
-echo "⬇️  Pulling latest changes from GitHub..."
-git fetch origin main
-git reset --hard origin/main
+# 1. Pull latest changes from production branch
+echo "⬇️  Pulling latest changes from production branch..."
+git fetch origin production
+git checkout -B production origin/production
+git reset --hard origin/production
+
 
 # 2. Install dependencies
 echo "📦 Installing npm dependencies..."

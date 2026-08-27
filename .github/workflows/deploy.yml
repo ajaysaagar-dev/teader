@@ -1,22 +1,22 @@
-name: Continuous Deployment to VPS
+name: Continuous Deployment to VPS (Production Branch)
 
 on:
   push:
     branches:
-      - main
+      - production
 
 jobs:
   test-and-build:
-    name: Test & Build Check
+    name: Test & Build Verification
     runs-on: ubuntu-latest
     env:
       JWT_SECRET: 0c51217d7a628ef407f4af35b6e7d6560051e7ef41582dac2121fafdf459c03f2c119fd8a202d1681e7bc99b20d5fb1cb02b55baaa2f256ae0b34cca6e121b0e
-      POSTGRES_HOST: 178.238.226.206
+      POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       POSTGRES_USER: ajaysaagar
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'aass209c' }}
       POSTGRES_DATABASE: ajaysaagar
-      DATABASE_URL: "postgresql://ajaysaagar:${{ secrets.POSTGRES_PASSWORD || 'aass209c' }}@178.238.226.206:5432/ajaysaagar"
+      DATABASE_URL: "postgresql://ajaysaagar:${{ secrets.POSTGRES_PASSWORD || 'aass209c' }}@127.0.0.1:5432/ajaysaagar"
 
     steps:
       - name: Checkout Source Code
@@ -29,7 +29,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci || npm install
+        run: npm ci || npm install --legacy-peer-deps
 
       - name: Run Test Suite (Vitest)
         run: npm test
@@ -41,7 +41,7 @@ jobs:
         run: npm run build
 
   deploy-to-vps:
-    name: Deploy to VPS
+    name: Deploy to Production VPS
     needs: test-and-build
     runs-on: ubuntu-latest
     steps:
@@ -52,12 +52,10 @@ jobs:
           username: ${{ secrets.VPS_USERNAME || 'root' }}
           password: ${{ secrets.VPS_PASSWORD || 'Shri@123' }}
           port: ${{ secrets.VPS_PORT || 22 }}
-
           script_stop: true
           script: |
-            echo "🚀 Starting Teader automatic deployment on VPS..."
+            echo "🚀 Starting Teader automatic deployment from production branch..."
             
-            # Navigate to project directory or clone if not present
             DEPLOY_DIR="/var/www/teader"
             if [ ! -d "$DEPLOY_DIR" ]; then
               DEPLOY_DIR="$HOME/teader"
@@ -66,26 +64,27 @@ jobs:
             if [ -d "$DEPLOY_DIR" ]; then
               cd "$DEPLOY_DIR"
               echo "📂 Navigated to $DEPLOY_DIR"
-              git fetch origin main
-              git reset --hard origin/main
+              git fetch origin production
+              git checkout -B production origin/production
+              git reset --hard origin/production
             else
-              echo "📂 Cloning repository to $DEPLOY_DIR"
-              git clone https://github.com/ajaysaagar-dev/teader.git "$DEPLOY_DIR"
+              echo "📂 Cloning production branch to $DEPLOY_DIR"
+              git clone -b production https://github.com/ajaysaagar-dev/teader.git "$DEPLOY_DIR"
               cd "$DEPLOY_DIR"
             fi
 
             # Install dependencies
             echo "📦 Installing production dependencies..."
-            npm ci || npm install
+            npm install --legacy-peer-deps
 
             # Compile production build
             echo "⚡ Building Next.js application..."
             npm run build
 
-            # Restart application process with PM2 or Docker
+            # Zero-downtime PM2 reload
             if command -v pm2 &> /dev/null; then
-              echo "🔄 Restarting via PM2 process manager..."
-              pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production || pm2 start npm --name "teader" -- start
+              echo "🔄 Reloading PM2 cluster..."
+              pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
               pm2 save
             elif command -v docker-compose &> /dev/null; then
               echo "🐳 Restarting via Docker Compose..."
@@ -95,4 +94,4 @@ jobs:
               nohup npm start > teader.log 2>&1 &
             fi
 
-            echo "✅ Teader successfully deployed and live on VPS!"
+            echo "✅ Teader successfully deployed from 'production' branch to VPS!"
