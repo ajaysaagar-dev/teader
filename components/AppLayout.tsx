@@ -16,8 +16,10 @@ import {
   X, 
   Sparkles,
   Command,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
+
 import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { Issue, FileDiff } from '@/lib/types';
@@ -57,6 +59,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -65,7 +68,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isDiffModalOpen, setIsDiffModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
-  // Load user session
+  // Verify authentication before rendering workspace
   useEffect(() => {
     try {
       const cached = localStorage.getItem('teader_user');
@@ -80,12 +83,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           try {
             localStorage.setItem('teader_user', JSON.stringify(data.user));
           } catch {}
+          setIsCheckingAuth(false);
         } else if (pathname !== '/login' && pathname !== '/register') {
           try {
             localStorage.removeItem('teader_user');
             localStorage.removeItem('teader_token');
           } catch {}
-          router.push('/login');
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
       })
       .catch(() => {
@@ -94,10 +98,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             localStorage.removeItem('teader_user');
             localStorage.removeItem('teader_token');
           } catch {}
-          router.push('/login');
+          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
+      })
+      .finally(() => {
+        setIsCheckingAuth(false);
       });
   }, [pathname, router]);
+
 
   // Fetch data for command palette
   useEffect(() => {
@@ -273,10 +281,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
       </header>
 
-      {/* ─── Main Content Canvas Area (100% Full-Width Canvas) ─────── */}
-      <main className="flex-1 flex flex-col min-w-0 h-[calc(100vh-48px)] overflow-hidden">
-        {children}
-      </main>
+      {/* ─── Main Content Canvas Area (Only shown if logged in) ──────── */}
+      {isCheckingAuth && !currentUser ? (
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#0E0F11] space-y-4">
+          <div className="w-11 h-11 rounded-xl bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 flex items-center justify-center font-bold animate-pulse shadow-[0_0_20px_rgba(220,176,1,0.2)]">
+            <span className="text-lg font-mono">T</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-[#8E939D]">
+            <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+            <span>Verifying workspace session...</span>
+          </div>
+        </div>
+      ) : !currentUser ? null : (
+        <main className="flex-1 flex flex-col min-w-0 h-[calc(100vh-48px)] overflow-hidden">
+          {children}
+        </main>
+      )}
+
 
       {/* ─── Account Settings Modal (Top Tab 'Account') ─────────────── */}
       <AnimatePresence>
