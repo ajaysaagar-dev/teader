@@ -38,8 +38,12 @@ export default function RegisterPage() {
           }
         } catch {}
         toast.success(`Account created for ${data.name}!`);
-        router.push('/projects');
-        router.refresh();
+        if (typeof window !== 'undefined') {
+          window.location.href = '/dashboard';
+        } else {
+          router.push('/dashboard');
+        }
+
       } else {
         toast.error(data.error || 'Registration failed');
       }

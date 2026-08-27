@@ -58,8 +58,20 @@ export default function LoginPage() {
           } catch {}
         }
         toast.success(`Welcome back, ${data.name}!`);
-        router.push('/projects');
-        router.refresh();
+        
+        // Check for redirect query param
+        let target = '/dashboard';
+        if (typeof window !== 'undefined') {
+          const urlParams = new URLSearchParams(window.location.search);
+          const redirectParam = urlParams.get('redirect');
+          if (redirectParam && redirectParam.startsWith('/')) {
+            target = redirectParam;
+          }
+          window.location.href = target;
+        } else {
+          router.push('/dashboard');
+        }
+
       } else {
         toast.error(data.error || 'Invalid credentials');
       }
