@@ -141,12 +141,25 @@ export default function SingleProjectPage() {
 
 
 
-  const [project, setProject] = useState<ProjectItem | null>(() => getLocalCache(`project_${projectIdParam}`, null));
-  const [issues, setIssues] = useState<Issue[]>(() => getLocalCache(`issues_${projectIdParam}`, []));
+  const [project, setProject] = useState<ProjectItem | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(() => !getLocalCache(`issues_${projectIdParam}`, null));
+  const [loading, setLoading] = useState(true);
+
+  // Hydrate from client cache immediately on mount (100% hydration mismatch-safe)
+  useEffect(() => {
+    const cachedIssues = getLocalCache<Issue[]>(`issues_${projectIdParam}`, []);
+    const cachedProj = getLocalCache<ProjectItem | null>(`project_${projectIdParam}`, null);
+    if (cachedIssues && cachedIssues.length > 0) {
+      setIssues(cachedIssues);
+      setLoading(false);
+    }
+    if (cachedProj) {
+      setProject(cachedProj);
+    }
+  }, [projectIdParam]);
 
   // Sync state to local cache immediately on any mutation
   useEffect(() => {
@@ -160,6 +173,7 @@ export default function SingleProjectPage() {
       setLocalCache(`project_${projectIdParam}`, project);
     }
   }, [project, projectIdParam]);
+
 
 
   // Modals
@@ -407,10 +421,33 @@ export default function SingleProjectPage() {
     }
   }, [issues, isCreator, project]);
 
-  // Add New Task in Active Selected Project
+  // Add New Task in Active Selected Project (Direct UI + Background Sync)
   const handleAddNewTaskToColumn = useCallback(async (title: string, status: Status) => {
     if (!project) return;
 
+    const tempId = `temp_${Date.now()}`;
+    const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
+    const optimisticIssue: Issue = {
+      id: tempId,
+      key: tempKey,
+      title: title.trim(),
+      description: '',
+      status,
+      priority: 'medium',
+      project: project.name,
+      projectId: project.id,
+      labels: ['Task'],
+      subtasks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+
+    // 1. Add in UI directly and immediately (0ms latency)
+    setIssues((prev) => [optimisticIssue, ...prev]);
+    toast.success(`Task "${title}" created!`);
+
+    // 2. Process in background to PostgreSQL server
     try {
       const res = await fetch('/api/issues', {
         method: 'POST',
@@ -427,15 +464,19 @@ export default function SingleProjectPage() {
 
       if (res.ok) {
         const createdIssue = await res.json();
-        setIssues((prev) => [createdIssue, ...prev]);
-        toast.success(`Created task ${createdIssue.key} in ${project.name}!`);
+        // Seamlessly reconcile temporary issue with real database record
+        setIssues((prev) =>
+          prev.map((iss) => (iss.id === tempId ? createdIssue : iss))
+        );
       } else {
-        throw new Error('Failed to create task');
+        throw new Error('Failed to create task on server');
       }
     } catch {
-      toast.error('Failed to save task to database');
+      toast.error('Failed to sync new task with server');
+      setIssues((prev) => prev.filter((iss) => iss.id !== tempId));
     }
   }, [project]);
+
 
   // Handle Subtask Toggle (Recursive Optimistic Update)
   const handleToggleSubtask = useCallback(async (issueId: string, subId: string, nextCompleted: boolean) => {
@@ -1149,7 +1190,22 @@ export default function SingleProjectPage() {
           <NewIssueModal
             isOpen={isNewIssueModalOpen}
             onClose={() => setIsNewIssueModalOpen(false)}
-            onCreateIssue={(created) => setIssues((prev) => [created, ...prev])}
+            onCreateIssue={(created) =>
+              setIssues((prev) => {
+                const existingIdx = prev.findIndex(
+                  (iss) =>
+                    iss.id === created.id ||
+                    (String(iss.id).startsWith('temp_') && iss.title === created.title)
+                );
+                if (existingIdx !== -1) {
+                  const updated = [...prev];
+                  updated[existingIdx] = created;
+                  return updated;
+                }
+                return [created, ...prev];
+              })
+            }
+
             defaultProjectKey={project.key}
             defaultProjectName={project.name}
             defaultProjectId={project.id}

@@ -192,6 +192,32 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     setIsSubmitting(true);
     const targetProjectName = defaultProjectName || 'Teader Platform Core';
 
+    const tempId = `temp_${Date.now()}`;
+    const tempKey = `${projectKey}-${Date.now().toString().slice(-4)}`;
+    const optimisticIssue: Issue = {
+      id: tempId,
+      key: tempKey,
+      title: title.trim(),
+      description: description.trim() || 'No description provided.',
+      status: 'todo',
+      priority,
+      assigneeName,
+      dueDate: dueDate || undefined,
+      estimatedHours: Number(estimatedHours) || undefined,
+      project: targetProjectName,
+      projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
+      labels: labels.split(',').map((l) => l.trim()).filter(Boolean),
+      subtasks: subworks,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // 1. Immediately inject into UI and close modal (0ms latency)
+    onCreateIssue(optimisticIssue);
+    toast.success(`Task ${tempKey} added!`);
+    onClose();
+
+    // 2. Process in background to database
     try {
       const res = await fetch('/api/issues', {
         method: 'POST',
@@ -214,18 +240,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       if (res.ok) {
         const createdIssue = await res.json();
         onCreateIssue(createdIssue);
-        toast.success(`Task ${createdIssue.key || ''} created successfully!`);
-        onClose();
       } else {
         const err = await res.json();
-        toast.error(err.error || 'Failed to create task');
+        toast.error(err.error || 'Failed to persist task to server');
       }
     } catch {
-      toast.error('Network error while creating task');
+      toast.error('Network error syncing task');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <AnimatePresence>

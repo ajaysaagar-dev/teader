@@ -45,11 +45,24 @@ function generate30CharKeyClient(): string {
 
 export default function ProjectsPage() {
   const router = useRouter();
-  const [projects, setProjects] = useState<ProjectItem[]>(() => getLocalCache('projects_list', []));
-  const [issues, setIssues] = useState<any[]>(() => getLocalCache('all_issues_list', []));
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
+  const [issues, setIssues] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(() => getLocalCache<ProjectItem[]>('projects_list', []).length === 0);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Hydrate from client cache safely on mount (100% hydration-safe)
+  useEffect(() => {
+    const cachedProjects = getLocalCache<ProjectItem[]>('projects_list', []);
+    const cachedIssues = getLocalCache<any[]>('all_issues_list', []);
+    if (cachedProjects && cachedProjects.length > 0) {
+      setProjects(cachedProjects);
+      setLoading(false);
+    }
+    if (cachedIssues && cachedIssues.length > 0) {
+      setIssues(cachedIssues);
+    }
+  }, []);
 
   // Sync projects and issues to cache
   useEffect(() => {
@@ -63,6 +76,7 @@ export default function ProjectsPage() {
       setLocalCache('all_issues_list', issues);
     }
   }, [issues]);
+
 
 
   // Modals state
