@@ -28,10 +28,12 @@ import {
   Send,
   Trash2,
   Tag,
-  Hash
+  Hash,
+  Pencil
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 interface IssueDetailViewProps {
 
@@ -52,6 +54,15 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [uploadingSubtaskId, setUploadingSubtaskId] = useState<string | null>(null);
   const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
 
+  // Description markdown edit state
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState(issue.description || '');
+  const [isSavingDesc, setIsSavingDesc] = useState(false);
+
+  useEffect(() => {
+    setDescValue(issue.description || '');
+  }, [issue.description]);
+
   // Time tracking & live timer state
 
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -59,6 +70,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [newCommentText, setNewCommentText] = useState('');
   const [newBlockerKey, setNewBlockerKey] = useState('');
   const [isAddingBlocker, setIsAddingBlocker] = useState(false);
+
 
   // Timer interval effect
   useEffect(() => {
@@ -435,13 +447,86 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             </h1>
           </div>
 
-          {/* Description Block */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
-            <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block">Description</span>
-            <p className="text-xs sm:text-sm text-[#CFD4DD] leading-relaxed whitespace-pre-wrap">
-              {issue.description || 'No description provided for this task.'}
-            </p>
+          {/* Description Block with Markdown Rendering */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2 group/desc">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block">
+                Description (Markdown)
+              </span>
+              {!isEditingDesc ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingDesc(true)}
+                  className="flex items-center gap-1 text-[11px] font-mono text-[#787C83] hover:text-[#DCB001] transition-colors opacity-80 group-hover/desc:opacity-100"
+                >
+                  <Pencil size={11} />
+                  <span>Edit</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDescValue(issue.description || '');
+                      setIsEditingDesc(false);
+                    }}
+                    className="text-[11px] text-[#787C83] hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingDesc}
+                    onClick={async () => {
+                      setIsSavingDesc(true);
+                      try {
+                        const res = await fetch(`/api/issues/${issue.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ description: descValue }),
+                        });
+                        if (res.ok) {
+                          onUpdateIssue({ ...issue, description: descValue });
+                          setIsEditingDesc(false);
+                          toast.success('Description updated!');
+                        } else {
+                          toast.error('Failed to update description');
+                        }
+                      } catch {
+                        toast.error('Network error saving description');
+                      } finally {
+                        setIsSavingDesc(false);
+                      }
+                    }}
+                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all disabled:opacity-50"
+                  >
+                    {isSavingDesc ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isEditingDesc ? (
+              <div className="space-y-2 pt-1">
+                <textarea
+                  value={descValue}
+                  onChange={(e) => setDescValue(e.target.value)}
+                  placeholder="Write task description in Markdown (e.g. ## Overview, **bold**, - list)..."
+                  rows={6}
+                  className="w-full p-3 bg-[#131415] border border-[#DCB001]/60 focus:border-[#DCB001] rounded-xl font-mono text-xs text-white outline-none resize-y leading-relaxed"
+                />
+                <div className="p-3 bg-[#131415]/70 border border-[#2A2C30] rounded-xl space-y-1">
+                  <span className="text-[10px] font-mono text-[#787C83] uppercase tracking-wider block">Live Preview</span>
+                  <MarkdownRenderer content={descValue} />
+                </div>
+              </div>
+            ) : (
+              <div className="pt-1">
+                <MarkdownRenderer content={issue.description} />
+              </div>
+            )}
           </div>
+
 
           {/* Task Dependencies Section (§1.1) */}
           <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3">
