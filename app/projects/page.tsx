@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { ProjectsGridSkeleton } from '@/components/ui/Skeleton';
+import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { 
   FolderKanban, 
   Plus, 
@@ -290,7 +291,7 @@ export default function ProjectsPage() {
   if (loading && projects.length === 0) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans relative">
           <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
             <div className="w-32 h-4 bg-[#2A2C30] animate-pulse rounded" />
             <div className="flex gap-2">
@@ -302,10 +303,14 @@ export default function ProjectsPage() {
             <div className="w-80 h-10 bg-[#1B1C1F] border border-[#2A2C30] animate-pulse rounded-xl mb-6" />
             <ProjectsGridSkeleton />
           </div>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#17181A]/90 backdrop-blur-md border border-[#2A2C30] shadow-xl px-4 py-2 rounded-full">
+            <RandomLoadingText />
+          </div>
         </div>
       </AppLayout>
     );
   }
+
 
   return (
     <AppLayout>

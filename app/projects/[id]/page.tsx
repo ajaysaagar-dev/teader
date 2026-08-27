@@ -6,7 +6,9 @@ import dynamic from 'next/dynamic';
 import { AppLayout } from '@/components/AppLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
+import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status } from '@/lib/types';
+
 import { Avatar } from '@/components/ui/Avatar';
 import { 
   FolderKanban, 
@@ -742,13 +744,17 @@ export default function SingleProjectPage() {
   if (loading && issues.length === 0 && !project) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans relative">
           <ProjectPageHeaderSkeleton />
           <KanbanBoardSkeleton />
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#17181A]/90 backdrop-blur-md border border-[#2A2C30] shadow-xl px-4 py-2 rounded-full">
+            <RandomLoadingText />
+          </div>
         </div>
       </AppLayout>
     );
   }
+
 
   return (
     <AppLayout>

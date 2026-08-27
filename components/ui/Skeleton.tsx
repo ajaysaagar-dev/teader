@@ -108,6 +108,8 @@ export function ProjectsGridSkeleton() {
   );
 }
 
+import { RandomLoadingText } from './RandomLoadingText';
+
 /** Generic inline loading spinner */
 export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
@@ -122,8 +124,10 @@ export function Spinner({ size = 16, className = '' }: { size?: number; classNam
 /** View loading fallback used inside dynamic() */
 export function ViewLoadingFallback() {
   return (
-    <div className="flex-1 flex items-center justify-center bg-[#131415]">
-      <Spinner size={20} />
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#131415] gap-3 select-none">
+      <Spinner size={22} />
+      <RandomLoadingText className="mt-1" />
     </div>
   );
 }
+

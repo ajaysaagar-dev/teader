@@ -38,6 +38,8 @@ import {
 } from 'lucide-react';
 
 import { toast } from 'sonner';
+import { RandomLoadingText } from './ui/RandomLoadingText';
+
 
 interface ProjectDocsViewProps {
   projectId: string | number;
@@ -736,11 +738,17 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
         {/* Documents Switcher List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-          {filteredDocs.length === 0 ? (
+          {loading ? (
+            <div className="p-4 flex flex-col items-center justify-center gap-2 text-center">
+              <div className="w-5 h-5 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
+              <RandomLoadingText showBadge={false} className="text-[11px]" />
+            </div>
+          ) : filteredDocs.length === 0 ? (
             <div className="p-4 text-center text-xs text-[#787C83] italic">
               No docs found.
             </div>
           ) : (
+
             filteredDocs.map((doc) => {
               const isSelected = selectedDocId === doc.id;
 

@@ -6,7 +6,9 @@ import { AppLayout } from '@/components/AppLayout';
 import { IssueDetailView } from '@/components/IssueDetailView';
 import { Issue, Status } from '@/lib/types';
 import { MOCK_ISSUES } from '@/lib/mock-data';
+import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { toast } from 'sonner';
+
 
 export default function SingleIssuePage() {
   const params = useParams();
@@ -62,12 +64,15 @@ export default function SingleIssuePage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex-1 flex items-center justify-center bg-[#131415] text-[#787C83] font-mono text-xs">
-          Loading task details...
+        <div className="flex-1 flex flex-col items-center justify-center bg-[#131415] text-[#CFD4DD] font-mono text-xs gap-3 p-6 select-none">
+          <div className="w-8 h-8 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
+          <span className="font-bold text-white tracking-tight">Loading task details...</span>
+          <RandomLoadingText />
         </div>
       </AppLayout>
     );
   }
+
 
   if (!issue) {
     return (
