@@ -154,10 +154,12 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
           body: JSON.stringify({ subId, completed: nextCompleted }),
         });
         toast.success(`Subtask marked as ${nextCompleted ? 'completed' : 'incomplete'}`);
-        if (nextCompleted) {
+        const ENABLE_CELEBRATION = false;
+        if (nextCompleted && ENABLE_CELEBRATION) {
           confetti({ particleCount: 35, spread: 40, origin: { y: 0.7 } });
         }
       } catch {
+
         toast.error('Failed to toggle subtask');
       }
     }

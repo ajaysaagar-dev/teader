@@ -66,9 +66,13 @@ export default function MyWorkPage() {
     } else if (pomodoroSeconds === 0 && isPomodoroRunning) {
       setIsPomodoroRunning(false);
       setPomodoroCycles((prev) => prev + 1);
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      const ENABLE_CELEBRATION = false;
+      if (ENABLE_CELEBRATION) {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+      }
       toast.success('Focus session completed! Take a 5-minute break. ☕');
       setPomodoroSeconds(25 * 60);
+
     }
     return () => clearInterval(interval);
   }, [isPomodoroRunning, pomodoroSeconds]);

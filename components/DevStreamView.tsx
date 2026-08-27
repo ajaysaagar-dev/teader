@@ -124,10 +124,12 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
           body: JSON.stringify({ subId, completed: nextCompleted }),
         });
         toast.success(`Sub-work updated`);
-        if (nextCompleted) {
+        const ENABLE_CELEBRATION = false;
+        if (nextCompleted && ENABLE_CELEBRATION) {
           confetti({ particleCount: 30, spread: 40, origin: { y: 0.6 } });
         }
       } catch {
+
         toast.error('Failed to update subtask');
       }
     }

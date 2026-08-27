@@ -456,9 +456,11 @@ export default function SingleProjectPage() {
         body: JSON.stringify({ subId, completed: nextCompleted }),
       });
       toast.success(`Marked as ${nextCompleted ? 'completed' : 'incomplete'}`);
-      if (nextCompleted) {
+      const ENABLE_CELEBRATION = false;
+      if (nextCompleted && ENABLE_CELEBRATION) {
         confetti({ particleCount: 35, spread: 40, origin: { y: 0.7 } });
       }
+
     } catch {
       toast.error('Failed to update subtask');
       fetchProjectData();

@@ -262,10 +262,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     }
 
     const allDone = updatedSubtasks.every((st) => st.completed);
+    const ENABLE_CELEBRATION = false;
     if (allDone && updatedSubtasks.length > 0 && nextStatus !== 'needs_review') {
-      confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-      toast.success('All sub-works completed! 🎉');
+      if (ENABLE_CELEBRATION) {
+        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+      }
+      toast.success('All sub-works completed!');
     }
+
 
     onUpdateIssue({
       ...issue,
