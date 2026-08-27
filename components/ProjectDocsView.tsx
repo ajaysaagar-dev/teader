@@ -796,14 +796,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
             {/* Literal Markdown Symbols Formatting Bar at Bottom Middle */}
             {(viewMode === 'editor' || viewMode === 'split') && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#17181A]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-xl px-3 py-1.5 flex items-center gap-1.5 text-xs text-[#CFD4DD] overflow-x-auto max-w-[95vw] custom-scrollbar">
-                <span className="text-[10px] font-mono text-[#787C83] uppercase px-1 hidden xl:inline">Symbols:</span>
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#17181A]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-xl px-3 py-1.5 flex flex-row flex-nowrap items-center gap-1.5 text-xs text-[#CFD4DD] overflow-x-auto max-w-[95vw] whitespace-nowrap select-none custom-scrollbar">
+                <span className="text-[10px] font-mono text-[#787C83] uppercase px-1 shrink-0 hidden xl:inline">Symbols:</span>
 
                 {/* # Heading 1 */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('# ', '', 'Heading 1')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
                   title="Heading 1: # Heading"
                 >
                   #
@@ -813,7 +813,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('## ', '', 'Heading 2')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
                   title="Heading 2: ## Heading"
                 >
                   ##
@@ -823,19 +823,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('### ', '', 'Heading 3')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-[#DCB001] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
                   title="Heading 3: ### Heading"
                 >
                   ###
                 </button>
 
-                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5 shrink-0" />
 
                 {/* **bold** */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('**', '**', 'bold')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono font-bold text-xs text-white transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-white transition-all leading-none"
                   title="Bold: **bold**"
                 >
                   **bold**
@@ -845,7 +845,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('*', '*', 'italic')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono italic text-xs text-[#CFD4DD] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono italic text-xs text-[#CFD4DD] transition-all leading-none"
                   title="Italic: *italic*"
                 >
                   *italic*
@@ -855,19 +855,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('~~', '~~', 'strike')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono line-through text-xs text-[#787C83] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono line-through text-xs text-[#787C83] transition-all leading-none"
                   title="Strikethrough: ~~strike~~"
                 >
                   ~~strike~~
                 </button>
 
-                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5 shrink-0" />
 
                 {/* `code` */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('`', '`', 'code')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#DCB001] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none"
                   title="Inline Code: `code`"
                 >
                   `code`
@@ -877,7 +877,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('```ts\n', '\n```', '// code')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#787C83] hover:text-white transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none"
                   title="Code Block: ```lang\ncode\n```"
                 >
                   ```{` `}```
@@ -887,7 +887,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('- ', '', 'item')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
                   title="Bullet List: - item"
                 >
                   - list
@@ -897,7 +897,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('1. ', '', 'item')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
                   title="Numbered List: 1. item"
                 >
                   1. list
@@ -907,19 +907,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('- [ ] ', '', 'task')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#DCB001] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none"
                   title="Task Checkbox: - [ ] task"
                 >
                   - [ ]
                 </button>
 
-                <span className="w-px h-4 bg-[#2A2C30] mx-0.5" />
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5 shrink-0" />
 
                 {/* > quote */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('> ', '', 'quote')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
                   title="Blockquote: > quote"
                 >
                   {`> quote`}
@@ -929,7 +929,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('[', '](https://example.com)', 'title')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#58A6FF] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#58A6FF] transition-all leading-none"
                   title="Link: [title](url)"
                 >
                   [link]
@@ -940,12 +940,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   type="button"
                   onClick={() =>
                     handleInsertSymbol(
-                      '\n| Feature | Status | Assignee |\n|---|---|---|\n| API Integration | In Progress | Karri |\n| UI Polish | Planned | Jori |\n',
+                      '\n| Col 1 | Col 2 |\n|---|---|\n| Val 1 | Val 2 |\n',
                       '',
                       ''
                     )
                   }
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#CFD4DD] transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
                   title="Table: | Col 1 | Col 2 |"
                 >
                   | table |
@@ -955,7 +955,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('\n---\n', '', '')}
-                  className="px-2 py-0.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded font-mono text-xs text-[#787C83] hover:text-white transition-all"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none"
                   title="Horizontal Divider: ---"
                 >
                   ---
