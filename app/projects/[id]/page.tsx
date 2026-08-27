@@ -39,8 +39,10 @@ import {
   Lock,
   FileText,
   Sparkles,
-  Loader2
+  Loader2,
+  MessageSquare
 } from 'lucide-react';
+
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -79,10 +81,15 @@ const ProjectDocsView = dynamic(
   () => import('@/components/ProjectDocsView').then((m) => ({ default: m.ProjectDocsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectConversationView = dynamic(
+  () => import('@/components/ProjectConversationView').then((m) => ({ default: m.ProjectConversationView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+
 const NewIssueModal = dynamic(
   () => import('@/components/NewIssueModal').then((m) => ({ default: m.NewIssueModal })),
   { ssr: false }
@@ -113,13 +120,14 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' {
+function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'calendar' || v === 'schedule' || v === 'timeline') return 'calendar';
   if (v === 'graph' || v === 'dependencies' || v === 'dag') return 'graph';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
+  if (v === 'conversation' || v === 'chat' || v === 'messages' || v === 'discuss') return 'conversation';
   if (v === 'tree') return 'tree';
   if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
   if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
@@ -133,7 +141,7 @@ export default function SingleProjectPage() {
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -141,10 +149,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
   }, [projectIdParam, router]);
+
 
 
 
@@ -1123,6 +1132,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('conversation')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'conversation'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Team Project Chat & Conversations"
+            >
+              <MessageSquare size={13} />
+              <span>Conversation</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('dev')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'dev'
@@ -1137,6 +1159,7 @@ export default function SingleProjectPage() {
             </button>
           </div>
         </div>
+
 
 
 
@@ -1230,7 +1253,17 @@ export default function SingleProjectPage() {
                 projectKey={project?.key}
               />
             </div>
+          ) : activeTab === 'conversation' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <ProjectConversationView
+                projectId={project?.id || 1}
+                projectName={project?.name}
+                projectKey={project?.key}
+                currentUser={currentUser}
+              />
+            </div>
           ) : activeTab === 'dev' ? (
+
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <DevStreamView
                 issues={projectIssues}

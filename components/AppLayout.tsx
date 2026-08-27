@@ -194,7 +194,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           <span className="w-px h-4 bg-[#2A2C30] mr-1 hidden sm:inline" />
 
-          {/* Top Tabs: Dashboard, Projects, Conversation, Account */}
+          {/* Top Tabs: Dashboard, Projects, Account */}
           <nav className="flex items-center gap-1 bg-[#0B0C0E] p-0.5 rounded-lg border border-[#222428]">
             {/* Tab: Dashboard */}
             <Link
@@ -222,19 +222,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span>Projects</span>
             </Link>
 
-            {/* Tab: Conversation */}
-            <Link
-              href="/conversations"
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                isConversationActive
-                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
-              }`}
-            >
-              <MessageSquare size={13} className={isConversationActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
-              <span>Conversation</span>
-            </Link>
-
             {/* Tab: Account */}
             <button
               onClick={() => setIsAccountModalOpen(true)}
@@ -253,6 +240,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               )}
             </button>
           </nav>
+
         </div>
 
 
