@@ -3,6 +3,8 @@ import { Inter, JetBrains_Mono, Prompt } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ConsoleBranding } from "@/components/ConsoleBranding";
+import { DesktopVersionIndicator } from "@/components/DesktopVersionIndicator";
+import { UIScaleInitializer } from "@/components/UIScaleInitializer";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -34,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} ${promptFont.variable} h-full antialiased dark`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${promptFont.variable} h-full w-full antialiased dark`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -44,7 +46,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">
+      <body className="h-full w-full overflow-hidden bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">
         <ConsoleBranding />
         {children}
 
@@ -60,6 +62,8 @@ export default function RootLayout({
             },
           }}
         />
+        <DesktopVersionIndicator />
+        <UIScaleInitializer />
       </body>
     </html>
   );

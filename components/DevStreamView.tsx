@@ -164,7 +164,7 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
   const subPercent = totalSubsCount > 0 ? Math.round((completedSubsCount / totalSubsCount) * 100) : 0;
 
   return (
-    <div className="flex-1 h-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
+    <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
       {/* Dev Stream Top Control Bar */}
       <div className="flex items-center justify-between gap-2 bg-[#1B1C1F] px-3 py-1.5 rounded-lg border border-[#2A2C30] shrink-0">
         {/* Quick Filter Pills */}

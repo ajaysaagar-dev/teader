@@ -15,6 +15,7 @@ import {
   UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getDesktopInfo } from '@/lib/desktop';
 
 interface SidebarProps {
   onOpenNewIssue?: () => void;
@@ -27,6 +28,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [desktopInfo, setDesktopInfo] = useState<{ isDesktop: boolean; version: string | null }>({
+    isDesktop: false,
+    version: null,
+  });
+
+  useEffect(() => {
+    setDesktopInfo(getDesktopInfo());
+  }, []);
 
   useEffect(() => {
     try {
@@ -97,13 +106,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
           {/* Top App Header */}
           <div className="flex items-center justify-between px-2 py-2 border-b border-[#2A2C30]/50">
             <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[#CFD4DD]">
-              <div className="w-5 h-5 rounded bg-[#DCB001] text-[#0F1011] flex items-center justify-center font-bold text-[11px] shrink-0">
-                T
-              </div>
               {!collapsed && (
-                <span className="font-bold text-sm text-[#CFD4DD] flex items-center gap-1">
-                  Teader <ChevronDown size={12} className="text-[#787C83]" />
-                </span>
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span className="font-bold text-sm text-[#CFD4DD] flex items-center gap-1">
+                    Teader <ChevronDown size={12} className="text-[#787C83]" />
+                  </span>
+                  {desktopInfo.isDesktop && desktopInfo.version && (
+                    <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#1A1B1D] text-[#DCB001] border border-[#2A2C30]">
+                      v{desktopInfo.version}
+                    </span>
+                  )}
+                </div>
               )}
             </Link>
           </div>

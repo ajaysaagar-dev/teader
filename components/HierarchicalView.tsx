@@ -203,7 +203,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
     : 0;
 
   return (
-    <div className="flex-1 h-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
+    <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
       {/* Top Filter & Hierarchy Control Bar */}
       <div className="flex items-center justify-between gap-2.5 bg-[#1B1C1F] px-3 py-2 rounded-lg border border-[#2A2C30] shrink-0">
         {/* Left Controls: Search & Grouping */}

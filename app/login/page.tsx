@@ -95,9 +95,6 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden relative z-10">
         {/* Header Branding */}
         <div className="p-8 pb-6 text-center space-y-2 border-b border-[#2A2C30] bg-[#0F1011]">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 mb-2">
-            <Sparkles size={24} />
-          </div>
           <h1 className="text-xl font-bold text-white tracking-tight">Welcome to Teader</h1>
           <p className="text-xs text-[#787C83]">Sign in to access your projects and task boards</p>
         </div>
