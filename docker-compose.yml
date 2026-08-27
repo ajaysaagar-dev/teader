@@ -1,0 +1,21 @@
+services:
+  teader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teader_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=178.238.226.206
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=ajaysaagar
+      - POSTGRES_PASSWORD=aass209c
+      - POSTGRES_DATABASE=ajaysaagar
+      - DATABASE_URL=postgresql://ajaysaagar:aass209c@178.238.226.206:5432/ajaysaagar
+      - JWT_SECRET=0c51217d7a628ef407f4af35b6e7d6560051e7ef41582dac2121fafdf459c03f2c119fd8a202d1681e7bc99b20d5fb1cb02b55baaa2f256ae0b34cca6e121b0e
+    volumes:
+      - ./data:/app/data
