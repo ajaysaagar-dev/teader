@@ -12,7 +12,8 @@ import {
   Calendar, 
   Clock, 
   Layers, 
-  Check 
+  Check,
+  AlertTriangle 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -96,12 +97,13 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [estimatedHours, setEstimatedHours] = useState(2);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
-  // AI Prompt Prompt State
+  // AI Prompt State
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiInput, setShowAiInput] = useState(false);
 
   const [joinedMembers, setJoinedMembers] = useState<{ id: number | string; name: string }[]>([]);
+  const [existingIssues, setExistingIssues] = useState<{ id: string; key: string; title: string }[]>([]);
   const [subworks, setSubworks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [newSubworkTitle, setNewSubworkTitle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,19 +112,45 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     if (defaultProjectKey) setProjectKey(defaultProjectKey);
   }, [defaultProjectKey]);
 
-  // Fetch Joined Project Members for Assignee Dropdown
+  // Fetch Joined Project Members & Existing Issues for Duplication Detection
   useEffect(() => {
-    if (isOpen && defaultProjectId) {
-      fetch(`/api/projects/${defaultProjectId}/members`)
+    if (isOpen) {
+      if (defaultProjectId) {
+        fetch(`/api/projects/${defaultProjectId}/members`)
+          .then((res) => res.json())
+          .then((data) => {
+            if (Array.isArray(data)) {
+              setJoinedMembers(data);
+            }
+          })
+          .catch(() => {});
+      }
+
+      fetch('/api/issues')
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
-            setJoinedMembers(data);
+            setExistingIssues(data.map((i: any) => ({ id: i.id, key: i.key, title: i.title })));
           }
         })
         .catch(() => {});
     }
   }, [isOpen, defaultProjectId]);
+
+  // Real-time Duplicate Issue Detection (§4.2)
+  const detectedDuplicates = React.useMemo(() => {
+    const cleanTitle = title.replace(/^\[(Bug|Feature|Refactor)\]:\s*/i, '').trim().toLowerCase();
+    if (cleanTitle.length < 4) return [];
+    const words = cleanTitle.split(/\s+/).filter((w) => w.length > 3);
+    if (words.length === 0) return [];
+
+    return existingIssues.filter((iss) => {
+      const issTitle = iss.title.toLowerCase();
+      const matchCount = words.filter((w) => issTitle.includes(w)).length;
+      return matchCount >= Math.min(2, words.length) || issTitle.includes(cleanTitle);
+    }).slice(0, 3);
+  }, [title, existingIssues]);
+
 
   if (!isOpen) return null;
 
@@ -354,7 +382,22 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
               />
+
+              {/* Duplicate Detection Warning Banner (§4.2) */}
+              {detectedDuplicates.length > 0 && (
+                <div className="mt-2 p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-xs space-y-1">
+                  <span className="text-[#EF4444] font-bold flex items-center gap-1 text-[11px]">
+                    <AlertTriangle size={12} /> Potential Duplicates Detected ({detectedDuplicates.length}):
+                  </span>
+                  {detectedDuplicates.map((dup) => (
+                    <div key={dup.id} className="text-[#CFD4DD] text-[11px] font-mono truncate pl-1">
+                      &bull; <strong className="text-[#DCB001]">{dup.key}</strong>: {dup.title}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
 
             {/* Description */}
             <div>
