@@ -1,0 +1,14 @@
+version: 0.0.1
+files:
+  - url: Teader Workspace Web Setup 0.0.1.exe
+    sha512: lBheGQxZpm7GP27qrXlYnL6Qh9vVMf8YJI4IvA5OpY5zV7mL/L+VNtErCC7AZOC8Oq6uWKKyLNIgGD0G/Ezw9A==
+path: Teader Workspace Web Setup 0.0.1.exe
+sha512: lBheGQxZpm7GP27qrXlYnL6Qh9vVMf8YJI4IvA5OpY5zV7mL/L+VNtErCC7AZOC8Oq6uWKKyLNIgGD0G/Ezw9A==
+packages:
+  x64:
+    size: 81038629
+    sha512: fzYWa7FLdL4yUFA68ucgVNiC+eSmShrQ0L69UUuWwmPkYZCNdcKsb9a/k4huujdeKbWFWuth6HD8HRSJnu/wpw==
+    blockMapSize: 86556
+    path: teader-electron-0.0.1-x64.nsis.7z
+    file: teader-electron-0.0.1-x64.nsis.7z
+releaseDate: '2026-08-27T13:49:11.494Z'

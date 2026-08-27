@@ -19,13 +19,6 @@ conn.on('ready', () => {
     apt-get update -y
     apt-get install -y curl git nginx ufw
 
-    # Check / Install Node.js 20 LTS if needed
-    if ! command -v node &> /dev/null || [[ $(node -v) != v20* && $(node -v) != v22* ]]; then
-      echo "Installing Node.js 20.x..."
-      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-      apt-get install -y nodejs
-    fi
-
     echo "Node version: $(node -v)"
     echo "NPM version: $(npm -v)"
 
@@ -49,7 +42,6 @@ conn.on('ready', () => {
     fi
 
     # Create .env on server
-    # Create .env on server
     cat << 'EOF' > .env
 POSTGRES_HOST=127.0.0.1
 POSTGRES_PORT=5432
@@ -64,6 +56,8 @@ NEXT_PUBLIC_APP_URL="https://teader.vedipocketpc.online"
 EOF
 
     echo "=== 3. Installing Dependencies & Building Next.js ==="
+    pkill -9 -f "next build" || true
+    rm -rf .next/cache || true
     npm install --legacy-peer-deps
     npm run build
 
@@ -74,6 +68,7 @@ EOF
     pm2 startup || true
 
     echo "=== 5. Configuring Nginx Reverse Proxy & SSL ==="
+    mkdir -p /var/www/releases
     if [ -f "/etc/letsencrypt/live/teader.vedipocketpc.online/fullchain.pem" ]; then
       cat << 'EOF' > /etc/nginx/sites-available/teader
 server {
@@ -93,7 +88,14 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    client_max_body_size 50M;
+    client_max_body_size 200M;
+
+    location /releases/ {
+        alias /var/www/releases/;
+        autoindex on;
+        add_header Access-Control-Allow-Origin *;
+        add_header Cache-Control "no-cache";
+    }
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -112,8 +114,7 @@ EOF
 
     ln -sf /etc/nginx/sites-available/teader /etc/nginx/sites-enabled/default
     nginx -t
-    systemctl restart nginx
-
+    systemctl reload nginx || systemctl restart nginx
 
     # Ensure Firewall opens 80, 443, 3000, 22
     ufw allow 22/tcp || true
@@ -122,35 +123,34 @@ EOF
     ufw allow 3000/tcp || true
 
     echo "===================================================="
-    echo "🎉 TEADER IS LIVE ON VPS: http://178.238.226.206"
+    echo "🎉 TEADER IS LIVE ON VPS: https://teader.vedipocketpc.online"
     echo "===================================================="
   `;
 
   conn.exec(deployCommands, (err, stream) => {
     if (err) {
-      console.error('Exec error:', err);
+      console.error('Execution error:', err);
       conn.end();
       return;
     }
 
-    stream
-      .on('close', (code, signal) => {
-        console.log(`Deployment script finished with exit code ${code}`);
-        conn.end();
-        process.exit(code || 0);
-      })
-      .on('data', (data) => {
-        process.stdout.write(data.toString());
-      })
-      .stderr.on('data', (data) => {
-        process.stderr.write(data.toString());
-      });
+    stream.on('close', (code, signal) => {
+      console.log(`Deployment script finished with exit code ${code}`);
+      conn.end();
+    });
+
+    stream.on('data', (data) => {
+      process.stdout.write(data.toString());
+    });
+
+    stream.stderr.on('data', (data) => {
+      process.stderr.write(data.toString());
+    });
   });
 });
 
 conn.on('error', (err) => {
-  console.error('SSH Connection error:', err);
-  process.exit(1);
+  console.error('SSH Connection Error:', err);
 });
 
 conn.connect({
@@ -158,5 +158,4 @@ conn.connect({
   port: 22,
   username: USERNAME,
   password: PASSWORD,
-  readyTimeout: 30000,
 });
