@@ -257,6 +257,22 @@ export async function initDB(): Promise<void> {
           );
         `);
 
+        // 10. Create Project Messages Table for Team Conversations
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_messages" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "userId" INT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "userName" VARCHAR(255) NOT NULL,
+            "userAvatar" VARCHAR(255),
+            "userRole" VARCHAR(64) DEFAULT 'member',
+            "content" TEXT NOT NULL,
+            "channel" VARCHAR(64) DEFAULT 'general',
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+
         // Seed default users if table is empty
         const userCheck = await p.query(`SELECT COUNT(*) as cnt FROM "users"`);
         const userCount = Number(userCheck.rows?.[0]?.cnt || 0);
@@ -1116,3 +1132,143 @@ export async function deleteProjectDocDB(docId: string) {
 
   memoryProjectDocsStore = memoryProjectDocsStore.filter((d) => d.id !== docId);
 }
+
+// ─── Project Conversation Messages ──────────────────────────────────────────
+
+export interface ProjectMessage {
+  id: number;
+  projectId: number;
+  userId: number;
+  userName: string;
+  userAvatar?: string;
+  userRole?: string;
+  content: string;
+  channel: string;
+  createdAt: string;
+}
+
+let memoryProjectMessagesStore: ProjectMessage[] = [
+  {
+    id: 1,
+    projectId: 1,
+    userId: 1,
+    userName: 'karri',
+    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    userRole: 'owner',
+    content: 'Welcome to the project conversation channel! You can coordinate tasks, share snippets, and discuss architecture here.',
+    channel: 'general',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 2,
+    projectId: 1,
+    userId: 2,
+    userName: 'jori',
+    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    userRole: 'member',
+    content: 'Just reviewed the latest branch commits. DAG timeline view looks super smooth!',
+    channel: 'general',
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+  },
+];
+
+export async function getProjectMessagesDB(projectId: number, channel: string = 'general'): Promise<ProjectMessage[]> {
+  await initDB();
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `SELECT "id", "projectId", "userId", "userName", "userAvatar", "userRole", "content", "channel", "createdAt" 
+       FROM "project_messages" 
+       WHERE "projectId" = $1 AND "channel" = $2 
+       ORDER BY "id" ASC LIMIT 200`,
+      [projectId, channel]
+    );
+    if (res.rows && res.rows.length > 0) {
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        projectId: r.projectId,
+        userId: r.userId,
+        userName: r.userName,
+        userAvatar: r.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        userRole: r.userRole || 'member',
+        content: r.content,
+        channel: r.channel,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+      }));
+    }
+  } catch {}
+
+  return memoryProjectMessagesStore.filter((m) => m.projectId === projectId && m.channel === channel);
+}
+
+export async function createProjectMessageDB(
+  projectId: number,
+  userId: number,
+  userName: string,
+  userAvatar: string,
+  userRole: string,
+  content: string,
+  channel: string = 'general'
+): Promise<ProjectMessage> {
+  await initDB();
+  const trimmed = content.trim();
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `INSERT INTO "project_messages" ("projectId", "userId", "userName", "userAvatar", "userRole", "content", "channel") 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING "id", "projectId", "userId", "userName", "userAvatar", "userRole", "content", "channel", "createdAt"`,
+      [projectId, userId, userName, userAvatar, userRole, trimmed, channel]
+    );
+    if (res.rows && res.rows[0]) {
+      const row = res.rows[0];
+      const newMsg: ProjectMessage = {
+        id: row.id,
+        projectId: row.projectId,
+        userId: row.userId,
+        userName: row.userName,
+        userAvatar: row.userAvatar,
+        userRole: row.userRole,
+        content: row.content,
+        channel: row.channel,
+        createdAt: new Date(row.createdAt).toISOString(),
+      };
+      memoryProjectMessagesStore.push(newMsg);
+      return newMsg;
+    }
+  } catch {}
+
+  const fallbackMsg: ProjectMessage = {
+    id: Date.now(),
+    projectId,
+    userId,
+    userName,
+    userAvatar,
+    userRole,
+    content: trimmed,
+    channel,
+    createdAt: new Date().toISOString(),
+  };
+  memoryProjectMessagesStore.push(fallbackMsg);
+  return fallbackMsg;
+}
+
+export async function deleteProjectMessageDB(messageId: number, userId: number): Promise<boolean> {
+  await initDB();
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `DELETE FROM "project_messages" WHERE "id" = $1 AND ("userId" = $2 OR $2 = 1) RETURNING "id"`,
+      [messageId, userId]
+    );
+    if (res.rowCount && res.rowCount > 0) {
+      memoryProjectMessagesStore = memoryProjectMessagesStore.filter((m) => m.id !== messageId);
+      return true;
+    }
+  } catch {}
+
+  memoryProjectMessagesStore = memoryProjectMessagesStore.filter((m) => m.id !== messageId);
+  return true;
+}
+

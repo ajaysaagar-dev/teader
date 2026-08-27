@@ -31,9 +31,11 @@ export async function middleware(req: NextRequest) {
   const isWorkspacePage =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/projects') ||
+    pathname.startsWith('/conversations') ||
     pathname.startsWith('/my-work') ||
     pathname.startsWith('/initiatives') ||
     pathname.startsWith('/issue');
+
 
   if (isWorkspacePage && !session) {
     const loginUrl = new URL('/login', req.url);

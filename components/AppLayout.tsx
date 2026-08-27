@@ -17,8 +17,10 @@ import {
   Sparkles,
   Command,
   ChevronDown,
-  Loader2
+  Loader2,
+  MessageSquare
 } from 'lucide-react';
+
 
 import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
@@ -167,12 +169,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const isDashboardActive = pathname === '/dashboard' || pathname === '/';
   const isProjectsActive = pathname.startsWith('/projects');
+  const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased select-none">
       {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
       <header className="h-12 px-4 bg-[#111215] border-b border-[#24262B] flex items-center justify-between shrink-0 z-40">
-        {/* Top Left: Logo & Navigation Tabs (Dashboard, Projects, Account) */}
+        {/* Top Left: Logo & Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
         <div className="flex items-center gap-3">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 mr-2 group">
@@ -189,10 +192,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
           </Link>
 
-
           <span className="w-px h-4 bg-[#2A2C30] mr-1 hidden sm:inline" />
 
-          {/* Top Tabs: Dashboard, Projects, Account */}
+          {/* Top Tabs: Dashboard, Projects, Conversation, Account */}
           <nav className="flex items-center gap-1 bg-[#0B0C0E] p-0.5 rounded-lg border border-[#222428]">
             {/* Tab: Dashboard */}
             <Link
@@ -220,6 +222,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <span>Projects</span>
             </Link>
 
+            {/* Tab: Conversation */}
+            <Link
+              href="/conversations"
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                isConversationActive
+                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
+                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+              }`}
+            >
+              <MessageSquare size={13} className={isConversationActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <span>Conversation</span>
+            </Link>
+
             {/* Tab: Account */}
             <button
               onClick={() => setIsAccountModalOpen(true)}
@@ -239,6 +254,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </button>
           </nav>
         </div>
+
 
         {/* Top Right: Global Controls */}
         <div className="flex items-center gap-2">
