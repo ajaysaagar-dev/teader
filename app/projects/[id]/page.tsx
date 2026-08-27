@@ -25,7 +25,10 @@ import {
   BarChart3,
   Calendar,
   Zap,
-  Download
+  Download,
+  GitFork,
+  BookOpen,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -56,6 +59,14 @@ const CalendarView = dynamic(
   () => import('@/components/CalendarView').then((m) => ({ default: m.CalendarView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const DependencyGraphView = dynamic(
+  () => import('@/components/DependencyGraphView').then((m) => ({ default: m.DependencyGraphView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const ProjectDocsView = dynamic(
+  () => import('@/components/ProjectDocsView').then((m) => ({ default: m.ProjectDocsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -68,7 +79,10 @@ const AutomationsModal = dynamic(
   () => import('@/components/AutomationsModal').then((m) => ({ default: m.AutomationsModal })),
   { ssr: false }
 );
-
+const ImportTasksModal = dynamic(
+  () => import('@/components/ImportTasksModal').then((m) => ({ default: m.ImportTasksModal })),
+  { ssr: false }
+);
 
 interface ProjectItem {
   id: string | number;
@@ -87,11 +101,13 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' {
+function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'calendar' || v === 'schedule' || v === 'timeline') return 'calendar';
+  if (v === 'graph' || v === 'dependencies' || v === 'dag') return 'graph';
+  if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
   if (v === 'tree') return 'tree';
   if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
   if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
@@ -105,7 +121,7 @@ export default function SingleProjectPage() {
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -113,10 +129,11 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs') => {
     setActiveTab(newTab);
     router.push(`/projects/${projectIdParam}/${newTab}`);
   }, [projectIdParam, router]);
+
 
 
 
@@ -131,8 +148,10 @@ export default function SingleProjectPage() {
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
+  const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
   const handleExportProject = useCallback((format: 'json' | 'csv' = 'json') => {
+
     if (typeof window !== 'undefined') {
       window.open(`/api/projects/${projectIdParam}/export?format=${format}`, '_blank');
       toast.success(`Exporting project as ${format.toUpperCase()}...`);
@@ -856,6 +875,32 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('graph')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'graph'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="DAG Dependency Graph"
+            >
+              <GitFork size={13} />
+              <span>Graph</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('docs')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                activeTab === 'docs'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Wiki & Specs"
+            >
+              <BookOpen size={13} />
+              <span>Docs</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('dev')}
               className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                 activeTab === 'dev'
@@ -916,6 +961,16 @@ export default function SingleProjectPage() {
               <span className="hidden md:inline">Automations</span>
             </button>
 
+            {/* Import Tasks Button */}
+            <button
+              onClick={() => setIsImportTasksModalOpen(true)}
+              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              title="Import Tasks from CSV / JSON"
+            >
+              <Upload size={12} />
+              <span className="hidden md:inline">Import</span>
+            </button>
+
             {/* Export Project Button */}
             <button
               onClick={() => handleExportProject('json')}
@@ -937,6 +992,7 @@ export default function SingleProjectPage() {
             </button>
           </div>
         </div>
+
 
 
         {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board with Error Boundaries */}
@@ -1012,10 +1068,25 @@ export default function SingleProjectPage() {
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
               />
             </div>
+          ) : activeTab === 'graph' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <DependencyGraphView
+                issues={projectIssues}
+                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              />
+            </div>
+          ) : activeTab === 'docs' ? (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+              <ProjectDocsView
+                projectId={project?.id || 1}
+                projectName={project?.name}
+                projectKey={project?.key}
+              />
+            </div>
           ) : activeTab === 'dev' ? (
             <div className="flex-1 flex flex-col h-full overflow-hidden">
               <DevStreamView
-
                 issues={projectIssues}
                 onSelectIssue={(id) => setSelectedIssueId(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
@@ -1071,6 +1142,18 @@ export default function SingleProjectPage() {
             projectName={project.name}
           />
         )}
+
+        {/* Import Tasks Modal */}
+        {project && (
+          <ImportTasksModal
+            isOpen={isImportTasksModalOpen}
+            onClose={() => setIsImportTasksModalOpen(false)}
+            projectId={project.id}
+            projectName={project.name}
+            onImportSuccess={(newlyImported) => setIssues((prev) => [...newlyImported, ...prev])}
+          />
+        )}
+
 
 
         {/* Real-time Edit Project Modal */}
