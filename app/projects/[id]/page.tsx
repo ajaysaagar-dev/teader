@@ -183,13 +183,15 @@ export default function SingleProjectPage() {
   const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
   const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
-  const handleExportProject = useCallback((format: 'json' | 'csv' = 'json') => {
-
+  const handleExportProject = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.open(`/api/projects/${projectIdParam}/export?format=${format}`, '_blank');
-      toast.success(`Exporting project as ${format.toUpperCase()}...`);
+      const cleanName = String(project?.name || projectIdParam).replace(/\s+/g, '');
+      const fileName = `${cleanName}.teaderdumpfile`;
+      window.open(`/api/projects/${projectIdParam}/export`, '_blank');
+      toast.success(`Bundling & exporting encrypted ${fileName}...`);
     }
-  }, [projectIdParam]);
+  }, [projectIdParam, project]);
+
 
 
   // Edit Project Form
@@ -938,13 +940,14 @@ export default function SingleProjectPage() {
 
             {/* Export Project Button */}
             <button
-              onClick={() => handleExportProject('json')}
+              onClick={handleExportProject}
               className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
-              title="Export Project (JSON)"
+              title="Export Encrypted Project Dump (.teaderdumpfile)"
             >
               <Download size={12} />
               <span className="hidden md:inline">Export</span>
             </button>
+
 
             {/* Quick + Task Button */}
             <button

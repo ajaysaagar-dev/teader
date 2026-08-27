@@ -1,7 +1,7 @@
-# TestProject — Architecture & Technical Specifications
+# test one — Architecture & Technical Specifications
 
 ## 1. Overview & System Goals
-This document serves as the single source of truth for **TestProject** (TEST).
+This document serves as the single source of truth for **test one** (PRJ79S5M922GZCQZZX0H9LF4WUKEVY).
 All architectural decisions, schema conventions, and milestone deliverables are maintained here.
 
 ---
@@ -15,8 +15,8 @@ All architectural decisions, schema conventions, and milestone deliverables are 
 ---
 
 ## 3. Workflow & Branching Conventions
-- Feature Branches: `feat/test-<id>-<name>`
-- Fix Branches: `fix/test-<id>-<name>`
+- Feature Branches: `feat/prj79s5m922gzcqzzx0h9lf4wukevy-<id>-<name>`
+- Fix Branches: `fix/prj79s5m922gzcqzzx0h9lf4wukevy-<id>-<name>`
 - Commit Message Convention: `feat(scope): detailed message`
 
 ---
@@ -25,9 +25,3 @@ All architectural decisions, schema conventions, and milestone deliverables are 
 1. **MVP Launch**: Core issue tracker & Kanban board
 2. **Phase 2**: Dependency DAG graph & real-time time tracking
 3. **Phase 3**: Automation rules engine & cross-project "My Work" dashboard
-
-```cpp
-int main(){
-     std::cout<<"Hello World"<<std::endl;
-}
-```
