@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ProjectDoc } from '@/lib/types';
 import { 
   FileText, 
@@ -14,11 +14,24 @@ import {
   Copy, 
   Search, 
   BookOpen, 
-  Clock, 
-  FolderKanban,
   FileCode,
-  Sparkles,
-  ChevronRight
+  Heading1,
+  Heading2,
+  Heading3,
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  FileCode2,
+  List,
+  ListOrdered,
+  CheckSquare,
+  Quote,
+  Link as LinkIcon,
+  Table as TableIcon,
+  Minus,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -27,6 +40,333 @@ interface ProjectDocsViewProps {
   projectName?: string;
   projectKey?: string;
 }
+
+// ─── GitHub-Style Markdown Renderer ──────────────────────────────────────────
+
+function parseInlineMarkdown(text: string): React.ReactNode[] {
+  // Regex for inline code, bold, italic, strikethrough, link
+  const tokens: React.ReactNode[] = [];
+  let remaining = text;
+  let keyIdx = 0;
+
+  while (remaining.length > 0) {
+    // 1. Inline code: `code`
+    const codeMatch = remaining.match(/^`([^`]+)`/);
+    if (codeMatch) {
+      tokens.push(
+        <code
+          key={`code_${keyIdx++}`}
+          className="px-1.5 py-0.5 mx-0.5 bg-[#202226] border border-[#2F333A] text-[#DCB001] font-mono text-[11px] rounded-md font-medium"
+        >
+          {codeMatch[1]}
+        </code>
+      );
+      remaining = remaining.slice(codeMatch[0].length);
+      continue;
+    }
+
+    // 2. Bold + Italic: ***text*** or ___text___
+    const boldItalicMatch = remaining.match(/^(\*\*\*|___)(.+?)\1/);
+    if (boldItalicMatch) {
+      tokens.push(
+        <strong key={`bi_${keyIdx++}`} className="font-bold italic text-white">
+          {boldItalicMatch[2]}
+        </strong>
+      );
+      remaining = remaining.slice(boldItalicMatch[0].length);
+      continue;
+    }
+
+    // 3. Bold: **text** or __text__
+    const boldMatch = remaining.match(/^(\*\*|__)(.+?)\1/);
+    if (boldMatch) {
+      tokens.push(
+        <strong key={`b_${keyIdx++}`} className="font-bold text-white">
+          {boldMatch[2]}
+        </strong>
+      );
+      remaining = remaining.slice(boldMatch[0].length);
+      continue;
+    }
+
+    // 4. Strikethrough: ~~text~~
+    const strikeMatch = remaining.match(/^~~(.+?)~~/);
+    if (strikeMatch) {
+      tokens.push(
+        <del key={`s_${keyIdx++}`} className="line-through text-[#787C83]">
+          {strikeMatch[1]}
+        </del>
+      );
+      remaining = remaining.slice(strikeMatch[0].length);
+      continue;
+    }
+
+    // 5. Italic: *text* or _text_
+    const italicMatch = remaining.match(/^(\*|_)([^*_]+)\1/);
+    if (italicMatch) {
+      tokens.push(
+        <em key={`i_${keyIdx++}`} className="italic text-[#E6EDF3]">
+          {italicMatch[2]}
+        </em>
+      );
+      remaining = remaining.slice(italicMatch[0].length);
+      continue;
+    }
+
+    // 6. Link: [title](url)
+    const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
+    if (linkMatch) {
+      tokens.push(
+        <a
+          key={`a_${keyIdx++}`}
+          href={linkMatch[2]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#58A6FF] hover:underline inline-flex items-center gap-0.5 font-medium"
+        >
+          <span>{linkMatch[1]}</span>
+          <ExternalLink size={10} className="opacity-70" />
+        </a>
+      );
+      remaining = remaining.slice(linkMatch[0].length);
+      continue;
+    }
+
+    // Regular plain text slice until next special token
+    const nextSpecial = remaining.search(/[`*_~\[]/);
+    if (nextSpecial === -1) {
+      tokens.push(remaining);
+      break;
+    } else if (nextSpecial === 0) {
+      // Unmatched marker character
+      tokens.push(remaining[0]);
+      remaining = remaining.slice(1);
+    } else {
+      tokens.push(remaining.slice(0, nextSpecial));
+      remaining = remaining.slice(nextSpecial);
+    }
+  }
+
+  return tokens;
+}
+
+function renderGithubMarkdown(markdown: string) {
+  if (!markdown) return null;
+  const lines = markdown.split('\n');
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. Code Block: ```lang
+    if (trimmed.startsWith('```')) {
+      const lang = trimmed.slice(3).trim() || 'text';
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // Skip closing ```
+      const codeString = codeLines.join('\n');
+
+      elements.push(
+        <div key={`codeblock_${i}`} className="my-4 rounded-xl bg-[#0E1012] border border-[#2A2C30] overflow-hidden shadow-md">
+          <div className="px-3.5 py-1.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between text-[11px] font-mono text-[#787C83]">
+            <span className="font-semibold uppercase tracking-wider text-[#DCB001]">{lang}</span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(codeString);
+                toast.success('Code copied to clipboard');
+              }}
+              className="flex items-center gap-1 hover:text-white transition-colors"
+            >
+              <Copy size={11} />
+              <span>Copy</span>
+            </button>
+          </div>
+          <pre className="p-4 text-xs font-mono text-[#E6EDF3] overflow-x-auto leading-relaxed selection:bg-[#DCB001]/30">
+            <code>{codeString}</code>
+          </pre>
+        </div>
+      );
+      continue;
+    }
+
+    // 2. Table: | Col 1 | Col 2 |
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+        tableLines.push(lines[i].trim());
+        i++;
+      }
+
+      if (tableLines.length >= 2) {
+        const headerCols = tableLines[0].split('|').slice(1, -1).map((c) => c.trim());
+        const bodyLines = tableLines.slice(2); // Skip separator row
+
+        elements.push(
+          <div key={`table_${i}`} className="my-4 overflow-x-auto rounded-xl border border-[#2A2C30] shadow-sm">
+            <table className="w-full text-xs text-left border-collapse bg-[#131415]">
+              <thead>
+                <tr className="bg-[#1B1C1F] border-b border-[#2A2C30]">
+                  {headerCols.map((h, colIdx) => (
+                    <th key={colIdx} className="px-4 py-2.5 font-bold text-white border-r last:border-r-0 border-[#2A2C30]">
+                      {parseInlineMarkdown(h)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2A2C30]">
+                {bodyLines.map((bRow, rIdx) => {
+                  const cells = bRow.split('|').slice(1, -1).map((c) => c.trim());
+                  return (
+                    <tr key={rIdx} className="hover:bg-[#1A1B1E] transition-colors">
+                      {cells.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-4 py-2 text-[#CFD4DD] border-r last:border-r-0 border-[#2A2C30]">
+                          {parseInlineMarkdown(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+        continue;
+      }
+    }
+
+    // 3. Horizontal Rule
+    if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
+      elements.push(<hr key={`hr_${i}`} className="my-6 border-t border-[#2A2C30]" />);
+      i++;
+      continue;
+    }
+
+    // 4. Headings (GitHub Style with bottom border for H1/H2)
+    if (trimmed.startsWith('# ')) {
+      elements.push(
+        <h1 key={`h1_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
+          {parseInlineMarkdown(trimmed.slice(2))}
+        </h1>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      elements.push(
+        <h2 key={`h2_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
+          {parseInlineMarkdown(trimmed.slice(3))}
+        </h2>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith('### ')) {
+      elements.push(
+        <h3 key={`h3_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
+          {parseInlineMarkdown(trimmed.slice(4))}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+    if (trimmed.startsWith('#### ')) {
+      elements.push(
+        <h4 key={`h4_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
+          {parseInlineMarkdown(trimmed.slice(5))}
+        </h4>
+      );
+      i++;
+      continue;
+    }
+
+    // 5. Blockquote (> )
+    if (trimmed.startsWith('>')) {
+      const quoteText = trimmed.replace(/^>\s*/, '');
+      elements.push(
+        <blockquote
+          key={`quote_${i}`}
+          className="my-3 pl-4 py-2 border-l-4 border-[#DCB001] bg-[#1B1C1F]/60 rounded-r-xl text-xs sm:text-sm text-[#CFD4DD] italic leading-relaxed"
+        >
+          {parseInlineMarkdown(quoteText)}
+        </blockquote>
+      );
+      i++;
+      continue;
+    }
+
+    // 6. Task List (- [ ] or - [x])
+    if (/^[-*]\s+\[([ xX])\]/.test(trimmed)) {
+      const isChecked = /^[-*]\s+\[([xX])\]/.test(trimmed);
+      const taskText = trimmed.replace(/^[-*]\s+\[([ xX])\]\s*/, '');
+      elements.push(
+        <div key={`task_${i}`} className="flex items-start gap-2.5 my-1.5 pl-1 text-xs sm:text-sm">
+          <input
+            type="checkbox"
+            checked={isChecked}
+            readOnly
+            className="mt-1 w-3.5 h-3.5 rounded accent-[#DCB001] bg-[#1B1C1F] border-[#2A2C30] cursor-default"
+          />
+          <span className={isChecked ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}>
+            {parseInlineMarkdown(taskText)}
+          </span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // 7. Unordered List (- or *)
+    if (/^[-*]\s+/.test(trimmed)) {
+      const listText = trimmed.replace(/^[-*]\s+/, '');
+      elements.push(
+        <div key={`ul_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
+          <span className="text-[#DCB001] font-bold text-sm leading-none mt-1.5">•</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText)}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // 8. Ordered List (1. 2. etc)
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
+    if (numMatch) {
+      elements.push(
+        <div key={`ol_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
+          <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0 mt-0.5">{numMatch[1]}.</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2])}</span>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // 9. Blank line
+    if (trimmed === '') {
+      elements.push(<div key={`blank_${i}`} className="h-2" />);
+      i++;
+      continue;
+    }
+
+    // 10. Paragraph
+    elements.push(
+      <p key={`p_${i}`} className="my-1.5 text-xs sm:text-sm text-[#CFD4DD] leading-relaxed">
+        {parseInlineMarkdown(line)}
+      </p>
+    );
+    i++;
+  }
+
+  return elements;
+}
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 
 export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   projectId,
@@ -44,6 +384,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [copiedFile, setCopiedFile] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // 1. Fetch all docs for this project
   const fetchDocsList = useCallback(async (selectNewestId?: string) => {
@@ -106,6 +448,28 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     );
   }, [docs, searchQuery]);
 
+  // Handle Markdown Symbol Insert at Cursor / Selection
+  const handleInsertSymbol = (prefix: string, suffix: string = '', defaultPlaceholder: string = 'text') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentVal = textarea.value;
+
+    const selectedText = currentVal.substring(start, end) || defaultPlaceholder;
+    const replacement = `${prefix}${selectedText}${suffix}`;
+
+    const updated = currentVal.substring(0, start) + replacement + currentVal.substring(end);
+    setActiveContent(updated);
+
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
+    }, 20);
+  };
+
   // Handle Create New Doc File
   const handleCreateDoc = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +485,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
-          content: `# ${title}\n\nTechnical specification and architecture documentation for ${projectName}.\n\n## 1. Overview\n\n## 2. Requirements\n\n## 3. Implementation Details\n`,
+          content: `# ${title}\n\nTechnical specification and architecture documentation for ${projectName}.\n\n## 1. Overview\n\n## 2. Architecture & Components\n- Core API routing and validation\n- State synchronization\n\n## 3. Implementation Steps\n- [ ] Initialize database migration\n- [ ] Build UI components\n- [ ] Execute automated tests\n\n\`\`\`ts\n// Example implementation\nexport const config = {\n  version: '2.0.0',\n  env: 'production'\n};\n\`\`\`\n`,
         }),
       });
 
@@ -212,7 +576,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex h-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden">
+    <div className="flex-1 flex h-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden relative">
       {/* Left Sidebar: Document List & Switcher */}
       <div className="w-64 sm:w-72 bg-[#17181A] border-r border-[#2A2C30] flex flex-col shrink-0 h-full">
         {/* Sidebar Header */}
@@ -325,7 +689,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       </div>
 
       {/* Main Workspace Area: Markdown Editor / Split / Preview */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] relative">
         {activeDoc ? (
           <>
             {/* Main Top Header */}
@@ -404,11 +768,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             </div>
 
             {/* Document Content Workspace */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex overflow-hidden pb-14">
               {/* Markdown Editor Column */}
               {(viewMode === 'editor' || viewMode === 'split') && (
                 <div className={`flex-1 h-full flex flex-col p-4 ${viewMode === 'split' ? 'border-r border-[#2A2C30]' : ''}`}>
                   <textarea
+                    ref={textareaRef}
                     value={activeContent}
                     onChange={(e) => setActiveContent(e.target.value)}
                     placeholder="Write markdown documentation here..."
@@ -417,17 +782,184 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 </div>
               )}
 
-              {/* Formatted Markdown Preview Column */}
+              {/* GitHub-Flavored Markdown Preview Column */}
               {(viewMode === 'preview' || viewMode === 'split') && (
-                <div className="flex-1 h-full overflow-y-auto p-6 bg-[#101112] custom-scrollbar">
-                  <div className="max-w-3xl mx-auto space-y-4 text-xs sm:text-sm text-[#CFD4DD] leading-relaxed">
-                    <div className="p-6 bg-[#17181A] border border-[#2A2C30] rounded-2xl shadow-md whitespace-pre-wrap font-sans">
-                      {activeContent}
+                <div className="flex-1 h-full overflow-y-auto p-6 bg-[#0E0F11] custom-scrollbar">
+                  <div className="max-w-4xl mx-auto space-y-1 text-[#CFD4DD] font-sans">
+                    <div className="p-6 sm:p-8 bg-[#161719] border border-[#2A2C30] rounded-2xl shadow-xl">
+                      {renderGithubMarkdown(activeContent)}
                     </div>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Horizontal Markdown Symbols Formatting Toolbar at Bottom Middle */}
+            {(viewMode === 'editor' || viewMode === 'split') && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#1B1C1F]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-full px-3 py-1.5 flex items-center gap-1 text-[#CFD4DD] transition-all">
+                {/* Heading 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('# ', '', 'Heading 1')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Heading 1 (# )"
+                >
+                  <Heading1 size={14} />
+                </button>
+
+                {/* Heading 2 */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('## ', '', 'Heading 2')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Heading 2 (## )"
+                >
+                  <Heading2 size={14} />
+                </button>
+
+                {/* Heading 3 */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('### ', '', 'Heading 3')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Heading 3 (### )"
+                >
+                  <Heading3 size={14} />
+                </button>
+
+                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+
+                {/* Bold */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('**', '**', 'bold text')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Bold (**text**)"
+                >
+                  <Bold size={14} />
+                </button>
+
+                {/* Italic */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('*', '*', 'italic text')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Italic (*text*)"
+                >
+                  <Italic size={14} />
+                </button>
+
+                {/* Strikethrough */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('~~', '~~', 'strikethrough')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Strikethrough (~~text~~)"
+                >
+                  <Strikethrough size={14} />
+                </button>
+
+                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+
+                {/* Inline Code */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('`', '`', 'code')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Inline Code (`code`)"
+                >
+                  <Code size={14} />
+                </button>
+
+                {/* Code Block */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('```ts\n', '\n```', '// code block')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Code Block (```lang)"
+                >
+                  <FileCode2 size={14} />
+                </button>
+
+                {/* Bullet List */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('- ', '', 'List item')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Bullet List (- item)"
+                >
+                  <List size={14} />
+                </button>
+
+                {/* Numbered List */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('1. ', '', 'Numbered item')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Numbered List (1. item)"
+                >
+                  <ListOrdered size={14} />
+                </button>
+
+                {/* Task Item */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('- [ ] ', '', 'Task item')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Task Checkbox (- [ ] task)"
+                >
+                  <CheckSquare size={14} />
+                </button>
+
+                <span className="w-px h-3.5 bg-[#2A2C30] mx-0.5" />
+
+                {/* Blockquote */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('> ', '', 'Quote text')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Blockquote (> quote)"
+                >
+                  <Quote size={14} />
+                </button>
+
+                {/* Link */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('[', '](https://example.com)', 'Link title')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Link ([title](url))"
+                >
+                  <LinkIcon size={14} />
+                </button>
+
+                {/* Table */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleInsertSymbol(
+                      '\n| Feature | Status | Assignee |\n|---|---|---|\n| API Integration | In Progress | Karri |\n| UI Polish | Planned | Jori |\n',
+                      '',
+                      ''
+                    )
+                  }
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Table (| Col 1 | Col 2 |)"
+                >
+                  <TableIcon size={14} />
+                </button>
+
+                {/* Horizontal Divider */}
+                <button
+                  type="button"
+                  onClick={() => handleInsertSymbol('\n---\n', '', '')}
+                  className="p-1.5 hover:bg-[#2A2C30] hover:text-[#DCB001] rounded-full transition-colors"
+                  title="Horizontal Divider (---)"
+                >
+                  <Minus size={14} />
+                </button>
+              </div>
+            )}
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-3">
