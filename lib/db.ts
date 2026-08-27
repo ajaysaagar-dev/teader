@@ -277,6 +277,24 @@ export async function initDB(): Promise<void> {
     try { await p.query(`ALTER TABLE \`issues\` ADD COLUMN \`reporterId\` INT DEFAULT NULL;`); } catch {}
     try { await p.query(`ALTER TABLE \`issues\` ADD COLUMN \`sprintId\` INT DEFAULT NULL;`); } catch {}
 
+    // 14. Create Project Docs Table for Server Markdown Files
+    await p.query(`
+      CREATE TABLE IF NOT EXISTS \`project_docs\` (
+        \`id\` VARCHAR(64) PRIMARY KEY,
+        \`projectId\` INT NOT NULL,
+        \`userId\` INT DEFAULT 1,
+        \`userName\` VARCHAR(128) DEFAULT 'karri',
+        \`title\` VARCHAR(255) NOT NULL,
+        \`fileName\` VARCHAR(255) NOT NULL UNIQUE,
+        \`filePath\` VARCHAR(512) NOT NULL,
+        \`createdAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`idx_project_docs_projectId\` (\`projectId\`),
+        FOREIGN KEY (\`projectId\`) REFERENCES \`projects\`(\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+
 
     const [userRows]: any = await p.query(`SELECT COUNT(*) as cnt FROM \`users\``);
     if (userRows[0].cnt === 0) {
@@ -1446,3 +1464,139 @@ export async function toggleSubtaskDB(subId: string, completed: boolean) {
     }
   }
 }
+
+// ─── Project Documents (Server .md Files) ───────────────────────────────────
+
+export interface ProjectDocRecord {
+  id: string;
+  projectId: number | string;
+  userId?: number | string;
+  userName?: string;
+  title: string;
+  fileName: string;
+  filePath: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+let memoryProjectDocsStore: ProjectDocRecord[] = [];
+
+export async function getProjectDocsDB(projectId: string | number) {
+  await initDB();
+  const numId = Number(projectId);
+  try {
+    const p = getPool();
+    const [rows]: any = await p.query(
+      `SELECT * FROM \`project_docs\` WHERE \`projectId\` = ? ORDER BY \`updatedAt\` DESC`,
+      [numId]
+    );
+    return rows;
+  } catch {
+    return memoryProjectDocsStore.filter((d) => Number(d.projectId) === numId);
+  }
+}
+
+export async function getProjectDocByIdDB(docId: string) {
+  await initDB();
+  try {
+    const p = getPool();
+    const [rows]: any = await p.query(
+      `SELECT * FROM \`project_docs\` WHERE \`id\` = ? LIMIT 1`,
+      [docId]
+    );
+    return rows[0] || null;
+  } catch {
+    return memoryProjectDocsStore.find((d) => d.id === docId) || null;
+  }
+}
+
+export async function createProjectDocDB(data: {
+  id: string;
+  projectId: number | string;
+  userId?: number | string;
+  userName?: string;
+  title: string;
+  fileName: string;
+  filePath: string;
+}) {
+  await initDB();
+  const numProjId = Number(data.projectId);
+  const numUserId = data.userId ? Number(data.userId) : 1;
+  const userName = data.userName || 'karri';
+  const now = new Date().toISOString();
+
+  const record: ProjectDocRecord = {
+    id: data.id,
+    projectId: numProjId,
+    userId: numUserId,
+    userName,
+    title: data.title,
+    fileName: data.fileName,
+    filePath: data.filePath,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    const p = getPool();
+    await p.query(
+      `INSERT INTO \`project_docs\` (\`id\`, \`projectId\`, \`userId\`, \`userName\`, \`title\`, \`fileName\`, \`filePath\`)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath]
+    );
+  } catch {
+    // Failover
+  }
+
+  memoryProjectDocsStore.unshift(record);
+  return record;
+}
+
+export async function updateProjectDocDB(
+  docId: string,
+  updates: { title?: string; fileName?: string; filePath?: string }
+) {
+  await initDB();
+  const fields: string[] = [];
+  const values: any[] = [];
+
+  if (updates.title !== undefined) {
+    fields.push('`title` = ?');
+    values.push(updates.title.trim());
+  }
+  if (updates.fileName !== undefined) {
+    fields.push('`fileName` = ?');
+    values.push(updates.fileName.trim());
+  }
+  if (updates.filePath !== undefined) {
+    fields.push('`filePath` = ?');
+    values.push(updates.filePath);
+  }
+
+  if (fields.length > 0) {
+    try {
+      const p = getPool();
+      values.push(docId);
+      await p.query(`UPDATE \`project_docs\` SET ${fields.join(', ')} WHERE \`id\` = ?`, values);
+    } catch {}
+  }
+
+  const target = memoryProjectDocsStore.find((d) => d.id === docId);
+  if (target) {
+    if (updates.title !== undefined) target.title = updates.title.trim();
+    if (updates.fileName !== undefined) target.fileName = updates.fileName.trim();
+    if (updates.filePath !== undefined) target.filePath = updates.filePath;
+    target.updatedAt = new Date().toISOString();
+  }
+}
+
+export async function deleteProjectDocDB(docId: string) {
+  await initDB();
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM \`project_docs\` WHERE \`id\` = ?`, [docId]);
+  } catch {}
+
+  memoryProjectDocsStore = memoryProjectDocsStore.filter((d) => d.id !== docId);
+}
+

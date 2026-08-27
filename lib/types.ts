@@ -41,7 +41,21 @@ export interface ImageRecord {
   createdAt?: string;
 }
 
+export interface ProjectDoc {
+  id: string;
+  projectId: number | string;
+  userId?: number | string;
+  userName?: string;
+  title: string;
+  fileName: string;
+  filePath?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  content?: string;
+}
+
 export interface TimelineEvent {
+
   id: string;
   type: 
     | 'status_change' 
