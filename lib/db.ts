@@ -97,11 +97,9 @@ let memoryUsersStore: any[] = [
   },
 ];
 let memoryProjectsStore: any[] = [];
-let memoryMembersStore: any[] = [
-  { projectId: 1, userId: 1, role: 'owner' },
-  { projectId: 1, userId: 2, role: 'member' },
-  { projectId: 1, userId: 3, role: 'admin' },
-];
+let memoryMembersStore: any[] = [];
+
+
 let memoryIssuesStore: any[] = [];
 let memoryImagesStore: any[] = [];
 let memoryProjectDocsStore: any[] = [];
@@ -294,35 +292,12 @@ export async function initDB(): Promise<void> {
         }
 
         // Seed default project if empty
-        const projCheck = await p.query(`SELECT COUNT(*) as cnt FROM "projects"`);
-        const projCount = Number(projCheck.rows?.[0]?.cnt || 0);
-
-        if (projCount === 0) {
-          const res = await p.query(
-            `INSERT INTO "projects" ("key", "name", "description", "owner_id", "creatorId", "ownerName")
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING "id"`,
-            ['TDR', 'Teader Platform Core', 'Core project management platform workspace and task tracking infrastructure.', 1, 1, 'karri']
-          );
-          const newProjId = res.rows[0].id;
-          await p.query(
-            `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-            [newProjId, 1, 'owner']
-          );
-          await p.query(
-            `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-            [newProjId, 2, 'member']
-          );
-          await p.query(
-            `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-            [newProjId, 3, 'admin']
-          );
-        }
-
         initialized = true;
       } catch (err: any) {
         console.warn('PostgreSQL initialization note:', err.message);
         initialized = true;
       }
+
     })();
   }
   return initPromise;
@@ -502,19 +477,33 @@ export async function getAllProjectsDB(userId?: number | string) {
          ORDER BY p."id" ASC`,
         [numericUserId, numericUserId, numericUserId]
       );
-      return result.rows;
+      return result.rows || [];
     }
 
     const result = await p.query(`SELECT * FROM "projects" ORDER BY "id" ASC`);
-    return result.rows;
-  } catch {
-    if (userId) {
-      const numericUserId = Number(userId);
-      return memoryProjectsStore.filter((p) => Number(p.owner_id) === numericUserId || Number(p.creatorId) === numericUserId);
-    }
-    return memoryProjectsStore;
+    return result.rows || [];
+  } catch (err: any) {
+    console.warn('[getAllProjectsDB Error]:', err.message);
   }
+
+  if (userId) {
+    const numericUserId = Number(userId);
+    const memberProjectIds = memoryMembersStore
+      .filter((m) => Number(m.userId) === numericUserId)
+      .map((m) => Number(m.projectId));
+
+    const filtered = memoryProjectsStore.filter(
+      (p) =>
+        Number(p.owner_id) === numericUserId ||
+        Number(p.creatorId) === numericUserId ||
+        memberProjectIds.includes(Number(p.id))
+    );
+    return filtered;
+  }
+  return memoryProjectsStore;
 }
+
+
 
 export async function getProjectByIdDB(id: string | number) {
   const projects = await getAllProjectsDB();
@@ -657,7 +646,38 @@ export async function joinProjectDB(userId: string | number, projectKey: string)
   return project;
 }
 
+export async function leaveProjectDB(userId: string | number, projectIdOrKey: string | number) {
+  await initDB();
+  const numUserId = Number(userId);
+  let numProjId = Number(projectIdOrKey);
+
+  if (isNaN(numProjId)) {
+    const project = await getProjectByIdDB(projectIdOrKey);
+    if (project) numProjId = Number(project.id);
+  }
+
+  try {
+    const p = getPool();
+    if (!isNaN(numProjId)) {
+      await p.query(
+        `DELETE FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2`,
+        [numProjId, numUserId]
+      );
+    }
+  } catch (err: any) {
+    console.warn('[leaveProjectDB Error]:', err.message);
+  }
+
+  memoryMembersStore = memoryMembersStore.filter(
+    (m) => !(Number(m.projectId) === numProjId && Number(m.userId) === numUserId)
+  );
+
+  return { success: true };
+}
+
+
 // ─── Issues & Subtasks Helpers ──────────────────────────────────────────────
+
 
 export function buildSubtaskTree(flatSubtasks: any[]): any[] {
   if (!Array.isArray(flatSubtasks) || flatSubtasks.length === 0) return [];

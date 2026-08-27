@@ -108,27 +108,29 @@ export default function ProjectsPage() {
   // Fetch Current Session & Projects Data
   const fetchDataFromDB = useCallback(async () => {
     try {
-      const meRes = await fetch('/api/auth/me');
-      let userIdParam = '';
-      if (meRes.ok) {
+      const [meRes, projRes, issueRes] = await Promise.all([
+        fetch('/api/auth/me', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/projects', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/issues', { cache: 'no-store' }).catch(() => null),
+      ]);
+
+      if (meRes && meRes.ok) {
         const meData = await meRes.json();
         if (meData.user) {
           setCurrentUser(meData.user);
-          userIdParam = `?userId=${meData.user.id}`;
         }
       }
 
-      const [projRes, issueRes] = await Promise.all([
-        fetch(`/api/projects${userIdParam}`, { cache: 'no-store' }),
-        fetch('/api/issues', { cache: 'no-store' }),
-      ]);
-
-      if (projRes.ok) {
+      if (projRes && projRes.ok) {
         const projData = await projRes.json();
-        if (Array.isArray(projData)) setProjects(projData);
+        if (Array.isArray(projData) && projData.length > 0) {
+          setProjects(projData);
+        } else if (Array.isArray(projData) && projData.length === 0) {
+          setProjects((prev) => (prev.length > 0 ? prev : projData));
+        }
       }
 
-      if (issueRes.ok) {
+      if (issueRes && issueRes.ok) {
         const issueData = await issueRes.json();
         if (Array.isArray(issueData)) setIssues(issueData);
       }
@@ -138,6 +140,7 @@ export default function ProjectsPage() {
       setLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     fetchDataFromDB();

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import {
   Settings,
   Trash2,
@@ -15,7 +16,8 @@ import {
   Lock,
   Database,
   RefreshCw,
-  FolderKanban
+  FolderKanban,
+  LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +35,7 @@ interface ProjectSettingsViewProps {
   isCreator: boolean;
   currentUser: any;
   onOpenDeleteModal: () => void;
+  onOpenLeaveModal: () => void;
   onOpenEditModal: () => void;
 }
 
@@ -42,7 +45,9 @@ export function ProjectSettingsView({
   isCreator,
   currentUser,
   onOpenDeleteModal,
+  onOpenLeaveModal,
   onOpenEditModal,
+
 }: ProjectSettingsViewProps) {
   const [copiedKey, setCopiedKey] = useState(false);
 
@@ -171,60 +176,106 @@ export function ProjectSettingsView({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {members.map((m) => (
-              <div
-                key={m.id || m.userId}
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#101114] border border-[#222428]"
-              >
-                <img
-                  src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                  alt={m.name}
-                  className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30]"
-                />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{m.name}</p>
-                  <p className="text-[10px] font-mono text-[#787C83] truncate">{m.email}</p>
+            {members.map((m) => {
+              const isCurrentUser = currentUser && String(m.id || m.userId) === String(currentUser.id);
+              return (
+                <div
+                  key={m.id || m.userId}
+                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                    isCurrentUser ? 'bg-[#18191E] border-[#DCB001]/40' : 'bg-[#101114] border-[#222428]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                      alt={m.name}
+                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-white truncate">{m.name}</p>
+                        {isCurrentUser && (
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/30">
+                            You
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] font-mono text-[#787C83] truncate">{m.email}</p>
+                    </div>
+                  </div>
+
+                  {isCurrentUser && (
+                    <button
+                      onClick={onOpenLeaveModal}
+                      title="Leave this project"
+                      className="ml-2 p-1.5 rounded-lg bg-[#241512] hover:bg-[#341B17] text-[#F97316] hover:text-white border border-[#F97316]/30 transition-colors shrink-0"
+                    >
+                      <LogOut size={13} />
+                    </button>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* 4. Danger Zone: Delete Project Button */}
-        <div className="p-6 rounded-2xl bg-[#181112] border border-[#EF4444]/30 space-y-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle size={18} className="text-[#EF4444]" />
-            <h3 className="text-sm font-bold text-[#EF4444]">Danger Zone</h3>
-          </div>
-          <p className="text-xs text-[#A88B8C]">
-            Permanently delete this project along with all associated Kanban tasks, subtask trees, channel messages, technical documentation, and collaborator roles. This action cannot be undone.
-          </p>
+        {/* 4. Danger Zone */}
+        <div className="space-y-4">
+          {/* Leave Project Option (Available for All Joined Members & Collaborators) */}
+          <div className="p-6 rounded-2xl bg-[#181310] border border-[#F97316]/30 space-y-4">
+            <div className="flex items-center gap-2">
+              <LogOut size={18} className="text-[#F97316]" />
+              <h3 className="text-sm font-bold text-[#F97316]">Leave Project Workspace</h3>
+            </div>
+            <p className="text-xs text-[#A89488]">
+              Leave this project workspace. You will be removed from the team members list and this project will no longer appear in your dashboard or project directory unless you rejoin using the Project Key.
+            </p>
 
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-[11px] font-mono text-[#8E7879]">
-              {isCreator ? 'Owner authorization verified' : 'Only the project creator can delete this project'}
-            </span>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] font-mono text-[#8E8078]">
+                Logged in as {currentUser?.name || 'Member'}
+              </span>
 
-            {isCreator ? (
               <button
-                onClick={onOpenDeleteModal}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                onClick={onOpenLeaveModal}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
               >
-                <Trash2 size={14} />
-                <span>Delete Project</span>
+                <LogOut size={14} />
+                <span>Leave Project</span>
               </button>
-            ) : (
-              <button
-                disabled
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#28181A] text-[#7A5B5D] font-bold text-xs cursor-not-allowed border border-[#3A2225]"
-              >
-                <Lock size={14} />
-                <span>Delete Disabled</span>
-              </button>
-            )}
+            </div>
           </div>
+
+          {/* Delete Project Option (For Creator / Owner) */}
+          {isCreator && (
+            <div className="p-6 rounded-2xl bg-[#181112] border border-[#EF4444]/30 space-y-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-[#EF4444]" />
+                <h3 className="text-sm font-bold text-[#EF4444]">Danger Zone — Delete Project</h3>
+              </div>
+              <p className="text-xs text-[#A88B8C]">
+                Permanently delete this project along with all associated Kanban tasks, subtask trees, channel messages, technical documentation, and collaborator roles. This action cannot be undone.
+              </p>
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[11px] font-mono text-[#8E7879]">
+                  Owner authorization verified ({currentUser?.name || 'Lead'})
+                </span>
+
+                <button
+                  onClick={onOpenDeleteModal}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Project</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+

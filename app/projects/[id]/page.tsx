@@ -212,6 +212,8 @@ export default function SingleProjectPage() {
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
   const [confirmDeleteKey, setConfirmDeleteKey] = useState('');
   const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [isLeaveProjectModalOpen, setIsLeaveProjectModalOpen] = useState(false);
+  const [isLeavingProject, setIsLeavingProject] = useState(false);
   const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
   const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
@@ -248,6 +250,43 @@ export default function SingleProjectPage() {
       setIsDeletingProject(false);
     }
   }, [project, confirmDeleteName, confirmDeleteKey, isDeletingProject, router]);
+
+  // Leave Project Handler (For Joined Members)
+  const handleLeaveProjectConfirmed = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project || isLeavingProject) return;
+
+    setIsLeavingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/leave`, {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.removeItem(`project_${project.id}`);
+            localStorage.removeItem(`issues_${project.id}`);
+            localStorage.removeItem('projects_list');
+            localStorage.removeItem('dashboard_projects');
+            localStorage.removeItem('dashboard_issues');
+          } catch {}
+        }
+        toast.success(`You have left project "${project.name}".`);
+        setIsLeaveProjectModalOpen(false);
+        router.push('/projects');
+      } else {
+
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to leave project');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to leave project');
+    } finally {
+      setIsLeavingProject(false);
+    }
+  }, [project, isLeavingProject, router]);
+
 
   // In-UI Export Project Dump Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -1368,6 +1407,9 @@ export default function SingleProjectPage() {
                   setConfirmDeleteKey('');
                   setIsDeleteProjectModalOpen(true);
                 }}
+                onOpenLeaveModal={() => {
+                  setIsLeaveProjectModalOpen(true);
+                }}
                 onOpenEditModal={() => {
                   if (project) {
                     setEditName(project.name);
@@ -1376,6 +1418,7 @@ export default function SingleProjectPage() {
                   }
                 }}
               />
+
             </div>
           ) : activeTab === 'hierarchy' ? (
 
@@ -1612,8 +1655,70 @@ export default function SingleProjectPage() {
             </div>
           )}
 
+          {/* Leave Project Confirmation Modal (For Joined Members) */}
+          {isLeaveProjectModalOpen && project && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-md bg-[#1B1C1F] border border-[#F97316]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1412]">
+                  <h3 className="text-xs font-bold text-[#F97316] uppercase tracking-wider flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    Leave Project Confirmation
+                  </h3>
+                  <button
+                    onClick={() => setIsLeaveProjectModalOpen(false)}
+                    className="text-[#787C83] hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleLeaveProjectConfirmed} className="p-5 space-y-4">
+                  <div className="space-y-2 text-xs">
+                    <p className="text-[#CFD4DD]">
+                      Are you sure you want to leave <strong className="text-white">{project.name}</strong>?
+                    </p>
+                    <p className="text-[11px] text-[#A89488] leading-relaxed">
+                      You will be removed as a member and this project will no longer appear in your dashboard. You can rejoin at any time using the Project Key.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] flex items-center gap-2 font-mono text-xs text-[#DCB001]">
+                    <span className="text-[#787C83]">Project:</span>
+                    <span className="font-bold truncate">{project.name} ({project.key})</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
+                    <span className="text-[11px] text-[#787C83]">Rejoin anytime with key</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsLeaveProjectModalOpen(false)}
+                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isLeavingProject}
+                        className="px-4 py-1.5 text-xs font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        {isLeavingProject ? 'Leaving...' : 'Confirm & Leave'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
           {/* Encrypted Project Export Modal (With Loading Progress & Download Button) */}
           {isExportModalOpen && (
+
 
 
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
