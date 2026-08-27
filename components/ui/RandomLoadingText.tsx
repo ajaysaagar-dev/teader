@@ -40,10 +40,13 @@ export function RandomLoadingText({
   intervalMs = 2800,
   showBadge = true,
 }: RandomLoadingTextProps) {
-  const [index, setIndex] = useState(() => Math.floor(Math.random() * LOADING_ITEMS.length));
+  const [index, setIndex] = useState(0);
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
+    // Randomize initial item immediately on client mount
+    setIndex(Math.floor(Math.random() * LOADING_ITEMS.length));
+
     const timer = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
@@ -54,6 +57,7 @@ export function RandomLoadingText({
 
     return () => clearInterval(timer);
   }, [intervalMs]);
+
 
   const current = LOADING_ITEMS[index];
 
