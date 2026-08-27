@@ -40,8 +40,11 @@ import {
   FileText,
   Sparkles,
   Loader2,
-  MessageSquare
+  MessageSquare,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
+
 
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -196,11 +199,50 @@ export default function SingleProjectPage() {
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
+  const [isDeleteProjectModalOpen, setIsDeleteProjectModalOpen] = useState(false);
+  const [confirmDeleteName, setConfirmDeleteName] = useState('');
+  const [confirmDeleteKey, setConfirmDeleteKey] = useState('');
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
   const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
+  // Delete Project Handler
+  const handleDeleteProjectConfirmed = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!project || isDeletingProject) return;
+
+    if (
+      confirmDeleteName.trim() !== project.name ||
+      confirmDeleteKey.trim().toUpperCase() !== project.key.toUpperCase()
+    ) {
+      toast.error('Project Name and Key do not match exact details!');
+      return;
+    }
+
+    setIsDeletingProject(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toast.success(`Project ${project.name} deleted successfully.`);
+        setIsDeleteProjectModalOpen(false);
+        router.push('/projects');
+      } else {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete project');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete project');
+    } finally {
+      setIsDeletingProject(false);
+    }
+  }, [project, confirmDeleteName, confirmDeleteKey, isDeletingProject, router]);
+
   // In-UI Export Project Dump Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
   const [exportStep, setExportStep] = useState<'packaging' | 'encrypting' | 'ready' | 'error'>('packaging');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportStatusText, setExportStatusText] = useState('Gathering project data...');
@@ -926,21 +968,38 @@ export default function SingleProjectPage() {
               </span>
 
               {isCreator && (
-                <button
-                  onClick={() => {
-                    if (project) {
-                      setEditName(project.name);
-                      setEditDesc(project.description || '');
-                      setIsEditProjectModalOpen(true);
-                    }
-                  }}
-                  className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
-                  title="Edit Project Details (Creator Only)"
-                >
-                  <Pencil size={12} />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => {
+                      if (project) {
+                        setEditName(project.name);
+                        setEditDesc(project.description || '');
+                        setIsEditProjectModalOpen(true);
+                      }
+                    }}
+                    className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
+                    title="Edit Project Details (Creator Only)"
+                  >
+                    <Pencil size={12} />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (project) {
+                        setConfirmDeleteName('');
+                        setConfirmDeleteKey('');
+                        setIsDeleteProjectModalOpen(true);
+                      }
+                    }}
+                    className="p-1 text-[#787C83] hover:text-[#EF4444] hover:bg-[#131415] rounded transition-colors"
+                    title="Delete Project (Creator Only)"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               )}
             </div>
+
 
             {/* Compact Copyable Project Key Pill */}
             {project && (
@@ -1420,8 +1479,98 @@ export default function SingleProjectPage() {
             </div>
           )}
 
+          {/* Delete Project Confirmation Modal */}
+          {isDeleteProjectModalOpen && project && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-md bg-[#1B1C1F] border border-[#EF4444]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              >
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1112]">
+                  <h3 className="text-xs font-bold text-[#EF4444] uppercase tracking-wider flex items-center gap-2">
+                    <AlertTriangle size={16} />
+                    Delete Project Confirmation
+                  </h3>
+                  <button
+                    onClick={() => setIsDeleteProjectModalOpen(false)}
+                    className="text-[#787C83] hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleDeleteProjectConfirmed} className="p-5 space-y-4">
+                  <div className="space-y-1.5 text-xs">
+                    <p className="text-[#CFD4DD]">
+                      Are you sure you want to permanently delete project <strong className="text-white">{project.name}</strong>?
+                    </p>
+                    <p className="text-[11px] text-[#EF4444]/80">
+                      ⚠️ This will permanently remove all tasks, subtasks, channel conversations, docs, and member associations.
+                    </p>
+                  </div>
+
+                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-3">
+                    <div>
+                      <label className="block text-[11px] text-[#787C83] mb-1">
+                        Type Project Name to confirm: <span className="text-white font-semibold">{project.name}</span>
+                      </label>
+                      <input
+                        type="text"
+                        autoFocus
+                        value={confirmDeleteName}
+                        onChange={(e) => setConfirmDeleteName(e.target.value)}
+                        placeholder={project.name}
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#EF4444]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-[#787C83] mb-1">
+                        Type Project Key to confirm: <span className="text-[#DCB001] font-mono text-[10px] font-bold block truncate">{project.key}</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={confirmDeleteKey}
+                        onChange={(e) => setConfirmDeleteKey(e.target.value)}
+                        placeholder="Paste or type project key"
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#EF4444] font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
+                    <span className="text-[11px] text-[#787C83]">Requires exact match</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsDeleteProjectModalOpen(false)}
+                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={
+                          confirmDeleteName.trim() !== project.name ||
+                          confirmDeleteKey.trim().toUpperCase() !== project.key.toUpperCase() ||
+                          isDeletingProject
+                        }
+                        className="px-4 py-1.5 text-xs font-semibold text-white bg-[#EF4444] hover:bg-[#DC2626] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                      >
+                        {isDeletingProject ? 'Deleting...' : 'Permanently Delete'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+
           {/* Encrypted Project Export Modal (With Loading Progress & Download Button) */}
           {isExportModalOpen && (
+
 
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
               <motion.div
