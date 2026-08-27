@@ -751,8 +751,8 @@ export default function SingleProjectPage() {
   return (
     <AppLayout>
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
-        {/* Compact Workspace Top Bar with Tab Switcher */}
-        <div className="h-11 px-3.5 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+        {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
+        <div className="h-11 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
           {/* Left: Breadcrumbs & Project Identity */}
           <div className="flex items-center gap-2.5 min-w-0">
             <button
@@ -767,7 +767,7 @@ export default function SingleProjectPage() {
 
             <div className="flex items-center gap-1.5 min-w-0">
               <FolderKanban size={14} className="text-[#DCB001] shrink-0" />
-              <span className="text-xs font-bold text-[#CFD4DD] truncate max-w-[150px] md:max-w-[220px]" title={project?.name}>
+              <span className="text-xs font-bold text-[#CFD4DD] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
                 {project?.name}
               </span>
 
@@ -806,118 +806,7 @@ export default function SingleProjectPage() {
             )}
           </div>
 
-          {/* Center / Right: Tab Switcher (Overview vs. Board vs. Hierarchical vs. Tree vs. Dev Stream) */}
-          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5">
-            <button
-              onClick={() => handleTabSwitch('overview')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'overview'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Overview & Analytics"
-            >
-              <BarChart3 size={13} />
-              <span>Overview</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('board')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'board'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-            >
-              <LayoutGrid size={13} />
-              <span>Board</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('hierarchy')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'hierarchy'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-            >
-              <Layers size={13} />
-              <span>Hierarchical</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('tree')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'tree'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Tree Explorer"
-            >
-              <FolderTree size={13} />
-              <span>Tree</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('calendar')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'calendar'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Deadlines & Calendar"
-            >
-              <Calendar size={13} />
-              <span>Calendar</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('graph')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'graph'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="DAG Dependency Graph"
-            >
-              <GitFork size={13} />
-              <span>Graph</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('docs')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'docs'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Wiki & Specs"
-            >
-              <BookOpen size={13} />
-              <span>Docs</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('dev')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
-                activeTab === 'dev'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Developer Workstation Stream"
-            >
-              <Terminal size={13} />
-              <span>Dev Stream</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-          </div>
-
-
-
-          {/* Right: Creator, Stacked Members, Sync Pulse & Actions */}
+          {/* Right: Creator, Stacked Members, Sync Pulse & Action Buttons */}
           <div className="flex items-center gap-2 text-xs shrink-0">
             {/* Project Creator Pill */}
             <div className="hidden lg:flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md px-2 py-0.5 text-[11px]">
@@ -954,7 +843,7 @@ export default function SingleProjectPage() {
             {/* Automations Button */}
             <button
               onClick={() => setIsAutomationsModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#CFD4DD] transition-all"
               title="Configure Workflow Automations"
             >
               <Zap size={12} className="text-[#DCB001]" />
@@ -964,7 +853,7 @@ export default function SingleProjectPage() {
             {/* Import Tasks Button */}
             <button
               onClick={() => setIsImportTasksModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
               title="Import Tasks from CSV / JSON"
             >
               <Upload size={12} />
@@ -974,7 +863,7 @@ export default function SingleProjectPage() {
             {/* Export Project Button */}
             <button
               onClick={() => handleExportProject('json')}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
               title="Export Project (JSON)"
             >
               <Download size={12} />
@@ -984,14 +873,125 @@ export default function SingleProjectPage() {
             {/* Quick + Task Button */}
             <button
               onClick={() => setIsNewIssueModalOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-md shadow-sm transition-all"
+              className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-md shadow-sm transition-all"
             >
               <Plus size={13} />
-              <span className="hidden sm:inline">New Task</span>
-              <span className="sm:hidden">New</span>
+              <span>New Task</span>
             </button>
           </div>
         </div>
+
+        {/* 2. Dedicated View Switcher Subheader Bar (Under current header, exclusively for tabs) */}
+        <div className="h-10 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center overflow-x-auto shrink-0 select-none custom-scrollbar">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handleTabSwitch('overview')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Overview & Analytics"
+            >
+              <BarChart3 size={13} />
+              <span>Overview</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('board')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'board'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+            >
+              <LayoutGrid size={13} />
+              <span>Board</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('hierarchy')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'hierarchy'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+            >
+              <Layers size={13} />
+              <span>Hierarchical</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('tree')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'tree'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Tree Explorer"
+            >
+              <FolderTree size={13} />
+              <span>Tree</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'calendar'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Deadlines & Calendar"
+            >
+              <Calendar size={13} />
+              <span>Calendar</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('graph')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'graph'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="DAG Dependency Graph"
+            >
+              <GitFork size={13} />
+              <span>Graph</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('docs')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'docs'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Wiki & Specs"
+            >
+              <BookOpen size={13} />
+              <span>Docs</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('dev')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'dev'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Developer Workstation Stream"
+            >
+              <Terminal size={13} />
+              <span>Dev Stream</span>
+              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+            </button>
+          </div>
+        </div>
+
 
 
 
