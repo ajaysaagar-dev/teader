@@ -63,11 +63,83 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const resolvedParams = await params;
-  const projectId = resolvedParams.id;
+  const rawProjectId = resolvedParams.id;
 
   try {
     ensureDocsDir();
-    const docs = await getProjectDocsDB(projectId);
+    const project = await getProjectByIdDB(rawProjectId);
+    const targetProjId = project ? project.id : (Number(rawProjectId) || rawProjectId);
+    const projName = project?.name || 'Project Workspace';
+
+    let docs = await getProjectDocsDB(targetProjId);
+
+    // Also scan DOCS_DIR to recover any files on disk matching this project
+    try {
+      const diskFiles = fs.readdirSync(DOCS_DIR);
+      const prefix1 = `proj_${targetProjId}_`;
+      const prefix2 = `proj_${rawProjectId}_`;
+
+      for (const fName of diskFiles) {
+        if (fName.endsWith('.md') && (fName.startsWith(prefix1) || fName.startsWith(prefix2))) {
+          const alreadyTracked = docs.some((d: any) => d.fileName === fName);
+          if (!alreadyTracked) {
+            const diskPath = path.join(DOCS_DIR, fName);
+            let diskContent = '';
+            try {
+              diskContent = fs.readFileSync(diskPath, 'utf-8');
+            } catch {}
+
+            // Extract title from filename or first line
+            const titleMatch = diskContent.match(/^#\s+(.+)$/m);
+            const extractedTitle = titleMatch
+              ? titleMatch[1].trim()
+              : fName.replace(/^proj_[^_]+_usr_[^_]+_doc_[^_]+_/, '').replace(/\.md$/, '').replace(/_/g, ' ');
+
+            const recoveredDoc = await createProjectDocDB({
+              id: `doc_rec_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+              projectId: targetProjId,
+              userId: (session as any).id || 1,
+              userName: (session as any).name || 'karri',
+              title: extractedTitle || 'Document',
+              fileName: fName,
+              filePath: diskPath,
+              content: diskContent,
+            });
+
+            docs.unshift(recoveredDoc);
+          }
+        }
+      }
+    } catch {}
+
+    // If still 0 docs, create the default starter documentation file so it is never empty
+    if (docs.length === 0) {
+      const defaultTitle = `${projName} Architecture & Overview`;
+      const initialContent = `# ${defaultTitle}\n\nTechnical specification and architecture documentation for **${projName}**.\n\n## 1. Overview\nComprehensive system architecture and component specifications.\n\n## 2. Architecture & Components\n- Core API routing and validation\n- State synchronization and realtime updates\n- Interactive markdown documentation engine\n\n## 3. Implementation Steps\n- [x] Initialize project workspace\n- [x] Configure database schemas\n- [ ] Implement team workflows\n\n\`\`\`ts\n// Example configuration\nexport const config = {\n  project: '${projName}',\n  version: '1.0.0',\n  mode: 'production'\n};\n\`\`\`\n`;
+      const docId = `doc_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      const userId = (session as any).id || 1;
+      const userName = (session as any).name || 'karri';
+      const cleanSlug = 'architecture_and_overview';
+      const fileName = `proj_${targetProjId}_usr_${userId}_${docId}_${cleanSlug}.md`;
+      const filePath = path.join(DOCS_DIR, fileName);
+
+      try {
+        fs.writeFileSync(filePath, initialContent, 'utf-8');
+      } catch {}
+
+      const created = await createProjectDocDB({
+        id: docId,
+        projectId: targetProjId,
+        userId,
+        userName,
+        title: defaultTitle,
+        fileName,
+        filePath,
+        content: initialContent,
+      });
+
+      docs = [created];
+    }
 
     // Resolve actual content for each document
     const populatedDocs = docs.map((doc: any) => {
@@ -96,10 +168,13 @@ export async function POST(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const resolvedParams = await params;
-  const projectId = resolvedParams.id;
+  const rawProjectId = resolvedParams.id;
 
   try {
     ensureDocsDir();
+    const project = await getProjectByIdDB(rawProjectId);
+    const targetProjId = project ? project.id : (Number(rawProjectId) || rawProjectId);
+
     const body = await req.json();
     const title = (body.title || 'Untitled Document').trim();
     const initialContent = body.content || `# ${title}\n\nStart writing documentation here...`;
@@ -113,7 +188,7 @@ export async function POST(
     const docId = `doc_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const userId = (session as any).id || 1;
     const userName = (session as any).name || 'karri';
-    const fileName = `proj_${projectId}_usr_${userId}_${docId}_${cleanSlug || 'doc'}.md`;
+    const fileName = `proj_${targetProjId}_usr_${userId}_${docId}_${cleanSlug || 'doc'}.md`;
     const filePath = path.join(DOCS_DIR, fileName);
 
     // Write .md file to server filesystem
@@ -121,7 +196,7 @@ export async function POST(
 
     const createdRecord = await createProjectDocDB({
       id: docId,
-      projectId,
+      projectId: targetProjId,
       userId,
       userName,
       title,
@@ -134,7 +209,7 @@ export async function POST(
 
     broadcastRealtimeEvent({
       type: 'DOC_CREATED',
-      projectId,
+      projectId: String(targetProjId),
       payload: docPayload,
       senderSessionId: (session as any).id,
     });

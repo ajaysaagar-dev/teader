@@ -1713,7 +1713,7 @@ export default function SingleProjectPage() {
           ) : activeTab === 'docs' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectDocsView
-                projectId={project?.id || 1}
+                projectId={project?.id || projectIdParam || 1}
                 projectName={project?.name}
                 projectKey={project?.key}
               />
@@ -1721,7 +1721,7 @@ export default function SingleProjectPage() {
           ) : activeTab === 'conversation' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectConversationView
-                projectId={project?.id || 1}
+                projectId={project?.id || projectIdParam || 1}
                 projectName={project?.name}
                 projectKey={project?.key}
                 currentUser={currentUser}

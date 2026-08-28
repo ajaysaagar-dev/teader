@@ -161,15 +161,18 @@ export function reconcileIssues(prev: Issue[], incoming: Issue[]): Issue[] {
  * Reconciles project docs list surgically
  */
 export function reconcileDocs(prev: ProjectDoc[], incoming: ProjectDoc[]): ProjectDoc[] {
-  if (prev.length === 0) return incoming;
-  if (incoming.length === 0) return prev;
+  if (!incoming || incoming.length === 0) return incoming || [];
+  if (!prev || prev.length === 0) return incoming;
 
   let hasChange = false;
   const prevMap = new Map<string, ProjectDoc>();
-  prev.forEach((d) => prevMap.set(String(d.id), d));
+  prev.forEach((d) => {
+    if (d && d.id) prevMap.set(String(d.id), d);
+  });
 
   const reconciled: ProjectDoc[] = [];
   for (const inc of incoming) {
+    if (!inc) continue;
     const existing = prevMap.get(String(inc.id));
     if (!existing) {
       reconciled.push(inc);
@@ -177,11 +180,12 @@ export function reconcileDocs(prev: ProjectDoc[], incoming: ProjectDoc[]): Proje
     } else if (
       existing.title === inc.title &&
       existing.fileName === inc.fileName &&
-      existing.updatedAt === inc.updatedAt
+      existing.updatedAt === inc.updatedAt &&
+      (inc.content === undefined || inc.content === existing.content)
     ) {
       reconciled.push(existing);
     } else {
-      reconciled.push(inc);
+      reconciled.push({ ...existing, ...inc });
       hasChange = true;
     }
   }
