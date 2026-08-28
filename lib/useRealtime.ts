@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { RealtimeEvent, RealtimeEventType } from './realtime';
@@ -24,22 +24,25 @@ function dispatchLocalRealtimeEvent(event: RealtimeEvent) {
   }
 }
 
-// Global WebSocket Singleton Instance
+// Global WebSocket & SSE Hybrid Realtime Manager Instance
 class RealtimeSocketManager {
   private ws: WebSocket | null = null;
+  private sse: EventSource | null = null;
   private reconnectTimeout: any = null;
   private pingInterval: any = null;
   private subscribers = new Set<(event: RealtimeEvent) => void>();
   private statusListeners = new Set<(connected: boolean) => void>();
   private isConnected = false;
   private subscribedRooms = new Set<string>(['global', 'all']);
+  private usingSSE = false;
+  private wsAttempts = 0;
 
   constructor() {
     if (typeof window !== 'undefined') {
       this.connect();
       window.addEventListener('online', () => this.connect());
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden && (!this.ws || this.ws.readyState !== WebSocket.OPEN)) {
+        if (!document.hidden && !this.isConnected) {
           this.connect();
         }
       });
@@ -50,23 +53,56 @@ class RealtimeSocketManager {
     if (process.env.NEXT_PUBLIC_WS_URL) {
       return process.env.NEXT_PUBLIC_WS_URL;
     }
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const isHttps = window.location.protocol === 'https:';
+    const protocol = isHttps ? 'wss:' : 'ws:';
     const hostname = window.location.hostname || 'localhost';
     const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
+
+    // If served over HTTPS and no custom port specified, prefer direct port 3001
     return `${protocol}//${hostname}:${port}`;
   }
 
   public connect() {
     if (typeof window === 'undefined') return;
+
+    // Clean up any existing dead handles
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
+    this.tryWebSocket();
+  }
+
+  private tryWebSocket() {
     try {
       const url = this.getWebSocketUrl();
-      this.ws = new WebSocket(url);
+      const ws = new WebSocket(url);
+      this.ws = ws;
 
-      this.ws.onopen = () => {
+      let connectionHandled = false;
+
+      // Fallback to SSE if WS doesn't open within 3 seconds
+      const wsTimer = setTimeout(() => {
+        if (!connectionHandled && ws.readyState !== WebSocket.OPEN) {
+          try {
+            ws.close();
+          } catch {}
+          this.fallbackToSSE();
+        }
+      }, 3000);
+
+      ws.onopen = () => {
+        connectionHandled = true;
+        clearTimeout(wsTimer);
+        this.wsAttempts = 0;
+        this.usingSSE = false;
+        if (this.sse) {
+          try {
+            this.sse.close();
+          } catch {}
+          this.sse = null;
+        }
+
         this.isConnected = true;
         this.notifyStatus(true);
 
@@ -84,7 +120,7 @@ class RealtimeSocketManager {
         }, 15000);
       };
 
-      this.ws.onmessage = (messageEvent) => {
+      ws.onmessage = (messageEvent) => {
         try {
           const data = JSON.parse(messageEvent.data);
           if (data.type === 'EVENT' && data.data) {
@@ -95,21 +131,89 @@ class RealtimeSocketManager {
         } catch {}
       };
 
-      this.ws.onclose = () => {
-        this.isConnected = false;
-        this.notifyStatus(false);
+      ws.onclose = () => {
+        clearTimeout(wsTimer);
+        if (this.ws === ws) {
+          this.ws = null;
+        }
         if (this.pingInterval) clearInterval(this.pingInterval);
-        this.scheduleReconnect();
+
+        // If WS dropped, fall back to SSE immediately
+        this.fallbackToSSE();
       };
 
-      this.ws.onerror = () => {
-        if (this.ws) {
+      ws.onerror = () => {
+        clearTimeout(wsTimer);
+        if (this.ws === ws) {
           try {
-            this.ws.close();
+            ws.close();
           } catch {}
         }
+        this.fallbackToSSE();
       };
     } catch {
+      this.fallbackToSSE();
+    }
+  }
+
+  private fallbackToSSE() {
+    if (typeof window === 'undefined' || typeof EventSource === 'undefined') {
+      this.isConnected = false;
+      this.notifyStatus(false);
+      this.scheduleReconnect();
+      return;
+    }
+
+    if (this.sse && this.sse.readyState === EventSource.OPEN) {
+      this.isConnected = true;
+      this.notifyStatus(true);
+      return;
+    }
+
+    try {
+      if (this.sse) {
+        try {
+          this.sse.close();
+        } catch {}
+      }
+
+      const sse = new EventSource('/api/realtime/stream?room=global');
+      this.sse = sse;
+      this.usingSSE = true;
+
+      sse.onopen = () => {
+        this.isConnected = true;
+        this.notifyStatus(true);
+      };
+
+      sse.onmessage = (messageEvent) => {
+        try {
+          const data = JSON.parse(messageEvent.data);
+          if (data.type === 'CONNECTED') {
+            this.isConnected = true;
+            this.notifyStatus(true);
+          } else if (data.type === 'EVENT' && data.data) {
+            const realtimeEvent: RealtimeEvent = data.data;
+            this.notifySubscribers(realtimeEvent);
+            dispatchLocalRealtimeEvent(realtimeEvent);
+          }
+        } catch {}
+      };
+
+      sse.onerror = () => {
+        if (this.sse === sse) {
+          this.isConnected = false;
+          this.notifyStatus(false);
+          try {
+            sse.close();
+          } catch {}
+          this.sse = null;
+        }
+        this.scheduleReconnect();
+      };
+    } catch {
+      this.isConnected = false;
+      this.notifyStatus(false);
       this.scheduleReconnect();
     }
   }
@@ -118,7 +222,7 @@ class RealtimeSocketManager {
     if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = setTimeout(() => {
       this.connect();
-    }, 2500);
+    }, 4000);
   }
 
   private send(data: any) {
@@ -131,25 +235,27 @@ class RealtimeSocketManager {
 
   public subscribeRoom(room: string) {
     this.subscribedRooms.add(room);
-    if (this.isConnected) {
+    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.send({ type: 'SUBSCRIBE', room });
     }
   }
 
   public unsubscribeRoom(room: string) {
     this.subscribedRooms.delete(room);
-    if (this.isConnected) {
+    if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.send({ type: 'UNSUBSCRIBE', room });
     }
   }
 
   public broadcast(event: RealtimeEvent) {
-    // 1. Send to WebSocket server
-    this.send({
-      type: 'BROADCAST',
-      event,
-      room: event.projectId ? `project:${event.projectId}` : 'global',
-    });
+    // 1. Send to WebSocket server if connected
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.send({
+        type: 'BROADCAST',
+        event,
+        room: event.projectId ? `project:${event.projectId}` : 'global',
+      });
+    }
 
     // 2. Broadcast across browser tabs
     if (globalBroadcastChannel) {
