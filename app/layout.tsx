@@ -10,6 +10,7 @@ import {
   getOrganizationSchema,
   getSoftwareApplicationSchema,
   getWebSiteSchema,
+  getFAQSchema,
 } from "@/lib/site-config";
 
 const inter = Inter({
@@ -112,6 +113,7 @@ export default function RootLayout({
   const orgSchema = getOrganizationSchema();
   const appSchema = getSoftwareApplicationSchema();
   const websiteSchema = getWebSiteSchema();
+  const faqSchema = getFAQSchema();
 
   return (
     <html
@@ -131,6 +133,10 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
       <body className="min-h-full w-full bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Issue',
+  title: 'Issue Tracker & Discussions',
+  description:
+    'Manage bug reports, feature requests, code diff reviews, and issue lifecycle updates in Teader.',
   robots: {
     index: false,
     follow: false,

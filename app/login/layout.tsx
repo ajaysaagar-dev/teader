@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Sign In',
-  description: 'Sign in to access your Teader workspace, task boards, and branch explorer.',
+  title: 'Sign In | Teader Workspace',
+  description:
+    'Sign in to access your high-velocity projects, Kanban boards, and branch explorer timeline in Teader.',
   robots: {
     index: false,
     follow: false,

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'My Work',
+  title: 'My Work & Assigned Tasks',
+  description:
+    'Track your personal deliverables, assigned issues, pending reviews, and sprint tasks across all active projects in Teader.',
   robots: {
     index: false,
     follow: false,

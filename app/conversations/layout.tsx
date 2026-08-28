@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Conversations',
+  title: 'Team Conversations & Channels',
+  description:
+    'Real-time developer team channels, issue discussions, and async project communications in Teader.',
   robots: {
     index: false,
     follow: false,

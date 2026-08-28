@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Projects Directory & Workspaces',
+  title: 'Project Workspace',
   description:
-    'Browse, create, and manage all your development projects, task repositories, and workspace boards with 0ms latency in Teader.',
+    'High-velocity project workspace with Kanban boards, hierarchical subtasks tree, Unity VCS branch explorer, and real-time Markdown documentation.',
   robots: {
     index: false,
     follow: false,
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProjectsLayout({
+export default function ProjectWorkspaceLayout({
   children,
 }: {
   children: React.ReactNode;

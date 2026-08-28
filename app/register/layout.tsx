@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Create Account',
-  description: 'Register for a Teader account to manage projects, tasks, and team boards.',
+  title: 'Create Account | Teader Workspace',
+  description:
+    'Register for a Teader account to manage projects, task trees, team boards, and real-time specs.',
   robots: {
     index: false,
     follow: false,

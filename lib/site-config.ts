@@ -137,3 +137,45 @@ export function getDocsBreadcrumbSchema() {
     ],
   };
 }
+
+export function getFAQSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is Teader?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Teader is an AI-native, high-velocity project management platform engineered for high-performance software engineering teams and autonomous AI coding agents.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the Branch Explorer in Teader?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The Branch Explorer provides a Unity VCS-style horizontal timeline visualization with smooth cubic Bezier curved splines showing task branches, blocking dependencies, and merge convergences.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How does Teader achieve 0ms latency?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Teader uses an optimistic UI reconciliation layer with in-memory caching and referential equality checking, ensuring instant DOM updates while mutating data asynchronously in PostgreSQL.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Does Teader support Markdown technical documentation?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes, Teader includes live Markdown project specs with real-time GitHub-flavored Markdown preview, instant Ctrl+S auto-saving, and PostgreSQL persistence.',
+        },
+      },
+    ],
+  };
+}
+
