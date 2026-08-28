@@ -1,4 +1,4 @@
-﻿export type RealtimeEventType =
+export type RealtimeEventType =
   | 'TASK_CREATED'
   | 'TASK_UPDATED'
   | 'TASKS_REORDERED'
@@ -53,7 +53,13 @@ export async function broadcastRealtimeEvent(event: RealtimeEvent): Promise<void
     };
     const room = enrichedEvent.projectId ? `project:${enrichedEvent.projectId}` : 'global';
 
-    // 1. Direct In-Process Dispatch (0ms, same Next.js process)
+    // 1. In-Process Shared Event Bus (for SSE & Route Handlers)
+    try {
+      const { emitRealtimeBusEvent } = await import('./realtime-bus');
+      emitRealtimeBusEvent(enrichedEvent, room);
+    } catch {}
+
+    // 2. Direct In-Process Dispatch to WebSocket Hub
     try {
       const mod = await getWsModule();
       if (mod && typeof mod.broadcastToClients === 'function') {
