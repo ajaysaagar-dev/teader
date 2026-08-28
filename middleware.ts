@@ -7,6 +7,7 @@ const PUBLIC_PAGE_ROUTES = [
   '/login',
   '/register',
   '/docs',
+  '/documentation',
   '/sitemap.xml',
   '/robots.txt',
   '/manifest.webmanifest',
