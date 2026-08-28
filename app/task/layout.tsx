@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Task',
+  title: 'Task Details & Subtasks Hierarchy',
+  description:
+    'Inspect task specifications, nested subtask trees, priority tags, branch linkages, and activity timelines in Teader.',
   robots: {
     index: false,
     follow: false,

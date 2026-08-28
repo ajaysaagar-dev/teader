@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Dashboard',
+  title: 'Workspace Dashboard',
+  description:
+    'Monitor sprint progress, active developer tasks, project velocities, and real-time activity across your Teader workspaces.',
   robots: {
     index: false,
     follow: false,
