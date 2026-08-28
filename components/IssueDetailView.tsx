@@ -100,9 +100,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   }, [isTimerRunning]);
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    const url = `${window.location.origin}/task/${issue.id}/details`;
+    navigator.clipboard.writeText(url);
     setCopiedLink(true);
-    toast.success('Task link copied to clipboard');
+    toast.success('Task details link copied to clipboard');
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
