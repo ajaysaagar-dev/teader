@@ -64,9 +64,12 @@ jobs:
             if [ -d "$DEPLOY_DIR" ]; then
               cd "$DEPLOY_DIR"
               echo "📂 Navigated to $DEPLOY_DIR"
+              git reset --hard HEAD || true
+              git clean -fd || true
               git fetch origin production
-              git checkout -B production origin/production
+              git checkout -f -B production origin/production
               git reset --hard origin/production
+              git clean -fd
             else
               echo "📂 Cloning production branch to $DEPLOY_DIR"
               git clone -b production https://github.com/ajaysaagar-dev/teader.git "$DEPLOY_DIR"
