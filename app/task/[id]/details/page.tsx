@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { IssueDetailView } from '@/components/IssueDetailView';
 import { Issue, Status } from '@/lib/types';
 import { MOCK_ISSUES } from '@/lib/mock-data';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
 
@@ -68,6 +70,31 @@ export default function TaskDetailsPage() {
       })
       .finally(() => setLoading(false));
   }, [issueId]);
+
+  // Real-time WebSocket dynamic updates for this task
+  useRealtimeSubscription({
+    projectId: issue?.projectId,
+    onEvent: useCallback((event: RealtimeEvent) => {
+      if (event.type === 'TASK_UPDATED' && event.payload) {
+        if (String(event.payload.id) === String(issueId) || event.payload.key?.toLowerCase() === issueId?.toLowerCase()) {
+          setIssue((prev) => (prev ? { ...prev, ...event.payload } : prev));
+        }
+      } else if (event.type === 'TASK_DELETED' && event.payload?.id === issueId) {
+        toast.info('This task was deleted in real-time');
+        router.push('/projects');
+      } else if (event.type === 'SUBTASK_UPDATED') {
+        fetch('/api/issues')
+          .then((res) => res.json())
+          .then((data) => {
+            if (Array.isArray(data)) {
+              const found = data.find((i: Issue) => String(i.id) === String(issueId) || i.key?.toLowerCase() === issueId?.toLowerCase());
+              if (found) setIssue(found);
+            }
+          })
+          .catch(() => {});
+      }
+    }, [issueId, router]),
+  });
 
   const isOwner = useMemo(() => {
     if (!project || !currentUser) return true;

@@ -7,6 +7,8 @@ import { AppLayout } from '@/components/AppLayout';
 import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { 
   FolderKanban, 
   CheckCircle2, 
@@ -82,6 +84,75 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────
+  useRealtimeSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
+      switch (event.type) {
+        case 'TASK_CREATED': {
+          const newTask = event.payload;
+          if (newTask) {
+            setIssues((prev) => {
+              if (prev.some((i) => i.id === newTask.id || i.key === newTask.key)) {
+                return prev.map((i) => (i.id === newTask.id || i.key === newTask.key ? { ...i, ...newTask } : i));
+              }
+              return [newTask, ...prev];
+            });
+          }
+          break;
+        }
+
+        case 'TASK_UPDATED': {
+          const updated = event.payload;
+          if (updated && updated.id) {
+            setIssues((prev) =>
+              prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+            );
+          }
+          break;
+        }
+
+        case 'TASKS_REORDERED': {
+          const items: Array<{ id: string; orderIndex: number; status?: Status }> = event.payload?.items || [];
+          if (items.length > 0) {
+            const map = new Map(items.map((it) => [it.id, it]));
+            setIssues((prev) =>
+              prev.map((iss) => {
+                const update = map.get(iss.id);
+                if (update) {
+                  return {
+                    ...iss,
+                    orderIndex: update.orderIndex,
+                    status: update.status || iss.status,
+                  };
+                }
+                return iss;
+              })
+            );
+          }
+          break;
+        }
+
+        case 'TASK_DELETED': {
+          const deletedId = event.payload?.id;
+          if (deletedId) {
+            setIssues((prev) => prev.filter((i) => i.id !== deletedId));
+          }
+          break;
+        }
+
+        case 'PROJECT_CREATED':
+        case 'PROJECT_UPDATED':
+        case 'PROJECT_DELETED': {
+          fetchDashboardData();
+          break;
+        }
+
+        default:
+          break;
+      }
+    }, [fetchDashboardData]),
+  });
 
   // Aggregate Cross-Project Metrics
   const projectSummaries: ProjectSummary[] = useMemo(() => {
@@ -211,6 +282,7 @@ export default function DashboardPage() {
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2.5">
+              <RealtimeBadge />
               <Link
                 href="/projects"
                 className="flex items-center gap-2 px-3.5 py-2 bg-[#1C1D20] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-white rounded-lg text-xs font-medium transition-all shadow-sm"
