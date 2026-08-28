@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { TeaderSandCanvas } from '@/components/ui/TeaderSandCanvas';
 import { toast } from 'sonner';
+import { BUILD_NUMBER } from '@/lib/build-info';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -87,7 +88,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group">
               <span className="font-extrabold text-xl text-white tracking-tight flex items-center gap-1 font-prompt">
-                teader <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">v0.1</span>
+                teader <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">{BUILD_NUMBER}</span>
               </span>
             </Link>
 
@@ -547,7 +548,7 @@ export default function LandingPage() {
       <footer className="py-8 px-6 border-t border-[#18191C] bg-[#070708] text-xs text-[#6B707B] font-mono">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span>Teader Platform v0.1 © 2026. Built with Next.js & PostgreSQL.</span>
+            <span>Teader Platform ({BUILD_NUMBER}) © 2026. Built with Next.js & PostgreSQL.</span>
           </div>
 
           <div className="flex items-center gap-5">
