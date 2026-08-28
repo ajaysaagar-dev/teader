@@ -397,7 +397,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         onClose={() => setIsCommandPaletteOpen(false)}
         issues={issues}
         projects={projects}
-        onSelectIssue={() => setIsCommandPaletteOpen(false)}
+        onSelectIssue={(issueId) => {
+          setIsCommandPaletteOpen(false);
+          if (issueId) router.push(`/task/${issueId}/details`);
+        }}
         onOpenNewIssue={() => { setIsCommandPaletteOpen(false); setIsNewIssueModalOpen(true); }}
         onSelectView={() => setIsCommandPaletteOpen(false)}
       />
