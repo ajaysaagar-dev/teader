@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getProjectDocsDB, createProjectDocDB, getProjectByIdDB } from '@/lib/db';
+import { getProjectDocsDB, createProjectDocDB, updateProjectDocDB, getProjectByIdDB } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 
@@ -12,9 +12,47 @@ function ensureDocsDir() {
   }
 }
 
+function resolveDiskContent(doc: any): string {
+  ensureDocsDir();
+  const localPath = path.join(DOCS_DIR, doc.fileName);
+
+  // 1. Check local file in data/docs/<fileName>
+  if (fs.existsSync(localPath)) {
+    try {
+      const content = fs.readFileSync(localPath, 'utf-8');
+      if (content && content.trim()) return content;
+    } catch {}
+  }
+
+  // 2. Check doc.filePath if valid path on host
+  if (doc.filePath && fs.existsSync(doc.filePath)) {
+    try {
+      const content = fs.readFileSync(doc.filePath, 'utf-8');
+      if (content && content.trim()) {
+        // Also ensure local copy in DOCS_DIR
+        try {
+          fs.writeFileSync(localPath, content, 'utf-8');
+        } catch {}
+        return content;
+      }
+    } catch {}
+  }
+
+  // 3. Check DB stored content
+  if (doc.content && typeof doc.content === 'string' && doc.content.trim()) {
+    try {
+      fs.writeFileSync(localPath, doc.content, 'utf-8');
+    } catch {}
+    return doc.content;
+  }
+
+  // 4. Fallback default
+  return `# ${doc.title || 'Document'}\n\nTechnical specification and documentation.`;
+}
+
 /**
  * GET /api/projects/[id]/docs
- * List all markdown docs for a project
+ * List all markdown docs for a project with actual content
  */
 export async function GET(
   req: Request,
@@ -28,62 +66,18 @@ export async function GET(
 
   try {
     ensureDocsDir();
-    let docs = await getProjectDocsDB(projectId);
+    const docs = await getProjectDocsDB(projectId);
 
-    // If no docs exist yet for this project, auto-seed the default README / Architecture spec file
-    if (docs.length === 0) {
-      const project = await getProjectByIdDB(projectId);
-      const projectName = project?.name || 'Project Workspace';
-      const projectKey = project?.key || 'PRJ';
-      const docId = `doc_${Date.now()}_init`;
-      const fileName = `proj_${projectId}_usr_${(session as any).id || 1}_${docId}_architecture_specs.md`;
-      const filePath = path.join(DOCS_DIR, fileName);
+    // Resolve actual content for each document
+    const populatedDocs = docs.map((doc: any) => {
+      const content = resolveDiskContent(doc);
+      return {
+        ...doc,
+        content,
+      };
+    });
 
-      const initialContent = `# ${projectName} — Architecture & Technical Specifications
-
-## 1. Overview & System Goals
-This document serves as the single source of truth for **${projectName}** (${projectKey}).
-All architectural decisions, schema conventions, and milestone deliverables are maintained here.
-
----
-
-## 2. Core Architecture
-- **Framework**: Next.js 16 (App Router + Turbopack)
-- **State & Real-time**: React 19 Client Components with Optimistic UI updates
-- **Database Layer**: MySQL 8.0 Connection Pooling with high-availability in-memory fallback
-- **Authentication**: JWT HttpOnly Cookies + Role-Based Access Control
-
----
-
-## 3. Workflow & Branching Conventions
-- Feature Branches: \`feat/${projectKey.toLowerCase()}-<id>-<name>\`
-- Fix Branches: \`fix/${projectKey.toLowerCase()}-<id>-<name>\`
-- Commit Message Convention: \`feat(scope): detailed message\`
-
----
-
-## 4. Key Milestones & Epics
-1. **MVP Launch**: Core issue tracker & Kanban board
-2. **Phase 2**: Dependency DAG graph & real-time time tracking
-3. **Phase 3**: Automation rules engine & cross-project "My Work" dashboard
-`;
-
-      fs.writeFileSync(filePath, initialContent, 'utf-8');
-
-      const created = await createProjectDocDB({
-        id: docId,
-        projectId,
-        userId: (session as any).id || 1,
-        userName: (session as any).name || 'karri',
-        title: 'Architecture & Technical Specifications',
-        fileName,
-        filePath,
-      });
-
-      docs = [created];
-    }
-
-    return NextResponse.json(docs);
+    return NextResponse.json(populatedDocs);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -132,6 +126,7 @@ export async function POST(
       title,
       fileName,
       filePath,
+      content: initialContent,
     });
 
     return NextResponse.json({ ...createdRecord, content: initialContent }, { status: 201 });

@@ -4,9 +4,17 @@ import { getProjectDocByIdDB, updateProjectDocDB, deleteProjectDocDB } from '@/l
 import fs from 'fs';
 import path from 'path';
 
+const DOCS_DIR = path.join(process.cwd(), 'data', 'docs');
+
+function ensureDocsDir() {
+  if (!fs.existsSync(DOCS_DIR)) {
+    fs.mkdirSync(DOCS_DIR, { recursive: true });
+  }
+}
+
 /**
  * GET /api/projects/[id]/docs/[docId]
- * Read the .md file content from server filesystem
+ * Read the actual .md file content from server filesystem / DB
  */
 export async function GET(
   req: Request,
@@ -19,16 +27,43 @@ export async function GET(
   const { docId } = resolvedParams;
 
   try {
+    ensureDocsDir();
     const doc = await getProjectDocByIdDB(docId);
     if (!doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
+    const localPath = path.join(DOCS_DIR, doc.fileName);
     let content = '';
-    if (doc.filePath && fs.existsSync(doc.filePath)) {
-      content = fs.readFileSync(doc.filePath, 'utf-8');
-    } else {
-      content = `# ${doc.title}\n\nDocument file initialized.`;
+
+    // 1. Try reading from local data/docs/<fileName>
+    if (fs.existsSync(localPath)) {
+      try {
+        content = fs.readFileSync(localPath, 'utf-8');
+      } catch {}
+    }
+
+    // 2. Try doc.filePath if on disk
+    if (!content && doc.filePath && fs.existsSync(doc.filePath)) {
+      try {
+        content = fs.readFileSync(doc.filePath, 'utf-8');
+        if (content) {
+          fs.writeFileSync(localPath, content, 'utf-8');
+        }
+      } catch {}
+    }
+
+    // 3. Try reading from DB content column
+    if (!content && doc.content && typeof doc.content === 'string') {
+      content = doc.content;
+      try {
+        fs.writeFileSync(localPath, content, 'utf-8');
+      } catch {}
+    }
+
+    // 4. Default fallback if still empty
+    if (!content) {
+      content = `# ${doc.title}\n\nDocument initialized.`;
     }
 
     return NextResponse.json({
@@ -42,7 +77,7 @@ export async function GET(
 
 /**
  * PUT /api/projects/[id]/docs/[docId]
- * Update the .md file content on the server filesystem
+ * Update the .md file content on the server filesystem and database
  */
 export async function PUT(
   req: Request,
@@ -55,6 +90,7 @@ export async function PUT(
   const { docId } = resolvedParams;
 
   try {
+    ensureDocsDir();
     const doc = await getProjectDocByIdDB(docId);
     if (!doc) {
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
@@ -62,19 +98,23 @@ export async function PUT(
 
     const body = await req.json();
     const { title, content } = body;
+    const localPath = path.join(DOCS_DIR, doc.fileName);
 
-    // Write updated content to server .md file
-    if (content !== undefined && doc.filePath) {
-      const dir = path.dirname(doc.filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+    // 1. Write updated content to server .md file on disk
+    if (content !== undefined) {
+      try {
+        fs.writeFileSync(localPath, content, 'utf-8');
+      } catch (e: any) {
+        console.warn('Could not write doc to disk:', e.message);
       }
-      fs.writeFileSync(doc.filePath, content, 'utf-8');
     }
 
-    if (title !== undefined && title.trim()) {
-      await updateProjectDocDB(docId, { title: title.trim() });
-    }
+    // 2. Update database record with title, content, and localPath
+    await updateProjectDocDB(docId, {
+      title: title !== undefined ? title.trim() : undefined,
+      content: content !== undefined ? content : undefined,
+      filePath: localPath,
+    });
 
     return NextResponse.json({
       success: true,
@@ -100,17 +140,24 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const resolvedParams = await params;
-  const { docId } = resolvedParams;
+  const { id: projectId, docId } = resolvedParams;
 
   try {
+    ensureDocsDir();
     const doc = await getProjectDocByIdDB(docId);
     if (doc) {
-      if (doc.filePath && fs.existsSync(doc.filePath)) {
+      const localPath = path.join(DOCS_DIR, doc.fileName);
+      if (fs.existsSync(localPath)) {
+        try {
+          fs.unlinkSync(localPath);
+        } catch {}
+      }
+      if (doc.filePath && fs.existsSync(doc.filePath) && doc.filePath !== localPath) {
         try {
           fs.unlinkSync(doc.filePath);
         } catch {}
       }
-      await deleteProjectDocDB(docId);
+      await deleteProjectDocDB(docId, (doc as any).projectId || projectId);
     }
 
     return NextResponse.json({ success: true, id: docId });

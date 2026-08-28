@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Issue, Status, Priority, Subtask } from '@/lib/types';
 import { Avatar } from './ui/Avatar';
+import { TaskContextMenu } from './ui/TaskContextMenu';
 import { 
   FolderTree, 
   ChevronRight, 
@@ -38,6 +39,8 @@ interface TreeViewProps {
   projectKey?: string;
   onSelectIssue: (id: string) => void;
   onUpdateIssueStatus?: (id: string, status: Status) => void;
+  onUpdateIssuePriority?: (id: string, priority: Priority) => void;
+  onDeleteIssue?: (issueId: string) => void;
   onOpenNewIssue?: () => void;
   onToggleSubtask?: (issueId: string, subtaskId: string, nextCompleted: boolean) => void;
   onAddSubtask?: (
@@ -52,6 +55,10 @@ interface TreeViewProps {
   onMoveSubtask?: (subtaskId: string, newParentId: string | null, targetIssueId: string) => void;
   onRenameIssue?: (issueId: string, newTitle: string) => void;
   onRenameEpic?: (oldEpicName: string, newEpicName: string) => void;
+  onMoveTaskToFolder?: (issueId: string, targetFolder: string) => void;
+  onAddTaskToFolder?: (folderName: string, title: string) => void;
+  onReorderTaskInFolder?: (draggedIssueId: string, targetIssueId: string, folderName: string, position: 'before' | 'after') => void;
+  canDelete?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
@@ -98,6 +105,19 @@ function isDescendant(targetSubId: string, node: Subtask): boolean {
     }
   }
   return false;
+}
+
+function extractDroppedIssueId(e: React.DragEvent): string | null {
+  try {
+    const raw = e.dataTransfer.getData('application/json');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.issueId) return parsed.issueId;
+    }
+  } catch {}
+  const plain = e.dataTransfer.getData('text/plain');
+  if (plain && plain.trim()) return plain.trim();
+  return null;
 }
 
 // Infinite Recursive Subtask & Folder Node Component
@@ -181,6 +201,7 @@ const RecursiveSubtaskNode: React.FC<{
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    if (!isFolder) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
@@ -198,6 +219,11 @@ const RecursiveSubtaskNode: React.FC<{
     e.stopPropagation();
     setIsDragOver(false);
 
+    if (!isFolder) {
+      toast.error('Tasks can only be dropped and organized inside a Folder');
+      return;
+    }
+
     try {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       if (!data || !data.subId) return;
@@ -206,13 +232,14 @@ const RecursiveSubtaskNode: React.FC<{
 
       // Prevent dropping a folder into its own child/descendant
       if (isDescendant(data.subId, node)) {
-        toast.error('Cannot move an item into its own child hierarchy');
+        toast.error('Cannot move a folder into its own child hierarchy');
         return;
       }
 
       if (onMoveSubtask) {
         onMoveSubtask(data.subId, node.id, issueId);
         setIsExpanded(true);
+        toast.success(`Task moved inside folder "${node.title}"`);
       }
     } catch {}
   };
@@ -365,29 +392,33 @@ const RecursiveSubtaskNode: React.FC<{
 
         </div>
 
-        {/* Hover Action Buttons: Add Subtask, Add Folder, Delete */}
+        {/* Hover Action Buttons: Only folders can create nested tasks / sub-folders */}
         <div className="flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-opacity shrink-0">
-          <button
-            onClick={() => {
-              setActiveInputType('subtask');
-              setIsExpanded(true);
-            }}
-            className="p-1 hover:bg-[#2A2C30] text-[#787C83] hover:text-[#DCB001] rounded transition-colors"
-            title="Add Nested Subtask"
-          >
-            <Plus size={11} />
-          </button>
+          {isFolder && (
+            <>
+              <button
+                onClick={() => {
+                  setActiveInputType('subtask');
+                  setIsExpanded(true);
+                }}
+                className="p-1 hover:bg-[#2A2C30] text-[#787C83] hover:text-[#DCB001] rounded transition-colors"
+                title="Add Task Inside Folder"
+              >
+                <Plus size={11} />
+              </button>
 
-          <button
-            onClick={() => {
-              setActiveInputType('folder');
-              setIsExpanded(true);
-            }}
-            className="p-1 hover:bg-[#2A2C30] text-[#787C83] hover:text-[#DCB001] rounded transition-colors"
-            title="Add Nested Folder"
-          >
-            <FolderPlus size={11} />
-          </button>
+              <button
+                onClick={() => {
+                  setActiveInputType('folder');
+                  setIsExpanded(true);
+                }}
+                className="p-1 hover:bg-[#2A2C30] text-[#787C83] hover:text-[#DCB001] rounded transition-colors"
+                title="Add Sub-folder Inside Folder"
+              >
+                <FolderPlus size={11} />
+              </button>
+            </>
+          )}
 
           {onDeleteSubtask && (
             <button
@@ -475,6 +506,8 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   projectKey = 'PRJ',
   onSelectIssue,
   onUpdateIssueStatus,
+  onUpdateIssuePriority,
+  onDeleteIssue,
   onOpenNewIssue,
   onToggleSubtask,
   onAddSubtask,
@@ -483,31 +516,108 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   onMoveSubtask,
   onRenameIssue,
   onRenameEpic,
+  onMoveTaskToFolder,
+  onAddTaskToFolder,
+  onReorderTaskInFolder,
+  canDelete = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
   const [expandedEpics, setExpandedEpics] = useState<Record<string, boolean>>({});
   const [expandedIssues, setExpandedIssues] = useState<Record<string, boolean>>({});
-  const [activeNewRootSubtask, setActiveNewRootSubtask] = useState<{ issueId: string; type: 'subtask' | 'folder' } | null>(null);
-  const [newRootInputTitle, setNewRootInputTitle] = useState('');
+  const [activeFolderTaskInput, setActiveFolderTaskInput] = useState<string | null>(null);
+  const [newTaskInFolderTitle, setNewTaskInFolderTitle] = useState('');
+  const [dragOverTask, setDragOverTask] = useState<{ issueId: string; position: 'before' | 'after' } | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    issue: Issue | null;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    issue: null,
+  });
 
   // Editing state for Epics & Task titles
   const [editingEpicName, setEditingEpicName] = useState<string | null>(null);
   const [editingEpicValue, setEditingEpicValue] = useState('');
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [editingIssueTitleValue, setEditingIssueTitleValue] = useState('');
-  const [dragOverIssueRootId, setDragOverIssueRootId] = useState<string | null>(null);
+  const [dragOverEpic, setDragOverEpic] = useState<string | null>(null);
 
-  // Group issues into Epics/Domains
+  // Group issues into Epics/Domains with "General" as default common folder
   const epicGroups = useMemo(() => {
-    const groups: Record<string, Issue[]> = {};
+    const groups: Record<string, Issue[]> = {
+      'General': [], // Always common & undeletable default folder
+    };
 
+    const isFolderEntity = (i: Issue) => {
+      return (
+        (i.labels && i.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
+        i.title.startsWith('📁 ') ||
+        i.title.startsWith('[Folder]')
+      );
+    };
+
+    const getFolderCleanName = (i: Issue) => {
+      if (i.epic && i.epic !== 'General') return i.epic.trim();
+      return i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
+    };
+
+    // 1. First register any explicit folder entities as folder containers
     issues.forEach((issue) => {
-      const epicName = issue.epic || 'General Tasks';
-      if (!groups[epicName]) {
-        groups[epicName] = [];
+      if (isFolderEntity(issue)) {
+        const name = getFolderCleanName(issue);
+        if (name && !groups[name]) {
+          groups[name] = [];
+        }
       }
-      groups[epicName].push(issue);
+    });
+
+    // 2. Also register any custom epics referenced on issues
+    issues.forEach((issue) => {
+      if (issue.epic && issue.epic.trim() && !groups[issue.epic.trim()]) {
+        groups[issue.epic.trim()] = [];
+      }
+    });
+
+    // 3. Now place actual tasks into their respective folders
+    issues.forEach((issue) => {
+      if (isFolderEntity(issue)) {
+        // If the folder issue itself has subtasks, insert them as child tasks of that folder
+        if (issue.subtasks && Array.isArray(issue.subtasks)) {
+          const folderName = getFolderCleanName(issue);
+          issue.subtasks.forEach((st: any) => {
+            if (st.title) {
+              const syntheticTask: Issue = {
+                id: st.id || `st_${Date.now()}`,
+                key: `${issue.key || 'TASK'}-${st.id?.slice(-3) || '1'}`,
+                title: st.title,
+                description: '',
+                labels: [],
+                subtasks: [],
+                status: st.completed ? 'done' : 'todo',
+                priority: 'medium',
+                epic: folderName,
+                project: issue.project,
+                projectId: issue.projectId,
+                createdAt: issue.createdAt,
+                updatedAt: issue.updatedAt,
+              };
+              if (groups[folderName] && !groups[folderName].some((t) => t.id === syntheticTask.id)) {
+                groups[folderName].push(syntheticTask);
+              }
+            }
+          });
+        }
+        return;
+      }
+      const targetFolder = issue.epic && issue.epic.trim() ? issue.epic.trim() : 'General';
+      if (!groups[targetFolder]) {
+        groups[targetFolder] = [];
+      }
+      groups[targetFolder].push(issue);
     });
 
     return groups;
@@ -555,6 +665,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   };
 
   const handleSaveEpicRename = (oldName: string) => {
+    if (oldName.toLowerCase() === 'general' || oldName.toLowerCase() === 'general tasks') {
+      toast.info('The "General" folder is the common default folder and cannot be modified.');
+      setEditingEpicName(null);
+      return;
+    }
     const trimmed = editingEpicValue.trim();
     if (trimmed && trimmed !== oldName && onRenameEpic) {
       onRenameEpic(oldName, trimmed);
@@ -598,31 +713,6 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   }, [issues]);
 
   const overallProgressPercent = totalCounts.total > 0 ? Math.round((totalCounts.completed / totalCounts.total) * 100) : 0;
-
-  const handleRootSubtaskSubmit = (issueId: string) => {
-    const text = newRootInputTitle.trim();
-    if (!text || !activeNewRootSubtask || !onAddSubtask) return;
-    onAddSubtask(issueId, text, null, activeNewRootSubtask.type === 'folder', activeNewRootSubtask.type);
-    setNewRootInputTitle('');
-    setActiveNewRootSubtask(null);
-  };
-
-  // Handle Drop onto Task Root Zone
-  const handleDropToTaskRoot = (e: React.DragEvent, targetIssueId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverIssueRootId(null);
-
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
-      if (!data || !data.subId) return;
-
-      if (onMoveSubtask) {
-        onMoveSubtask(data.subId, null, targetIssueId);
-        setExpandedIssues((prev) => ({ ...prev, [targetIssueId]: true }));
-      }
-    } catch {}
-  };
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#0F1011] overflow-hidden">
@@ -721,13 +811,23 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
           </button>
 
           {onOpenNewIssue && (
-            <button
-              onClick={onOpenNewIssue}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded shadow-sm transition-all shrink-0"
-            >
-              <Plus size={13} />
-              <span>New Task</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={onOpenNewIssue}
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#1A1B1D] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] font-bold text-xs rounded transition-all shrink-0"
+                title="Create New Folder / Group"
+              >
+                <FolderPlus size={13} />
+                <span>+ Folder</span>
+              </button>
+              <button
+                onClick={onOpenNewIssue}
+                className="flex items-center gap-1 px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded shadow-sm transition-all shrink-0"
+              >
+                <Plus size={13} />
+                <span>New Task</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -764,12 +864,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
           {/* TREE LEVEL 1: Epics & Domains */}
           <div className="relative pl-4 sm:pl-6 border-l-2 border-[#2A2C30] ml-4 sm:ml-6 space-y-4">
             {epicNames.map((epicName) => {
-              const epicIssues = epicGroups[epicName].filter((i) =>
-                filteredIssues.some((fi) => fi.id === i.id)
+              const isFiltering = searchQuery.trim() !== '' || statusFilter !== 'all';
+              const epicIssues = (epicGroups[epicName] || []).filter((i) =>
+                !isFiltering ? true : filteredIssues.some((fi) => fi.id === i.id)
               );
 
-              // Hide empty epics if filtered
-              if (filteredIssues.length > 0 && epicIssues.length === 0) return null;
+              // Only hide empty folder if user is actively searching/filtering and neither tasks nor folder name match
+              if (
+                isFiltering &&
+                epicIssues.length === 0 &&
+                !epicName.toLowerCase().includes(searchQuery.toLowerCase())
+              ) {
+                return null;
+              }
 
               const isEpicExpanded = expandedEpics[epicName] ?? true;
               let epicTotal = 0;
@@ -781,18 +888,44 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               });
               const epicProgress = epicTotal > 0 ? Math.round((epicDone / epicTotal) * 100) : 0;
               const isEditingThisEpic = editingEpicName === epicName;
+              const isGeneralFolder = epicName.toLowerCase() === 'general' || epicName.toLowerCase() === 'general tasks';
 
               return (
                 <div key={epicName} className="relative group/epic">
                   {/* Branch Connector Guide */}
                   <div className="absolute -left-4 sm:-left-6 top-4 w-4 sm:w-6 h-[2px] bg-[#2A2C30] group-hover/epic:bg-[#DCB001]/60 transition-colors" />
 
-                  {/* Epic Node Banner */}
+                  {/* Epic / Folder Node Banner */}
                   <div
                     onClick={() => {
                       if (!isEditingThisEpic) toggleEpic(epicName);
                     }}
-                    className="flex items-center justify-between p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-lg cursor-pointer transition-all shadow-sm group"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverEpic(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverEpic(null);
+                      const droppedId = extractDroppedIssueId(e);
+                      if (droppedId && onMoveTaskToFolder) {
+                        onMoveTaskToFolder(droppedId, epicName);
+                        setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                      }
+                    }}
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all shadow-sm group ${
+                      dragOverEpic === epicName
+                        ? 'bg-[#DCB001]/20 border-2 border-dashed border-[#DCB001] scale-[1.01]'
+                        : 'bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40'
+                    }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <button
@@ -810,7 +943,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       </div>
 
                       {/* Inline Epic Rename */}
-                      {isEditingThisEpic ? (
+                      {isEditingThisEpic && !isGeneralFolder ? (
                         <div
                           className="flex items-center gap-1 flex-1 max-w-sm"
                           onClick={(e) => e.stopPropagation()}
@@ -839,26 +972,36 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           <span
                             onDoubleClick={(e) => {
                               e.stopPropagation();
+                              if (isGeneralFolder) {
+                                toast.info('General is the default common folder and cannot be renamed.');
+                                return;
+                              }
                               setEditingEpicValue(epicName);
                               setEditingEpicName(epicName);
                             }}
                             className="font-bold text-xs md:text-sm text-[#CFD4DD] group-hover:text-white truncate"
-                            title="Double click to rename epic"
+                            title={isGeneralFolder ? 'General (Default Common Folder)' : 'Double click to rename folder'}
                           >
                             {epicName}
                           </span>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingEpicValue(epicName);
-                              setEditingEpicName(epicName);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 text-[#787C83] hover:text-[#DCB001] transition-opacity"
-                            title="Rename Epic"
-                          >
-                            <Pencil size={11} />
-                          </button>
+                          {isGeneralFolder ? (
+                            <span className="text-[9px] font-mono text-[#DCB001] bg-[#DCB001]/10 border border-[#DCB001]/30 px-1.5 py-0.2 rounded font-bold shrink-0">
+                              DEFAULT
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingEpicValue(epicName);
+                                setEditingEpicName(epicName);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#787C83] hover:text-[#DCB001] transition-opacity"
+                              title="Rename Folder"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          )}
                         </div>
                       )}
 
@@ -868,69 +1011,228 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      {epicTotal > 0 && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#787C83] bg-[#17181A] border border-[#2A2C30] px-2 py-0.5 rounded">
-                          <span>{epicDone}/{epicTotal} subtasks</span>
-                          <span className="text-[#22C55E] font-bold">({epicProgress}%)</span>
-                        </div>
+                      {dragOverEpic === epicName ? (
+                        <span className="text-[11px] font-bold text-[#DCB001] font-mono animate-pulse">
+                          Drop to move here &darr;
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                            setActiveFolderTaskInput((prev) => (prev === epicName ? null : epicName));
+                          }}
+                          className="flex items-center gap-1 px-2 py-0.5 bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] text-[11px] font-medium rounded transition-colors"
+                          title={`Create new task inside folder "${epicName}"`}
+                        >
+                          <Plus size={11} />
+                          <span>Task</span>
+                        </button>
                       )}
                     </div>
                   </div>
 
-                  {/* TREE LEVEL 2: Tasks within Epic */}
+                  {/* Inline + Task Input inside Folder */}
+                  {activeFolderTaskInput === epicName && (
+                    <div className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5">
+                      <div className="flex items-center gap-2 bg-[#17181A] border border-[#DCB001]/60 rounded-lg p-2 shadow-sm">
+                        <FileCode size={13} className="text-[#DCB001] shrink-0" />
+                        <input
+                          type="text"
+                          placeholder={`Enter task title inside folder "${epicName}"...`}
+                          value={newTaskInFolderTitle}
+                          onChange={(e) => setNewTaskInFolderTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
+                                onAddTaskToFolder(epicName, newTaskInFolderTitle.trim());
+                                setNewTaskInFolderTitle('');
+                                setActiveFolderTaskInput(null);
+                              }
+                            }
+                            if (e.key === 'Escape') {
+                              setActiveFolderTaskInput(null);
+                              setNewTaskInFolderTitle('');
+                            }
+                          }}
+                          autoFocus
+                          className="flex-1 bg-transparent text-xs text-white placeholder-[#787C83] outline-none"
+                        />
+                        <button
+                          onClick={() => {
+                            if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
+                              onAddTaskToFolder(epicName, newTaskInFolderTitle.trim());
+                              setNewTaskInFolderTitle('');
+                              setActiveFolderTaskInput(null);
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded transition-colors"
+                        >
+                          Add Task
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveFolderTaskInput(null);
+                            setNewTaskInFolderTitle('');
+                          }}
+                          className="px-2 py-1 text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TREE LEVEL 2: Tasks within Folder */}
                   <AnimatePresence>
                     {isEpicExpanded && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5 space-y-2.5"
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                        }}
+                        onDragLeave={() => {
+                          setDragOverEpic(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDragOverEpic(null);
+                          const droppedId = extractDroppedIssueId(e);
+                          if (droppedId && onMoveTaskToFolder) {
+                            onMoveTaskToFolder(droppedId, epicName);
+                            setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                          }
+                        }}
+                        className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5 space-y-2.5 min-h-[30px]"
                       >
+                        {/* Empty Folder Drop Hint */}
+                        {epicIssues.length === 0 && (
+                          <div
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                            }}
+                            onDragLeave={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDragOverEpic(null);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setDragOverEpic(null);
+                              const droppedId = extractDroppedIssueId(e);
+                              if (droppedId && onMoveTaskToFolder) {
+                                onMoveTaskToFolder(droppedId, epicName);
+                                setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                              }
+                            }}
+                            className={`py-3 px-3 border border-dashed rounded-lg text-center text-xs font-mono transition-all ${
+                              dragOverEpic === epicName
+                                ? 'border-[#DCB001] bg-[#DCB001]/10 text-[#DCB001]'
+                                : 'border-[#2A2C30] text-[#787C83]'
+                            }`}
+                          >
+                            <span>📁 Folder is empty. Drag and drop tasks here or </span>
+                            <button
+                              onClick={() => {
+                                setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                                setActiveFolderTaskInput(epicName);
+                              }}
+                              className="text-[#DCB001] underline ml-1 font-bold hover:text-white"
+                            >
+                              create a new task
+                            </button>
+                          </div>
+                        )}
+
                         {epicIssues.map((issue) => {
-                          const isIssueExpanded = expandedIssues[issue.id] ?? true;
-                          const subtasks = issue.subtasks || [];
-                          const issueCounts = countNestedSubtasks(subtasks);
                           const statusCfg = STATUS_CONFIG[issue.status] || STATUS_CONFIG.todo;
                           const priorityCfg = PRIORITY_CONFIG[issue.priority] || PRIORITY_CONFIG.medium;
                           const isEditingThisIssue = editingIssueId === issue.id;
-                          const isRootDragOver = dragOverIssueRootId === issue.id;
+                          const isHoveredBefore = dragOverTask?.issueId === issue.id && dragOverTask.position === 'before';
+                          const isHoveredAfter = dragOverTask?.issueId === issue.id && dragOverTask.position === 'after';
 
                           return (
                             <div key={issue.id} className="relative group/task">
+                              {/* Top insertion line */}
+                              {isHoveredBefore && (
+                                <div className="absolute -top-1.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full z-20 shadow-[0_0_8px_#DCB001]" />
+                              )}
+
                               {/* Branch Connector Guide */}
                               <div className="absolute -left-5 sm:-left-7 top-4 w-5 sm:w-7 h-[2px] bg-[#2A2C30] group-hover/task:bg-[#DCB001]/70 transition-colors" />
 
-                              {/* Task Card Node */}
+                              {/* Task Card Leaf Node */}
                               <div
+                                draggable={!isEditingThisIssue}
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', issue.id);
+                                  e.dataTransfer.setData(
+                                    'application/json',
+                                    JSON.stringify({
+                                      issueId: issue.id,
+                                      currentEpic: issue.epic || 'General',
+                                    })
+                                  );
+                                  e.dataTransfer.effectAllowed = 'move';
+                                }}
                                 onDragOver={(e) => {
                                   e.preventDefault();
-                                  if (dragOverIssueRootId !== issue.id) setDragOverIssueRootId(issue.id);
+                                  e.stopPropagation();
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const midY = rect.top + rect.height / 2;
+                                  const pos = e.clientY < midY ? 'before' : 'after';
+                                  if (!dragOverTask || dragOverTask.issueId !== issue.id || dragOverTask.position !== pos) {
+                                    setDragOverTask({ issueId: issue.id, position: pos });
+                                  }
                                 }}
                                 onDragLeave={() => {
-                                  if (dragOverIssueRootId === issue.id) setDragOverIssueRootId(null);
+                                  setDragOverTask(null);
                                 }}
-                                onDrop={(e) => handleDropToTaskRoot(e, issue.id)}
-                                className={`bg-[#17181A] border transition-all shadow-sm rounded-lg p-2.5 ${
-                                  isRootDragOver
-                                    ? 'border-2 border-dashed border-[#DCB001] bg-[#DCB001]/10'
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const pos = dragOverTask?.position || 'after';
+                                  setDragOverTask(null);
+                                  setDragOverEpic(null);
+                                  const droppedId = extractDroppedIssueId(e);
+                                  if (droppedId) {
+                                    if (onReorderTaskInFolder) {
+                                      onReorderTaskInFolder(droppedId, issue.id, epicName, pos);
+                                    } else if (onMoveTaskToFolder) {
+                                      onMoveTaskToFolder(droppedId, epicName);
+                                    }
+                                    setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                                  }
+                                }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setContextMenu({
+                                    isOpen: true,
+                                    position: { x: e.clientX, y: e.clientY },
+                                    issue,
+                                  });
+                                }}
+                                className={`bg-[#17181A] border transition-all shadow-sm rounded-lg p-2.5 select-none cursor-grab active:cursor-grabbing ${
+                                  isHoveredBefore || isHoveredAfter
+                                    ? 'border-[#DCB001] bg-[#DCB001]/10'
                                     : 'border-[#2A2C30] hover:border-[#DCB001]/50'
                                 }`}
                               >
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  {/* Left: Expand, Key, Title, Priority */}
+                                  {/* Left: Drag grip, File icon, Key, Title, Priority */}
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    {subtasks.length > 0 ? (
-                                      <button
-                                        onClick={() => toggleIssue(issue.id)}
-                                        className="text-[#787C83] hover:text-[#DCB001] p-0.5 transition-colors"
-                                      >
-                                        {isIssueExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                                      </button>
-                                    ) : (
-                                      <span className="w-4 h-4 flex items-center justify-center text-[#787C83]">
-                                        <FileCode size={11} />
-                                      </span>
-                                    )}
+                                    <GripVertical size={13} className="text-[#787C83] hover:text-[#DCB001] shrink-0 opacity-0 group-hover/task:opacity-100 transition-opacity cursor-grab" />
+                                    <span className="w-4 h-4 flex items-center justify-center text-[#787C83] shrink-0">
+                                      <FileCode size={12} />
+                                    </span>
 
                                     {/* Issue Key */}
                                     <button
@@ -1000,28 +1302,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                     )}
                                   </div>
 
-                                  {/* Right: Status Pill, Subtask Count & Assignee */}
+                                  {/* Right: Status Pill, Assignee & Actions */}
                                   <div className="flex items-center gap-2 shrink-0">
                                     {/* Status Switcher Dropdown */}
-                                    <div className="flex items-center gap-1">
-                                      <select
-                                        value={issue.status}
-                                        onChange={(e) => onUpdateIssueStatus && onUpdateIssueStatus(issue.id, e.target.value as Status)}
-                                        className={`text-[11px] font-semibold px-2 py-0.5 rounded border outline-none cursor-pointer bg-[#131415] ${statusCfg.text} ${statusCfg.border}`}
-                                      >
-                                        <option value="todo">Todo</option>
-                                        <option value="in_progress">In Progress</option>
-                                        <option value="needs_review">Needs Review</option>
-                                        <option value="done">Done</option>
-                                      </select>
-                                    </div>
-
-                                    {/* Subtasks Count Badge */}
-                                    {issueCounts.total > 0 && (
-                                      <span className="text-[10px] font-mono px-1.5 py-0.5 bg-[#131415] border border-[#2A2C30] rounded text-[#787C83]">
-                                        {issueCounts.completed}/{issueCounts.total}
-                                      </span>
-                                    )}
+                                    <select
+                                      value={issue.status}
+                                      onChange={(e) => onUpdateIssueStatus && onUpdateIssueStatus(issue.id, e.target.value as Status)}
+                                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border outline-none cursor-pointer bg-[#131415] ${statusCfg.text} ${statusCfg.border}`}
+                                    >
+                                      <option value="todo">Todo</option>
+                                      <option value="in_progress">In Progress</option>
+                                      <option value="needs_review">Needs Review</option>
+                                      <option value="done">Done</option>
+                                    </select>
 
                                     {/* Assignee Avatar */}
                                     {issue.assignee && (
@@ -1030,115 +1323,27 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                       </div>
                                     )}
 
-                                    {/* Quick + Subtask button */}
-                                    <button
-                                      onClick={() => {
-                                        setExpandedIssues((prev) => ({ ...prev, [issue.id]: true }));
-                                        setActiveNewRootSubtask(
-                                          activeNewRootSubtask?.issueId === issue.id && activeNewRootSubtask.type === 'subtask'
-                                            ? null
-                                            : { issueId: issue.id, type: 'subtask' }
-                                        );
-                                      }}
-                                      className="p-1 hover:bg-[#2A2C30] rounded text-[#787C83] hover:text-[#DCB001] transition-colors"
-                                      title="Add Sub-work Item"
-                                    >
-                                      <Plus size={12} />
-                                    </button>
-
-                                    {/* Quick + Folder button */}
-                                    <button
-                                      onClick={() => {
-                                        setExpandedIssues((prev) => ({ ...prev, [issue.id]: true }));
-                                        setActiveNewRootSubtask(
-                                          activeNewRootSubtask?.issueId === issue.id && activeNewRootSubtask.type === 'folder'
-                                            ? null
-                                            : { issueId: issue.id, type: 'folder' }
-                                        );
-                                      }}
-                                      className="p-1 hover:bg-[#2A2C30] rounded text-[#787C83] hover:text-[#DCB001] transition-colors"
-                                      title="Add Folder Container"
-                                    >
-                                      <FolderPlus size={12} />
-                                    </button>
+                                    {/* Delete Task Button */}
+                                    {canDelete && onDeleteIssue && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onDeleteIssue(issue.id);
+                                        }}
+                                        className="opacity-0 group-hover/task:opacity-100 p-1 hover:bg-[#EF4444]/15 rounded text-[#787C83] hover:text-[#EF4444] transition-all"
+                                        title="Delete Task"
+                                      >
+                                        <Trash2 size={11} />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
-
-                                {/* Drag Drop Hint Bar when hovering task */}
-                                {isRootDragOver && (
-                                  <div className="mt-2 py-1 px-2.5 bg-[#DCB001]/15 border border-[#DCB001]/40 rounded text-center text-xs font-mono text-[#DCB001] flex items-center justify-center gap-1.5">
-                                    <CornerDownRight size={12} />
-                                    <span>Drop here to move item to task root (no parent)</span>
-                                  </div>
-                                )}
-
-                                {/* TREE LEVEL 3+: Infinite Recursive Nested Subtasks & Folders */}
-                                <AnimatePresence>
-                                  {isIssueExpanded && (subtasks.length > 0 || activeNewRootSubtask?.issueId === issue.id) && (
-                                    <motion.div
-                                      initial={{ opacity: 0, height: 0 }}
-                                      animate={{ opacity: 1, height: 'auto' }}
-                                      exit={{ opacity: 0, height: 0 }}
-                                      className="pl-5 sm:pl-6 border-l-2 border-[#2A2C30]/50 ml-2 mt-2 pt-1 space-y-1.5"
-                                    >
-                                      {subtasks.map((subtask) => (
-                                        <RecursiveSubtaskNode
-                                          key={subtask.id}
-                                          node={subtask}
-                                          issueId={issue.id}
-                                          level={1}
-                                          onToggleSubtask={onToggleSubtask}
-                                          onAddSubtask={onAddSubtask}
-                                          onDeleteSubtask={onDeleteSubtask}
-                                          onRenameSubtask={onRenameSubtask}
-                                          onMoveSubtask={onMoveSubtask}
-                                        />
-                                      ))}
-
-                                      {/* Inline New Root Subtask / Folder Input */}
-                                      {activeNewRootSubtask?.issueId === issue.id && (
-                                        <div className="flex items-center gap-2 pt-1">
-                                          <div className="flex items-center gap-1 bg-[#131415] border border-[#DCB001]/60 rounded px-2 py-0.5 flex-1">
-                                            {activeNewRootSubtask.type === 'folder' ? (
-                                              <Folder size={11} className="text-[#DCB001] shrink-0" />
-                                            ) : (
-                                              <Square size={11} className="text-[#787C83] shrink-0" />
-                                            )}
-                                            <input
-                                              type="text"
-                                              placeholder={
-                                                activeNewRootSubtask.type === 'folder'
-                                                  ? 'Enter folder name...'
-                                                  : 'Enter sub-work item...'
-                                              }
-                                              value={newRootInputTitle}
-                                              onChange={(e) => setNewRootInputTitle(e.target.value)}
-                                              onKeyDown={(e) => {
-                                                if (e.key === 'Enter') handleRootSubtaskSubmit(issue.id);
-                                                if (e.key === 'Escape') setActiveNewRootSubtask(null);
-                                              }}
-                                              autoFocus
-                                              className="w-full bg-transparent text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none"
-                                            />
-                                          </div>
-                                          <button
-                                            onClick={() => handleRootSubtaskSubmit(issue.id)}
-                                            className="px-2 py-0.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded"
-                                          >
-                                            Add
-                                          </button>
-                                          <button
-                                            onClick={() => setActiveNewRootSubtask(null)}
-                                            className="px-1.5 py-0.5 text-xs text-[#787C83] hover:text-[#CFD4DD]"
-                                          >
-                                            Cancel
-                                          </button>
-                                        </div>
-                                      )}
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
                               </div>
+
+                              {/* Bottom insertion line */}
+                              {isHoveredAfter && (
+                                <div className="absolute -bottom-1.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full z-20 shadow-[0_0_8px_#DCB001]" />
+                              )}
                             </div>
                           );
                         })}
@@ -1160,6 +1365,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
           )}
         </div>
       </div>
+
+      {/* Task Right-Click Context Menu */}
+      <TaskContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        issue={contextMenu.issue}
+        onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
+        onEdit={(issue) => onSelectIssue(issue.id)}
+        onDelete={onDeleteIssue}
+        onUpdateStatus={onUpdateIssueStatus}
+        onUpdatePriority={onUpdateIssuePriority}
+        canDelete={canDelete}
+      />
     </div>
   );
 });

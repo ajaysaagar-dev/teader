@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateIssueStatusDB } from '@/lib/db';
+import { updateIssueStatusDB, deleteIssueDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { parseBody, UpdateIssueSchema } from '@/lib/validation';
 
@@ -25,6 +25,22 @@ export async function PATCH(
       ...data,
     });
 
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSessionFromCookie();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const resolvedParams = await params;
+  try {
+    await deleteIssueDB(resolvedParams.id);
+    return NextResponse.json({ success: true, id: resolvedParams.id });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

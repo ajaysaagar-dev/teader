@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import {
   MessageSquare,
@@ -54,9 +55,36 @@ const DEFAULT_CHANNELS: Channel[] = [
 const EMOJIS = ['🚀', '⚡', '🔥', '✅', '👏', '🎉', '💡', '🤖', '👀', '❤️'];
 
 export default function ConversationsPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const initialChannel = searchParams?.get('channel') || 'general';
+  const initialProjectId = searchParams?.get('project') ? Number(searchParams.get('project')) : null;
+
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [activeChannel, setActiveChannel] = useState<string>('general');
+  const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(initialProjectId);
+  const [activeChannel, setActiveChannelState] = useState<string>(initialChannel);
+
+  const setActiveChannel = useCallback((ch: string) => {
+    setActiveChannelState(ch);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('channel', ch);
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  }, []);
+
+  const setSelectedProjectId = useCallback((projId: number | null) => {
+    setSelectedProjectIdState(projId);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (projId !== null) {
+        url.searchParams.set('project', String(projId));
+      } else {
+        url.searchParams.delete('project');
+      }
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  }, []);
   const [channels, setChannels] = useState<Channel[]>(DEFAULT_CHANNELS);
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
   const [members, setMembers] = useState<Member[]>([]);

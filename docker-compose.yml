@@ -1,4 +1,27 @@
+version: '3.8'
+
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: teader_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-teader_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teader_secret}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-teader_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-teader_user} -d $${POSTGRES_DB:-teader_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teader-net
+
   teader:
     build:
       context: .
@@ -7,15 +30,30 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - POSTGRES_HOST=178.238.226.206
+      - HOSTNAME=0.0.0.0
+      - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=ajaysaagar
-      - POSTGRES_PASSWORD=aass209c
-      - POSTGRES_DATABASE=ajaysaagar
-      - DATABASE_URL=postgresql://ajaysaagar:aass209c@178.238.226.206:5432/ajaysaagar
-      - JWT_SECRET=0c51217d7a628ef407f4af35b6e7d6560051e7ef41582dac2121fafdf459c03f2c119fd8a202d1681e7bc99b20d5fb1cb02b55baaa2f256ae0b34cca6e121b0e
+      - POSTGRES_USER=${POSTGRES_USER:-teader_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-teader_secret}
+      - POSTGRES_DATABASE=${POSTGRES_DATABASE:-teader_db}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-teader_user}:${POSTGRES_PASSWORD:-teader_secret}@postgres:5432/${POSTGRES_DATABASE:-teader_db}
+      - JWT_SECRET=${JWT_SECRET:-0c51217d7a628ef407f4af35b6e7d6560051e7ef41582dac2121fafdf459c03f2c119fd8a202d1681e7bc99b20d5fb1cb02b55baaa2f256ae0b34cca6e121b0e}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
     volumes:
       - ./data:/app/data
+    networks:
+      - teader-net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  teader-net:
+    driver: bridge

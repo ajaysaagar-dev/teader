@@ -76,12 +76,21 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
     const map = new Map<string, { id: string; title: string; subtitle?: string; issues: Issue[] }>();
 
     if (groupBy === 'epic') {
+      map.set('General', { id: 'General', title: 'General', subtitle: 'Default Common Folder', issues: [] });
       filteredIssues.forEach((issue) => {
-        const epicName = issue.epic || 'General / Core Tasks';
-        if (!map.has(epicName)) {
-          map.set(epicName, { id: epicName, title: epicName, subtitle: 'Epic / Feature Group', issues: [] });
+        const isFolder =
+          (issue.labels && issue.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
+          issue.title.startsWith('📁 ');
+        const folderName = isFolder
+          ? (issue.epic || issue.title.replace(/^📁\s*/, '').trim())
+          : (issue.epic || 'General');
+
+        if (!map.has(folderName)) {
+          map.set(folderName, { id: folderName, title: folderName, subtitle: 'Folder / Group', issues: [] });
         }
-        map.get(epicName)!.issues.push(issue);
+        if (!isFolder) {
+          map.get(folderName)!.issues.push(issue);
+        }
       });
     } else if (groupBy === 'status') {
       const statusOrder: { id: Status; title: string }[] = [

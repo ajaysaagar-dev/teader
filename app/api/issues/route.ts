@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const issues = await getAllIssuesDB();
+    const issues = await getAllIssuesDB(session.id);
     return NextResponse.json(issues);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

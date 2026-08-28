@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AppLayout } from '@/components/AppLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { WorkspaceSplashScreen } from '@/components/WorkspaceSplashScreen';
 import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
-import { Issue, Status } from '@/lib/types';
+import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
 
 
@@ -104,10 +105,6 @@ const NewIssueModal = dynamic(
   () => import('@/components/NewIssueModal').then((m) => ({ default: m.NewIssueModal })),
   { ssr: false }
 );
-const AutomationsModal = dynamic(
-  () => import('@/components/AutomationsModal').then((m) => ({ default: m.AutomationsModal })),
-  { ssr: false }
-);
 const ImportTasksModal = dynamic(
   () => import('@/components/ImportTasksModal').then((m) => ({ default: m.ImportTasksModal })),
   { ssr: false }
@@ -146,11 +143,16 @@ function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev'
   return 'overview';
 }
 
+// Module memory to prevent re-triggering splash screen on tab switches within the same project
+const initializedProjects = new Set<string>();
+
 export default function SingleProjectPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectIdParam = params?.id as string;
   const viewParam = params?.view as string | undefined;
+  const taskQuery = searchParams?.get('task');
 
   const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings'>(() => parseViewTab(viewParam));
 
@@ -160,50 +162,59 @@ export default function SingleProjectPage() {
     }
   }, [viewParam]);
 
+  // Handle browser back/forward buttons smoothly without page reload
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const segments = window.location.pathname.split('/');
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment && lastSegment !== projectIdParam) {
+          setActiveTab(parseViewTab(lastSegment));
+        } else {
+          setActiveTab('overview');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [projectIdParam]);
+
   const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => {
     setActiveTab(newTab);
-    router.push(`/projects/${projectIdParam}/${newTab}`);
-  }, [projectIdParam, router]);
-
-
-
-
-
+    if (typeof window !== 'undefined') {
+      const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
+      window.history.pushState(null, '', `/projects/${projectIdParam}/${newTab}${search}`);
+    }
+  }, [projectIdParam, searchParams]);
 
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(taskQuery || null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate from client cache immediately on mount (100% hydration mismatch-safe)
+  // Sync selected task from URL query param
   useEffect(() => {
-    const cachedIssues = getLocalCache<Issue[]>(`issues_${projectIdParam}`, []);
-    const cachedProj = getLocalCache<ProjectItem | null>(`project_${projectIdParam}`, null);
-    if (cachedIssues && cachedIssues.length > 0) {
-      setIssues(cachedIssues);
-      setLoading(false);
+    if (taskQuery && taskQuery !== selectedIssueId) {
+      setSelectedIssueId(taskQuery);
+    } else if (!taskQuery && selectedIssueId && !searchParams?.has('task')) {
+      // Keep state in sync
     }
-    if (cachedProj) {
-      setProject(cachedProj);
+  }, [taskQuery, selectedIssueId, searchParams]);
+
+  const handleSelectIssue = useCallback((id: string | null) => {
+    setSelectedIssueId(id);
+    if (typeof window !== 'undefined') {
+      const currentUrl = new URL(window.location.href);
+      if (id) {
+        currentUrl.searchParams.set('task', id);
+      } else {
+        currentUrl.searchParams.delete('task');
+      }
+      window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
     }
-  }, [projectIdParam]);
-
-  // Sync state to local cache immediately on any mutation
-  useEffect(() => {
-    if (issues.length > 0) {
-      setLocalCache(`issues_${projectIdParam}`, issues);
-    }
-  }, [issues, projectIdParam]);
-
-  useEffect(() => {
-    if (project) {
-      setLocalCache(`project_${projectIdParam}`, project);
-    }
-  }, [project, projectIdParam]);
-
-
+  }, []);
 
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
@@ -214,7 +225,6 @@ export default function SingleProjectPage() {
   const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [isLeaveProjectModalOpen, setIsLeaveProjectModalOpen] = useState(false);
   const [isLeavingProject, setIsLeavingProject] = useState(false);
-  const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
   const [isImportTasksModalOpen, setIsImportTasksModalOpen] = useState(false);
 
   // Delete Project Handler
@@ -361,14 +371,23 @@ export default function SingleProjectPage() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
+  // Splash Screen States: only show on initial opening of project, never when switching tabs
+  const isAlreadyLoaded = initializedProjects.has(String(projectIdParam).toLowerCase());
+  const [isInitialLoading, setIsInitialLoading] = useState(!isAlreadyLoaded);
+  const [splashStep, setSplashStep] = useState(1);
+  const [splashMessage, setSplashMessage] = useState('Verifying user authentication...');
+
   const isFetchingRef = useRef(false);
 
-  // Real-time Fetching & User Session
+  // Real-time Fetching & User Session with Splash Steps
   const fetchProjectData = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
 
     try {
+      // Step 1: Verify User Session
+      setSplashStep(1);
+      setSplashMessage('Verifying user authentication...');
       const meRes = await fetch('/api/auth/me');
       if (meRes.ok) {
         const meData = await meRes.json();
@@ -383,7 +402,9 @@ export default function SingleProjectPage() {
         return;
       }
 
-
+      // Step 2: Verify Project Permissions & Membership
+      setSplashStep(2);
+      setSplashMessage('Verifying project permissions & membership...');
       const [projRes, issueRes] = await Promise.all([
         fetch('/api/projects', { cache: 'no-store' }),
         fetch('/api/issues', { cache: 'no-store' }),
@@ -407,23 +428,23 @@ export default function SingleProjectPage() {
         }
       }
 
+      setProject(foundProj);
+
       if (!foundProj) {
-        foundProj = {
-          id: projectIdParam,
-          key: projectIdParam.toUpperCase(),
-          name: decodeURIComponent(projectIdParam),
-          description: '',
-          ownerName: 'karri',
-        };
+        // Project not found or user lacks access
+        setIsInitialLoading(false);
+        setLoading(false);
+        return;
       }
 
-      setProject((prev) => {
-        if (!prev || prev.id !== foundProj?.id || prev.name !== foundProj?.name || prev.description !== foundProj?.description) {
-          return foundProj;
-        }
-        return prev;
-      });
+      // Register project in session memory so switching tabs never shows splash screen
+      initializedProjects.add(String(projectIdParam).toLowerCase());
+      if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
+      if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
 
+      // Step 3: Load Architecture, Members, and Issues
+      setSplashStep(3);
+      setSplashMessage('Loading workspace issues & architecture...');
       if (foundProj && foundProj.id) {
         const memRes = await fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store' });
         if (memRes.ok) {
@@ -445,13 +466,21 @@ export default function SingleProjectPage() {
         }
       }
 
+      // Step 4: Finalize and Open Workspace
+      setSplashStep(4);
+      setSplashMessage('Initializing workspace views...');
+      if (!isAlreadyLoaded) {
+        await new Promise((r) => setTimeout(r, 180));
+      }
+
     } catch (err) {
       console.error('Error loading project:', err);
     } finally {
+      setIsInitialLoading(false);
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [projectIdParam, router]);
+  }, [projectIdParam, router, isAlreadyLoaded]);
 
   // Smart polling: every 30s only when tab is visible
   useEffect(() => {
@@ -599,6 +628,53 @@ export default function SingleProjectPage() {
       setIssues(previousIssues);
     }
   }, [issues, isCreator, project]);
+
+  // Delete Task Handler (Admin / Owner privilege)
+  const handleDeleteIssue = useCallback(async (issueId: string) => {
+    const targetIssue = issues.find((i) => i.id === issueId);
+    const issueKey = targetIssue?.key || issueId;
+
+    if (!isCreator && currentUser?.role !== 'admin' && currentUser?.role !== 'owner') {
+      toast.error('Permission Denied: Only project admins / owners can delete tasks.');
+      return;
+    }
+
+    // Optimistically remove from state
+    setIssues((prev) => prev.filter((i) => i.id !== issueId));
+    if (selectedIssueId === issueId) {
+      setSelectedIssueId(null);
+    }
+    toast.success(`Deleted task ${issueKey}`);
+
+    try {
+      const res = await fetch(`/api/issues/${issueId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        toast.error('Failed to delete task from server');
+      }
+    } catch {
+      toast.error('Network error while deleting task');
+    }
+  }, [issues, selectedIssueId, isCreator, currentUser]);
+
+  // Update Task Priority Handler
+  const handleUpdateIssuePriority = useCallback(async (issueId: string, nextPriority: Priority) => {
+    setIssues((prev) =>
+      prev.map((i) => (i.id === issueId ? { ...i, priority: nextPriority } : i))
+    );
+    toast.success(`Priority updated to ${nextPriority}`);
+
+    try {
+      await fetch(`/api/issues/${issueId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority: nextPriority }),
+      });
+    } catch {
+      toast.error('Failed to update priority on server');
+    }
+  }, []);
 
   // Add New Task in Active Selected Project (Direct UI + Background Sync)
   const handleAddNewTaskToColumn = useCallback(async (title: string, status: Status) => {
@@ -970,31 +1046,153 @@ export default function SingleProjectPage() {
           })
         )
       );
-      toast.success(`Epic renamed to "${newEpicName}"!`);
     } catch {
       toast.error('Failed to rename epic');
       fetchProjectData();
     }
   }, [issues, fetchProjectData]);
 
-  if (loading && issues.length === 0 && !project) {
-    return (
-      <AppLayout>
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans relative">
-          <ProjectPageHeaderSkeleton />
-          <KanbanBoardSkeleton />
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#17181A]/90 backdrop-blur-md border border-[#2A2C30] shadow-xl px-4 py-2 rounded-full">
-            <RandomLoadingText />
-          </div>
-        </div>
-      </AppLayout>
+  // Handle Drag & Drop to Move Task between Folders/Epics
+  const handleMoveTaskToFolder = useCallback(async (issueId: string, targetEpicName: string) => {
+    // 1. Optimistic UI update
+    setIssues((prev) =>
+      prev.map((iss) => (iss.id === issueId ? { ...iss, epic: targetEpicName } : iss))
     );
-  }
+    toast.success(`Task moved into "${targetEpicName}" folder!`);
 
+    // 2. Background Sync
+    try {
+      const res = await fetch(`/api/issues/${issueId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ epic: targetEpicName }),
+      });
+      if (!res.ok) {
+        toast.error('Failed to sync moved task with server');
+        fetchProjectData();
+      }
+    } catch {
+      toast.error('Network error moving task');
+      fetchProjectData();
+    }
+  }, [fetchProjectData]);
+
+  // Handle Adding Task directly to Folder
+  const handleAddTaskToFolder = useCallback(async (folderName: string, taskTitle: string) => {
+    if (!project || !taskTitle.trim()) return;
+
+    const tempId = `temp_${Date.now()}`;
+    const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
+    const optimisticIssue: Issue = {
+      id: tempId,
+      key: tempKey,
+      title: taskTitle.trim(),
+      description: '',
+      status: 'todo',
+      priority: 'medium',
+      project: project.name,
+      projectId: project.id,
+      epic: folderName || 'General',
+      labels: ['General'],
+      subtasks: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setIssues((prev) => [optimisticIssue, ...prev]);
+    toast.success(`Task created in folder "${folderName}"!`);
+
+    try {
+      const res = await fetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: taskTitle.trim(),
+          status: 'todo',
+          priority: 'medium',
+          project: project.name,
+          projectId: project.id,
+          epic: folderName || 'General',
+          labels: ['General'],
+        }),
+      });
+      if (res.ok) {
+        const createdIssue = await res.json();
+        setIssues((prev) =>
+          prev.map((iss) => (iss.id === tempId ? createdIssue : iss))
+        );
+      }
+    } catch {
+      toast.error('Failed to sync task to server');
+    }
+  }, [project]);
+
+  // Handle Drag & Drop to Reorder Task inside Folder or between Folders
+  const handleReorderTaskInFolder = useCallback(async (
+    draggedIssueId: string,
+    targetIssueId: string,
+    targetFolder: string,
+    position: 'before' | 'after'
+  ) => {
+    setIssues((prev) => {
+      const dragged = prev.find((i) => i.id === draggedIssueId);
+      if (!dragged) return prev;
+
+      const updatedDragged = { ...dragged, epic: targetFolder };
+      const remaining = prev.filter((i) => i.id !== draggedIssueId);
+      const targetIndex = remaining.findIndex((i) => i.id === targetIssueId);
+
+      if (targetIndex === -1) {
+        return [updatedDragged, ...remaining];
+      }
+
+      const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+      const next = [...remaining];
+      next.splice(insertIndex, 0, updatedDragged);
+      return next;
+    });
+
+    toast.success(`Task reordered in folder "${targetFolder}"!`);
+
+    try {
+      await fetch(`/api/issues/${draggedIssueId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ epic: targetFolder }),
+      });
+    } catch {}
+  }, []);
 
   return (
-    <AppLayout>
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+    <>
+      {/* Upper Layer Splash Screen (Fades out when background loading completes) */}
+      <AnimatePresence>
+        {isInitialLoading && <WorkspaceSplashScreen />}
+      </AnimatePresence>
+
+      <AppLayout>
+
+      {/* Access Denied Guard if user does not own and is not joined in this project */}
+      {!isInitialLoading && !project ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[#131415] text-[#CFD4DD]">
+          <div className="w-14 h-14 rounded-2xl bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444]">
+            <Lock size={28} />
+          </div>
+          <h2 className="text-lg font-bold text-white">Access Denied or Project Not Found</h2>
+          <p className="text-xs text-[#787C83] max-w-md">
+            You do not have access to this project. Only project owners and joined members can access this workspace.
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => router.push('/projects')}
+              className="px-4 py-2 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-xl hover:bg-[#c49c00] transition-colors"
+            >
+              Back to My Projects
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
         {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
         <div className="h-11 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
           {/* Left: Breadcrumbs & Project Identity */}
@@ -1101,16 +1299,6 @@ export default function SingleProjectPage() {
               <span>Live</span>
             </div>
 
-            {/* Automations Button */}
-            <button
-              onClick={() => setIsAutomationsModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#CFD4DD] transition-all"
-              title="Configure Workflow Automations"
-            >
-              <Zap size={12} className="text-[#DCB001]" />
-              <span className="hidden md:inline">Automations</span>
-            </button>
-
             {/* Import Tasks Button */}
             <button
               onClick={() => setIsImportTasksModalOpen(true)}
@@ -1129,16 +1317,6 @@ export default function SingleProjectPage() {
             >
               <Download size={12} />
               <span className="hidden md:inline">Export</span>
-            </button>
-
-
-            {/* Quick + Task Button */}
-            <button
-              onClick={() => setIsNewIssueModalOpen(true)}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-md shadow-sm transition-all"
-            >
-              <Plus size={13} />
-              <span>New Task</span>
             </button>
           </div>
         </div>
@@ -1291,12 +1469,11 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
                 <button
-                  onClick={() => setSelectedIssueId(null)}
+                  onClick={() => handleSelectIssue(null)}
                   className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
                 >
                   <ArrowLeft size={12} />
                   <span>Back to {activeTab === 'overview' ? 'Overview' : activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
-
                 </button>
 
                 <div className="flex items-center gap-2">
@@ -1309,7 +1486,7 @@ export default function SingleProjectPage() {
                     <option value="todo">Todo</option>
                     <option value="in_progress">In Progress</option>
                     <option value="needs_review">Needs Review</option>
-                    <option value="done">Done (Creator Only)</option>
+                    <option value="done (Creator Only)">Done (Creator Only)</option>
                   </select>
                 </div>
               </div>
@@ -1334,12 +1511,13 @@ export default function SingleProjectPage() {
           ) : activeTab === 'tree' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <TreeView
-
                 issues={projectIssues}
                 projectName={project?.name}
                 projectKey={project?.key}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
+                onUpdateIssuePriority={handleUpdateIssuePriority}
+                onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                 onToggleSubtask={handleToggleSubtask}
                 onAddSubtask={handleAddSubtask}
@@ -1348,13 +1526,17 @@ export default function SingleProjectPage() {
                 onMoveSubtask={handleMoveSubtask}
                 onRenameIssue={handleRenameIssue}
                 onRenameEpic={handleRenameEpic}
+                onMoveTaskToFolder={handleMoveTaskToFolder}
+                onAddTaskToFolder={handleAddTaskToFolder}
+                onReorderTaskInFolder={handleReorderTaskInFolder}
+                canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
               />
             </div>
           ) : activeTab === 'calendar' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <CalendarView
                 issues={projectIssues}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
               />
             </div>
@@ -1362,7 +1544,7 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <DependencyGraphView
                 issues={projectIssues}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
               />
             </div>
@@ -1387,7 +1569,7 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <DevStreamView
                 issues={projectIssues}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                 onToggleSubtask={handleToggleSubtask}
@@ -1425,7 +1607,7 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <HierarchicalView
                 issues={projectIssues}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                 onToggleSubtask={handleToggleSubtask}
@@ -1436,10 +1618,13 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <KanbanBoardView
                 issues={projectIssues}
-                onSelectIssue={(id) => setSelectedIssueId(id)}
+                onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
+                onUpdateIssuePriority={handleUpdateIssuePriority}
+                onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                 onAddNewTaskToColumn={handleAddNewTaskToColumn}
+                canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
               />
             </div>
           )}
@@ -1470,16 +1655,6 @@ export default function SingleProjectPage() {
             defaultProjectName={project.name}
             defaultProjectId={project.id}
             isProjectLocked={true}
-          />
-        )}
-
-        {/* Workflow Automations Modal */}
-        {project && (
-          <AutomationsModal
-            isOpen={isAutomationsModalOpen}
-            onClose={() => setIsAutomationsModalOpen(false)}
-            projectId={project.id}
-            projectName={project.name}
           />
         )}
 
@@ -1836,7 +2011,9 @@ export default function SingleProjectPage() {
           )}
         </AnimatePresence>
       </div>
+      )}
     </AppLayout>
+    </>
   );
 }
 

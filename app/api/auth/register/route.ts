@@ -7,7 +7,8 @@ import { parseBody, RegisterSchema } from '@/lib/validation';
 export async function POST(req: Request) {
   const { data, error } = await parseBody(req, RegisterSchema);
   if (error) {
-    return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
+    const message = error.issues?.[0]?.message || 'Validation failed';
+    return NextResponse.json({ error: message, issues: error.issues }, { status: 400 });
   }
 
   // Rate limit registrations by IP

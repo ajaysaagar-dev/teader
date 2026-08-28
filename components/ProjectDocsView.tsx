@@ -385,8 +385,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [docs, setDocs] = useState<ProjectDoc[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [activeContent, setActiveContent] = useState<string>('');
+  const [savedContent, setSavedContent] = useState<string>('');
   const [activeTitle, setActiveTitle] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'editor' | 'split' | 'preview'>('split');
+  const [savedTitle, setSavedTitle] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'editor' | 'split' | 'preview'>('preview');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -405,9 +407,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       setDocs(cachedDocs);
       const targetDoc = cachedDocs[0];
       setSelectedDocId(targetDoc.id);
-      setActiveTitle(targetDoc.title);
+      const cleanTitle = targetDoc.title.replace(/\.md$/i, '');
+      setActiveTitle(cleanTitle);
+      setSavedTitle(cleanTitle);
       const cachedContent = getLocalCache(`doc_content_${targetDoc.id}`, '');
-      if (cachedContent) setActiveContent(cachedContent);
+      if (cachedContent) {
+        setActiveContent(cachedContent);
+        setSavedContent(cachedContent);
+      }
       setLoading(false);
     }
   }, [projectId]);
@@ -419,15 +426,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   }, [docs, projectId]);
 
-  // Sync active doc content to cache immediately
+
+  const selectedDocIdRef = useRef<string | null>(selectedDocId);
   useEffect(() => {
-    if (selectedDocId && activeContent) {
-      setLocalCache(`doc_content_${selectedDocId}`, activeContent);
-    }
-  }, [selectedDocId, activeContent]);
+    selectedDocIdRef.current = selectedDocId;
+  }, [selectedDocId]);
 
-
-  // 1. Fetch all docs for this project
+  // 1. Fetch all docs for this project once on projectId change
   const fetchDocsList = useCallback(async (selectNewestId?: string) => {
     try {
       const res = await fetch(`/api/projects/${projectId}/docs`);
@@ -441,10 +446,20 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           return next;
         });
         if (data.length > 0) {
-          const targetId = selectNewestId || selectedDocId || data[0].id;
-          const targetDoc = data.find((d) => d.id === targetId) || data[0];
+          const curId = selectedDocIdRef.current;
+          const targetDoc = (selectNewestId && data.find((d) => d.id === selectNewestId)) ||
+            (curId && data.find((d) => d.id === curId)) ||
+            data[0];
           setSelectedDocId(targetDoc.id);
-          setActiveTitle(targetDoc.title);
+          const cleanTitle = targetDoc.title ? targetDoc.title.replace(/\.md$/i, '') : '';
+          setActiveTitle(cleanTitle);
+          setSavedTitle(cleanTitle);
+          if (targetDoc.content !== undefined && targetDoc.content !== '') {
+            setActiveContent(targetDoc.content);
+            setSavedContent(targetDoc.content);
+            historyRef.current = [targetDoc.content];
+            historyIndexRef.current = 0;
+          }
         }
       }
     } catch {
@@ -452,7 +467,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [projectId, selectedDocId]);
+  }, [projectId]);
 
 
 
@@ -505,7 +520,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   }, []);
 
-  // 2. Fetch selected document content from server .md file
+  // 2. Fetch selected document content from server .md file / DB
   useEffect(() => {
     if (!selectedDocId) return;
 
@@ -515,9 +530,17 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       .then((data) => {
         if (isMounted && data.content !== undefined) {
           setActiveContent(data.content);
-          setActiveTitle(data.title);
+          setSavedContent(data.content);
+          const cleanTitle = data.title ? data.title.replace(/\.md$/i, '') : '';
+          setActiveTitle(cleanTitle);
+          setSavedTitle(cleanTitle);
           historyRef.current = [data.content];
           historyIndexRef.current = 0;
+          setDocs((prev) =>
+            prev.map((d) =>
+              d.id === selectedDocId ? { ...d, content: data.content, title: data.title } : d
+            )
+          );
         }
       })
       .catch(() => {});
@@ -577,7 +600,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     e.preventDefault();
     if (!newDocTitle.trim()) return;
 
-    const title = newDocTitle.trim();
+    const cleanTitle = newDocTitle.trim().replace(/\.md$/i, '');
     setNewDocTitle('');
     setIsCreatingNew(false);
 
@@ -586,20 +609,26 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
-          content: `# ${title}\n\nTechnical specification and architecture documentation for ${projectName}.\n\n## 1. Overview\n\n## 2. Architecture & Components\n- Core API routing and validation\n- State synchronization\n\n## 3. Implementation Steps\n- [ ] Initialize database migration\n- [ ] Build UI components\n- [ ] Execute automated tests\n\n\`\`\`ts\n// Example implementation\nexport const config = {\n  version: '2.0.0',\n  env: 'production'\n};\n\`\`\`\n`,
+          title: cleanTitle,
+          content: `# ${cleanTitle}\n\nTechnical specification and architecture documentation for ${projectName}.\n\n## 1. Overview\n\n## 2. Architecture & Components\n- Core API routing and validation\n- State synchronization\n\n## 3. Implementation Steps\n- [ ] Initialize database migration\n- [ ] Build UI components\n- [ ] Execute automated tests\n\n\`\`\`ts\n// Example implementation\nexport const config = {\n  version: '2.0.0',\n  env: 'production'\n};\n\`\`\`\n`,
         }),
       });
 
       if (res.ok) {
         const created: ProjectDoc = await res.json();
+        const docTitle = created.title ? created.title.replace(/\.md$/i, '') : cleanTitle;
+        const docContent = created.content || '';
         setDocs((prev) => [created, ...prev]);
         setSelectedDocId(created.id);
-        setActiveTitle(created.title);
-        setActiveContent(created.content || '');
-        historyRef.current = [created.content || ''];
+        setActiveTitle(docTitle);
+        setSavedTitle(docTitle);
+        setActiveContent(docContent);
+        setSavedContent(docContent);
+        setLocalCache(`doc_content_${created.id}`, docContent);
+        historyRef.current = [docContent];
         historyIndexRef.current = 0;
-        toast.success(`Created unique .md file: ${created.fileName}`);
+        setViewMode('split'); // Newly created file opens in split mode
+        toast.success(`Created: ${docTitle}`);
       } else {
         toast.error('Failed to create doc file');
       }
@@ -612,27 +641,31 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const handleSaveDoc = useCallback(async () => {
     if (!selectedDocId) return;
 
-    // 1. Immediately show as Saved in UI (0ms) and update local cache
+    const cleanTitle = activeTitle.trim().replace(/\.md$/i, '');
+
+    // 1. Immediately show as Saved in UI (0ms) and update saved preview + local cache
     setIsJustSaved(true);
+    setSavedContent(activeContent);
+    setSavedTitle(cleanTitle);
     setLocalCache(`doc_content_${selectedDocId}`, activeContent);
     setDocs((prev) => {
-      const updated = prev.map((d) => (d.id === selectedDocId ? { ...d, title: activeTitle.trim(), updatedAt: new Date().toISOString() } : d));
+      const updated = prev.map((d) => (d.id === selectedDocId ? { ...d, title: cleanTitle, updatedAt: new Date().toISOString() } : d));
       setLocalCache(`docs_${projectId}`, updated);
       return updated;
     });
-    toast.success(`☁️ Saved: ${activeDoc?.fileName || '.md'}`);
+    toast.success(`☁️ Saved: ${cleanTitle || 'Document'}`);
 
     setTimeout(() => {
       setIsJustSaved(false);
     }, 2200);
 
-    // 2. Process in background to physical server .md file & database
+    // 2. Process in background to physical server file & database
     try {
       const res = await fetch(`/api/projects/${projectId}/docs/${selectedDocId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: activeTitle.trim(),
+          title: cleanTitle,
           content: activeContent,
         }),
       });
@@ -640,7 +673,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       if (res.ok) {
         const data = await res.json();
         setDocs((prev) =>
-          prev.map((d) => (d.id === selectedDocId ? { ...d, title: activeTitle.trim(), updatedAt: data.updatedAt } : d))
+          prev.map((d) => (d.id === selectedDocId ? { ...d, title: cleanTitle, updatedAt: data.updatedAt } : d))
         );
       } else {
         toast.error('Failed to sync document to server');
@@ -648,7 +681,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     } catch {
       toast.error('Network error during background save');
     }
-  }, [selectedDocId, projectId, activeTitle, activeContent, activeDoc]);
+  }, [selectedDocId, projectId, activeTitle, activeContent]);
 
 
   // Global Keyboard Shortcuts (Ctrl+S for Save, Ctrl+Z for Undo, Ctrl+Y for Redo)
@@ -688,7 +721,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   // Handle Delete Doc
   const handleDeleteDoc = async (docId: string, docFileName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`Are you sure you want to delete the file "${docFileName}" from the server?`)) {
+    const cleanDocName = docFileName.replace(/\.md$/i, '');
+    if (!confirm(`Are you sure you want to delete "${cleanDocName}" from the server?`)) {
       return;
     }
 
@@ -703,13 +737,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         if (selectedDocId === docId) {
           if (remaining.length > 0) {
             setSelectedDocId(remaining[0].id);
+            setViewMode('preview');
           } else {
             setSelectedDocId(null);
             setActiveContent('');
+            setSavedContent('');
             setActiveTitle('');
+            setSavedTitle('');
           }
         }
-        toast.success(`Deleted file ${docFileName}`);
+        toast.success(`Deleted file: ${cleanDocName}`);
       }
     } catch {
       toast.error('Failed to delete document');
@@ -718,12 +755,32 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
   const handleCopyFileName = () => {
     if (activeDoc?.fileName && typeof window !== 'undefined') {
-      navigator.clipboard.writeText(`data/docs/${activeDoc.fileName}`);
+      const cleanName = activeDoc.fileName.replace(/\.md$/i, '');
+      navigator.clipboard.writeText(cleanName);
       setCopiedFile(true);
-      toast.success('Copied server file path');
+      toast.success('Copied document identifier');
       setTimeout(() => setCopiedFile(false), 2000);
     }
   };
+
+  const handleSelectDoc = (docId: string) => {
+    setSelectedDocId(docId);
+    setViewMode('preview'); // Opening already created file defaults to preview mode
+    const doc = docs.find((d) => d.id === docId);
+    if (doc) {
+      const cleanTitle = doc.title ? doc.title.replace(/\.md$/i, '') : '';
+      setActiveTitle(cleanTitle);
+      setSavedTitle(cleanTitle);
+      if (doc.content !== undefined && doc.content !== '') {
+        setActiveContent(doc.content);
+        setSavedContent(doc.content);
+        historyRef.current = [doc.content];
+        historyIndexRef.current = 0;
+      }
+    }
+  };
+
+  const hasUnsavedChanges = activeContent !== savedContent || activeTitle !== savedTitle;
 
   return (
     <div className="flex-1 flex h-full min-h-0 w-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden relative">
@@ -740,10 +797,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             <button
               onClick={() => setIsCreatingNew(true)}
               className="flex items-center gap-1 px-2 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold transition-all shadow-sm"
-              title="Create New Markdown File"
+              title="Create New Document"
             >
               <Plus size={12} />
-              <span>New .md</span>
+              <span>New Doc</span>
             </button>
           </div>
 
@@ -809,7 +866,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               return (
                 <div
                   key={doc.id}
-                  onClick={() => setSelectedDocId(doc.id)}
+                  onClick={() => handleSelectDoc(doc.id)}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer group flex items-center justify-between gap-2 ${
                     isSelected
                       ? 'bg-[#1F2023] border-[#DCB001]/60 text-white shadow-sm'
@@ -819,12 +876,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5">
                       <FileCode size={13} className={isSelected ? 'text-[#DCB001]' : 'text-[#787C83]'} />
-                      <span className="font-semibold text-xs truncate block">{doc.title}</span>
+                      <span className="font-semibold text-xs truncate block">{doc.title.replace(/\.md$/i, '')}</span>
                     </div>
 
                     <div className="flex items-center gap-1 text-[10px] font-mono text-[#787C83] truncate">
                       <span className="bg-[#0E0F10] px-1.5 py-0.2 rounded border border-[#2A2C30] truncate max-w-[140px]">
-                        {doc.fileName}
+                        {doc.fileName.replace(/\.md$/i, '')}
                       </span>
                     </div>
                   </div>
@@ -865,16 +922,24 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   onClick={handleCopyFileName}
                   className="hidden md:flex items-center gap-1 px-2 py-0.5 bg-[#131415] hover:bg-[#1F2023] border border-[#2A2C30] rounded text-[10px] font-mono text-[#787C83] hover:text-[#DCB001] transition-all shrink-0"
-                  title="Click to copy server .md path"
+                  title="Click to copy identifier"
                 >
                   <FileCode size={11} />
-                  <span className="truncate max-w-[160px]">{activeDoc.fileName}</span>
+                  <span className="truncate max-w-[160px]">{activeDoc.fileName.replace(/\.md$/i, '')}</span>
                   {copiedFile ? <Check size={11} className="text-[#22C55E]" /> : <Copy size={10} />}
                 </button>
               </div>
 
               {/* Controls */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* Unsaved Changes Status Badge */}
+                {hasUnsavedChanges && (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[11px] font-mono text-[#F59E0B]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+                    <span>Unsaved (Ctrl+S to save)</span>
+                  </span>
+                )}
+
                 {/* View Mode Switcher */}
                 <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
                   <button
@@ -929,7 +994,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   ) : (
                     <>
                       <Cloud size={13} />
-                      <span>Save .md</span>
+                      <span>Save</span>
                       <span className="hidden sm:inline-block text-[10px] opacity-75 font-mono ml-0.5 bg-black/15 px-1 py-0.2 rounded">
                         Ctrl+S
                       </span>
@@ -956,12 +1021,27 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 </div>
               )}
 
-              {/* GitHub-Flavored Markdown Preview Column */}
+              {/* GitHub-Flavored Markdown Preview Column (Only updates when saved) */}
               {(viewMode === 'preview' || viewMode === 'split') && (
                 <div className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-16 bg-[#0E0F11] custom-scrollbar">
                   <div className="max-w-4xl mx-auto space-y-1 text-[#CFD4DD] font-sans">
+                    {viewMode === 'split' && (
+                      <div className="flex items-center justify-between pb-3 text-[11px] font-mono text-[#787C83]">
+                        <span>SAVED PREVIEW</span>
+                        {hasUnsavedChanges ? (
+                          <span className="text-[#F59E0B] flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+                            Press Ctrl+S to update preview
+                          </span>
+                        ) : (
+                          <span className="text-[#22C55E]">✓ Up to date</span>
+                        )}
+                      </div>
+                    )}
                     <div className="p-6 sm:p-8 bg-[#161719] border border-[#2A2C30] rounded-2xl shadow-xl">
-                      {renderGithubMarkdown(activeContent)}
+                      {savedContent ? renderGithubMarkdown(savedContent) : (
+                        <p className="text-xs text-[#787C83] italic">No saved content yet. Press Ctrl+S or click Save to update preview.</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1168,7 +1248,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             <BookOpen size={36} className="text-[#DCB001]/40" />
             <h3 className="text-base font-bold text-white">No Document Selected</h3>
             <p className="text-xs text-[#787C83] max-w-sm">
-              Select an existing document from the left sidebar or click "+ New .md" to create a new markdown file.
+              Select an existing document from the left sidebar or click "+ New Doc" to create a new document.
             </p>
           </div>
         )}

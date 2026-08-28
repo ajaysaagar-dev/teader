@@ -3,11 +3,11 @@ import crypto from 'crypto';
 import { hashPassword, verifyPassword } from './auth';
 
 // PostgreSQL Connection Configuration
-const DB_HOST = process.env.POSTGRES_HOST || process.env.MYSQL_HOST || '178.238.226.206';
+const DB_HOST = process.env.POSTGRES_HOST || process.env.MYSQL_HOST || 'localhost';
 const DB_USER = process.env.POSTGRES_USER || process.env.MYSQL_USER || 'ajaysaagar';
 const DB_PASSWORD = process.env.POSTGRES_PASSWORD || process.env.MYSQL_PASSWORD || 'aass209c';
-const DB_NAME = process.env.POSTGRES_DATABASE || process.env.MYSQL_DATABASE || 'ajaysaagar';
-const DB_PORT = Number(process.env.POSTGRES_PORT || process.env.MYSQL_PORT) || 5432;
+const DB_NAME = process.env.POSTGRES_DATABASE || process.env.MYSQL_DATABASE || 'teader_db';
+const DB_PORT = Number(process.env.POSTGRES_PORT || process.env.MYSQL_PORT) || 5678;
 const DATABASE_URL = process.env.DATABASE_URL;
 
 let pgPool: Pool | null = null;
@@ -143,9 +143,13 @@ export async function initDB(): Promise<void> {
             "owner_id" INT NOT NULL DEFAULT 1,
             "creatorId" INT DEFAULT 1,
             "ownerName" VARCHAR(128) DEFAULT 'karri',
+            "docIds" JSONB DEFAULT '[]'::jsonb,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
+        try {
+          await p.query(`ALTER TABLE "projects" ADD COLUMN IF NOT EXISTS "docIds" JSONB DEFAULT '[]'::jsonb;`);
+        } catch {}
 
         // 3. Create Project Members Table
         await p.query(`
@@ -250,10 +254,14 @@ export async function initDB(): Promise<void> {
             "title" VARCHAR(255) NOT NULL,
             "fileName" VARCHAR(255) NOT NULL UNIQUE,
             "filePath" VARCHAR(512) NOT NULL,
+            "content" TEXT,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
+        try {
+          await p.query(`ALTER TABLE "project_docs" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
+        } catch {}
 
         // 10. Create Project Messages Table for Team Conversations
         await p.query(`
@@ -481,14 +489,14 @@ export async function getAllProjectsDB(userId?: number | string) {
   await initDB();
   try {
     const p = getPool();
-    if (userId) {
+    if (userId !== undefined && userId !== null && userId !== '') {
       const numericUserId = Number(userId);
       const result = await p.query(
         `SELECT DISTINCT p.* FROM "projects" p
          LEFT JOIN "project_members" pm ON p."id" = pm."projectId"
-         WHERE p."owner_id" = $1 OR p."creatorId" = $2 OR pm."userId" = $3
+         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1
          ORDER BY p."id" ASC`,
-        [numericUserId, numericUserId, numericUserId]
+        [numericUserId]
       );
       return result.rows || [];
     }
@@ -499,7 +507,7 @@ export async function getAllProjectsDB(userId?: number | string) {
     console.warn('[getAllProjectsDB Error]:', err.message);
   }
 
-  if (userId) {
+  if (userId !== undefined && userId !== null && userId !== '') {
     const numericUserId = Number(userId);
     const memberProjectIds = memoryMembersStore
       .filter((m) => Number(m.userId) === numericUserId)
@@ -720,11 +728,24 @@ export function buildSubtaskTree(flatSubtasks: any[]): any[] {
   return roots;
 }
 
-export async function getAllIssuesDB() {
+export async function getAllIssuesDB(userId?: number | string) {
   await initDB();
   try {
     const p = getPool();
-    const issuesRes = await p.query(`SELECT * FROM "issues" ORDER BY "createdAt" DESC`);
+    let issuesRes;
+    if (userId !== undefined && userId !== null && userId !== '') {
+      const numUserId = Number(userId);
+      issuesRes = await p.query(
+        `SELECT DISTINCT i.* FROM "issues" i
+         JOIN "projects" p ON i."projectId" = p."id"
+         LEFT JOIN "project_members" pm ON p."id" = pm."projectId"
+         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1
+         ORDER BY i."createdAt" DESC`,
+        [numUserId]
+      );
+    } else {
+      issuesRes = await p.query(`SELECT * FROM "issues" ORDER BY "createdAt" DESC`);
+    }
     const subtasksRes = await p.query(`SELECT * FROM "subtasks"`);
     const imagesRes = await p.query(`SELECT * FROM "images"`);
 
@@ -950,6 +971,20 @@ export async function updateIssueStatusDB(
   }
 }
 
+export async function deleteIssueDB(id: string) {
+  await initDB();
+  try {
+    const p = getPool();
+    // Subtasks, comments, activities will cascade or be deleted
+    await p.query(`DELETE FROM "subtasks" WHERE "issueId" = $1`, [id]);
+    await p.query(`DELETE FROM "comments" WHERE "issueId" = $1`, [id]);
+    await p.query(`DELETE FROM "activities" WHERE "issueId" = $1`, [id]);
+    await p.query(`DELETE FROM "issues" WHERE "id" = $1`, [id]);
+  } catch {}
+
+  memoryIssuesStore = memoryIssuesStore.filter((i) => i.id !== id);
+}
+
 export async function createSubtaskDB(
   issueId: string,
   title: string,
@@ -1044,6 +1079,7 @@ export interface ProjectDocRecord {
   title: string;
   fileName: string;
   filePath: string;
+  content?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1057,7 +1093,7 @@ export async function getProjectDocsDB(projectId: string | number) {
       `SELECT * FROM "project_docs" WHERE "projectId" = $1 ORDER BY "updatedAt" DESC`,
       [numId]
     );
-    return result.rows;
+    return result.rows || [];
   } catch {
     return memoryProjectDocsStore.filter((d) => Number(d.projectId) === numId);
   }
@@ -1085,12 +1121,14 @@ export async function createProjectDocDB(data: {
   title: string;
   fileName: string;
   filePath: string;
+  content?: string;
 }) {
   await initDB();
   const numProjId = Number(data.projectId);
   const numUserId = data.userId ? Number(data.userId) : 1;
   const userName = data.userName || 'karri';
   const now = new Date().toISOString();
+  const content = data.content || '';
 
   const record: ProjectDocRecord = {
     id: data.id,
@@ -1100,26 +1138,44 @@ export async function createProjectDocDB(data: {
     title: data.title,
     fileName: data.fileName,
     filePath: data.filePath,
+    content,
     createdAt: now,
     updatedAt: now,
   };
 
   try {
     const p = getPool();
+    // 1. Insert/Update document in project_docs with physical filePath & content
     await p.query(
-      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath]
+      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath", "content")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "fileName" = $6, "filePath" = $7, "content" = $8, "updatedAt" = CURRENT_TIMESTAMP`,
+      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath, content]
     );
-  } catch {}
 
+    // 2. Reference doc id in projects table (docIds array)
+    await p.query(
+      `UPDATE "projects"
+       SET "docIds" = CASE
+         WHEN "docIds" IS NULL THEN jsonb_build_array($1::text)
+         WHEN NOT ("docIds" @> jsonb_build_array($1::text)) THEN "docIds" || jsonb_build_array($1::text)
+         ELSE "docIds"
+       END
+       WHERE "id" = $2`,
+      [data.id, numProjId]
+    );
+  } catch (e: any) {
+    console.warn('[createProjectDocDB error]:', e.message);
+  }
+
+  memoryProjectDocsStore = memoryProjectDocsStore.filter((d) => d.id !== data.id);
   memoryProjectDocsStore.unshift(record);
   return record;
 }
 
 export async function updateProjectDocDB(
   docId: string,
-  updates: { title?: string; fileName?: string; filePath?: string }
+  updates: { title?: string; fileName?: string; filePath?: string; content?: string }
 ) {
   await initDB();
   const fields: string[] = [];
@@ -1138,6 +1194,12 @@ export async function updateProjectDocDB(
     fields.push(`"filePath" = $${paramIdx++}`);
     values.push(updates.filePath);
   }
+  if (updates.content !== undefined) {
+    fields.push(`"content" = $${paramIdx++}`);
+    values.push(updates.content);
+  }
+
+  fields.push(`"updatedAt" = CURRENT_TIMESTAMP`);
 
   if (fields.length > 0) {
     try {
@@ -1152,16 +1214,45 @@ export async function updateProjectDocDB(
     if (updates.title !== undefined) target.title = updates.title.trim();
     if (updates.fileName !== undefined) target.fileName = updates.fileName.trim();
     if (updates.filePath !== undefined) target.filePath = updates.filePath;
+    if (updates.content !== undefined) target.content = updates.content;
     target.updatedAt = new Date().toISOString();
   }
 }
 
-export async function deleteProjectDocDB(docId: string) {
+export async function deleteProjectDocDB(docId: string, projectId?: string | number) {
   await initDB();
   try {
     const p = getPool();
+    // 1. Remove from project_docs table
     await p.query(`DELETE FROM "project_docs" WHERE "id" = $1`, [docId]);
-  } catch {}
+
+    // 2. Remove docId from projects table reference
+    if (projectId) {
+      await p.query(
+        `UPDATE "projects"
+         SET "docIds" = COALESCE((
+           SELECT jsonb_agg(elem)
+           FROM jsonb_array_elements("docIds") elem
+           WHERE elem #>> '{}' != $1
+         ), '[]'::jsonb)
+         WHERE "id" = $2`,
+        [docId, Number(projectId)]
+      );
+    } else {
+      await p.query(
+        `UPDATE "projects"
+         SET "docIds" = COALESCE((
+           SELECT jsonb_agg(elem)
+           FROM jsonb_array_elements("docIds") elem
+           WHERE elem #>> '{}' != $1
+         ), '[]'::jsonb)
+         WHERE "docIds" @> jsonb_build_array($1::text)`,
+        [docId]
+      );
+    }
+  } catch (e: any) {
+    console.warn('[deleteProjectDocDB error]:', e.message);
+  }
 
   memoryProjectDocsStore = memoryProjectDocsStore.filter((d) => d.id !== docId);
 }

@@ -35,7 +35,7 @@ interface ProjectOverviewViewProps {
     ownerName?: string;
   } | null;
   members?: Array<{ id: number | string; name: string; email: string; avatar: string }>;
-  onNavigateTab: (tab: 'board' | 'hierarchy' | 'tree' | 'dev') => void;
+  onNavigateTab: (tab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => void;
   onOpenNewIssue: () => void;
 }
 

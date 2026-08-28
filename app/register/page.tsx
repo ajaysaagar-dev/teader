@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { User, Mail, Lock, UserPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { clearAllLocalCaches } from '@/lib/client-cache';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (res.ok) {
+        clearAllLocalCaches();
         try {
           localStorage.setItem('teader_user', JSON.stringify(data));
           if (data.token) {
@@ -45,11 +47,12 @@ export default function RegisterPage() {
         }
 
       } else {
-        toast.error(data.error || 'Registration failed');
+        const errorMsg = data.error || data.issues?.[0]?.message || 'Registration failed';
+        toast.error(errorMsg);
       }
 
     } catch {
-      toast.error('Failed to create account. Please try again.');
+      toast.error('Failed to create account. Please check your network or database.');
     } finally {
       setIsSubmitting(false);
     }
@@ -102,16 +105,17 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
-              Password
+              Password <span className="text-[10px] text-[#787C83] font-normal">(min 6 characters)</span>
             </label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-3 text-[#787C83]" />
               <input
                 type="password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="At least 6 characters"
                 className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>

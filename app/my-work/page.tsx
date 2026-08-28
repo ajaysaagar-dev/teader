@@ -23,13 +23,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export default function MyWorkPage() {
+  const searchParams = useSearchParams();
+  const initialTab = (searchParams?.get('tab') as 'assigned' | 'blocked' | 'due' | 'completed') || 'assigned';
+
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterTab, setFilterTab] = useState<'assigned' | 'blocked' | 'due' | 'completed'>('assigned');
+  const [filterTab, setFilterTabState] = useState<'assigned' | 'blocked' | 'due' | 'completed'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const setFilterTab = (tab: 'assigned' | 'blocked' | 'due' | 'completed') => {
+    setFilterTabState(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  };
 
   // Pomodoro Focus Mode Timer State (§11.2)
   const [focusIssue, setFocusIssue] = useState<Issue | null>(null);

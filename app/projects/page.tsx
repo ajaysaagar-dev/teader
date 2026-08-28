@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { ProjectContextMenu } from '@/components/ui/ProjectContextMenu';
 
 interface ProjectItem {
   id: string | number;
@@ -51,33 +52,17 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Hydrate from client cache safely on mount (100% hydration-safe)
-  useEffect(() => {
-    const cachedProjects = getLocalCache<ProjectItem[]>('projects_list', []);
-    const cachedIssues = getLocalCache<any[]>('all_issues_list', []);
-    if (cachedProjects && cachedProjects.length > 0) {
-      setProjects(cachedProjects);
-      setLoading(false);
-    }
-    if (cachedIssues && cachedIssues.length > 0) {
-      setIssues(cachedIssues);
-    }
-  }, []);
-
-  // Sync projects and issues to cache
-  useEffect(() => {
-    if (projects.length > 0) {
-      setLocalCache('projects_list', projects);
-    }
-  }, [projects]);
-
-  useEffect(() => {
-    if (issues.length > 0) {
-      setLocalCache('all_issues_list', issues);
-    }
-  }, [issues]);
-
-
+  const [projectContextMenu, setProjectContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    project: ProjectItem | null;
+    isOwner: boolean;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    project: null,
+    isOwner: false,
+  });
 
   // Modals state
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -123,10 +108,8 @@ export default function ProjectsPage() {
 
       if (projRes && projRes.ok) {
         const projData = await projRes.json();
-        if (Array.isArray(projData) && projData.length > 0) {
+        if (Array.isArray(projData)) {
           setProjects(projData);
-        } else if (Array.isArray(projData) && projData.length === 0) {
-          setProjects((prev) => (prev.length > 0 ? prev : projData));
         }
       }
 
@@ -434,6 +417,16 @@ export default function ProjectsPage() {
                 <div
                   key={proj.id}
                   onClick={() => router.push(`/projects/${proj.id}`)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setProjectContextMenu({
+                      isOpen: true,
+                      position: { x: e.clientX, y: e.clientY },
+                      project: proj,
+                      isOwner: Boolean(isOwner),
+                    });
+                  }}
                   className="p-5 rounded-xl bg-[#1B1C1F] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 cursor-pointer space-y-4 shadow-sm group flex flex-col justify-between"
                 >
                   <div className="space-y-2">
@@ -825,6 +818,26 @@ export default function ProjectsPage() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Project Right-Click Context Menu */}
+        <ProjectContextMenu
+          isOpen={projectContextMenu.isOpen}
+          position={projectContextMenu.position}
+          project={projectContextMenu.project}
+          isOwner={projectContextMenu.isOwner}
+          onClose={() => setProjectContextMenu((prev) => ({ ...prev, isOpen: false }))}
+          onOpen={(projId) => router.push(`/projects/${projId}`)}
+          onEdit={(proj) => {
+            setProjectToEdit(proj);
+            setEditName(proj.name);
+            setEditDesc(proj.description || '');
+          }}
+          onDelete={(proj) => {
+            setProjectToDelete(proj);
+            setConfirmName('');
+            setConfirmKey('');
+          }}
+        />
       </div>
     </AppLayout>
   );

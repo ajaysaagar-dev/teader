@@ -40,6 +40,20 @@ export function removeLocalCache(key: string): void {
   } catch {}
 }
 
+export function clearAllLocalCaches(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('teader_cache_') || key.startsWith('teader_') || key.includes('projects') || key.includes('issues'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  } catch {}
+}
+
 /**
  * Fine-grained deep equality check between two issues.
  * Returns true if all fields and recursive subtasks are identical.

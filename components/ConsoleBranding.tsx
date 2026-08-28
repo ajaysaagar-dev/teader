@@ -20,7 +20,7 @@ export function printTeaderConsoleBanner() {
   );
 
   console.log(
-    '%c TEADER %c v2.0 %c High-Velocity Engineering Platform %c ⚡ 0ms Optimistic UI ',
+    '%c TEADER %c v0.1 %c High-Velocity Engineering Platform %c ⚡ 0ms Optimistic UI ',
     'background: #DCB001; color: #0A0B0D; font-weight: 900; font-size: 14px; padding: 4px 10px; border-radius: 4px;',
     'background: #2A2C30; color: #DCB001; font-weight: bold; font-size: 12px; padding: 4px 8px; border-radius: 4px;',
     'background: #181A1F; color: #CFD4DD; font-weight: 600; font-size: 12px; padding: 4px 8px; border-radius: 4px;',

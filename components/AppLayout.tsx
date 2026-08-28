@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { clearAllLocalCaches } from '@/lib/client-cache';
 import { 
   LayoutDashboard, 
   FolderKanban, 
@@ -159,6 +160,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       try {
+        clearAllLocalCaches();
         localStorage.removeItem('teader_user');
         localStorage.removeItem('teader_token');
       } catch {}
@@ -256,16 +258,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-[#0B0C0E] border border-[#2A2C30] rounded text-[#8E939D]">
               ⌘K
             </kbd>
-          </button>
-
-          {/* New Task Button */}
-          <button
-            onClick={() => setIsNewIssueModalOpen(true)}
-            className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-[#0A0B0D] bg-[#DCB001] hover:bg-[#E5B800] rounded-lg shadow-sm transition-all hover:scale-105"
-            title="Create New Task (C)"
-          >
-            <Plus size={13} className="stroke-[3]" />
-            <span className="hidden sm:inline">New Task</span>
           </button>
 
           {/* Keyboard Shortcuts */}
@@ -368,7 +360,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
                     <span className="text-[#787C83]">Database Connection</span>
-                    <span className="text-[#22C55E] font-medium">PostgreSQL 178.238.226.206</span>
+                    <span className="text-[#22C55E] font-medium">PostgreSQL localhost:5678 (teader_db)</span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
                     <span className="text-[#787C83]">Client Caching</span>

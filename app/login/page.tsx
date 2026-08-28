@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ShieldCheck, LogIn, Mail, Lock, Sparkles, CheckSquare, Square } from 'lucide-react';
 import { toast } from 'sonner';
+import { clearAllLocalCaches } from '@/lib/client-cache';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,14 +19,8 @@ export default function LoginPage() {
     try {
       const savedUser = localStorage.getItem('teader_user');
       if (savedUser) {
-        // Fast verify with backend
-        fetch('/api/auth/me')
-          .then((res) => {
-            if (res.ok) {
-              router.push('/projects');
-            }
-          })
-          .catch(() => {});
+        // Redirect to dashboard if already logged in
+        router.push('/dashboard');
       }
     } catch {}
   }, [router]);
@@ -48,6 +43,8 @@ export default function LoginPage() {
 
       const data = await res.json();
       if (res.ok) {
+        // Clear previous user cache
+        clearAllLocalCaches();
         // Persist session user & token in localStorage to remember login state
         if (rememberMe) {
           try {
@@ -150,31 +147,7 @@ export default function LoginPage() {
               <span className="text-[11px] font-medium">Remember me (Keep me signed in)</span>
             </button>
           </div>
-
-          {/* Quick Preset Credentials Clickable Hints */}
-          <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-1.5 text-[11px] text-[#787C83]">
-            <div className="font-semibold text-[#CFD4DD] flex items-center gap-1">
-              <ShieldCheck size={12} className="text-[#DCB001]" />
-              Demo Credentials (Click to fill):
-            </div>
-            <div className="flex flex-col gap-1 font-mono text-[10px]">
-              <button
-                type="button"
-                onClick={() => handlePresetFill('karri@teader.io')}
-                className="text-left px-2 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#DCB001] transition-colors"
-              >
-                Owner: karri@teader.io / password123
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePresetFill('jori@teader.io')}
-                className="text-left px-2 py-1 bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#CFD4DD] transition-colors"
-              >
-                Member: jori@teader.io / password123
-              </button>
-            </div>
-          </div>
-
+          
           <button
             type="submit"
             disabled={!email.trim() || !password.trim() || isSubmitting}

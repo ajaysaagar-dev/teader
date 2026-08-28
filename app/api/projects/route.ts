@@ -8,9 +8,7 @@ export async function GET(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId') || String(session.id);
-    const projects = await getAllProjectsDB(userId ? Number(userId) : undefined);
+    const projects = await getAllProjectsDB(session.id);
     return NextResponse.json(projects);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

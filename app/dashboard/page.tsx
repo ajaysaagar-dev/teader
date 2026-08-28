@@ -48,17 +48,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'all' | 'in_progress' | 'blocked' | 'done'>('all');
 
-  // Hydrate from cache on mount for 0ms initial render
-  useEffect(() => {
-    const cachedProjects = getLocalCache<any[]>('dashboard_projects', []);
-    const cachedIssues = getLocalCache<Issue[]>('dashboard_issues', []);
-    if (cachedProjects.length > 0 || cachedIssues.length > 0) {
-      setProjects(cachedProjects);
-      setIssues(cachedIssues);
-      setLoading(false);
-    }
-  }, []);
-
   // Fetch live global projects and issues from database
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -78,11 +67,9 @@ export default function DashboardPage() {
 
         if (Array.isArray(projData)) {
           setProjects(projData);
-          setLocalCache('dashboard_projects', projData);
         }
         if (Array.isArray(issueData)) {
           setIssues(issueData);
-          setLocalCache('dashboard_issues', issueData);
         }
       }
     } catch (err) {

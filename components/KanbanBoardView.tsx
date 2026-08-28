@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Issue, Status } from '@/lib/types';
+import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { TaskContextMenu } from '@/components/ui/TaskContextMenu';
 import { 
   Plus, 
   Search, 
@@ -22,16 +23,22 @@ interface KanbanBoardViewProps {
   issues: Issue[];
   onSelectIssue: (id: string) => void;
   onUpdateIssueStatus: (issueId: string, newStatus: Status) => void;
+  onUpdateIssuePriority?: (issueId: string, newPriority: Priority) => void;
+  onDeleteIssue?: (issueId: string) => void;
   onOpenNewIssue: () => void;
   onAddNewTaskToColumn?: (title: string, status: Status) => void;
+  canDelete?: boolean;
 }
 
 export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   issues,
   onSelectIssue,
   onUpdateIssueStatus,
+  onUpdateIssuePriority,
+  onDeleteIssue,
   onOpenNewIssue,
   onAddNewTaskToColumn,
+  canDelete = true,
 }) => {
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
@@ -40,6 +47,16 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverColId, setDragOverColId] = useState<Status | null>(null);
+
+  const [contextMenu, setContextMenu] = useState<{
+    isOpen: boolean;
+    position: { x: number; y: number };
+    issue: Issue | null;
+  }>({
+    isOpen: false,
+    position: { x: 0, y: 0 },
+    issue: null,
+  });
 
 
   // Memoized Filtered Issues
@@ -209,6 +226,15 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   <div
                     key={issue.id}
                     onClick={() => onSelectIssue(issue.id)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContextMenu({
+                        isOpen: true,
+                        position: { x: e.clientX, y: e.clientY },
+                        issue,
+                      });
+                    }}
                     className="px-3 py-2 grid grid-cols-12 items-center hover:bg-[#131415] cursor-pointer transition-colors text-xs group"
                   >
                     <div className="col-span-2 flex items-center gap-1.5 font-mono font-bold text-[#DCB001] text-[11px]">
@@ -403,6 +429,15 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                             setDragOverColId(null);
                           }}
                           onClick={() => onSelectIssue(issue.id)}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setContextMenu({
+                              isOpen: true,
+                              position: { x: e.clientX, y: e.clientY },
+                              issue,
+                            });
+                          }}
                           className={`p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-all duration-150 shadow-sm group select-none ${
                             isDragging
                               ? 'opacity-30 border-dashed border-[#DCB001] scale-[0.98]'
@@ -525,6 +560,19 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
           })}
         </div>
       )}
+
+      {/* Task Right-Click Context Menu */}
+      <TaskContextMenu
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        issue={contextMenu.issue}
+        onClose={() => setContextMenu((prev) => ({ ...prev, isOpen: false }))}
+        onEdit={(issue) => onSelectIssue(issue.id)}
+        onDelete={onDeleteIssue}
+        onUpdateStatus={onUpdateIssueStatus}
+        onUpdatePriority={onUpdateIssuePriority}
+        canDelete={canDelete}
+      />
     </div>
   );
 });
