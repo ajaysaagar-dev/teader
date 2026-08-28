@@ -13,10 +13,11 @@ Whenever any code changes, edits, bug fixes, or feature implementations are comp
    - Stage and commit changes **step-by-step as distinct, modular commits** grouped logically by functionality / layer (e.g., Database/Types, API Routes, UI Components, Page Views).
    - Use clear conventional commit messages (e.g., `fix(db): ...`, `feat(routes): ...`, `feat(ui): ...`).
 
-2. **Unified Push**:
+2. **Unified Push ONLY to Main**:
    - **Do NOT push step-by-step after each individual commit.**
    - First create all the separate commits locally.
-   - Once all commits are created and verified, **push all commits together in a single `git push`** to the `main` branch on GitHub (`origin main`).
+   - Once all commits are created and verified, **push all commits together in a single `git push origin main`**.
+   - **CRITICAL RULE**: ALWAYS and ONLY push to the `main` branch. **NEVER push to the `production` branch.**
 
 ---
 
@@ -26,7 +27,7 @@ Always update the `BUILD_NUMBER` constant in `lib/build-info.ts` to the exact ti
 
 - **Format**: `B<A|P>-<DDMMYYYY>-<HHMM>`
   - `BA` prefix if AM (e.g. `BA-12032026-1106`)
-  - `BP` prefix if PM (e.g. `BP-28082026-0702`)
+  - `BP` prefix if PM (e.g. `BP-28082026-0718`)
   - Followed by hyphen `-`, `DDMMYYYY` (Day, Month, Year), hyphen `-`, and `HHMM` (12-Hour, Minute).
 
 - **Display**:
