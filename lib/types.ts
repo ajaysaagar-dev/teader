@@ -168,6 +168,7 @@ export interface Issue {
   project: string;
   isFavorite?: boolean;
   isPinned?: boolean;
+  orderIndex?: number;
   subtasks: Subtask[];
   images?: ImageRecord[];
   timeline?: TimelineEvent[];
