@@ -1,4 +1,4 @@
-﻿export type RealtimeEventType =
+export type RealtimeEventType =
   | 'TASK_CREATED'
   | 'TASK_UPDATED'
   | 'TASKS_REORDERED'
@@ -10,7 +10,10 @@
   | 'MEMBER_JOINED'
   | 'MEMBER_LEFT'
   | 'MESSAGE_SENT'
-  | 'MESSAGE_DELETED';
+  | 'MESSAGE_DELETED'
+  | 'DOC_CREATED'
+  | 'DOC_UPDATED'
+  | 'DOC_DELETED';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;
