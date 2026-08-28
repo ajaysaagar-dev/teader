@@ -34,8 +34,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/conversations') ||
     pathname.startsWith('/my-work') ||
     pathname.startsWith('/initiatives') ||
-    pathname.startsWith('/issue');
-
+    pathname.startsWith('/issue') ||
+    pathname.startsWith('/task');
 
   if (isWorkspacePage && !session) {
     const loginUrl = new URL('/login', req.url);
@@ -72,5 +72,7 @@ export const config = {
     '/initiatives/:path*',
     '/initiatives',
     '/issue/:path*',
+    '/task/:path*',
+    '/task',
   ],
 };

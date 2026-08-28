@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const token = await setSessionCookie(user, data.remember !== false);
     return NextResponse.json({ ...user, token });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 401 });
+return NextResponse.json({ error: err.message }, { status: 401 });
   }
 
 }
