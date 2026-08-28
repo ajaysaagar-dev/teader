@@ -2,7 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromRequest } from '@/lib/auth';
 
 // Public routes that never require authentication
-const PUBLIC_PAGE_ROUTES = ['/', '/login', '/register'];
+const PUBLIC_PAGE_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/docs',
+  '/sitemap.xml',
+  '/robots.txt',
+  '/manifest.webmanifest',
+  '/opengraph-image',
+  '/twitter-image',
+  '/og-image.png',
+];
 const PUBLIC_API_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
@@ -20,7 +31,13 @@ export async function middleware(req: NextRequest) {
     PUBLIC_API_ROUTES.some((r) => pathname.startsWith(r)) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/data/')
+    pathname.startsWith('/data/') ||
+    pathname.startsWith('/releases/') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.xml') ||
+    pathname.endsWith('.txt')
   ) {
     return NextResponse.next();
   }
