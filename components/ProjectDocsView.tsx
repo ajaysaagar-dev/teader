@@ -34,7 +34,8 @@ import {
   Undo2,
   Redo2,
   CheckCircle2,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -693,10 +694,95 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }, 20);
   };
 
+  // Auto-Save State & Refs
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeContentRef = useRef(activeContent);
+  const activeTitleRef = useRef(activeTitle);
+  const selectedDocIdCurrentRef = useRef(selectedDocId);
+
+  useEffect(() => {
+    activeContentRef.current = activeContent;
+  }, [activeContent]);
+
+  useEffect(() => {
+    activeTitleRef.current = activeTitle;
+  }, [activeTitle]);
+
+  useEffect(() => {
+    selectedDocIdCurrentRef.current = selectedDocId;
+  }, [selectedDocId]);
+
+  // Perform background auto-save to server & DB without interrupting user typing
+  const performAutoSave = useCallback(async () => {
+    const docId = selectedDocIdCurrentRef.current;
+    if (!docId) return;
+
+    const contentToSave = activeContentRef.current;
+    const cleanTitle = activeTitleRef.current.trim().replace(/\.md$/i, '');
+
+    setIsAutoSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/docs/${docId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: cleanTitle,
+          content: contentToSave,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSavedContent(contentToSave);
+        setSavedTitle(cleanTitle);
+        setLocalCache(`doc_content_${docId}`, contentToSave);
+        setDocs((prev) =>
+          prev.map((d) => (d.id === docId ? { ...d, title: cleanTitle, updatedAt: data.updatedAt || new Date().toISOString() } : d))
+        );
+      }
+    } catch (err) {
+      console.warn('Background auto-save note:', err);
+    } finally {
+      setIsAutoSaving(false);
+    }
+  }, [projectId]);
+
+  // Debounced auto-save triggering on any content or title change
+  useEffect(() => {
+    if (!selectedDocId) return;
+    if (activeContent === savedContent && activeTitle === savedTitle) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 500);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [activeContent, activeTitle, savedContent, savedTitle, selectedDocId, performAutoSave]);
+
   // Handle Textarea Change with History Debounce
   const handleContentChange = (newVal: string) => {
     setActiveContent(newVal);
     pushToHistory(newVal);
+  };
+
+  // Handle Title Change
+  const handleTitleChange = (newTitle: string) => {
+    setActiveTitle(newTitle);
+    const clean = newTitle.trim().replace(/\.md$/i, '');
+    if (selectedDocId) {
+      setDocs((prev) =>
+        prev.map((d) => (d.id === selectedDocId ? { ...d, title: clean } : d))
+      );
+    }
   };
 
   // Handle Create New Doc File
@@ -736,7 +822,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         setLocalCache(`doc_content_${created.id}`, docContent);
         historyRef.current = [docContent];
         historyIndexRef.current = 0;
-        setViewMode('split'); // Newly created file opens in split mode
+        setViewMode('split');
         toast.success(`Created: ${docTitle}`);
       } else {
         toast.error('Failed to create doc file');
@@ -746,60 +832,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   };
 
-  // Handle Save Doc Content to Server .md File (Instant UI Feedback + Background Server Sync)
-  const handleSaveDoc = useCallback(async () => {
-    if (!selectedDocId) return;
-
-    const cleanTitle = activeTitle.trim().replace(/\.md$/i, '');
-
-    // 1. Immediately show as Saved in UI (0ms) and update saved preview + local cache
-    setIsJustSaved(true);
-    setSavedContent(activeContent);
-    setSavedTitle(cleanTitle);
-    setLocalCache(`doc_content_${selectedDocId}`, activeContent);
-    setDocs((prev) => {
-      const updated = prev.map((d) => (d.id === selectedDocId ? { ...d, title: cleanTitle, updatedAt: new Date().toISOString() } : d));
-      setLocalCache(`docs_${projectId}`, updated);
-      return updated;
-    });
-    toast.success(`☁️ Saved: ${cleanTitle || 'Document'}`);
-
-    setTimeout(() => {
-      setIsJustSaved(false);
-    }, 2200);
-
-    // 2. Process in background to physical server file & database
-    try {
-      const res = await fetch(`/api/projects/${projectId}/docs/${selectedDocId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: cleanTitle,
-          content: activeContent,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setDocs((prev) =>
-          prev.map((d) => (d.id === selectedDocId ? { ...d, title: cleanTitle, updatedAt: data.updatedAt } : d))
-        );
-      } else {
-        toast.error('Failed to sync document to server');
-      }
-    } catch {
-      toast.error('Network error during background save');
-    }
-  }, [selectedDocId, projectId, activeTitle, activeContent]);
-
-
-  // Global Keyboard Shortcuts (Ctrl+S for Save, Ctrl+Z for Undo, Ctrl+Y for Redo)
+  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y for Redo, Ctrl+S for instant flush)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S / Cmd+S => Save on Cloud
+      // Ctrl+S / Cmd+S => Instant Flush Auto-save
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        handleSaveDoc();
+        performAutoSave();
         return;
       }
 
@@ -823,7 +862,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSaveDoc, handleUndo, handleRedo]);
+  }, [performAutoSave, handleUndo, handleRedo]);
 
 
 
@@ -1022,7 +1061,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <input
                   type="text"
                   value={activeTitle}
-                  onChange={(e) => setActiveTitle(e.target.value)}
+                  onChange={(e) => handleTitleChange(e.target.value)}
                   className="bg-transparent text-sm sm:text-base font-bold text-white outline-none flex-1 truncate hover:border-b hover:border-[#DCB001] focus:border-b focus:border-[#DCB001] transition-all"
                   title="Click to edit document title"
                 />
@@ -1041,13 +1080,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
               {/* Controls */}
               <div className="flex items-center gap-2 shrink-0">
-                {/* Unsaved Changes Status Badge */}
-                {hasUnsavedChanges && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F59E0B]/10 border border-[#F59E0B]/30 text-[11px] font-mono text-[#F59E0B]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                    <span>Unsaved (Ctrl+S to save)</span>
-                  </span>
-                )}
+                {/* Autosave Status Indicator */}
+                <div className="flex items-center select-none">
+                  {isAutoSaving ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#DCB001]/30 rounded-lg text-[11px] font-mono text-[#DCB001]" title="Autosaving to server...">
+                      <Loader2 size={11} className="animate-spin text-[#DCB001]" />
+                      <span>Saving...</span>
+                    </div>
+                  ) : hasUnsavedChanges ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#2A2C30] rounded-lg text-[11px] font-mono text-[#787C83]" title="Autosave pending...">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
+                      <span>Editing</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#22C55E]/20 rounded-lg text-[11px] font-mono text-[#22C55E]" title="All changes automatically saved">
+                      <CheckCircle2 size={11} className="text-[#22C55E]" />
+                      <span className="hidden sm:inline">Saved</span>
+                    </div>
+                  )}
+                </div>
 
                 {/* Realtime Live Sync Badge */}
                 <div className="hidden md:flex items-center">
@@ -1089,34 +1140,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <span className="hidden sm:inline">Preview</span>
                   </button>
                 </div>
-
-                {/* Save to Cloud Button (Instant Feedback) */}
-                <button
-                  onClick={handleSaveDoc}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all ${
-                    isJustSaved
-                      ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40 scale-105'
-                      : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
-                  }`}
-                  title="Save to Cloud (Ctrl + S)"
-                >
-                  {isJustSaved ? (
-                    <>
-                      <Check size={13} className="text-[#22C55E] stroke-[3]" />
-                      <span>Saved</span>
-                    </>
-                  ) : (
-                    <>
-                      <Cloud size={13} />
-                      <span>Save</span>
-                      <span className="hidden sm:inline-block text-[10px] opacity-75 font-mono ml-0.5 bg-black/15 px-1 py-0.2 rounded">
-                        Ctrl+S
-                      </span>
-                    </>
-                  )}
-                </button>
-
-
               </div>
             </div>
 
@@ -1145,13 +1168,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_6px_#22C55E]" />
                           <span className="text-[#CFD4DD] font-bold">REALTIME PREVIEW</span>
                         </div>
-                        {hasUnsavedChanges ? (
-                          <span className="text-[#F59E0B] flex items-center gap-1 text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                            Unsaved edits (Ctrl+S to save)
+                        {isAutoSaving ? (
+                          <span className="text-[#DCB001] flex items-center gap-1 text-[10px]">
+                            <Loader2 size={10} className="animate-spin text-[#DCB001]" />
+                            Saving to server...
+                          </span>
+                        ) : hasUnsavedChanges ? (
+                          <span className="text-[#787C83] flex items-center gap-1 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
+                            Auto-syncing...
                           </span>
                         ) : (
-                          <span className="text-[#22C55E] text-[10px]">✓ Saved to Cloud</span>
+                          <span className="text-[#22C55E] text-[10px]">✓ All changes saved</span>
                         )}
                       </div>
                     )}
