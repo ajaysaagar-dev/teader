@@ -24,12 +24,10 @@ Whenever any code changes, edits, bug fixes, or feature implementations are comp
 
 Always update the `BUILD_NUMBER` constant in `lib/build-info.ts` to the exact time the code was edited before pushing to GitHub:
 
-- **Format**: `B<A|P><DD><MM><YYYY><HH><MM>`
-  - `BA` prefix if AM
-  - `BP` prefix if PM
-  - Followed by `DD` (2-digit Day), `MM` (2-digit Month), `YYYY` (4-digit Year), `HH` (2-digit 12-Hour), `MM` (2-digit Minute).
-  - *Example 1*: `12:03:2026 12:45AM` -> `BA120320261245`
-  - *Example 2*: `28:08:2026 07:00PM` -> `BP280820260700`
+- **Format**: `B<A|P>-<DDMMYYYY>-<HHMM>`
+  - `BA` prefix if AM (e.g. `BA-12032026-1106`)
+  - `BP` prefix if PM (e.g. `BP-28082026-0702`)
+  - Followed by hyphen `-`, `DDMMYYYY` (Day, Month, Year), hyphen `-`, and `HHMM` (12-Hour, Minute).
 
 - **Display**:
   - In the app bottom-right of the screen, **always show the build number** (not version number).
