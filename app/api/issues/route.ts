@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllIssuesDB, createIssueDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { parseBody, CreateIssueSchema } from '@/lib/validation';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 
 export async function GET() {
   const session = await getSessionFromCookie();
@@ -35,6 +36,13 @@ export async function POST(req: Request) {
       labels: data.labels,
       subtasks: data.subtasks,
       assigneeName: data.assigneeName,
+    });
+
+    broadcastRealtimeEvent({
+      type: 'TASK_CREATED',
+      projectId: created.projectId,
+      payload: created,
+      senderSessionId: session.id,
     });
 
     return NextResponse.json(created, { status: 201 });

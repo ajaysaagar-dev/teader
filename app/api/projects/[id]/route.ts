@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { deleteProjectDB, updateProjectDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { parseBody, UpdateProjectSchema } from '@/lib/validation';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 
 export async function PATCH(
   req: Request,
@@ -21,6 +22,14 @@ export async function PATCH(
       name: data.name,
       description: data.description,
     });
+
+    broadcastRealtimeEvent({
+      type: 'PROJECT_UPDATED',
+      projectId: resolvedParams.id,
+      payload: { id: resolvedParams.id, ...data },
+      senderSessionId: session.id,
+    });
+
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -37,6 +46,14 @@ export async function DELETE(
   try {
     const resolvedParams = await params;
     const result = await deleteProjectDB(resolvedParams.id);
+
+    broadcastRealtimeEvent({
+      type: 'PROJECT_DELETED',
+      projectId: resolvedParams.id,
+      payload: { id: resolvedParams.id },
+      senderSessionId: session.id,
+    });
+
     return NextResponse.json(result);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
