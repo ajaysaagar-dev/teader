@@ -3,7 +3,8 @@ import { z } from 'zod';
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
 export const LoginSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().min(1, 'Email or username is required'),
+  username: z.string().optional(),
   password: z.string().min(1, 'Password is required'),
   remember: z.boolean().optional(),
 });

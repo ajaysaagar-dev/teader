@@ -330,13 +330,16 @@ export async function initDB(): Promise<void> {
 
 // ─── Authentication Data Access Helpers ─────────────────────────────────────
 
-export async function loginUserDB(email: string, plainTextPassword?: string) {
+export async function loginUserDB(emailOrUsername: string, plainTextPassword?: string) {
   await initDB();
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalized = emailOrUsername.toLowerCase().trim();
 
   try {
     const p = getPool();
-    const result = await p.query(`SELECT * FROM "users" WHERE LOWER("email") = $1 LIMIT 1`, [normalizedEmail]);
+    const result = await p.query(
+      `SELECT * FROM "users" WHERE LOWER("email") = $1 OR LOWER("name") = $1 LIMIT 1`,
+      [normalized]
+    );
     const user = result.rows?.[0];
 
     if (user) {
@@ -352,7 +355,9 @@ export async function loginUserDB(email: string, plainTextPassword?: string) {
     if (err.message === 'Invalid email or password') throw err;
   }
 
-  const memUser = memoryUsersStore.find((u) => u.email.toLowerCase() === normalizedEmail);
+  const memUser = memoryUsersStore.find(
+    (u) => u.email.toLowerCase() === normalized || u.name.toLowerCase() === normalized
+  );
   if (memUser) {
     if (plainTextPassword) {
       const isMatch = await verifyPassword(plainTextPassword, memUser.password);
@@ -1140,7 +1145,11 @@ export interface ProjectDocRecord {
 
 export async function getProjectDocsDB(projectId: string | number) {
   await initDB();
-  const numId = Number(projectId);
+  let numId = Number(projectId);
+  if (isNaN(numId)) {
+    const project = await getProjectByIdDB(projectId);
+    if (project) numId = Number(project.id);
+  }
   try {
     const p = getPool();
     const result = await p.query(
@@ -1178,7 +1187,11 @@ export async function createProjectDocDB(data: {
   content?: string;
 }) {
   await initDB();
-  const numProjId = Number(data.projectId);
+  let numProjId = Number(data.projectId);
+  if (isNaN(numProjId)) {
+    const project = await getProjectByIdDB(data.projectId);
+    numProjId = project ? Number(project.id) : 1;
+  }
   const numUserId = data.userId ? Number(data.userId) : 1;
   const userName = data.userName || 'karri';
   const now = new Date().toISOString();
@@ -1275,13 +1288,18 @@ export async function updateProjectDocDB(
 
 export async function deleteProjectDocDB(docId: string, projectId?: string | number) {
   await initDB();
+  let numProjId = projectId !== undefined ? Number(projectId) : undefined;
+  if (numProjId !== undefined && isNaN(numProjId)) {
+    const project = await getProjectByIdDB(projectId!);
+    numProjId = project ? Number(project.id) : undefined;
+  }
   try {
     const p = getPool();
     // 1. Remove from project_docs table
     await p.query(`DELETE FROM "project_docs" WHERE "id" = $1`, [docId]);
 
     // 2. Remove docId from projects table reference
-    if (projectId) {
+    if (numProjId !== undefined) {
       await p.query(
         `UPDATE "projects"
          SET "docIds" = COALESCE((
@@ -1290,7 +1308,7 @@ export async function deleteProjectDocDB(docId: string, projectId?: string | num
            WHERE elem #>> '{}' != $1
          ), '[]'::jsonb)
          WHERE "id" = $2`,
-        [docId, Number(projectId)]
+        [docId, numProjId]
       );
     } else {
       await p.query(

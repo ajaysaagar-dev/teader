@@ -10,8 +10,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
   }
 
-  // Rate limit by IP + email
-  const key = rateLimitKey(getClientIp(req), data.email);
+  const identifier = (data.email || data.username || '').trim();
+
+  // Rate limit by IP + identifier
+  const key = rateLimitKey(getClientIp(req), identifier);
   if (isRateLimited(key)) {
     return NextResponse.json(
       { error: 'Too many login attempts. Please try again in 15 minutes.' },
@@ -20,11 +22,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const user = await loginUserDB(data.email, data.password);
+    const user = await loginUserDB(identifier, data.password);
     const token = await setSessionCookie(user, data.remember !== false);
     return NextResponse.json({ ...user, token });
   } catch (err: any) {
-return NextResponse.json({ error: err.message }, { status: 401 });
+    return NextResponse.json({ error: err.message }, { status: 401 });
   }
 
 }
