@@ -1081,28 +1081,53 @@ export default function SingleProjectPage() {
 
   // Handle Drag & Drop to Move Task between Folders/Epics
   const handleMoveTaskToFolder = useCallback(async (issueId: string, targetEpicName: string) => {
+    let nextAllIssues: Issue[] = [];
+
     // 1. Optimistic UI update
-    setIssues((prev) =>
-      prev.map((iss) => (iss.id === issueId ? { ...iss, epic: targetEpicName } : iss))
-    );
+    setIssues((prev) => {
+      const dragged = prev.find((i) => i.id === issueId);
+      if (!dragged) return prev;
+      const updated = { ...dragged, epic: targetEpicName };
+      const remaining = prev.filter((i) => i.id !== issueId);
+      nextAllIssues = [...remaining, updated];
+      return nextAllIssues;
+    });
     toast.success(`Task moved into "${targetEpicName}" folder!`);
 
     // 2. Background Sync
     try {
-      const res = await fetch(`/api/issues/${issueId}`, {
+      await fetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ epic: targetEpicName }),
       });
-      if (!res.ok) {
-        toast.error('Failed to sync moved task with server');
-        fetchProjectData();
+
+      const projIssues = nextAllIssues.filter(
+        (i: any) =>
+          project &&
+          (String(i.projectId) === String(project.id) ||
+            i.project === project.name ||
+            (i.project || '').toLowerCase() === project.name.toLowerCase())
+      );
+
+      if (projIssues.length > 0) {
+        const payload = projIssues.map((iss, idx) => ({
+          id: iss.id,
+          orderIndex: idx,
+          status: iss.status,
+        }));
+
+        await fetch('/api/issues/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payload }),
+        });
       }
     } catch {
       toast.error('Network error moving task');
       fetchProjectData();
     }
-  }, [fetchProjectData]);
+  }, [project, fetchProjectData]);
 
   // Handle Adding Task directly to Folder
   const handleAddTaskToFolder = useCallback(async (folderName: string, taskTitle: string) => {
@@ -1161,6 +1186,8 @@ export default function SingleProjectPage() {
     targetFolder: string,
     position: 'before' | 'after'
   ) => {
+    let nextAllIssues: Issue[] = [];
+
     setIssues((prev) => {
       const dragged = prev.find((i) => i.id === draggedIssueId);
       if (!dragged) return prev;
@@ -1170,13 +1197,14 @@ export default function SingleProjectPage() {
       const targetIndex = remaining.findIndex((i) => i.id === targetIssueId);
 
       if (targetIndex === -1) {
-        return [updatedDragged, ...remaining];
+        nextAllIssues = [updatedDragged, ...remaining];
+      } else {
+        const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+        const next = [...remaining];
+        next.splice(insertIndex, 0, updatedDragged);
+        nextAllIssues = next;
       }
-
-      const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
-      const next = [...remaining];
-      next.splice(insertIndex, 0, updatedDragged);
-      return next;
+      return nextAllIssues;
     });
 
     toast.success(`Task reordered in folder "${targetFolder}"!`);
@@ -1187,8 +1215,32 @@ export default function SingleProjectPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ epic: targetFolder }),
       });
-    } catch {}
-  }, []);
+
+      const projIssues = nextAllIssues.filter(
+        (i: any) =>
+          project &&
+          (String(i.projectId) === String(project.id) ||
+            i.project === project.name ||
+            (i.project || '').toLowerCase() === project.name.toLowerCase())
+      );
+
+      if (projIssues.length > 0) {
+        const payload = projIssues.map((iss, idx) => ({
+          id: iss.id,
+          orderIndex: idx,
+          status: iss.status,
+        }));
+
+        await fetch('/api/issues/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payload }),
+        });
+      }
+    } catch (err) {
+      console.error('Error persisting tree reorder to DB:', err);
+    }
+  }, [project]);
 
   return (
     <>
