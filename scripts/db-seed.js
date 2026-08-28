@@ -1,10 +1,10 @@
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 
-const DB_HOST = process.env.POSTGRES_HOST || process.env.MYSQL_HOST || '178.238.226.206';
-const DB_USER = process.env.POSTGRES_USER || process.env.MYSQL_USER || 'ajaysaagar';
-const DB_PASSWORD = process.env.POSTGRES_PASSWORD || process.env.MYSQL_PASSWORD || 'aass209c';
-const DB_NAME = process.env.POSTGRES_DATABASE || process.env.MYSQL_DATABASE || 'ajaysaagar';
+const DB_HOST = process.env.POSTGRES_HOST || process.env.MYSQL_HOST || 'localhost';
+const DB_USER = process.env.POSTGRES_USER || process.env.MYSQL_USER || 'teader_user';
+const DB_PASSWORD = process.env.POSTGRES_PASSWORD || process.env.MYSQL_PASSWORD || 'teader_secret';
+const DB_NAME = process.env.POSTGRES_DATABASE || process.env.MYSQL_DATABASE || 'teader_db';
 const DB_PORT = Number(process.env.POSTGRES_PORT || process.env.MYSQL_PORT) || 5432;
 const DATABASE_URL = process.env.DATABASE_URL;
 
