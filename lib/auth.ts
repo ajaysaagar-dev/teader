@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 
 // ─── Secrets ────────────────────────────────────────────────────────────────
@@ -62,25 +62,52 @@ export async function setSessionCookie(user: SessionUser, remember: boolean = tr
   return token;
 }
 
-
-
 export async function clearSessionCookie() {
   const cookieStore = await cookies();
   cookieStore.delete(COOKIE_NAME);
 }
 
 export async function getSessionFromCookie(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const cookie = cookieStore.get(COOKIE_NAME);
-  if (!cookie?.value) return null;
-  return verifySession(cookie.value);
+  try {
+    const cookieStore = await cookies();
+    const cookie = cookieStore.get(COOKIE_NAME);
+    if (cookie?.value) {
+      const user = await verifySession(cookie.value);
+      if (user) return user;
+    }
+  } catch {}
+
+  try {
+    const headerList = await headers();
+    const authHeader = headerList.get('authorization') || headerList.get('x-teader-token');
+    if (authHeader) {
+      const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : authHeader.trim();
+      if (token) {
+        return verifySession(token);
+      }
+    }
+  } catch {}
+
+  return null;
 }
 
 /** Read session from a NextRequest (used in middleware) */
 export async function getSessionFromRequest(req: NextRequest): Promise<SessionUser | null> {
   const token = req.cookies.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySession(token);
+  if (token) {
+    const user = await verifySession(token);
+    if (user) return user;
+  }
+
+  const authHeader = req.headers.get('authorization') || req.headers.get('x-teader-token');
+  if (authHeader) {
+    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.substring(7).trim() : authHeader.trim();
+    if (bearerToken) {
+      return verifySession(bearerToken);
+    }
+  }
+
+  return null;
 }
 
 // ─── Password Helpers ─────────────────────────────────────────────────────────
