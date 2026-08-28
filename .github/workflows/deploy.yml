@@ -76,6 +76,12 @@ jobs:
               cd "$DEPLOY_DIR"
             fi
 
+            # Navigate into teader-web directory if inside monorepo root
+            if [ -d "teader-web" ]; then
+              cd teader-web
+              echo "📂 Navigated to teader-web directory"
+            fi
+
             # Install dependencies
             echo "📦 Installing production dependencies..."
             npm install --legacy-peer-deps
@@ -87,7 +93,7 @@ jobs:
             # Zero-downtime PM2 reload
             if command -v pm2 &> /dev/null; then
               echo "🔄 Reloading PM2 cluster..."
-              pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+              pm2 reload ecosystem.config.js --env production || pm2 restart teader --update-env || pm2 start ecosystem.config.js --env production
               pm2 save
             elif command -v docker-compose &> /dev/null; then
               echo "🐳 Restarting via Docker Compose..."
