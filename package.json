@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0 -p 3000",
+    "ws": "node server/ws-server.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@prisma/client": "^7.9.0",
+    "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
@@ -30,6 +32,7 @@
     "sonner": "^2.0.7",
     "swagger-ui-react": "^5.32.11",
     "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
