@@ -1,4 +1,4 @@
-﻿const http = require('http');
+const http = require('http');
 const { WebSocketServer, WebSocket } = require('ws');
 
 const PORT = Number(process.env.WS_PORT || process.env.PORT_WS || 3001);
@@ -44,6 +44,13 @@ function broadcastToClients(event, targetRoom, excludeClientId) {
         console.warn('[WS Broadcast Client Error]:', err.message);
       }
     }
+  }
+
+  // Also notify in-process SSE listeners
+  if (globalForWs.__teaderRealtimeBus) {
+    try {
+      globalForWs.__teaderRealtimeBus.emit('realtime_event', { event, room: targetRoom });
+    } catch {}
   }
 
   return count;
