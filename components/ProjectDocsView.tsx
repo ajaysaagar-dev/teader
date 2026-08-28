@@ -40,6 +40,8 @@ import {
 import { toast } from 'sonner';
 import { RandomLoadingText } from './ui/RandomLoadingText';
 import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { RealtimeBadge } from '@/components/RealtimeBadge';
 
 
 
@@ -432,6 +434,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     selectedDocIdRef.current = selectedDocId;
   }, [selectedDocId]);
 
+  const savedContentRef = useRef<string>(savedContent);
+  useEffect(() => {
+    savedContentRef.current = savedContent;
+  }, [savedContent]);
+
   // 1. Fetch all docs for this project once on projectId change
   const fetchDocsList = useCallback(async (selectNewestId?: string) => {
     try {
@@ -474,6 +481,87 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   useEffect(() => {
     fetchDocsList();
   }, [fetchDocsList]);
+
+  // ─── Real-Time WebSocket Dynamic Documentation Synchronization ──────────────
+  useRealtimeSubscription({
+    projectId,
+    onEvent: useCallback((event: RealtimeEvent) => {
+      switch (event.type) {
+        case 'DOC_CREATED': {
+          const newDoc = event.payload;
+          if (newDoc && (String(newDoc.projectId) === String(projectId) || !newDoc.projectId)) {
+            setDocs((prev) => {
+              if (prev.some((d) => d.id === newDoc.id)) {
+                return prev.map((d) => (d.id === newDoc.id ? { ...d, ...newDoc } : d));
+              }
+              return [newDoc, ...prev];
+            });
+            toast.info(`New document created: ${newDoc.title || 'Untitled'}`);
+          }
+          break;
+        }
+
+        case 'DOC_UPDATED': {
+          const updatedDoc = event.payload;
+          if (updatedDoc && updatedDoc.id) {
+            setDocs((prev) =>
+              prev.map((d) => (d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d))
+            );
+
+            // If the updated doc is currently open, and current user has no uncommitted local edits
+            if (selectedDocIdRef.current === updatedDoc.id) {
+              const cleanTitle = updatedDoc.title ? updatedDoc.title.replace(/\.md$/i, '') : '';
+              setSavedTitle(cleanTitle);
+              if (updatedDoc.content !== undefined) {
+                setSavedContent(updatedDoc.content);
+                setActiveContent((prev) => {
+                  if (!prev || prev === savedContentRef.current) {
+                    return updatedDoc.content;
+                  }
+                  return prev;
+                });
+              }
+            }
+          }
+          break;
+        }
+
+        case 'DOC_DELETED': {
+          const deletedId = event.payload?.id;
+          if (deletedId) {
+            setDocs((prev) => {
+              const remaining = prev.filter((d) => d.id !== deletedId);
+              if (selectedDocIdRef.current === deletedId) {
+                if (remaining.length > 0) {
+                  setSelectedDocId(remaining[0].id);
+                  const nextDoc = remaining[0];
+                  const cleanTitle = nextDoc.title ? nextDoc.title.replace(/\.md$/i, '') : '';
+                  setActiveTitle(cleanTitle);
+                  setSavedTitle(cleanTitle);
+                  if (nextDoc.content !== undefined) {
+                    setActiveContent(nextDoc.content);
+                    setSavedContent(nextDoc.content);
+                  }
+                } else {
+                  setSelectedDocId(null);
+                  setActiveContent('');
+                  setSavedContent('');
+                  setActiveTitle('');
+                  setSavedTitle('');
+                }
+              }
+              return remaining;
+            });
+            toast.info('A document was deleted');
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }, [projectId]),
+  });
 
   // Undo / Redo History Stack
   const historyRef = useRef<string[]>([]);
@@ -940,6 +1028,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   </span>
                 )}
 
+                {/* Realtime Live Sync Badge */}
+                <div className="hidden md:flex items-center">
+                  <RealtimeBadge />
+                </div>
+
                 {/* View Mode Switcher */}
                 <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
                   <button
@@ -1021,26 +1114,31 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 </div>
               )}
 
-              {/* GitHub-Flavored Markdown Preview Column (Only updates when saved) */}
+              {/* GitHub-Flavored Markdown Preview Column (Real-time Live Preview while editing) */}
               {(viewMode === 'preview' || viewMode === 'split') && (
                 <div className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-16 bg-[#0E0F11] custom-scrollbar">
                   <div className="max-w-4xl mx-auto space-y-1 text-[#CFD4DD] font-sans">
                     {viewMode === 'split' && (
                       <div className="flex items-center justify-between pb-3 text-[11px] font-mono text-[#787C83]">
-                        <span>SAVED PREVIEW</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_6px_#22C55E]" />
+                          <span className="text-[#CFD4DD] font-bold">REALTIME PREVIEW</span>
+                        </div>
                         {hasUnsavedChanges ? (
-                          <span className="text-[#F59E0B] flex items-center gap-1">
+                          <span className="text-[#F59E0B] flex items-center gap-1 text-[10px]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
-                            Press Ctrl+S to update preview
+                            Unsaved edits (Ctrl+S to save)
                           </span>
                         ) : (
-                          <span className="text-[#22C55E]">✓ Up to date</span>
+                          <span className="text-[#22C55E] text-[10px]">✓ Saved to Cloud</span>
                         )}
                       </div>
                     )}
                     <div className="p-6 sm:p-8 bg-[#161719] border border-[#2A2C30] rounded-2xl shadow-xl">
-                      {savedContent ? renderGithubMarkdown(savedContent) : (
-                        <p className="text-xs text-[#787C83] italic">No saved content yet. Press Ctrl+S or click Save to update preview.</p>
+                      {activeContent || savedContent ? (
+                        renderGithubMarkdown(activeContent || savedContent)
+                      ) : (
+                        <p className="text-xs text-[#787C83] italic">Start typing in the editor on the left to see real-time preview...</p>
                       )}
                     </div>
                   </div>
