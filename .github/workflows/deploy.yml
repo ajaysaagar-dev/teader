@@ -1,9 +1,9 @@
-name: Continuous Deployment to VPS (Main Branch)
+name: Continuous Deployment to VPS (Production Branch)
 
 on:
   push:
     branches:
-      - main
+      - production
 
 jobs:
   test-and-build:
@@ -54,7 +54,7 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script_stop: true
           script: |
-            echo "🚀 Starting Teader automatic deployment from main branch..."
+            echo "🚀 Starting Teader automatic deployment from production branch..."
             
             DEPLOY_DIR="/var/www/teader"
             if [ ! -d "$DEPLOY_DIR" ]; then
@@ -66,13 +66,13 @@ jobs:
               echo "📂 Navigated to $DEPLOY_DIR"
               git reset --hard HEAD || true
               git clean -fd || true
-              git fetch origin main
-              git checkout -f -B main origin/main
-              git reset --hard origin/main
+              git fetch origin production
+              git checkout -f -B production origin/production
+              git reset --hard origin/production
               git clean -fd
             else
-              echo "📂 Cloning main branch to $DEPLOY_DIR"
-              git clone -b main https://github.com/ajaysaagar-dev/teader.git "$DEPLOY_DIR"
+              echo "📂 Cloning production branch to $DEPLOY_DIR"
+              git clone -b production https://github.com/ajaysaagar-dev/teader.git "$DEPLOY_DIR"
               cd "$DEPLOY_DIR"
             fi
 
