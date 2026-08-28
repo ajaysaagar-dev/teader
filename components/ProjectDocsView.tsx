@@ -409,14 +409,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     if (cachedDocs && cachedDocs.length > 0) {
       setDocs(cachedDocs);
       const targetDoc = cachedDocs[0];
-      setSelectedDocId(targetDoc.id);
-      const cleanTitle = targetDoc.title.replace(/\.md$/i, '');
-      setActiveTitle(cleanTitle);
-      setSavedTitle(cleanTitle);
-      const cachedContent = getLocalCache(`doc_content_${targetDoc.id}`, '');
-      if (cachedContent) {
-        setActiveContent(cachedContent);
-        setSavedContent(cachedContent);
+      if (targetDoc) {
+        setSelectedDocId(String(targetDoc.id));
+        const cleanTitle = (targetDoc.title || '').replace(/\.md$/i, '');
+        setActiveTitle(cleanTitle);
+        setSavedTitle(cleanTitle);
+        const cachedContent = getLocalCache(`doc_content_${targetDoc.id}`, targetDoc.content || '');
+        if (cachedContent) {
+          setActiveContent(cachedContent);
+          setSavedContent(cachedContent);
+        }
       }
       setLoading(false);
     }
@@ -428,7 +430,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       setLocalCache(`docs_${projectId}`, docs);
     }
   }, [docs, projectId]);
-
 
   const selectedDocIdRef = useRef<string | null>(selectedDocId);
   useEffect(() => {
@@ -446,27 +447,26 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       const res = await fetch(`/api/projects/${projectId}/docs`);
       if (res.ok) {
         const data: ProjectDoc[] = await res.json();
-        setDocs((prev) => {
-          const next = reconcileDocs(prev, data);
-          if (next !== prev && next.length > 0) {
-            setLocalCache(`docs_${projectId}`, next);
-          }
-          return next;
-        });
-        if (data.length > 0) {
-          const curId = selectedDocIdRef.current;
-          const targetDoc = (selectNewestId && data.find((d) => d.id === selectNewestId)) ||
-            (curId && data.find((d) => d.id === curId)) ||
-            data[0];
-          setSelectedDocId(targetDoc.id);
-          const cleanTitle = targetDoc.title ? targetDoc.title.replace(/\.md$/i, '') : '';
-          setActiveTitle(cleanTitle);
-          setSavedTitle(cleanTitle);
-          if (targetDoc.content !== undefined && targetDoc.content !== '') {
-            setActiveContent(targetDoc.content);
-            setSavedContent(targetDoc.content);
-            historyRef.current = [targetDoc.content];
-            historyIndexRef.current = 0;
+        if (Array.isArray(data)) {
+          setDocs(data);
+          setLocalCache(`docs_${projectId}`, data);
+          if (data.length > 0) {
+            const curId = selectedDocIdRef.current;
+            const targetDoc = (selectNewestId && data.find((d) => String(d.id) === String(selectNewestId))) ||
+              (curId && data.find((d) => String(d.id) === String(curId))) ||
+              data[0];
+            if (targetDoc) {
+              setSelectedDocId(String(targetDoc.id));
+              const cleanTitle = (targetDoc.title || '').replace(/\.md$/i, '');
+              setActiveTitle(cleanTitle);
+              setSavedTitle(cleanTitle);
+              if (targetDoc.content !== undefined && targetDoc.content !== '') {
+                setActiveContent(targetDoc.content);
+                setSavedContent(targetDoc.content);
+                historyRef.current = [targetDoc.content];
+                historyIndexRef.current = 0;
+              }
+            }
           }
         }
       }
@@ -476,8 +476,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       setLoading(false);
     }
   }, [projectId]);
-
-
 
   useEffect(() => {
     fetchDocsList();
@@ -512,11 +510,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           const updatedDoc = event.payload;
           if (updatedDoc && updatedDoc.id) {
             setDocs((prev) =>
-              prev.map((d) => (d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d))
+              prev.map((d) => (String(d.id) === String(updatedDoc.id) ? { ...d, ...updatedDoc } : d))
             );
 
             // If the updated doc is currently open, and current user has no uncommitted local edits
-            if (selectedDocIdRef.current === updatedDoc.id) {
+            if (String(selectedDocIdRef.current) === String(updatedDoc.id)) {
               const cleanTitle = updatedDoc.title ? updatedDoc.title.replace(/\.md$/i, '') : '';
               setSavedTitle(cleanTitle);
               if (updatedDoc.content !== undefined) {
@@ -537,10 +535,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           const deletedId = event.payload?.id;
           if (deletedId) {
             setDocs((prev) => {
-              const remaining = prev.filter((d) => d.id !== deletedId);
-              if (selectedDocIdRef.current === deletedId) {
+              const remaining = prev.filter((d) => String(d.id) !== String(deletedId));
+              if (String(selectedDocIdRef.current) === String(deletedId)) {
                 if (remaining.length > 0) {
-                  setSelectedDocId(remaining[0].id);
+                  setSelectedDocId(String(remaining[0].id));
                   const nextDoc = remaining[0];
                   const cleanTitle = nextDoc.title ? nextDoc.title.replace(/\.md$/i, '') : '';
                   setActiveTitle(cleanTitle);
@@ -623,7 +621,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     fetch(`/api/projects/${projectId}/docs/${selectedDocId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (isMounted && data.content !== undefined) {
+        if (isMounted && data && data.content !== undefined) {
           setActiveContent(data.content);
           setSavedContent(data.content);
           const cleanTitle = data.title ? data.title.replace(/\.md$/i, '') : '';
@@ -633,7 +631,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           historyIndexRef.current = 0;
           setDocs((prev) =>
             prev.map((d) =>
-              d.id === selectedDocId ? { ...d, content: data.content, title: data.title } : d
+              String(d.id) === String(selectedDocId) ? { ...d, content: data.content, title: data.title } : d
             )
           );
         }
@@ -647,16 +645,17 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
   // Active Doc Object
   const activeDoc = useMemo(() => {
-    return docs.find((d) => d.id === selectedDocId) || null;
+    return docs.find((d) => String(d.id) === String(selectedDocId)) || null;
   }, [docs, selectedDocId]);
 
-  // Filtered Docs List with strict key deduplication
+  // Filtered Docs List with strict key deduplication and safe string lookups
   const filteredDocs = useMemo(() => {
     const seen = new Set<string>();
     const uniqueDocs: ProjectDoc[] = [];
     for (const d of docs) {
-      const docKey = String(d.id || d.fileName);
-      if (!seen.has(docKey)) {
+      if (!d) continue;
+      const docKey = String(d.id || d.fileName || '');
+      if (docKey && !seen.has(docKey)) {
         seen.add(docKey);
         uniqueDocs.push(d);
       }
@@ -666,8 +665,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     const q = searchQuery.toLowerCase().trim();
     return uniqueDocs.filter(
       (d) =>
-        d.title.toLowerCase().includes(q) ||
-        d.fileName.toLowerCase().includes(q)
+        (d.title && d.title.toLowerCase().includes(q)) ||
+        (d.fileName && d.fileName.toLowerCase().includes(q))
     );
   }, [docs, searchQuery]);
 
@@ -719,7 +718,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     if (!docId) return;
 
     const contentToSave = activeContentRef.current;
-    const cleanTitle = activeTitleRef.current.trim().replace(/\.md$/i, '');
+    const cleanTitle = (activeTitleRef.current || 'Untitled Document').trim().replace(/\.md$/i, '');
 
     setIsAutoSaving(true);
     try {
@@ -738,13 +737,61 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         setSavedTitle(cleanTitle);
         setLocalCache(`doc_content_${docId}`, contentToSave);
         setDocs((prev) =>
-          prev.map((d) => (d.id === docId ? { ...d, title: cleanTitle, updatedAt: data.updatedAt || new Date().toISOString() } : d))
+          prev.map((d) => (String(d.id) === String(docId) ? { ...d, title: cleanTitle, updatedAt: data.updatedAt || new Date().toISOString() } : d))
         );
       }
     } catch (err) {
       console.warn('Background auto-save note:', err);
     } finally {
       setIsAutoSaving(false);
+    }
+  }, [projectId]);
+
+  // Explicit Manual Save with visual feedback and toast
+  const performManualSave = useCallback(async () => {
+    const docId = selectedDocIdCurrentRef.current;
+    if (!docId) return;
+
+    const contentToSave = activeContentRef.current;
+    const cleanTitle = (activeTitleRef.current || 'Untitled Document').trim().replace(/\.md$/i, '');
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/docs/${docId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: cleanTitle,
+          content: contentToSave,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setSavedContent(contentToSave);
+        setSavedTitle(cleanTitle);
+        setLocalCache(`doc_content_${docId}`, contentToSave);
+        setDocs((prev) =>
+          prev.map((d) =>
+            String(d.id) === String(docId)
+              ? { ...d, title: cleanTitle, updatedAt: data.updatedAt || new Date().toISOString() }
+              : d
+          )
+        );
+        setIsJustSaved(true);
+        toast.success(`Saved: ${cleanTitle}`);
+        setTimeout(() => setIsJustSaved(false), 2000);
+      } else {
+        toast.error('Failed to save document');
+      }
+    } catch {
+      toast.error('Network error saving document');
+    } finally {
+      setIsSaving(false);
     }
   }, [projectId]);
 
@@ -780,7 +827,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     const clean = newTitle.trim().replace(/\.md$/i, '');
     if (selectedDocId) {
       setDocs((prev) =>
-        prev.map((d) => (d.id === selectedDocId ? { ...d, title: clean } : d))
+        prev.map((d) => (String(d.id) === String(selectedDocId) ? { ...d, title: clean } : d))
       );
     }
   };
@@ -814,7 +861,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           }
           return [created, ...prev];
         });
-        setSelectedDocId(created.id);
+        setSelectedDocId(String(created.id));
         setActiveTitle(docTitle);
         setSavedTitle(docTitle);
         setActiveContent(docContent);
@@ -832,13 +879,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   };
 
-  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y for Redo, Ctrl+S for instant flush)
+  // Global Keyboard Shortcuts (Ctrl+Z for Undo, Ctrl+Y for Redo, Ctrl+S for instant manual save)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S / Cmd+S => Instant Flush Auto-save
+      // Ctrl+S / Cmd+S => Instant Manual Save
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        performAutoSave();
+        performManualSave();
         return;
       }
 
@@ -862,14 +909,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performAutoSave, handleUndo, handleRedo]);
-
-
+  }, [performManualSave, handleUndo, handleRedo]);
 
   // Handle Delete Doc
   const handleDeleteDoc = async (docId: string, docFileName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const cleanDocName = docFileName.replace(/\.md$/i, '');
+    const cleanDocName = (docFileName || 'Document').replace(/\.md$/i, '');
     if (!confirm(`Are you sure you want to delete "${cleanDocName}" from the server?`)) {
       return;
     }
@@ -880,11 +925,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       });
 
       if (res.ok) {
-        const remaining = docs.filter((d) => d.id !== docId);
+        const remaining = docs.filter((d) => String(d.id) !== String(docId));
         setDocs(remaining);
-        if (selectedDocId === docId) {
+        if (String(selectedDocId) === String(docId)) {
           if (remaining.length > 0) {
-            setSelectedDocId(remaining[0].id);
+            setSelectedDocId(String(remaining[0].id));
             setViewMode('preview');
           } else {
             setSelectedDocId(null);
@@ -914,7 +959,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const handleSelectDoc = (docId: string) => {
     setSelectedDocId(docId);
     setViewMode('preview'); // Opening already created file defaults to preview mode
-    const doc = docs.find((d) => d.id === docId);
+    const doc = docs.find((d) => String(d.id) === String(docId));
     if (doc) {
       const cleanTitle = doc.title ? doc.title.replace(/\.md$/i, '') : '';
       setActiveTitle(cleanTitle);
@@ -944,7 +989,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
             <button
               onClick={() => setIsCreatingNew(true)}
-              className="flex items-center gap-1 px-2 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold transition-all shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer"
               title="Create New Document"
             >
               <Plus size={12} />
@@ -972,7 +1017,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               type="text"
               required
               autoFocus
-              placeholder="Document title (e.g. API Spec)..."
+              placeholder="Document title (e.g. Architecture & Overview)..."
               value={newDocTitle}
               onChange={(e) => setNewDocTitle(e.target.value)}
               className="w-full bg-[#1B1C1F] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none"
@@ -987,7 +1032,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-3 py-1 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-lg"
+                className="px-3 py-1 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-lg cursor-pointer"
               >
                 Create
               </button>
@@ -1007,14 +1052,15 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               No docs found.
             </div>
           ) : (
-
             filteredDocs.map((doc) => {
-              const isSelected = selectedDocId === doc.id;
+              const isSelected = String(selectedDocId) === String(doc.id);
+              const docTitle = doc?.title ? doc.title.replace(/\.md$/i, '') : 'Untitled Document';
+              const docFileName = doc?.fileName ? doc.fileName.replace(/\.md$/i, '') : String(doc.id);
 
               return (
                 <div
                   key={doc.id}
-                  onClick={() => handleSelectDoc(doc.id)}
+                  onClick={() => handleSelectDoc(String(doc.id))}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer group flex items-center justify-between gap-2 ${
                     isSelected
                       ? 'bg-[#1F2023] border-[#DCB001]/60 text-white shadow-sm'
@@ -1024,19 +1070,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-1.5">
                       <FileCode size={13} className={isSelected ? 'text-[#DCB001]' : 'text-[#787C83]'} />
-                      <span className="font-semibold text-xs truncate block">{doc.title.replace(/\.md$/i, '')}</span>
+                      <span className="font-semibold text-xs truncate block">{docTitle}</span>
                     </div>
 
                     <div className="flex items-center gap-1 text-[10px] font-mono text-[#787C83] truncate">
                       <span className="bg-[#0E0F10] px-1.5 py-0.2 rounded border border-[#2A2C30] truncate max-w-[140px]">
-                        {doc.fileName.replace(/\.md$/i, '')}
+                        {docFileName}
                       </span>
                     </div>
                   </div>
 
                   {/* Delete button */}
                   <button
-                    onClick={(e) => handleDeleteDoc(doc.id, doc.fileName, e)}
+                    onClick={(e) => handleDeleteDoc(String(doc.id), doc.fileName || 'Document', e)}
                     className="text-[#787C83] hover:text-[#EF4444] p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Delete document"
                   >
@@ -1054,7 +1100,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         {activeDoc ? (
           <>
             {/* Main Top Header */}
-            <div className="h-12 px-5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+            <div className="h-12 px-4 sm:px-5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
               {/* Document Title Input */}
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <FileText size={16} className="text-[#DCB001] shrink-0" />
@@ -1073,35 +1119,59 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   title="Click to copy identifier"
                 >
                   <FileCode size={11} />
-                  <span className="truncate max-w-[160px]">{activeDoc.fileName.replace(/\.md$/i, '')}</span>
+                  <span className="truncate max-w-[160px]">{(activeDoc.fileName || '').replace(/\.md$/i, '')}</span>
                   {copiedFile ? <Check size={11} className="text-[#22C55E]" /> : <Copy size={10} />}
                 </button>
               </div>
 
               {/* Controls */}
               <div className="flex items-center gap-2 shrink-0">
+                {/* 1. Explicit Save Button */}
+                <button
+                  type="button"
+                  onClick={() => performManualSave()}
+                  disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                    hasUnsavedChanges
+                      ? 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] cursor-pointer'
+                      : isJustSaved
+                      ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40 cursor-default'
+                      : 'bg-[#202226] text-[#787C83] border border-[#2A2C30] opacity-75 cursor-default'
+                  }`}
+                  title="Save document (Ctrl + S)"
+                >
+                  {isSaving || isAutoSaving ? (
+                    <Loader2 size={13} className="animate-spin text-current" />
+                  ) : isJustSaved ? (
+                    <Check size={13} className="text-[#22C55E]" />
+                  ) : (
+                    <Save size={13} />
+                  )}
+                  <span>{isSaving || isAutoSaving ? 'Saving...' : isJustSaved ? 'Saved' : 'Save'}</span>
+                </button>
+
                 {/* Autosave Status Indicator */}
-                <div className="flex items-center select-none">
+                <div className="hidden sm:flex items-center select-none">
                   {isAutoSaving ? (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#DCB001]/30 rounded-lg text-[11px] font-mono text-[#DCB001]" title="Autosaving to server...">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#DCB001]/30 rounded-lg text-[11px] font-mono text-[#DCB001]" title="Autosaving to server...">
                       <Loader2 size={11} className="animate-spin text-[#DCB001]" />
                       <span>Saving...</span>
                     </div>
                   ) : hasUnsavedChanges ? (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#2A2C30] rounded-lg text-[11px] font-mono text-[#787C83]" title="Autosave pending...">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#2A2C30] rounded-lg text-[11px] font-mono text-[#787C83]" title="Unsaved changes pending...">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
-                      <span>Editing</span>
+                      <span>Unsaved</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] border border-[#22C55E]/20 rounded-lg text-[11px] font-mono text-[#22C55E]" title="All changes automatically saved">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#22C55E]/20 rounded-lg text-[11px] font-mono text-[#22C55E]" title="All changes saved">
                       <CheckCircle2 size={11} className="text-[#22C55E]" />
-                      <span className="hidden sm:inline">Saved</span>
+                      <span>Synced</span>
                     </div>
                   )}
                 </div>
 
                 {/* Realtime Live Sync Badge */}
-                <div className="hidden md:flex items-center">
+                <div className="hidden lg:flex items-center">
                   <RealtimeBadge />
                 </div>
 
@@ -1168,7 +1238,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_6px_#22C55E]" />
                           <span className="text-[#CFD4DD] font-bold">REALTIME PREVIEW</span>
                         </div>
-                        {isAutoSaving ? (
+                        {isAutoSaving || isSaving ? (
                           <span className="text-[#DCB001] flex items-center gap-1 text-[10px]">
                             <Loader2 size={10} className="animate-spin text-[#DCB001]" />
                             Saving to server...
@@ -1176,7 +1246,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         ) : hasUnsavedChanges ? (
                           <span className="text-[#787C83] flex items-center gap-1 text-[10px]">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
-                            Auto-syncing...
+                            Unsaved changes
                           </span>
                         ) : (
                           <span className="text-[#22C55E] text-[10px]">✓ All changes saved</span>
@@ -1198,11 +1268,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             {/* Literal Markdown Symbols Formatting Bar at Bottom Middle */}
             {(viewMode === 'editor' || viewMode === 'split') && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 bg-[#17181A]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/50 shadow-2xl rounded-xl px-3 py-1.5 flex flex-row flex-nowrap items-center gap-1.5 text-xs text-[#CFD4DD] overflow-x-auto max-w-[95vw] whitespace-nowrap select-none custom-scrollbar">
+                {/* Save Button */}
+                <button
+                  type="button"
+                  onClick={() => performManualSave()}
+                  disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
+                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2.5 bg-[#DCB001] hover:bg-[#c49c00] disabled:bg-[#1B1C1F] text-[#0F1011] disabled:text-[#787C83] disabled:border-[#2A2C30] border border-[#DCB001]/60 rounded-lg font-mono text-xs font-bold transition-all leading-none cursor-pointer disabled:cursor-default"
+                  title="Save Document (Ctrl + S)"
+                >
+                  <Save size={12} />
+                  <span>Save</span>
+                </button>
+
+                <span className="w-px h-4 bg-[#2A2C30] mx-0.5 shrink-0" />
+
                 {/* Undo Button */}
                 <button
                   type="button"
                   onClick={handleUndo}
-                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Undo (Ctrl + Z)"
                 >
                   <Undo2 size={12} />
@@ -1213,7 +1297,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={handleRedo}
-                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center gap-1 shrink-0 h-7 px-2 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] hover:text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Redo (Ctrl + Y / Ctrl + Shift + Z)"
                 >
                   <Redo2 size={12} />
@@ -1224,12 +1308,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
                 <span className="text-[10px] font-mono text-[#787C83] uppercase px-1 shrink-0 hidden xl:inline">Symbols:</span>
 
-
                 {/* # Heading 1 */}
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('# ', '', 'Heading 1')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Heading 1: # Heading"
                 >
                   #
@@ -1239,7 +1322,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('## ', '', 'Heading 2')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Heading 2: ## Heading"
                 >
                   ##
@@ -1249,7 +1332,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('### ', '', 'Heading 3')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Heading 3: ### Heading"
                 >
                   ###
@@ -1261,7 +1344,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('**', '**', 'bold')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-white transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono font-bold text-xs text-white transition-all leading-none cursor-pointer"
                   title="Bold: **bold**"
                 >
                   **bold**
@@ -1271,7 +1354,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('*', '*', 'italic')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono italic text-xs text-[#CFD4DD] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono italic text-xs text-[#CFD4DD] transition-all leading-none cursor-pointer"
                   title="Italic: *italic*"
                 >
                   *italic*
@@ -1281,7 +1364,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('~~', '~~', 'strike')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono line-through text-xs text-[#787C83] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono line-through text-xs text-[#787C83] transition-all leading-none cursor-pointer"
                   title="Strikethrough: ~~strike~~"
                 >
                   ~~strike~~
@@ -1293,7 +1376,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('`', '`', 'code')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Inline Code: `code`"
                 >
                   `code`
@@ -1303,7 +1386,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('```ts\n', '\n```', '// code')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none cursor-pointer"
                   title="Code Block: ```lang\ncode\n```"
                 >
                   ```{` `}```
@@ -1313,7 +1396,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('- ', '', 'item')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none cursor-pointer"
                   title="Bullet List: - item"
                 >
                   - list
@@ -1323,7 +1406,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('1. ', '', 'item')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none cursor-pointer"
                   title="Numbered List: 1. item"
                 >
                   1. list
@@ -1333,7 +1416,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('- [ ] ', '', 'task')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#DCB001] transition-all leading-none cursor-pointer"
                   title="Task Checkbox: - [ ] task"
                 >
                   - [ ]
@@ -1345,7 +1428,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('> ', '', 'quote')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none cursor-pointer"
                   title="Blockquote: > quote"
                 >
                   {`> quote`}
@@ -1355,7 +1438,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('[', '](https://example.com)', 'title')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#58A6FF] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#58A6FF] transition-all leading-none cursor-pointer"
                   title="Link: [title](url)"
                 >
                   [link]
@@ -1371,7 +1454,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       ''
                     )
                   }
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#CFD4DD] transition-all leading-none cursor-pointer"
                   title="Table: | Col 1 | Col 2 |"
                 >
                   | table |
@@ -1381,14 +1464,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => handleInsertSymbol('\n---\n', '', '')}
-                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none"
+                  className="inline-flex items-center justify-center shrink-0 h-7 px-2.5 bg-[#131415] hover:bg-[#222427] hover:border-[#DCB001]/50 border border-[#2A2C30] rounded-lg font-mono text-xs text-[#787C83] hover:text-white transition-all leading-none cursor-pointer"
                   title="Horizontal Divider: ---"
                 >
                   ---
                 </button>
               </div>
             )}
-
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-3">
