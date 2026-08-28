@@ -9,7 +9,7 @@ import { clearAllLocalCaches } from '@/lib/client-cache';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,7 +67,8 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim() || isSubmitting) return;
+    const cleanId = identifier.trim();
+    if (!cleanId || !password.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -75,7 +76,8 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: email.trim(), 
+          email: cleanId,
+          username: cleanId,
           password: password.trim(),
           remember: rememberMe
         }),
@@ -128,8 +130,8 @@ export default function LoginPage() {
     }
   };
 
-  const handlePresetFill = (presetEmail: string) => {
-    setEmail(presetEmail);
+  const handlePresetFill = (presetId: string) => {
+    setIdentifier(presetId);
     setPassword('password123');
   };
 
@@ -160,16 +162,17 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="p-8 space-y-5">
           <div>
             <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
-              Email Address
+              Email or Username
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-3 text-[#787C83]" />
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. karri@teader.io"
+                autoComplete="username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="e.g. karri or karri@teader.io"
                 className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
@@ -184,6 +187,7 @@ export default function LoginPage() {
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -210,7 +214,7 @@ export default function LoginPage() {
           
           <button
             type="submit"
-            disabled={!email.trim() || !password.trim() || isSubmitting}
+            disabled={!identifier.trim() || !password.trim() || isSubmitting}
             className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-xl shadow-lg transition-all disabled:opacity-50"
           >
             <LogIn size={15} />

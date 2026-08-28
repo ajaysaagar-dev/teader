@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 
 import { Issue, Status, Priority } from '@/lib/types';
 import { 
@@ -20,7 +20,10 @@ import {
   User,
   Calendar,
   Filter,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  MoveHorizontal
 } from 'lucide-react';
 
 interface DependencyGraphViewProps {
@@ -80,7 +83,6 @@ function getUserColor(userName: string): string {
 }
 
 function parseBlockedBy(blockedBy: any): string[] {
-
   if (!blockedBy) return [];
   if (Array.isArray(blockedBy)) return blockedBy.map(String);
   if (typeof blockedBy === 'string') {
@@ -105,28 +107,86 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const [selectedUserFilter, setSelectedUserFilter] = useState<string | null>(null);
   const [layoutMode, setLayoutMode] = useState<'timeline_branches' | 'dag_pipeline'>('timeline_branches');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isGrabbing, setIsGrabbing] = useState(false);
+  const isDraggingRef = useRef(false);
+  const startDragXRef = useRef(0);
+  const scrollLeftStartRef = useRef(0);
+  const animFrameRef = useRef<number | null>(null);
 
-  // Ultra-Smooth Inertial Horizontal Scrolling on Mouse Wheel
+  // Ease-in-Ease-out Cubic Bezier Function: S-Curve
+  const easeInOutCubic = useCallback((t: number): number => {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }, []);
+
+  // Programmatic Smooth Scroll with Ease-In-Ease-Out Animation
+  const smoothScrollBy = useCallback((deltaX: number, customDuration = 450) => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+
+    const startX = el.scrollLeft;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const targetX = Math.max(0, Math.min(maxScroll, startX + deltaX));
+    const distance = targetX - startX;
+
+    if (Math.abs(distance) < 1) return;
+
+    const startTime = performance.now();
+    const duration = Math.min(650, Math.max(350, customDuration));
+
+    const step = (currentTime: number) => {
+      if (!el) return;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const eased = easeInOutCubic(progress);
+
+      el.scrollLeft = startX + distance * eased;
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(step);
+      } else {
+        el.scrollLeft = targetX;
+        animFrameRef.current = null;
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(step);
+  }, [easeInOutCubic]);
+
+  // Ultra-Smooth Ease-In-Ease-Out Horizontal Scrolling on Mouse Wheel & Trackpad
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    let animationFrameId: number | null = null;
     let targetScrollLeft = el.scrollLeft;
-    let isScrolling = false;
+    let startScrollLeft = el.scrollLeft;
+    let animStartTime = 0;
+    let animDuration = 450;
+    let isAnimating = false;
+    let animFrame: number | null = null;
 
-    const smoothScrollLoop = () => {
+    const easeInOutCubicMath = (t: number): number => {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    };
+
+    const animateLoop = (now: number) => {
       if (!el) return;
-      const current = el.scrollLeft;
-      const diff = targetScrollLeft - current;
+      const elapsed = now - animStartTime;
+      const progress = Math.min(1, elapsed / animDuration);
+      const eased = easeInOutCubicMath(progress);
 
-      if (Math.abs(diff) > 0.5) {
-        el.scrollLeft += diff * 0.2; // Smooth exponential interpolation
-        animationFrameId = requestAnimationFrame(smoothScrollLoop);
+      el.scrollLeft = startScrollLeft + (targetScrollLeft - startScrollLeft) * eased;
+
+      if (progress < 1) {
+        animFrame = requestAnimationFrame(animateLoop);
       } else {
         el.scrollLeft = targetScrollLeft;
-        isScrolling = false;
-        animationFrameId = null;
+        isAnimating = false;
+        animFrame = null;
       }
     };
 
@@ -134,26 +194,90 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       // Don't intercept if holding Ctrl/Cmd (allow zooming)
       if (e.ctrlKey || e.metaKey) return;
 
-      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
-      if (Math.abs(delta) > 0) {
-        e.preventDefault();
-        const maxScroll = el.scrollWidth - el.clientWidth;
-        const currentPos = isScrolling ? targetScrollLeft : el.scrollLeft;
-        targetScrollLeft = Math.max(0, Math.min(maxScroll, currentPos + delta * 1.5));
+      const rawDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (Math.abs(rawDelta) === 0) return;
 
-        if (!isScrolling) {
-          isScrolling = true;
-          animationFrameId = requestAnimationFrame(smoothScrollLoop);
-        }
+      e.preventDefault();
+
+      const maxScroll = el.scrollWidth - el.clientWidth;
+      const currentScroll = el.scrollLeft;
+
+      // Smooth step delta with ease-in-ease-out accumulation
+      const stepDelta = rawDelta * 1.8;
+      const newTarget = Math.max(0, Math.min(maxScroll, (isAnimating ? targetScrollLeft : currentScroll) + stepDelta));
+
+      startScrollLeft = currentScroll;
+      targetScrollLeft = newTarget;
+      animStartTime = performance.now();
+
+      const distance = Math.abs(targetScrollLeft - startScrollLeft);
+      animDuration = Math.min(600, Math.max(380, distance * 0.75));
+
+      if (!isAnimating) {
+        isAnimating = true;
+        animFrame = requestAnimationFrame(animateLoop);
+      }
+    };
+
+    // Keyboard Arrow navigation with Ease-In-Ease-Out
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        smoothScrollBy(-320, 400);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        smoothScrollBy(320, 400);
       }
     };
 
     el.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       el.removeEventListener('wheel', handleWheel);
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('keydown', handleKeyDown);
+      if (animFrame) cancelAnimationFrame(animFrame);
     };
-  }, []);
+  }, [smoothScrollBy]);
+
+  // Click & Drag Canvas to Pan smoothly
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('[data-interactive="true"]') || target.closest('.cursor-pointer')) {
+      return;
+    }
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+
+    isDraggingRef.current = true;
+    setIsGrabbing(true);
+    startDragXRef.current = e.pageX - el.offsetLeft;
+    scrollLeftStartRef.current = el.scrollLeft;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startDragXRef.current) * 1.5;
+    el.scrollLeft = scrollLeftStartRef.current - walk;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      setIsGrabbing(false);
+    }
+  };
 
 
 
@@ -436,11 +560,36 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           </div>
         </div>
 
-        {/* Right: Controls & Zoom */}
+        {/* Right: Controls, Smooth Pan & Zoom */}
         <div className="flex items-center gap-2">
+          {/* Smooth Horizontal Scroll Navigation (Ease-In-Ease-Out) */}
+          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => smoothScrollBy(-380, 480)}
+              className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1F2023] rounded transition-colors"
+              title="Smooth Scroll Left (Ease In-Out)"
+            >
+              <ChevronLeft size={13} />
+            </button>
+            <div className="flex items-center gap-1 px-1.5 text-[10px] font-mono text-[#787C83] border-x border-[#2A2C30]">
+              <MoveHorizontal size={11} className="text-[#DCB001]" />
+              <span className="hidden sm:inline">PAN</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => smoothScrollBy(380, 480)}
+              className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1F2023] rounded transition-colors"
+              title="Smooth Scroll Right (Ease In-Out)"
+            >
+              <ChevronRight size={13} />
+            </button>
+          </div>
+
           {/* Zoom Controls */}
           <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
             <button
+              type="button"
               onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
               className="p-1 text-[#787C83] hover:text-white rounded"
               title="Zoom Out"
@@ -449,6 +598,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             </button>
             <span className="px-1.5 text-[10px] font-mono text-[#CFD4DD]">{Math.round(scale * 100)}%</span>
             <button
+              type="button"
               onClick={() => setScale((s) => Math.min(1.5, s + 0.1))}
               className="p-1 text-[#787C83] hover:text-white rounded"
               title="Zoom In"
@@ -456,6 +606,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               <ZoomIn size={13} />
             </button>
             <button
+              type="button"
               onClick={() => setScale(1)}
               className="p-1 text-[#787C83] hover:text-white rounded ml-1 border-l border-[#2A2C30]"
               title="Reset Zoom"
@@ -469,7 +620,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       {/* SVG Timeline Canvas Area */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-auto bg-[#0E0F11] relative graph-scrollbar custom-scrollbar"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        className={`flex-1 overflow-auto bg-[#0E0F11] relative graph-scrollbar custom-scrollbar select-none ${
+          isGrabbing ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
       >
 
 

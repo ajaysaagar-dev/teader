@@ -74,9 +74,17 @@ describe('signSession + verifySession', () => {
 });
 
 describe('loginUserDB', () => {
-  it('logs in seeded default user successfully', async () => {
+  it('logs in seeded default user successfully by email', async () => {
     const { loginUserDB } = await import('../lib/db');
     const user = await loginUserDB('karri@teader.io', 'password123');
+    expect(user).toBeDefined();
+    expect(user.email).toBe('karri@teader.io');
+    expect(user.name).toBe('karri');
+  });
+
+  it('logs in seeded default user successfully by username', async () => {
+    const { loginUserDB } = await import('../lib/db');
+    const user = await loginUserDB('karri', 'password123');
     expect(user).toBeDefined();
     expect(user.email).toBe('karri@teader.io');
     expect(user.name).toBe('karri');
@@ -85,6 +93,7 @@ describe('loginUserDB', () => {
   it('rejects wrong password', async () => {
     const { loginUserDB } = await import('../lib/db');
     await expect(loginUserDB('karri@teader.io', 'wrongpassword')).rejects.toThrow('Invalid email or password');
+    await expect(loginUserDB('karri', 'wrongpassword')).rejects.toThrow('Invalid email or password');
   });
 });
 
