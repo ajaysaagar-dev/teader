@@ -10,6 +10,8 @@ import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } f
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { RealtimeBadge } from '@/components/RealtimeBadge';
 
 
 
@@ -528,6 +530,88 @@ export default function SingleProjectPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIssueId, isEditProjectModalOpen, isNewIssueModalOpen]);
+
+  // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────
+  useRealtimeSubscription({
+    projectId: project?.id || projectIdParam,
+    onEvent: useCallback((event: RealtimeEvent) => {
+      switch (event.type) {
+        case 'TASK_CREATED': {
+          const newTask = event.payload;
+          if (
+            newTask &&
+            (String(newTask.projectId) === String(projectIdParam) ||
+              (project && (String(newTask.projectId) === String(project.id) || newTask.project === project.name)))
+          ) {
+            setIssues((prev) => {
+              if (prev.some((i) => i.id === newTask.id || i.key === newTask.key)) {
+                return prev.map((i) => (i.id === newTask.id || i.key === newTask.key ? { ...i, ...newTask } : i));
+              }
+              return [newTask, ...prev];
+            });
+          }
+          break;
+        }
+
+        case 'TASK_UPDATED': {
+          const updated = event.payload;
+          if (updated && updated.id) {
+            setIssues((prev) =>
+              prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+            );
+          }
+          break;
+        }
+
+        case 'TASKS_REORDERED': {
+          const items: Array<{ id: string; orderIndex: number; status?: Status }> = event.payload?.items || [];
+          if (items.length > 0) {
+            const map = new Map(items.map((it) => [it.id, it]));
+            setIssues((prev) => {
+              const updated = prev.map((iss) => {
+                const update = map.get(iss.id);
+                if (update) {
+                  return {
+                    ...iss,
+                    orderIndex: update.orderIndex,
+                    status: update.status || iss.status,
+                  };
+                }
+                return iss;
+              });
+              return [...updated].sort((a, b) => (Number(a.orderIndex) || 0) - (Number(b.orderIndex) || 0));
+            });
+          }
+          break;
+        }
+
+        case 'TASK_DELETED': {
+          const deletedId = event.payload?.id;
+          if (deletedId) {
+            setIssues((prev) => prev.filter((i) => i.id !== deletedId));
+            setSelectedIssueId((prev) => (prev === deletedId ? null : prev));
+          }
+          break;
+        }
+
+        case 'SUBTASK_UPDATED': {
+          fetchProjectData();
+          break;
+        }
+
+        case 'PROJECT_UPDATED': {
+          const updatedProj = event.payload;
+          if (updatedProj && (String(updatedProj.id) === String(projectIdParam) || (project && String(updatedProj.id) === String(project.id)))) {
+            setProject((prev) => (prev ? { ...prev, ...updatedProj } : prev));
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }, [projectIdParam, project, fetchProjectData]),
+  });
 
   // Memoized checks & derived state
   const isCreator = useMemo(() => {
@@ -1372,10 +1456,9 @@ export default function SingleProjectPage() {
               </div>
             )}
 
-            {/* Live Sync Indicator */}
-            <div className="hidden xl:flex items-center gap-1 text-[10px] font-mono text-[#787C83] pl-1" title="Real-time MySQL DB Sync Active">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-              <span>Live</span>
+            {/* Live Sync WebSocket Indicator */}
+            <div className="hidden xl:flex items-center pl-1">
+              <RealtimeBadge />
             </div>
 
             {/* Import Tasks Button */}

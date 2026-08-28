@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProjectMessage } from '@/lib/db';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 
 interface Channel {
   id?: number | string;
@@ -133,9 +134,28 @@ export function ProjectConversationView({
       if (document.visibilityState === 'visible') {
         fetchMessages(false);
       }
-    }, 3000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [projectId, fetchMessages]);
+
+  // Real-time WebSocket dynamic message synchronization
+  useRealtimeSubscription({
+    projectId,
+    onEvent: useCallback((event: RealtimeEvent) => {
+      if (event.type === 'MESSAGE_SENT' && event.payload) {
+        const msg = event.payload;
+        if (msg.channel === activeChannel) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+          scrollToBottom();
+        }
+      } else if (event.type === 'MESSAGE_DELETED' && event.payload?.id) {
+        setMessages((prev) => prev.filter((m) => m.id !== event.payload.id));
+      }
+    }, [activeChannel]),
+  });
 
   useEffect(() => {
     scrollToBottom();
