@@ -1,4 +1,4 @@
-export type RealtimeEventType =
+﻿export type RealtimeEventType =
   | 'TASK_CREATED'
   | 'TASK_UPDATED'
   | 'TASKS_REORDERED'
@@ -27,23 +27,48 @@ const WS_PORT = process.env.WS_PORT || process.env.PORT_WS || '3001';
 const WS_HOST = process.env.WS_HOST || '127.0.0.1';
 const BROADCAST_ENDPOINT = `http://${WS_HOST}:${WS_PORT}/broadcast`;
 
+let wsModule: any = null;
+
+async function getWsModule() {
+  if (!wsModule && typeof window === 'undefined') {
+    try {
+      wsModule = await import('../server/ws-server');
+      if (wsModule && wsModule.initWebSocketServer) {
+        wsModule.initWebSocketServer();
+      }
+    } catch {}
+  }
+  return wsModule;
+}
+
 /**
- * Broadcasts an event to the local WebSocket server to instantly notify all connected clients.
- * This is non-blocking and fails gracefully if the WS server is not running.
+ * Broadcasts an event to all connected WebSocket clients.
+ * Integrates directly inside the Next.js process for zero latency, with HTTP fallback.
  */
 export async function broadcastRealtimeEvent(event: RealtimeEvent): Promise<void> {
   try {
+    const enrichedEvent: RealtimeEvent = {
+      ...event,
+      timestamp: event.timestamp || Date.now(),
+    };
+    const room = enrichedEvent.projectId ? `project:${enrichedEvent.projectId}` : 'global';
+
+    // 1. Direct In-Process Dispatch (0ms, same Next.js process)
+    try {
+      const mod = await getWsModule();
+      if (mod && typeof mod.broadcastToClients === 'function') {
+        mod.broadcastToClients(enrichedEvent, room);
+      }
+    } catch {}
+
+    // 2. HTTP Endpoint Dispatch (covers cluster / multi-process)
     const payload = {
-      event: {
-        ...event,
-        timestamp: event.timestamp || Date.now(),
-      },
-      room: event.projectId ? `project:${event.projectId}` : 'global',
+      event: enrichedEvent,
+      room,
     };
 
-    // Use a short timeout so API responses are never delayed
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 800);
+    const timeoutId = setTimeout(() => controller.abort(), 600);
 
     fetch(BROADCAST_ENDPOINT, {
       method: 'POST',
@@ -54,7 +79,6 @@ export async function broadcastRealtimeEvent(event: RealtimeEvent): Promise<void
       .catch(() => {})
       .finally(() => clearTimeout(timeoutId));
   } catch (err: any) {
-    // Gracefully handle any broadcast failure
     console.warn('[Realtime Broadcast Note]:', err.message);
   }
 }
