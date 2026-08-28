@@ -23,6 +23,7 @@ interface KanbanBoardViewProps {
   issues: Issue[];
   onSelectIssue: (id: string) => void;
   onUpdateIssueStatus: (issueId: string, newStatus: Status) => void;
+  onReorderIssues?: (reorderedIssues: Issue[]) => void;
   onUpdateIssuePriority?: (issueId: string, newPriority: Priority) => void;
   onDeleteIssue?: (issueId: string) => void;
   onOpenNewIssue: () => void;
@@ -34,6 +35,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   issues,
   onSelectIssue,
   onUpdateIssueStatus,
+  onReorderIssues,
   onUpdateIssuePriority,
   onDeleteIssue,
   onOpenNewIssue,
@@ -45,8 +47,12 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [addingToCol, setAddingToCol] = useState<Status | null>(null);
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
+  
+  // Drag and drop reordering states
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverColId, setDragOverColId] = useState<Status | null>(null);
+  const [dragOverIssueId, setDragOverIssueId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -57,7 +63,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
     position: { x: 0, y: 0 },
     issue: null,
   });
-
 
   // Memoized Filtered Issues
   const filteredIssues = useMemo(() => {
@@ -113,6 +118,62 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
     setAddingToCol(null);
   }, [inlineTaskTitle, onAddNewTaskToColumn]);
 
+  // Handle Drag & Drop Reordering (Top, Down, Between Tasks, Across Columns)
+  const handleReorder = useCallback((
+    sourceId: string,
+    targetId: string | null,
+    pos: 'before' | 'after' | null,
+    targetStatus: Status | null
+  ) => {
+    const sourceIssue = issues.find((i) => i.id === sourceId);
+    if (!sourceIssue) return;
+
+    const isStatusChanged = targetStatus && sourceIssue.status !== targetStatus;
+    const updatedSource: Issue = isStatusChanged
+      ? { ...sourceIssue, status: targetStatus }
+      : sourceIssue;
+
+    const remaining = issues.filter((i) => i.id !== sourceId);
+    let updatedList: Issue[];
+
+    if (!targetId || targetId === sourceId) {
+      if (targetStatus && isStatusChanged) {
+        // Find the last task in that column and append after it
+        let lastIdxInCol = -1;
+        for (let i = remaining.length - 1; i >= 0; i--) {
+          if (remaining[i].status === targetStatus) {
+            lastIdxInCol = i;
+            break;
+          }
+        }
+        if (lastIdxInCol !== -1) {
+          updatedList = [...remaining];
+          updatedList.splice(lastIdxInCol + 1, 0, updatedSource);
+        } else {
+          updatedList = [...remaining, updatedSource];
+        }
+      } else {
+        updatedList = [...remaining, updatedSource];
+      }
+    } else {
+      const targetIndex = remaining.findIndex((i) => i.id === targetId);
+      if (targetIndex === -1) {
+        updatedList = [...remaining, updatedSource];
+      } else {
+        const insertIndex = pos === 'after' ? targetIndex + 1 : targetIndex;
+        updatedList = [...remaining];
+        updatedList.splice(insertIndex, 0, updatedSource);
+      }
+    }
+
+    if (onReorderIssues) {
+      onReorderIssues(updatedList);
+    }
+
+    if (isStatusChanged && targetStatus) {
+      onUpdateIssueStatus(sourceId, targetStatus);
+    }
+  }, [issues, onReorderIssues, onUpdateIssueStatus]);
 
   return (
     <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none">
@@ -195,9 +256,9 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 
       {/* Main View: Kanban Board or Compact List */}
       {viewMode === 'list' ? (
-        /* Compact List / Table View */
+        /* Compact List / Table View with Drag-and-Drop Reordering */
         <div className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-lg overflow-hidden flex flex-col min-h-0">
-          <div className="px-3 py-1.5 bg-[#17181A] border-b border-[#2A2C30] grid grid-cols-12 text-[10px] font-mono text-[#787C83] uppercase tracking-wider">
+          <div className="px-3 py-1.5 bg-[#17181A] border-b border-[#2A2C30] grid grid-cols-12 text-[10px] font-mono text-[#787C83] uppercase tracking-wider items-center">
             <div className="col-span-2">Key</div>
             <div className="col-span-5">Title</div>
             <div className="col-span-2">Status</div>
@@ -221,10 +282,56 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   email: '',
                   role: '',
                 };
+                const isDragging = draggedIssueId === issue.id;
+                const isOverThis = dragOverIssueId === issue.id;
 
                 return (
                   <div
                     key={issue.id}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', issue.id);
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDraggedIssueId(issue.id);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedIssueId(null);
+                      setDragOverIssueId(null);
+                      setDropPosition(null);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (draggedIssueId && draggedIssueId !== issue.id) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                        const pos = isTopHalf ? 'before' : 'after';
+                        if (dragOverIssueId !== issue.id || dropPosition !== pos) {
+                          setDragOverIssueId(issue.id);
+                          setDropPosition(pos);
+                        }
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        if (dragOverIssueId === issue.id) {
+                          setDragOverIssueId(null);
+                          setDropPosition(null);
+                        }
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const droppedId = e.dataTransfer.getData('text/plain') || draggedIssueId;
+                      if (droppedId && droppedId !== issue.id) {
+                        handleReorder(droppedId, issue.id, dropPosition || 'before', null);
+                      }
+                      setDraggedIssueId(null);
+                      setDragOverIssueId(null);
+                      setDropPosition(null);
+                    }}
                     onClick={() => onSelectIssue(issue.id)}
                     onContextMenu={(e) => {
                       e.preventDefault();
@@ -235,9 +342,22 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                         issue,
                       });
                     }}
-                    className="px-3 py-2 grid grid-cols-12 items-center hover:bg-[#131415] cursor-pointer transition-colors text-xs group"
+                    className={`relative px-3 py-2 grid grid-cols-12 items-center hover:bg-[#131415] cursor-grab active:cursor-grabbing transition-all text-xs group select-none ${
+                      isDragging ? 'opacity-30 bg-[#131415]' : ''
+                    }`}
                   >
-                    <div className="col-span-2 flex items-center gap-1.5 font-mono font-bold text-[#DCB001] text-[11px]">
+                    {/* Top Drop Indicator Line */}
+                    {isOverThis && dropPosition === 'before' && (
+                      <div className="absolute -top-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                    )}
+
+                    {/* Bottom Drop Indicator Line */}
+                    {isOverThis && dropPosition === 'after' && (
+                      <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                    )}
+
+                    <div className="col-span-2 flex items-center gap-2 font-mono font-bold text-[#DCB001] text-[11px]">
+                      <GripVertical size={12} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
                       <span>{issue.key}</span>
                     </div>
 
@@ -296,10 +416,11 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
           </div>
         </div>
       ) : (
-        /* High-Density Kanban Board Columns Grid with Drag & Drop */
+        /* High-Density Kanban Board Columns Grid with Drag & Drop Reordering */
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 overflow-y-auto min-h-0">
           {columns.map((col) => {
-            const isColumnOver = dragOverColId === col.id;
+            const isColumnOver = dragOverColId === col.id && !dragOverIssueId;
+            const columnCards = filteredIssues.filter((i) => i.status === col.id);
 
             return (
               <div
@@ -307,21 +428,27 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                 onDragOver={(e) => {
                   e.preventDefault();
                   e.dataTransfer.dropEffect = 'move';
-                  if (dragOverColId !== col.id) setDragOverColId(col.id);
+                  if (dragOverColId !== col.id) {
+                    setDragOverColId(col.id);
+                  }
                 }}
                 onDragLeave={(e) => {
                   if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setDragOverColId(null);
+                    if (dragOverColId === col.id) {
+                      setDragOverColId(null);
+                    }
                   }
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
                   const droppedId = e.dataTransfer.getData('text/plain') || draggedIssueId;
                   if (droppedId) {
-                    onUpdateIssueStatus(droppedId, col.id);
+                    handleReorder(droppedId, null, null, col.id);
                   }
                   setDraggedIssueId(null);
                   setDragOverColId(null);
+                  setDragOverIssueId(null);
+                  setDropPosition(null);
                 }}
                 className={`bg-[#1B1C1F] border rounded-lg flex flex-col max-h-full overflow-hidden transition-all duration-150 ${
                   isColumnOver
@@ -366,12 +493,12 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                 </div>
 
                 {/* Column Body / Cards List */}
-                <div className="flex-1 p-2 space-y-2 overflow-y-auto">
+                <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-[120px]">
                   {/* Inline Quick Add Card */}
                   {addingToCol === col.id && (
                     <form
                       onSubmit={(e) => handleInlineAddSubmit(col.id, e)}
-                      className="p-2 bg-[#131415] border border-[#DCB001]/50 rounded-lg space-y-1.5"
+                      className="p-2 bg-[#131415] border border-[#DCB001]/50 rounded-lg space-y-1.5 shadow-md"
                     >
                       <input
                         type="text"
@@ -401,157 +528,209 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   )}
 
                   {/* Task Cards */}
-                  {filteredIssues
-                    .filter((i) => i.status === col.id)
-                    .map((issue) => {
-                      const completedSubCount = (issue.subtasks || []).filter((st) => st.completed).length;
-                      const issueAny = issue as any;
-                      const assigneeUser = issue.assignee || {
-                        id: 'usr_default',
-                        name: issueAny.assigneeName || 'User',
-                        avatar: issueAny.assigneeAvatar,
-                        email: '',
-                        role: '',
-                      };
-                      const isDragging = draggedIssueId === issue.id;
+                  {columnCards.map((issue) => {
+                    const completedSubCount = (issue.subtasks || []).filter((st) => st.completed).length;
+                    const issueAny = issue as any;
+                    const assigneeUser = issue.assignee || {
+                      id: 'usr_default',
+                      name: issueAny.assigneeName || 'User',
+                      avatar: issueAny.assigneeAvatar,
+                      email: '',
+                      role: '',
+                    };
+                    const isDragging = draggedIssueId === issue.id;
+                    const isOverThis = dragOverIssueId === issue.id;
 
-                      return (
-                        <div
-                          key={issue.id}
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData('text/plain', issue.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                            setDraggedIssueId(issue.id);
-                          }}
-                          onDragEnd={() => {
-                            setDraggedIssueId(null);
-                            setDragOverColId(null);
-                          }}
-                          onClick={() => onSelectIssue(issue.id)}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setContextMenu({
-                              isOpen: true,
-                              position: { x: e.clientX, y: e.clientY },
-                              issue,
-                            });
-                          }}
-                          className={`p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-all duration-150 shadow-sm group select-none ${
-                            isDragging
-                              ? 'opacity-30 border-dashed border-[#DCB001] scale-[0.98]'
-                              : 'border-[#2A2C30] hover:border-[#DCB001]/40'
-                          }`}
-                        >
-                          {/* Key, Priority & Drag Handle */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              <GripVertical size={11} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0" />
-                              <span className="font-mono text-[11px] font-bold text-[#DCB001]">
-                                {issue.key}
-                              </span>
-                            </div>
-                            <span
-                              className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase ${
-                                issue.priority === 'critical'
-                                  ? 'bg-[#C0393B]/20 text-[#C0393B] border border-[#C0393B]/40'
-                                  : issue.priority === 'high'
-                                  ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/40'
-                                  : 'bg-[#2A2C30] text-[#787C83]'
-                              }`}
-                            >
-                              {issue.priority}
+                    return (
+                      <div
+                        key={issue.id}
+                        draggable={true}
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', issue.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          setDraggedIssueId(issue.id);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedIssueId(null);
+                          setDragOverColId(null);
+                          setDragOverIssueId(null);
+                          setDropPosition(null);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (draggedIssueId && draggedIssueId !== issue.id) {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                            const pos = isTopHalf ? 'before' : 'after';
+                            if (dragOverIssueId !== issue.id || dropPosition !== pos) {
+                              setDragOverIssueId(issue.id);
+                              setDropPosition(pos);
+                            }
+                            if (dragOverColId !== col.id) {
+                              setDragOverColId(col.id);
+                            }
+                          }
+                        }}
+                        onDragLeave={(e) => {
+                          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                            if (dragOverIssueId === issue.id) {
+                              setDragOverIssueId(null);
+                              setDropPosition(null);
+                            }
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const droppedId = e.dataTransfer.getData('text/plain') || draggedIssueId;
+                          if (droppedId && droppedId !== issue.id) {
+                            handleReorder(droppedId, issue.id, dropPosition || 'before', col.id);
+                          }
+                          setDraggedIssueId(null);
+                          setDragOverColId(null);
+                          setDragOverIssueId(null);
+                          setDropPosition(null);
+                        }}
+                        onClick={() => onSelectIssue(issue.id)}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setContextMenu({
+                            isOpen: true,
+                            position: { x: e.clientX, y: e.clientY },
+                            issue,
+                          });
+                        }}
+                        className={`relative p-2.5 bg-[#131415] hover:bg-[#1A1B1E] border rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-all duration-150 shadow-sm group select-none ${
+                          isDragging
+                            ? 'opacity-30 border-dashed border-[#DCB001] scale-[0.98]'
+                            : 'border-[#2A2C30] hover:border-[#DCB001]/40'
+                        }`}
+                      >
+                        {/* Top Drop Indicator Line (Reorder Above) */}
+                        {isOverThis && dropPosition === 'before' && (
+                          <div className="absolute -top-1.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20 animate-pulse" />
+                        )}
+
+                        {/* Bottom Drop Indicator Line (Reorder Below) */}
+                        {isOverThis && dropPosition === 'after' && (
+                          <div className="absolute -bottom-1.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20 animate-pulse" />
+                        )}
+
+                        {/* Key, Priority & Drag Handle */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1">
+                            <GripVertical size={12} className="text-[#787C83] opacity-40 group-hover:opacity-100 group-hover:text-[#DCB001] transition-all shrink-0 cursor-grab" />
+                            <span className="font-mono text-[11px] font-bold text-[#DCB001]">
+                              {issue.key}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase ${
+                              issue.priority === 'critical'
+                                ? 'bg-[#C0393B]/20 text-[#C0393B] border border-[#C0393B]/40'
+                                : issue.priority === 'high'
+                                ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/40'
+                                : 'bg-[#2A2C30] text-[#787C83]'
+                            }`}
+                          >
+                            {issue.priority}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
+                          {issue.title}
+                        </h4>
+
+                        {/* Subtasks progress indicator */}
+                        {(issue.subtasks || []).length > 0 && (
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
+                            <CheckSquare size={11} className="text-[#DCB001]" />
+                            <span>
+                              {completedSubCount}/{(issue.subtasks || []).length} sub-works
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Card Footer */}
+                        <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1.5 truncate max-w-[120px]">
+                            <Avatar user={assigneeUser} size="xs" />
+                            <span className="text-[10px] text-[#787C83] font-mono truncate">
+                              {assigneeUser.name}
                             </span>
                           </div>
 
-                          {/* Title */}
-                          <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
-                            {issue.title}
-                          </h4>
+                          {/* Quick Stage Action Buttons on Hover */}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {col.id === 'todo' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateIssueStatus(issue.id, 'in_progress');
+                                }}
+                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded flex items-center gap-0.5"
+                                title="Start Progress"
+                              >
+                                <Play size={9} /> Start
+                              </button>
+                            )}
 
-                          {/* Subtasks progress indicator */}
-                          {(issue.subtasks || []).length > 0 && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
-                              <CheckSquare size={11} className="text-[#DCB001]" />
-                              <span>
-                                {completedSubCount}/{(issue.subtasks || []).length} sub-works
-                              </span>
-                            </div>
-                          )}
+                            {col.id === 'in_progress' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateIssueStatus(issue.id, 'needs_review');
+                                }}
+                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#3B82F6]/40 rounded flex items-center gap-0.5"
+                                title="Submit for Review"
+                              >
+                                <Eye size={9} /> Review
+                              </button>
+                            )}
 
-                          {/* Card Footer */}
-                          <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-1.5 truncate max-w-[120px]">
-                              <Avatar user={assigneeUser} size="xs" />
-                              <span className="text-[10px] text-[#787C83] font-mono truncate">
-                                {assigneeUser.name}
-                              </span>
-                            </div>
+                            {col.id === 'needs_review' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateIssueStatus(issue.id, 'done');
+                                }}
+                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#22C55E] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#22C55E]/40 rounded flex items-center gap-0.5"
+                                title="Approve & Complete"
+                              >
+                                <CheckCircle2 size={9} /> Approve
+                              </button>
+                            )}
 
-                            {/* Quick Stage Action Buttons on Hover */}
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {col.id === 'todo' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onUpdateIssueStatus(issue.id, 'in_progress');
-                                  }}
-                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#DCB001] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded flex items-center gap-0.5"
-                                  title="Start Progress"
-                                >
-                                  <Play size={9} /> Start
-                                </button>
-                              )}
-
-                              {col.id === 'in_progress' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onUpdateIssueStatus(issue.id, 'needs_review');
-                                  }}
-                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#3B82F6] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#3B82F6]/40 rounded flex items-center gap-0.5"
-                                  title="Submit for Review"
-                                >
-                                  <Eye size={9} /> Review
-                                </button>
-                              )}
-
-                              {col.id === 'needs_review' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onUpdateIssueStatus(issue.id, 'done');
-                                  }}
-                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#22C55E] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#22C55E]/40 rounded flex items-center gap-0.5"
-                                  title="Approve & Complete"
-                                >
-                                  <CheckCircle2 size={9} /> Approve
-                                </button>
-                              )}
-
-                              {col.id === 'done' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onUpdateIssueStatus(issue.id, 'todo');
-                                  }}
-                                  className="px-1.5 py-0.5 text-[9px] font-semibold text-[#787C83] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#2A2C30] rounded flex items-center gap-0.5"
-                                  title="Reopen Task"
-                                >
-                                  <RotateCcw size={9} /> Reopen
-                                </button>
-                              )}
-                            </div>
+                            {col.id === 'done' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateIssueStatus(issue.id, 'todo');
+                                }}
+                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[#787C83] bg-[#1A1B1D] hover:bg-[#2A2C30] border border-[#2A2C30] rounded flex items-center gap-0.5"
+                                title="Reopen Task"
+                              >
+                                <RotateCcw size={9} /> Reopen
+                              </button>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    );
+                  })}
 
-                  {/* Drop Placeholder Slot Indicator */}
-                  {isColumnOver && (
-                    <div className="p-3 border-2 border-dashed border-[#DCB001]/60 bg-[#DCB001]/5 rounded-lg text-center text-[10px] font-mono text-[#DCB001] animate-pulse">
-                      Drop to move to {col.title}
+                  {/* Empty Column Drop Placeholder Slot Indicator */}
+                  {columnCards.length === 0 && (
+                    <div className={`p-4 border-2 border-dashed rounded-lg text-center text-[10px] font-mono transition-colors ${
+                      isColumnOver
+                        ? 'border-[#DCB001] bg-[#DCB001]/10 text-[#DCB001]'
+                        : 'border-[#2A2C30] text-[#787C83]'
+                    }`}>
+                      {isColumnOver ? 'Drop here to add to this column' : 'No tasks in this stage'}
                     </div>
                   )}
                 </div>
@@ -578,5 +757,3 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 });
 
 KanbanBoardView.displayName = 'KanbanBoardView';
-
-

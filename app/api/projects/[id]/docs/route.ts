@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getProjectDocsDB, createProjectDocDB, updateProjectDocDB, getProjectByIdDB } from '@/lib/db';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 import fs from 'fs';
 import path from 'path';
 
@@ -129,7 +130,16 @@ export async function POST(
       content: initialContent,
     });
 
-    return NextResponse.json({ ...createdRecord, content: initialContent }, { status: 201 });
+    const docPayload = { ...createdRecord, content: initialContent };
+
+    broadcastRealtimeEvent({
+      type: 'DOC_CREATED',
+      projectId,
+      payload: docPayload,
+      senderSessionId: (session as any).id,
+    });
+
+    return NextResponse.json(docPayload, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

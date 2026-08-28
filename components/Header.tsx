@@ -42,7 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleCopyLink = () => {
     if (activeIssue) {
-      navigator.clipboard.writeText(`${window.location.origin}/issue/${activeIssue.key}`);
+      navigator.clipboard.writeText(`${window.location.origin}/task/${activeIssue.id || activeIssue.key}/details`);
       setCopiedLink(true);
       toast.success(`Copied link for ${activeIssue.key}`);
       setTimeout(() => setCopiedLink(false), 2000);

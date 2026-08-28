@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 import {
   getAllProjectsDB,
   getProjectMessagesDB,
@@ -100,6 +101,13 @@ export async function POST(req: NextRequest) {
       channel
     );
 
+    broadcastRealtimeEvent({
+      type: 'MESSAGE_SENT',
+      projectId: Number(projectId),
+      payload: newMsg,
+      senderSessionId: session.id,
+    });
+
     return NextResponse.json({ message: newMsg });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to send message' }, { status: 500 });
@@ -134,6 +142,16 @@ export async function DELETE(req: NextRequest) {
 
     // Admins can delete all messages; regular users can only delete their own messages
     await deleteProjectMessageDB(Number(messageId), session.id, isUserAdmin);
+
+    if (projectIdStr) {
+      broadcastRealtimeEvent({
+        type: 'MESSAGE_DELETED',
+        projectId: Number(projectIdStr),
+        payload: { id: Number(messageId) },
+        senderSessionId: session.id,
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to delete message' }, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { getProjectDocByIdDB, updateProjectDocDB, deleteProjectDocDB } from '@/lib/db';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 import fs from 'fs';
 import path from 'path';
 
@@ -116,12 +117,28 @@ export async function PUT(
       filePath: localPath,
     });
 
+    const docUpdatePayload = {
+      id: docId,
+      projectId: (doc as any).projectId || resolvedParams.id,
+      title: title || doc.title,
+      fileName: doc.fileName,
+      content,
+      updatedAt: new Date().toISOString(),
+    };
+
+    broadcastRealtimeEvent({
+      type: 'DOC_UPDATED',
+      projectId: (doc as any).projectId || resolvedParams.id,
+      payload: docUpdatePayload,
+      senderSessionId: (session as any).id,
+    });
+
     return NextResponse.json({
       success: true,
       id: docId,
       title: title || doc.title,
       fileName: doc.fileName,
-      updatedAt: new Date().toISOString(),
+      updatedAt: docUpdatePayload.updatedAt,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -158,6 +175,13 @@ export async function DELETE(
         } catch {}
       }
       await deleteProjectDocDB(docId, (doc as any).projectId || projectId);
+
+      broadcastRealtimeEvent({
+        type: 'DOC_DELETED',
+        projectId: (doc as any).projectId || projectId,
+        payload: { id: docId, fileName: doc.fileName },
+        senderSessionId: (session as any).id,
+      });
     }
 
     return NextResponse.json({ success: true, id: docId });

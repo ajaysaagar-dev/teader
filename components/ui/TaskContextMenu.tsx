@@ -99,7 +99,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
   };
 
   const handleCopyLink = () => {
-    const url = `${window.location.origin}/issue/${issue.id}`;
+    const url = `${window.location.origin}/task/${issue.id}/details`;
     navigator.clipboard.writeText(url);
     toast.success('Copied task link');
     onClose();

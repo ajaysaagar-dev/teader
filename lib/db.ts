@@ -185,10 +185,14 @@ export async function initDB(): Promise<void> {
             "estimatedHours" NUMERIC(6, 2) DEFAULT 0,
             "loggedHours" NUMERIC(6, 2) DEFAULT 0,
             "isFavorite" BOOLEAN DEFAULT FALSE,
+            "orderIndex" INT DEFAULT 0,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
+        try {
+          await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "orderIndex" INT DEFAULT 0;`);
+        } catch {}
 
         // 5. Create Subtasks Table
         await p.query(`
@@ -736,15 +740,17 @@ export async function getAllIssuesDB(userId?: number | string) {
     if (userId !== undefined && userId !== null && userId !== '') {
       const numUserId = Number(userId);
       issuesRes = await p.query(
-        `SELECT DISTINCT i.* FROM "issues" i
-         JOIN "projects" p ON i."projectId" = p."id"
-         LEFT JOIN "project_members" pm ON p."id" = pm."projectId"
-         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1
-         ORDER BY i."createdAt" DESC`,
+        `SELECT i.* FROM "issues" i
+         WHERE i."projectId" IN (
+           SELECT p."id" FROM "projects" p
+           LEFT JOIN "project_members" pm ON p."id" = pm."projectId"
+           WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1
+         )
+         ORDER BY COALESCE(i."orderIndex", 0) ASC, i."createdAt" DESC`,
         [numUserId]
       );
     } else {
-      issuesRes = await p.query(`SELECT * FROM "issues" ORDER BY "createdAt" DESC`);
+      issuesRes = await p.query(`SELECT * FROM "issues" ORDER BY COALESCE("orderIndex", 0) ASC, "createdAt" DESC`);
     }
     const subtasksRes = await p.query(`SELECT * FROM "subtasks"`);
     const imagesRes = await p.query(`SELECT * FROM "images"`);
@@ -787,14 +793,15 @@ export async function getAllIssuesDB(userId?: number | string) {
         ...iss,
         labels,
         blockedBy,
+        orderIndex: Number(iss.orderIndex) || 0,
         estimatedHours: Number(iss.estimatedHours) || 0,
         loggedHours: Number(iss.loggedHours) || 0,
         subtasks: buildSubtaskTree(subtasksMap.get(iss.id) || []),
         images: imagesMap.get(iss.id) || [],
       };
-
     });
-  } catch {
+  } catch (err: any) {
+    console.warn('[getAllIssuesDB Error]:', err.message);
     return memoryIssuesStore;
   }
 }
@@ -940,6 +947,10 @@ export async function updateIssueStatusDB(
     fields.push(`"labels" = $${paramIdx++}`);
     values.push(JSON.stringify(updates.labels));
   }
+  if (updates.orderIndex !== undefined) {
+    fields.push(`"orderIndex" = $${paramIdx++}`);
+    values.push(Number(updates.orderIndex) || 0);
+  }
 
   if (fields.length > 0) {
     try {
@@ -968,7 +979,50 @@ export async function updateIssueStatusDB(
     if (updates.blocks !== undefined) target.blocks = updates.blocks;
     if (updates.timeEntries !== undefined) target.timeEntries = updates.timeEntries;
     if (updates.customFields !== undefined) target.customFields = updates.customFields;
+    if (updates.orderIndex !== undefined) target.orderIndex = updates.orderIndex;
   }
+}
+
+export async function reorderIssuesDB(
+  items: Array<{ id: string; orderIndex: number; status?: string }> | string[]
+) {
+  await initDB();
+  if (!items || !Array.isArray(items) || items.length === 0) return { success: true, count: 0 };
+
+  const normalizedItems: Array<{ id: string; orderIndex: number; status?: string }> =
+    typeof items[0] === 'string'
+      ? (items as string[]).map((id, idx) => ({ id, orderIndex: idx }))
+      : (items as Array<{ id: string; orderIndex: number; status?: string }>);
+
+  try {
+    const p = getPool();
+    for (const item of normalizedItems) {
+      if (item.status) {
+        await p.query(
+          `UPDATE "issues" SET "orderIndex" = $1, "status" = $2 WHERE "id" = $3`,
+          [item.orderIndex, item.status, item.id]
+        );
+      } else {
+        await p.query(
+          `UPDATE "issues" SET "orderIndex" = $1 WHERE "id" = $2`,
+          [item.orderIndex, item.id]
+        );
+      }
+    }
+  } catch (err: any) {
+    console.warn('[reorderIssuesDB DB warning]:', err.message);
+  }
+
+  // Update in-memory store
+  for (const item of normalizedItems) {
+    const mem = memoryIssuesStore.find((i) => i.id === item.id);
+    if (mem) {
+      mem.orderIndex = item.orderIndex;
+      if (item.status) mem.status = item.status;
+    }
+  }
+
+  return { success: true, count: normalizedItems.length };
 }
 
 export async function deleteIssueDB(id: string) {

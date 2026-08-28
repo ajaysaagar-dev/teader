@@ -63,7 +63,7 @@ export const UpdateIssueSchema = z.object({
   blockedBy: z.array(z.string()).optional(),
   blocks: z.array(z.string()).optional(),
   customFields: z.record(z.string(), z.any()).optional(),
-
+  orderIndex: z.number().optional(),
   timeEntries: z
     .array(
       z.object({
@@ -77,6 +77,17 @@ export const UpdateIssueSchema = z.object({
     )
     .optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'At least one field must be provided' });
+
+export const ReorderIssuesSchema = z.object({
+  issueIds: z.array(z.string()).optional(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      orderIndex: z.number(),
+      status: z.enum(['todo', 'in_progress', 'needs_review', 'done', 'blocked', 'cancelled', 'merged']).optional(),
+    })
+  ).optional(),
+});
 
 
 // ─── Projects ────────────────────────────────────────────────────────────────

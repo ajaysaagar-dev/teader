@@ -208,6 +208,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: i.id,
         run: () => {
           onSelectIssue(i.id);
+          router.push(`/task/${i.id}/details`);
           onClose();
         },
       })
@@ -343,6 +344,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         key={issue.id}
                         onClick={() => {
                           onSelectIssue(issue.id);
+                          router.push(`/task/${issue.id}/details`);
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}

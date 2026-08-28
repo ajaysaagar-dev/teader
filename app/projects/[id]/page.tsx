@@ -10,6 +10,8 @@ import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } f
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
+import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { RealtimeBadge } from '@/components/RealtimeBadge';
 
 
 
@@ -204,17 +206,12 @@ export default function SingleProjectPage() {
   }, [taskQuery, selectedIssueId, searchParams]);
 
   const handleSelectIssue = useCallback((id: string | null) => {
-    setSelectedIssueId(id);
-    if (typeof window !== 'undefined') {
-      const currentUrl = new URL(window.location.href);
-      if (id) {
-        currentUrl.searchParams.set('task', id);
-      } else {
-        currentUrl.searchParams.delete('task');
-      }
-      window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+    if (id) {
+      router.push(`/task/${id}/details`);
+    } else {
+      setSelectedIssueId(null);
     }
-  }, []);
+  }, [router]);
 
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
@@ -534,6 +531,88 @@ export default function SingleProjectPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIssueId, isEditProjectModalOpen, isNewIssueModalOpen]);
 
+  // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────
+  useRealtimeSubscription({
+    projectId: project?.id || projectIdParam,
+    onEvent: useCallback((event: RealtimeEvent) => {
+      switch (event.type) {
+        case 'TASK_CREATED': {
+          const newTask = event.payload;
+          if (
+            newTask &&
+            (String(newTask.projectId) === String(projectIdParam) ||
+              (project && (String(newTask.projectId) === String(project.id) || newTask.project === project.name)))
+          ) {
+            setIssues((prev) => {
+              if (prev.some((i) => i.id === newTask.id || i.key === newTask.key)) {
+                return prev.map((i) => (i.id === newTask.id || i.key === newTask.key ? { ...i, ...newTask } : i));
+              }
+              return [newTask, ...prev];
+            });
+          }
+          break;
+        }
+
+        case 'TASK_UPDATED': {
+          const updated = event.payload;
+          if (updated && updated.id) {
+            setIssues((prev) =>
+              prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+            );
+          }
+          break;
+        }
+
+        case 'TASKS_REORDERED': {
+          const items: Array<{ id: string; orderIndex: number; status?: Status }> = event.payload?.items || [];
+          if (items.length > 0) {
+            const map = new Map(items.map((it) => [it.id, it]));
+            setIssues((prev) => {
+              const updated = prev.map((iss) => {
+                const update = map.get(iss.id);
+                if (update) {
+                  return {
+                    ...iss,
+                    orderIndex: update.orderIndex,
+                    status: update.status || iss.status,
+                  };
+                }
+                return iss;
+              });
+              return [...updated].sort((a, b) => (Number(a.orderIndex) || 0) - (Number(b.orderIndex) || 0));
+            });
+          }
+          break;
+        }
+
+        case 'TASK_DELETED': {
+          const deletedId = event.payload?.id;
+          if (deletedId) {
+            setIssues((prev) => prev.filter((i) => i.id !== deletedId));
+            setSelectedIssueId((prev) => (prev === deletedId ? null : prev));
+          }
+          break;
+        }
+
+        case 'SUBTASK_UPDATED': {
+          fetchProjectData();
+          break;
+        }
+
+        case 'PROJECT_UPDATED': {
+          const updatedProj = event.payload;
+          if (updatedProj && (String(updatedProj.id) === String(projectIdParam) || (project && String(updatedProj.id) === String(project.id)))) {
+            setProject((prev) => (prev ? { ...prev, ...updatedProj } : prev));
+          }
+          break;
+        }
+
+        default:
+          break;
+      }
+    }, [projectIdParam, project, fetchProjectData]),
+  });
+
   // Memoized checks & derived state
   const isCreator = useMemo(() => {
     if (!currentUser || !project) return false;
@@ -628,6 +707,38 @@ export default function SingleProjectPage() {
       setIssues(previousIssues);
     }
   }, [issues, isCreator, project]);
+
+  // Reorder Issues Handler for Board / List View Drag & Drop with Database Persistence
+  const handleReorderIssues = useCallback(async (reorderedProjectIssues: Issue[]) => {
+    // 1. Optimistic state update
+    setIssues((prev) => {
+      const nonProjectIssues = prev.filter(
+        (i: any) =>
+          project &&
+          String(i.projectId) !== String(project.id) &&
+          i.project !== project.name &&
+          (i.project || '').toLowerCase() !== project.name.toLowerCase()
+      );
+      return [...reorderedProjectIssues, ...nonProjectIssues];
+    });
+
+    // 2. Persist updated orderIndex & status in database
+    try {
+      const payload = reorderedProjectIssues.map((iss, idx) => ({
+        id: iss.id,
+        orderIndex: idx,
+        status: iss.status,
+      }));
+
+      await fetch('/api/issues/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: payload }),
+      });
+    } catch (err) {
+      console.error('Error saving reordered tasks to DB:', err);
+    }
+  }, [project]);
 
   // Delete Task Handler (Admin / Owner privilege)
   const handleDeleteIssue = useCallback(async (issueId: string) => {
@@ -1054,28 +1165,53 @@ export default function SingleProjectPage() {
 
   // Handle Drag & Drop to Move Task between Folders/Epics
   const handleMoveTaskToFolder = useCallback(async (issueId: string, targetEpicName: string) => {
+    let nextAllIssues: Issue[] = [];
+
     // 1. Optimistic UI update
-    setIssues((prev) =>
-      prev.map((iss) => (iss.id === issueId ? { ...iss, epic: targetEpicName } : iss))
-    );
+    setIssues((prev) => {
+      const dragged = prev.find((i) => i.id === issueId);
+      if (!dragged) return prev;
+      const updated = { ...dragged, epic: targetEpicName };
+      const remaining = prev.filter((i) => i.id !== issueId);
+      nextAllIssues = [...remaining, updated];
+      return nextAllIssues;
+    });
     toast.success(`Task moved into "${targetEpicName}" folder!`);
 
     // 2. Background Sync
     try {
-      const res = await fetch(`/api/issues/${issueId}`, {
+      await fetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ epic: targetEpicName }),
       });
-      if (!res.ok) {
-        toast.error('Failed to sync moved task with server');
-        fetchProjectData();
+
+      const projIssues = nextAllIssues.filter(
+        (i: any) =>
+          project &&
+          (String(i.projectId) === String(project.id) ||
+            i.project === project.name ||
+            (i.project || '').toLowerCase() === project.name.toLowerCase())
+      );
+
+      if (projIssues.length > 0) {
+        const payload = projIssues.map((iss, idx) => ({
+          id: iss.id,
+          orderIndex: idx,
+          status: iss.status,
+        }));
+
+        await fetch('/api/issues/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payload }),
+        });
       }
     } catch {
       toast.error('Network error moving task');
       fetchProjectData();
     }
-  }, [fetchProjectData]);
+  }, [project, fetchProjectData]);
 
   // Handle Adding Task directly to Folder
   const handleAddTaskToFolder = useCallback(async (folderName: string, taskTitle: string) => {
@@ -1134,6 +1270,8 @@ export default function SingleProjectPage() {
     targetFolder: string,
     position: 'before' | 'after'
   ) => {
+    let nextAllIssues: Issue[] = [];
+
     setIssues((prev) => {
       const dragged = prev.find((i) => i.id === draggedIssueId);
       if (!dragged) return prev;
@@ -1143,13 +1281,14 @@ export default function SingleProjectPage() {
       const targetIndex = remaining.findIndex((i) => i.id === targetIssueId);
 
       if (targetIndex === -1) {
-        return [updatedDragged, ...remaining];
+        nextAllIssues = [updatedDragged, ...remaining];
+      } else {
+        const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+        const next = [...remaining];
+        next.splice(insertIndex, 0, updatedDragged);
+        nextAllIssues = next;
       }
-
-      const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
-      const next = [...remaining];
-      next.splice(insertIndex, 0, updatedDragged);
-      return next;
+      return nextAllIssues;
     });
 
     toast.success(`Task reordered in folder "${targetFolder}"!`);
@@ -1160,8 +1299,32 @@ export default function SingleProjectPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ epic: targetFolder }),
       });
-    } catch {}
-  }, []);
+
+      const projIssues = nextAllIssues.filter(
+        (i: any) =>
+          project &&
+          (String(i.projectId) === String(project.id) ||
+            i.project === project.name ||
+            (i.project || '').toLowerCase() === project.name.toLowerCase())
+      );
+
+      if (projIssues.length > 0) {
+        const payload = projIssues.map((iss, idx) => ({
+          id: iss.id,
+          orderIndex: idx,
+          status: iss.status,
+        }));
+
+        await fetch('/api/issues/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: payload }),
+        });
+      }
+    } catch (err) {
+      console.error('Error persisting tree reorder to DB:', err);
+    }
+  }, [project]);
 
   return (
     <>
@@ -1293,10 +1456,9 @@ export default function SingleProjectPage() {
               </div>
             )}
 
-            {/* Live Sync Indicator */}
-            <div className="hidden xl:flex items-center gap-1 text-[10px] font-mono text-[#787C83] pl-1" title="Real-time MySQL DB Sync Active">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-              <span>Live</span>
+            {/* Live Sync WebSocket Indicator */}
+            <div className="hidden xl:flex items-center pl-1">
+              <RealtimeBadge />
             </div>
 
             {/* Import Tasks Button */}
@@ -1620,6 +1782,7 @@ export default function SingleProjectPage() {
                 issues={projectIssues}
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
+                onReorderIssues={handleReorderIssues}
                 onUpdateIssuePriority={handleUpdateIssuePriority}
                 onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}

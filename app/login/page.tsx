@@ -13,16 +13,56 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingAutoLogin, setIsCheckingAutoLogin] = useState(true);
 
-  // Check if session token or user is already remembered
+  // Check if session token or user is already remembered in localStorage
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('teader_user');
-      if (savedUser) {
-        // Redirect to dashboard if already logged in
-        router.push('/dashboard');
+    let isMounted = true;
+
+    async function checkRememberedSession() {
+      try {
+        const savedToken = localStorage.getItem('teader_token');
+        const savedUser = localStorage.getItem('teader_user');
+
+        if (savedToken || savedUser) {
+          const res = await fetch('/api/auth/me', {
+            headers: savedToken ? { Authorization: `Bearer ${savedToken}` } : {},
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated && data.user) {
+              if (savedToken) localStorage.setItem('teader_token', savedToken);
+              localStorage.setItem('teader_user', JSON.stringify(data.user));
+
+              // Auto-redirect to target dashboard
+              let target = '/dashboard';
+              if (typeof window !== 'undefined') {
+                const urlParams = new URLSearchParams(window.location.search);
+                const redirectParam = urlParams.get('redirect');
+                if (redirectParam && redirectParam.startsWith('/')) {
+                  target = redirectParam;
+                }
+                window.location.href = target;
+                return;
+              }
+              router.push(target);
+              return;
+            }
+          }
+        }
+      } catch {}
+
+      if (isMounted) {
+        setIsCheckingAutoLogin(false);
       }
-    } catch {}
+    }
+
+    checkRememberedSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -45,15 +85,24 @@ export default function LoginPage() {
       if (res.ok) {
         // Clear previous user cache
         clearAllLocalCaches();
-        // Persist session user & token in localStorage to remember login state
+
+        // Persist session user & token in localStorage if remember enabled
         if (rememberMe) {
           try {
             localStorage.setItem('teader_user', JSON.stringify(data));
             if (data.token) {
               localStorage.setItem('teader_token', data.token);
             }
+            localStorage.setItem('teader_remember', 'true');
+          } catch {}
+        } else {
+          try {
+            localStorage.removeItem('teader_user');
+            localStorage.removeItem('teader_token');
+            localStorage.removeItem('teader_remember');
           } catch {}
         }
+
         toast.success(`Welcome back, ${data.name}!`);
         
         // Check for redirect query param
@@ -83,6 +132,17 @@ export default function LoginPage() {
     setEmail(presetEmail);
     setPassword('password123');
   };
+
+  if (isCheckingAutoLogin) {
+    return (
+      <div className="min-h-screen bg-[#131415] text-[#CFD4DD] font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
+          <span className="text-xs font-mono text-[#787C83]">Verifying saved session...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#131415] text-[#CFD4DD] font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">

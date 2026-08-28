@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { addSubtaskDB, updateSubtaskDB, deleteSubtaskDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { parseBody, AddSubtaskSchema, UpdateSubtaskSchema } from '@/lib/validation';
+import { broadcastRealtimeEvent } from '@/lib/realtime';
 
 export async function POST(req: Request) {
   const session = await getSessionFromCookie();
@@ -20,6 +21,13 @@ export async function POST(req: Request) {
       Boolean(data.isFolder),
       data.type || (data.isFolder ? 'folder' : 'subtask')
     );
+
+    broadcastRealtimeEvent({
+      type: 'SUBTASK_UPDATED',
+      payload: { action: 'create', issueId: data.issueId, subtask },
+      senderSessionId: session.id,
+    });
+
     return NextResponse.json(subtask, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -41,6 +49,19 @@ export async function PATCH(req: Request) {
       completed: data.completed,
       parentId: data.parentId !== undefined ? data.parentId : undefined,
       issueId: data.issueId,
+    });
+
+    broadcastRealtimeEvent({
+      type: 'SUBTASK_UPDATED',
+      payload: {
+        action: 'update',
+        subId: data.subId,
+        completed: data.completed,
+        title: data.title,
+        parentId: data.parentId,
+        issueId: data.issueId,
+      },
+      senderSessionId: session.id,
     });
 
     return NextResponse.json({
@@ -68,6 +89,13 @@ export async function DELETE(req: Request) {
     }
 
     await deleteSubtaskDB(subId);
+
+    broadcastRealtimeEvent({
+      type: 'SUBTASK_UPDATED',
+      payload: { action: 'delete', subId },
+      senderSessionId: session.id,
+    });
+
     return NextResponse.json({ success: true, subId });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
