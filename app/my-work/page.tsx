@@ -265,7 +265,7 @@ export default function MyWorkPage() {
                         </div>
 
                         <Link
-                          href={`/projects/${issue.projectId || 1}`}
+                          href={`/task/${issue.id}/details`}
                           className="block text-sm font-semibold text-white hover:text-[#DCB001] transition-colors truncate"
                         >
                           {issue.title}

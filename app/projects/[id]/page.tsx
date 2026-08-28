@@ -204,17 +204,12 @@ export default function SingleProjectPage() {
   }, [taskQuery, selectedIssueId, searchParams]);
 
   const handleSelectIssue = useCallback((id: string | null) => {
-    setSelectedIssueId(id);
-    if (typeof window !== 'undefined') {
-      const currentUrl = new URL(window.location.href);
-      if (id) {
-        currentUrl.searchParams.set('task', id);
-      } else {
-        currentUrl.searchParams.delete('task');
-      }
-      window.history.replaceState(null, '', currentUrl.pathname + currentUrl.search);
+    if (id) {
+      router.push(`/task/${id}/details`);
+    } else {
+      setSelectedIssueId(null);
     }
-  }, []);
+  }, [router]);
 
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
@@ -628,6 +623,38 @@ export default function SingleProjectPage() {
       setIssues(previousIssues);
     }
   }, [issues, isCreator, project]);
+
+  // Reorder Issues Handler for Board / List View Drag & Drop with Database Persistence
+  const handleReorderIssues = useCallback(async (reorderedProjectIssues: Issue[]) => {
+    // 1. Optimistic state update
+    setIssues((prev) => {
+      const nonProjectIssues = prev.filter(
+        (i: any) =>
+          project &&
+          String(i.projectId) !== String(project.id) &&
+          i.project !== project.name &&
+          (i.project || '').toLowerCase() !== project.name.toLowerCase()
+      );
+      return [...reorderedProjectIssues, ...nonProjectIssues];
+    });
+
+    // 2. Persist updated orderIndex & status in database
+    try {
+      const payload = reorderedProjectIssues.map((iss, idx) => ({
+        id: iss.id,
+        orderIndex: idx,
+        status: iss.status,
+      }));
+
+      await fetch('/api/issues/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: payload }),
+      });
+    } catch (err) {
+      console.error('Error saving reordered tasks to DB:', err);
+    }
+  }, [project]);
 
   // Delete Task Handler (Admin / Owner privilege)
   const handleDeleteIssue = useCallback(async (issueId: string) => {
@@ -1620,6 +1647,7 @@ export default function SingleProjectPage() {
                 issues={projectIssues}
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
+                onReorderIssues={handleReorderIssues}
                 onUpdateIssuePriority={handleUpdateIssuePriority}
                 onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}

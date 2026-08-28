@@ -509,7 +509,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={iss.id}
-                    onClick={() => router.push(`/projects/${iss.projectId || 1}`)}
+                    onClick={() => router.push(`/task/${iss.id}/details`)}
                     className="py-3 px-2 flex items-center justify-between gap-4 hover:bg-[#1B1C1F]/60 rounded-lg transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3 min-w-0">

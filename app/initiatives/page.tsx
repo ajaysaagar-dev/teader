@@ -15,8 +15,8 @@ export default function InitiativesPage() {
     <AppLayout>
       <TimelineView
         issues={issues}
-        onSelectIssue={() => {
-          router.push('/dashboard');
+        onSelectIssue={(id) => {
+          if (id) router.push(`/task/${id}/details`);
         }}
       />
     </AppLayout>
