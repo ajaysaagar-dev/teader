@@ -491,12 +491,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           const newDoc = event.payload;
           if (newDoc && (String(newDoc.projectId) === String(projectId) || !newDoc.projectId)) {
             setDocs((prev) => {
-              if (prev.some((d) => d.id === newDoc.id)) {
-                return prev.map((d) => (d.id === newDoc.id ? { ...d, ...newDoc } : d));
+              const exists = prev.some(
+                (d) => String(d.id) === String(newDoc.id) || (d.fileName && d.fileName === newDoc.fileName)
+              );
+              if (exists) {
+                return prev.map((d) =>
+                  String(d.id) === String(newDoc.id) || (d.fileName && d.fileName === newDoc.fileName)
+                    ? { ...d, ...newDoc }
+                    : d
+                );
               }
               return [newDoc, ...prev];
             });
-            toast.info(`New document created: ${newDoc.title || 'Untitled'}`);
           }
           break;
         }
@@ -643,11 +649,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     return docs.find((d) => d.id === selectedDocId) || null;
   }, [docs, selectedDocId]);
 
-  // Filtered Docs List
+  // Filtered Docs List with strict key deduplication
   const filteredDocs = useMemo(() => {
-    if (!searchQuery.trim()) return docs;
+    const seen = new Set<string>();
+    const uniqueDocs: ProjectDoc[] = [];
+    for (const d of docs) {
+      const docKey = String(d.id || d.fileName);
+      if (!seen.has(docKey)) {
+        seen.add(docKey);
+        uniqueDocs.push(d);
+      }
+    }
+
+    if (!searchQuery.trim()) return uniqueDocs;
     const q = searchQuery.toLowerCase().trim();
-    return docs.filter(
+    return uniqueDocs.filter(
       (d) =>
         d.title.toLowerCase().includes(q) ||
         d.fileName.toLowerCase().includes(q)
@@ -706,7 +722,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         const created: ProjectDoc = await res.json();
         const docTitle = created.title ? created.title.replace(/\.md$/i, '') : cleanTitle;
         const docContent = created.content || '';
-        setDocs((prev) => [created, ...prev]);
+        setDocs((prev) => {
+          if (prev.some((d) => String(d.id) === String(created.id) || (d.fileName && d.fileName === created.fileName))) {
+            return prev.map((d) => (String(d.id) === String(created.id) ? created : d));
+          }
+          return [created, ...prev];
+        });
         setSelectedDocId(created.id);
         setActiveTitle(docTitle);
         setSavedTitle(docTitle);
