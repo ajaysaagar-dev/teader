@@ -713,8 +713,22 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       const previous = byUser.get(presence.userId);
       if (!previous || previous.lastSeen < presence.lastSeen) byUser.set(presence.userId, presence);
     });
-    return Array.from(byUser.values());
-  }, [activeDocsPresence, currentUser?.id]);
+
+    const remoteCollaborators = Array.from(byUser.values());
+    if (!currentUser || !selectedDoc) return remoteCollaborators;
+
+    return [
+      {
+        presenceId: docsPresenceIdRef.current,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        docId: String(selectedDoc.id),
+        docTitle: selectedDoc.fileName || selectedDoc.title || 'No document selected',
+        lastSeen: Date.now(),
+      },
+      ...remoteCollaborators,
+    ];
+  }, [activeDocsPresence, currentUser, selectedDoc]);
 
   const hasUnsavedChanges = useMemo(() => {
     return activeContent !== savedContent || activeTitle !== savedTitle;
