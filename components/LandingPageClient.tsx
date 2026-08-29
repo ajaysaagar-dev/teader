@@ -75,7 +75,7 @@ export default function LandingPageClient() {
 
 
 
-  // ─── Scroll Reveal Observer for Simple Smooth Animations ─────────────────
+  // ─── Bidirectional Scroll Fade-In / Fade-Out Observer ──────────────────────
   useEffect(() => {
     if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
 
@@ -83,14 +83,19 @@ export default function LandingPageClient() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('opacity-100', 'translate-y-0');
-            entry.target.classList.remove('opacity-0', 'translate-y-8');
+            // Incoming content: smoothly fade-in to 1
+            entry.target.classList.add('opacity-100', 'translate-y-0', 'scale-100');
+            entry.target.classList.remove('opacity-0', 'translate-y-10', 'scale-[0.98]', 'pointer-events-none');
+          } else {
+            // Outgoing content: smoothly fade-out to 0 (works in BOTH scroll directions: up and down)
+            entry.target.classList.add('opacity-0', 'translate-y-10', 'scale-[0.98]', 'pointer-events-none');
+            entry.target.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
           }
         });
       },
       {
-        threshold: 0.1,
-        rootMargin: '0px 0px -40px 0px',
+        threshold: 0.12,
+        rootMargin: '-20px 0px -20px 0px',
       }
     );
 
@@ -202,7 +207,7 @@ export default function LandingPageClient() {
       {/* ─── Semantic Main Area ───────────────────────────────────────── */}
       <main>
         {/* ─── Hero Section ────────────────────────────────────────────── */}
-        <section className="relative pt-24 pb-28 px-6 overflow-hidden">
+        <section className="relative pt-24 pb-28 px-6 overflow-hidden reveal-on-scroll opacity-100 transition-all duration-700 ease-out">
           {/* Ambient Glows */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[380px] bg-[#DCB001]/10 blur-[150px] pointer-events-none rounded-full" />
           <div className="absolute top-1/3 left-1/3 w-[500px] h-[280px] bg-[#06B6D4]/10 blur-[130px] pointer-events-none rounded-full" />
