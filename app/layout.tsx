@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono, Prompt } from "next/font/google";
+import { Inter, Geist, Geist_Mono, Space_Grotesk, Sora } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ConsoleBranding } from "@/components/ConsoleBranding";
@@ -14,20 +14,32 @@ import {
 } from "@/lib/site-config";
 
 const inter = Inter({
-  variable: "--font-sans",
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const geist = Geist({
+  variable: "--font-geist",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-const promptFont = Prompt({
-  variable: "--font-prompt",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
-  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const viewport: Viewport = {
@@ -118,7 +130,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} ${promptFont.variable} h-full w-full antialiased dark`}
+      className={`${inter.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${sora.variable} h-full w-full antialiased dark`}
     >
       <head>
         {/* Structured Data JSON-LD */}

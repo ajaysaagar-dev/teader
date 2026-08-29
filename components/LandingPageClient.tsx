@@ -75,7 +75,7 @@ export default function LandingPageClient() {
   const isLoggedIn = Boolean(currentUser);
 
   return (
-    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-landing selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
       {/* ─── Sand Dissolve Canvas Intro ──────────────────────────────── */}
       <TeaderSandCanvas />
 

@@ -21,6 +21,35 @@ export interface ActiveHighlightInfo {
   timestamp: number;
 }
 
+export interface ActiveCursorInfo {
+  lineIndex: number;
+  col?: number;
+  offset?: number;
+}
+
+/**
+ * Realtime Live Cursor Beacon in the markdown preview
+ */
+export function LiveCursorBeacon({
+  lineIndex,
+  col = 1,
+}: {
+  lineIndex: number;
+  col?: number;
+}) {
+  return (
+    <span
+      className="inline-block relative align-middle -translate-y-0.5 mx-0.5 z-30 pointer-events-none"
+      title={`Live Cursor at Line ${lineIndex + 1}, Column ${col}`}
+    >
+      <span className="inline-block w-[2.5px] h-4 bg-[#DCB001] shadow-[0_0_10px_#DCB001] animate-pulse rounded-full" />
+      <span className="absolute -top-5 -left-3 px-1.5 py-0.2 bg-[#181A1E] border border-[#DCB001] text-[#DCB001] text-[9px] font-mono font-bold rounded shadow-lg whitespace-nowrap opacity-90 scale-90">
+        Ln {lineIndex + 1}:{col}
+      </span>
+    </span>
+  );
+}
+
 /**
  * Animated letter-by-letter fading highlight for newly typed words in realtime
  */
@@ -82,11 +111,19 @@ function renderTextWithHighlight(
 /**
  * Parses inline GitHub Markdown and embedded HTML tags (<b>, <i>, <code>, <kbd>, <a>, <img>, <br>, <span>, <del>, <sub>, <sup>, etc.)
  */
-export function parseInlineMarkdown(text: string, highlight?: ActiveHighlightInfo | null): React.ReactNode[] {
-  if (!text) return [];
+export function parseInlineMarkdown(
+  text: string,
+  highlight?: ActiveHighlightInfo | null,
+  cursor?: ActiveCursorInfo | null
+): React.ReactNode[] {
+  if (!text) {
+    return cursor ? [<LiveCursorBeacon key="cursor_empty" lineIndex={cursor.lineIndex} col={cursor.col} />] : [];
+  }
   const tokens: React.ReactNode[] = [];
   let remaining = text;
   let keyIdx = 0;
+  let charCounter = 0;
+  let cursorInserted = !cursor;
 
   while (remaining.length > 0) {
     // 0. Skip / Strip HTML comments: <!-- comment -->
@@ -393,6 +430,13 @@ export function parseInlineMarkdown(text: string, highlight?: ActiveHighlightInf
     }
   }
 
+  // Insert live cursor beacon if this line has the active cursor
+  if (cursor && !cursorInserted) {
+    tokens.push(
+      <LiveCursorBeacon key={`cursor_beacon_${cursor.lineIndex}`} lineIndex={cursor.lineIndex} col={cursor.col} />
+    );
+  }
+
   return tokens;
 }
 
@@ -436,13 +480,19 @@ export function CollapsibleDetails({
 }
 
 /**
- * Full GitHub-Flavored Markdown + HTML Parser with realtime letter-by-letter fade highlight
+ * Full GitHub-Flavored Markdown + HTML Parser with realtime letter-by-letter fade highlight & live cursor position
  */
 export function renderGithubMarkdown(
   markdown: string,
-  activeHighlight?: ActiveHighlightInfo | null
+  activeHighlight?: ActiveHighlightInfo | null,
+  activeCursor?: ActiveCursorInfo | null
 ): React.ReactNode[] | null {
-  if (!markdown || !markdown.trim()) return null;
+  if (!markdown || !markdown.trim()) {
+    if (activeCursor) {
+      return [<LiveCursorBeacon key="cursor_empty_doc" lineIndex={activeCursor.lineIndex} col={activeCursor.col} />];
+    }
+    return null;
+  }
   const lines = markdown.split(/\r?\n/);
   const elements: React.ReactNode[] = [];
   let i = 0;
@@ -451,6 +501,7 @@ export function renderGithubMarkdown(
     const line = lines[i];
     const trimmed = line.trim();
     const lineHighlight = activeHighlight && activeHighlight.lineIndex === i ? activeHighlight : null;
+    const lineCursor = activeCursor && activeCursor.lineIndex === i ? activeCursor : null;
 
     // 0. Skip HTML comment line
     if (trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
@@ -675,25 +726,25 @@ export function renderGithubMarkdown(
       if (tag === 'h1') {
         elements.push(
           <h1 key={`h1_html_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
-            {parseInlineMarkdown(content, lineHighlight)}
+            {parseInlineMarkdown(content, lineHighlight, lineCursor)}
           </h1>
         );
       } else if (tag === 'h2') {
         elements.push(
           <h2 key={`h2_html_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
-            {parseInlineMarkdown(content, lineHighlight)}
+            {parseInlineMarkdown(content, lineHighlight, lineCursor)}
           </h2>
         );
       } else if (tag === 'h3') {
         elements.push(
           <h3 key={`h3_html_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
-            {parseInlineMarkdown(content, lineHighlight)}
+            {parseInlineMarkdown(content, lineHighlight, lineCursor)}
           </h3>
         );
       } else {
         elements.push(
           <h4 key={`h4_html_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
-            {parseInlineMarkdown(content, lineHighlight)}
+            {parseInlineMarkdown(content, lineHighlight, lineCursor)}
           </h4>
         );
       }
@@ -705,7 +756,7 @@ export function renderGithubMarkdown(
     if (trimmed.startsWith('# ')) {
       elements.push(
         <h1 key={`h1_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(2), lineHighlight)}
+          {parseInlineMarkdown(trimmed.slice(2), lineHighlight, lineCursor)}
         </h1>
       );
       i++;
@@ -714,7 +765,7 @@ export function renderGithubMarkdown(
     if (trimmed.startsWith('## ')) {
       elements.push(
         <h2 key={`h2_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(3), lineHighlight)}
+          {parseInlineMarkdown(trimmed.slice(3), lineHighlight, lineCursor)}
         </h2>
       );
       i++;
@@ -723,7 +774,7 @@ export function renderGithubMarkdown(
     if (trimmed.startsWith('### ')) {
       elements.push(
         <h3 key={`h3_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(4), lineHighlight)}
+          {parseInlineMarkdown(trimmed.slice(4), lineHighlight, lineCursor)}
         </h3>
       );
       i++;
@@ -732,7 +783,7 @@ export function renderGithubMarkdown(
     if (trimmed.startsWith('#### ')) {
       elements.push(
         <h4 key={`h4_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
-          {parseInlineMarkdown(trimmed.slice(5), lineHighlight)}
+          {parseInlineMarkdown(trimmed.slice(5), lineHighlight, lineCursor)}
         </h4>
       );
       i++;
@@ -751,7 +802,7 @@ export function renderGithubMarkdown(
 
       elements.push(
         <div key={`center_${i}`} className="my-4 text-center">
-          {renderGithubMarkdown(centerLines.join('\n'), activeHighlight)}
+          {renderGithubMarkdown(centerLines.join('\n'), activeHighlight, lineCursor)}
         </div>
       );
       continue;
@@ -778,7 +829,7 @@ export function renderGithubMarkdown(
           className="my-3 pl-4 py-2 border-l-4 border-[#DCB001] bg-[#1B1C1F]/60 rounded-r-xl text-xs sm:text-sm text-[#CFD4DD] italic leading-relaxed"
         >
           {quoteLines.map((q, idx) => (
-            <p key={idx} className="my-0.5">{parseInlineMarkdown(q, lineHighlight)}</p>
+            <p key={idx} className="my-0.5">{parseInlineMarkdown(q, lineHighlight, lineCursor)}</p>
           ))}
         </blockquote>
       );
@@ -798,7 +849,7 @@ export function renderGithubMarkdown(
             className="mt-1 w-3.5 h-3.5 rounded accent-[#DCB001] bg-[#1B1C1F] border-[#2A2C30] cursor-default"
           />
           <span className={isChecked ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}>
-            {parseInlineMarkdown(taskText, lineHighlight)}
+            {parseInlineMarkdown(taskText, lineHighlight, lineCursor)}
           </span>
         </div>
       );
@@ -812,7 +863,7 @@ export function renderGithubMarkdown(
       elements.push(
         <div key={`ul_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
           <span className="text-[#DCB001] font-bold text-sm leading-none mt-1.5">•</span>
-          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText, lineHighlight)}</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText, lineHighlight, lineCursor)}</span>
         </div>
       );
       i++;
@@ -825,7 +876,7 @@ export function renderGithubMarkdown(
       elements.push(
         <div key={`ol_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
           <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0 mt-0.5">{numMatch[1]}.</span>
-          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2], lineHighlight)}</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2], lineHighlight, lineCursor)}</span>
         </div>
       );
       i++;
@@ -834,7 +885,11 @@ export function renderGithubMarkdown(
 
     // 15. Blank line
     if (trimmed === '') {
-      elements.push(<div key={`blank_${i}`} className="h-2" />);
+      elements.push(
+        <div key={`blank_${i}`} className="h-2">
+          {lineCursor && <LiveCursorBeacon lineIndex={lineCursor.lineIndex} col={lineCursor.col} />}
+        </div>
+      );
       i++;
       continue;
     }
@@ -842,7 +897,7 @@ export function renderGithubMarkdown(
     // 16. Paragraph
     elements.push(
       <p key={`p_${i}`} className="my-1.5 text-xs sm:text-sm text-[#CFD4DD] leading-relaxed">
-        {parseInlineMarkdown(line, lineHighlight)}
+        {parseInlineMarkdown(line, lineHighlight, lineCursor)}
       </p>
     );
     i++;
@@ -854,10 +909,12 @@ export function renderGithubMarkdown(
 export function MarkdownRenderer({
   content,
   activeHighlight,
+  activeCursor,
   className = '',
 }: {
   content?: string;
   activeHighlight?: ActiveHighlightInfo | null;
+  activeCursor?: ActiveCursorInfo | null;
   className?: string;
 }) {
   if (!content || !content.trim()) {
@@ -866,7 +923,7 @@ export function MarkdownRenderer({
 
   return (
     <div className={`space-y-1 font-sans text-xs leading-relaxed ${className}`}>
-      {renderGithubMarkdown(content, activeHighlight)}
+      {renderGithubMarkdown(content, activeHighlight, activeCursor)}
     </div>
   );
 }

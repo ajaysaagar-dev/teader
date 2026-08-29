@@ -49,7 +49,7 @@ import { RandomLoadingText } from './ui/RandomLoadingText';
 import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
-import { renderGithubMarkdown, parseInlineMarkdown, ActiveHighlightInfo } from '@/components/ui/MarkdownRenderer';
+import { renderGithubMarkdown, parseInlineMarkdown, ActiveHighlightInfo, ActiveCursorInfo } from '@/components/ui/MarkdownRenderer';
 
 interface ProjectDocsViewProps {
   projectId: string | number;
@@ -211,6 +211,29 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     highlightTimerRef.current = setTimeout(() => {
       setActiveHighlight(null);
     }, 2200);
+  }, []);
+
+  const [cursorPos, setCursorPos] = useState<ActiveCursorInfo>({
+    lineIndex: 0,
+    col: 1,
+    offset: 0,
+  });
+
+  const updateCursorPos = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const offset = textarea.selectionStart || 0;
+    const val = textarea.value || '';
+    const textBefore = val.slice(0, offset);
+    const lines = textBefore.split('\n');
+    const lineIndex = Math.max(0, lines.length - 1);
+    const col = Math.max(1, lines[lines.length - 1].length + 1);
+
+    setCursorPos({
+      lineIndex,
+      col,
+      offset,
+    });
   }, []);
 
   // 1. Fetch all docs for this project
@@ -1169,6 +1192,15 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <RealtimeBadge />
                   </div>
 
+                  {/* Realtime Live Cursor Position Indicator */}
+                  <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#141518] border border-[#2A2C30] rounded-lg text-[11px] font-mono text-[#CFD4DD]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse shadow-[0_0_6px_#DCB001]" />
+                    <span className="text-white font-bold">Ln {cursorPos.lineIndex + 1}</span>
+                    <span className="text-[#787C83]">:</span>
+                    <span className="text-white font-bold">Col {cursorPos.col || 1}</span>
+                    <span className="text-[#787C83] ml-1">({cursorPos.offset || 0} ch)</span>
+                  </div>
+
                   {/* Manual Save Button */}
                   <button
                     onClick={() => performManualSave()}
@@ -1224,7 +1256,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <textarea
                       ref={textareaRef}
                       value={activeContent}
-                      onChange={(e) => handleContentChange(e.target.value, e)}
+                      onChange={(e) => {
+                        handleContentChange(e.target.value, e);
+                        updateCursorPos();
+                      }}
+                      onSelect={updateCursorPos}
+                      onClick={updateCursorPos}
+                      onKeyUp={updateCursorPos}
+                      onFocus={updateCursorPos}
                       placeholder="Write markdown documentation and GitHub HTML tags here..."
                       className="w-full h-full flex-1 p-4 bg-[#111215] border border-[#222428] focus:border-[#DCB001]/60 rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
                     />
@@ -1244,13 +1283,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                             <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_8px_#22C55E]" />
                             <span className="text-[#CFD4DD] font-bold">SYNCHRONIZED PREVIEW</span>
                           </div>
-                          <span>Smooth Scroll Active</span>
+                          <span>Ln {cursorPos.lineIndex + 1}:{cursorPos.col || 1}</span>
                         </div>
                       )}
 
                       <div className="p-6 sm:p-8 bg-[#141518] border border-[#222428] rounded-2xl shadow-xl">
                         {activeContent || savedContent ? (
-                          renderGithubMarkdown(activeContent || savedContent, activeHighlight)
+                          renderGithubMarkdown(activeContent || savedContent, activeHighlight, cursorPos)
                         ) : (
                           <p className="text-xs text-[#787C83] italic">Start typing in the editor to see real-time preview...</p>
                         )}

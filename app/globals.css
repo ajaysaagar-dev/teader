@@ -60,7 +60,7 @@
   body {
     background-color: var(--bg-main);
     color: var(--text-primary);
-    font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font-inter), var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     letter-spacing: -0.01em;
     min-height: 100%;
     width: 100%;
@@ -70,8 +70,32 @@
   }
 }
 
+.font-sans, .font-inter {
+  font-family: var(--font-inter), var(--font-geist), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-geist {
+  font-family: var(--font-geist), var(--font-inter), sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.font-space-grotesk {
+  font-family: var(--font-space-grotesk), var(--font-sora), sans-serif;
+}
+
+.font-sora {
+  font-family: var(--font-sora), var(--font-space-grotesk), sans-serif;
+}
+
+.font-landing {
+  font-family: var(--font-space-grotesk), var(--font-sora), var(--font-inter), sans-serif;
+}
+
 .font-prompt {
-  font-family: var(--font-prompt), 'Prompt', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-space-grotesk), var(--font-sora), sans-serif;
 }
 
 
