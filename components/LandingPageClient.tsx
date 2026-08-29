@@ -93,7 +93,6 @@ export default function LandingPageClient() {
               <a href="#features" className="hover:text-white transition-colors">Features</a>
               <a href="#branch-explorer" className="hover:text-white transition-colors">Branch Explorer</a>
               <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
-              <Link href="/docs" className="hover:text-white transition-colors">API Docs</Link>
               <Link href="/documentation" className="hover:text-white transition-colors">Documentation</Link>
             </nav>
           </div>

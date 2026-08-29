@@ -409,11 +409,11 @@ export default function DocumentationPage() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/docs"
+              href="/"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16181C] hover:bg-[#1E2025] text-[#CFD4DD] hover:text-white border border-[#2A2C30] text-xs font-medium transition-colors"
             >
-              <Database size={13} className="text-[#06B6D4]" />
-              <span>Swagger UI</span>
+              <Home size={13} className="text-[#06B6D4]" />
+              <span>Back to Home</span>
             </Link>
 
             <Link
@@ -1009,7 +1009,7 @@ git push origin feature/TED-104-add-oauth2-provider`}
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">REST API & Endpoints</h2>
               <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Teader provides a full REST API for automation, CI/CD pipelines, and autonomous AI agents. Interactive Swagger documentation is available at <Link href="/docs" className="text-[#DCB001] underline underline-offset-4">/docs</Link>.
+                Teader provides a comprehensive REST API for automation, CI/CD pipelines, and autonomous AI agents to manage projects, tasks, comments, and real-time state.
               </p>
 
               <div className="space-y-3 pt-2">

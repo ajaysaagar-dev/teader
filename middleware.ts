@@ -6,7 +6,6 @@ const PUBLIC_PAGE_ROUTES = [
   '/',
   '/login',
   '/register',
-  '/docs',
   '/documentation',
   '/sitemap.xml',
   '/robots.txt',
@@ -20,7 +19,6 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/register',
   '/api/auth/logout',
   '/api/auth/me',
-  '/api/swagger',
 ];
 
 export async function middleware(req: NextRequest) {
