@@ -75,34 +75,78 @@ export default function LandingPageClient() {
 
 
 
-  // ─── Bidirectional Scroll Fade-In / Fade-Out Observer ──────────────────────
+  // ─── Bidirectional Dynamic Scroll Fade-In & Fade-Out ─────────────────────
   useEffect(() => {
-    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) return;
+    if (typeof window === 'undefined') return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Incoming content: smoothly fade-in to 1
-            entry.target.classList.add('opacity-100', 'translate-y-0', 'scale-100');
-            entry.target.classList.remove('opacity-0', 'translate-y-10', 'scale-[0.98]', 'pointer-events-none');
-          } else {
-            // Outgoing content: smoothly fade-out to 0 (works in BOTH scroll directions: up and down)
-            entry.target.classList.add('opacity-0', 'translate-y-10', 'scale-[0.98]', 'pointer-events-none');
-            entry.target.classList.remove('opacity-100', 'translate-y-0', 'scale-100');
-          }
-        });
-      },
-      {
-        threshold: 0.12,
-        rootMargin: '-20px 0px -20px 0px',
-      }
-    );
+    let rafId: number | null = null;
 
-    const elements = document.querySelectorAll('.reveal-on-scroll');
-    elements.forEach((el) => observer.observe(el));
+    const handleScrollFade = () => {
+      const elements = document.querySelectorAll<HTMLElement>('.reveal-on-scroll');
+      const viewHeight = window.innerHeight || document.documentElement.clientHeight;
+      const fadeZone = 120; // Distance in pixels from viewport top/bottom where fading occurs
 
-    return () => observer.disconnect();
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+
+        // 1. Completely out of viewport (above or below) -> 0 opacity
+        if (rect.bottom <= 0) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(-20px)';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+
+        if (rect.top >= viewHeight) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(20px)';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+
+        // 2. In viewport: calculate bidirectional fade
+        let opacity = 1;
+        let translateY = 0;
+
+        // Fading when entering / exiting the bottom boundary
+        if (rect.top > viewHeight - fadeZone) {
+          const progress = Math.max(0, Math.min(1, (viewHeight - rect.top) / fadeZone));
+          opacity = progress;
+          translateY = (1 - progress) * 20;
+        }
+        // Fading when exiting / entering the top boundary
+        else if (rect.bottom < fadeZone) {
+          const progress = Math.max(0, Math.min(1, rect.bottom / fadeZone));
+          opacity = progress;
+          translateY = -(1 - progress) * 20;
+        }
+
+        el.style.opacity = String(opacity);
+        el.style.transform = `translateY(${translateY}px)`;
+        el.style.pointerEvents = opacity > 0.05 ? 'auto' : 'none';
+      });
+    };
+
+    const onScroll = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(handleScrollFade);
+    };
+
+    // Run immediately and on scroll/resize
+    handleScrollFade();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    const timer1 = setTimeout(handleScrollFade, 50);
+    const timer2 = setTimeout(handleScrollFade, 300);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [mounted]);
 
   const handleLogout = async () => {
@@ -207,7 +251,7 @@ export default function LandingPageClient() {
       {/* ─── Semantic Main Area ───────────────────────────────────────── */}
       <main>
         {/* ─── Hero Section ────────────────────────────────────────────── */}
-        <section className="relative pt-24 pb-28 px-6 overflow-hidden reveal-on-scroll opacity-100 transition-all duration-700 ease-out">
+        <section className="relative pt-24 pb-28 px-6 overflow-hidden reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           {/* Ambient Glows */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[380px] bg-[#DCB001]/10 blur-[150px] pointer-events-none rounded-full" />
           <div className="absolute top-1/3 left-1/3 w-[500px] h-[280px] bg-[#06B6D4]/10 blur-[130px] pointer-events-none rounded-full" />
@@ -289,7 +333,7 @@ export default function LandingPageClient() {
         </section>
 
         {/* ─── Documentation Suite Showcase Section ────────────────────────── */}
-        <section id="documentation-suite" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0E0F13] reveal-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+        <section id="documentation-suite" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0E0F13] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center space-y-3 max-w-3xl mx-auto">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 text-xs font-mono font-semibold">
@@ -531,7 +575,7 @@ export default function LandingPageClient() {
         </section>
 
         {/* ─── Core Platform Features Grid ─────────────────────────────── */}
-        <section id="features" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0C0D10] reveal-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+        <section id="features" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0C0D10] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-16">
             <div className="text-center space-y-3 max-w-3xl mx-auto">
               <h2 className="text-xs font-mono uppercase tracking-wider text-[#DCB001]">Professional Workflows</h2>
@@ -611,7 +655,7 @@ export default function LandingPageClient() {
         </section>
 
         {/* ─── Branch Explorer Graph Showcase ──────────────────────────── */}
-        <section id="branch-explorer" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+        <section id="branch-explorer" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center space-y-3 max-w-3xl mx-auto">
               <h2 className="text-xs font-mono uppercase tracking-wider text-[#06B6D4]">Visual Dependency Graph</h2>
@@ -651,7 +695,7 @@ export default function LandingPageClient() {
         </section>
 
         {/* ─── Architecture Section ─────────────────────────────────────── */}
-        <section id="architecture" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+        <section id="architecture" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center space-y-2 max-w-2xl mx-auto">
               <h2 className="text-xs font-mono uppercase tracking-wider text-[#06B6D4]">Architecture</h2>
@@ -689,7 +733,7 @@ export default function LandingPageClient() {
         </section>
 
         {/* ─── Call To Action Section ───────────────────────────────────── */}
-        <section className="py-24 px-6 border-t border-[#1C1E22] bg-[#08090B] text-center relative overflow-hidden reveal-on-scroll opacity-0 translate-y-8 transition-all duration-700">
+        <section className="py-24 px-6 border-t border-[#1C1E22] bg-[#08090B] text-center relative overflow-hidden reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-4xl mx-auto space-y-6 relative z-10">
             <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
               Supercharge your organization&apos;s project velocity today.
