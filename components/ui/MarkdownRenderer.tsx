@@ -16,9 +16,9 @@ import {
 import { toast } from 'sonner';
 
 export interface ActiveHighlightInfo {
-  lineIndex: number;
+  lineIndex?: number;
   word?: string;
-  timestamp: number;
+  timestamp?: number;
 }
 
 export interface ActiveCursorInfo {
@@ -88,64 +88,6 @@ export function LiveCursorBeacon({
       </span>
     </span>
   );
-}
-
-/**
- * Animated letter-by-letter fading highlight for newly typed words in realtime
- */
-export function TypingLetterFade({
-  text,
-  animKey = 'default',
-}: {
-  text: string;
-  animKey?: string | number;
-}) {
-  if (!text) return null;
-
-  return (
-    <span key={`fade_grp_${animKey}`} className="inline">
-      {text.split('').map((char, index) => (
-        <span
-          key={`char_${animKey}_${index}`}
-          className="animate-letter-fade"
-          style={{
-            animationDelay: `${index * 45}ms`,
-          }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function renderTextWithHighlight(
-  textSlice: string,
-  keyIdx: number,
-  highlight?: ActiveHighlightInfo | null
-): React.ReactNode {
-  if (!highlight || !highlight.word || !highlight.word.trim()) {
-    return textSlice;
-  }
-
-  const targetWord = highlight.word.trim();
-  const wordIdx = textSlice.indexOf(targetWord);
-
-  if (wordIdx !== -1) {
-    const before = textSlice.slice(0, wordIdx);
-    const match = textSlice.slice(wordIdx, wordIdx + targetWord.length);
-    const after = textSlice.slice(wordIdx + targetWord.length);
-
-    return (
-      <span key={`hl_wrap_${keyIdx}`}>
-        {before}
-        <TypingLetterFade text={match} animKey={highlight.timestamp} />
-        {after}
-      </span>
-    );
-  }
-
-  return textSlice;
 }
 
 /**
@@ -468,14 +410,14 @@ export function parseInlineMarkdown(
     // Regular plain text slice until next special marker
     const nextSpecial = remaining.search(/[`*_~\[<]/);
     if (nextSpecial === -1) {
-      tokens.push(renderTextWithHighlight(remaining, keyIdx++, highlight));
+      tokens.push(remaining);
       break;
     } else if (nextSpecial === 0) {
       // Unmatched marker character
-      tokens.push(renderTextWithHighlight(remaining[0], keyIdx++, highlight));
+      tokens.push(remaining[0]);
       remaining = remaining.slice(1);
     } else {
-      tokens.push(renderTextWithHighlight(remaining.slice(0, nextSpecial), keyIdx++, highlight));
+      tokens.push(remaining.slice(0, nextSpecial));
       remaining = remaining.slice(nextSpecial);
     }
   }

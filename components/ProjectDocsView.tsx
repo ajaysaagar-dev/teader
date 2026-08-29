@@ -99,8 +99,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [copiedFile, setCopiedFile] = useState(false);
-  const [activeHighlight, setActiveHighlight] = useState<ActiveHighlightInfo | null>(null);
-  const highlightTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Folder management state
   const [customFolders, setCustomFolders] = useState<string[]>(() => {
@@ -216,21 +214,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       top: targetScrollTop,
       behavior: 'smooth',
     });
-  }, []);
-
-  const triggerActiveHighlight = useCallback((lineIndex: number, word: string) => {
-    if (!word || !word.trim()) return;
-    if (highlightTimerRef.current) {
-      clearTimeout(highlightTimerRef.current);
-    }
-    setActiveHighlight({
-      lineIndex,
-      word: word.trim(),
-      timestamp: Date.now(),
-    });
-    highlightTimerRef.current = setTimeout(() => {
-      setActiveHighlight(null);
-    }, 2200);
   }, []);
 
   const [cursorPos, setCursorPos] = useState<ActiveCursorInfo>({
@@ -491,21 +474,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   return prev;
                 });
 
-                // Smoothly scroll preview for viewing users in realtime to the changed spot & highlight words!
+                // Smoothly scroll preview for viewing users in realtime to the changed spot
                 if (oldContent !== newContent) {
                   const changedLine = calculateChangedLineFromText(oldContent, newContent);
                   const totalLines = newContent.split('\n').length;
-                  const oldLines = oldContent.split('\n');
-                  const newLines = newContent.split('\n');
-                  const diffLine = newLines[changedLine] || '';
-                  const oldLine = oldLines[changedLine] || '';
-                  const newWords = diffLine.split(/\s+/);
-                  const oldWords = new Set<string>(oldLine.split(/\s+/));
-                  const addedWord = newWords.find((w: string) => Boolean(w && !oldWords.has(w))) || newWords[newWords.length - 1] || '';
-
-                  if (addedWord) {
-                    triggerActiveHighlight(changedLine, addedWord);
-                  }
 
                   requestAnimationFrame(() => {
                     scrollToChangeLocation(changedLine, totalLines);
@@ -756,7 +728,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     };
   }, [activeContent, activeTitle, savedContent, savedTitle, selectedDocId, performAutoSave]);
 
-  // Handle Textarea Change with smooth preview scroll & letter fade highlight to changed spot
+  // Handle Textarea Change with smooth preview scroll to changed spot
   const handleContentChange = (newVal: string, e?: React.ChangeEvent<HTMLTextAreaElement>) => {
     const oldVal = activeContent;
     setActiveContent(newVal);
@@ -766,15 +738,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     const cursorPos = e?.target?.selectionStart ?? textareaRef.current?.selectionStart;
     const changedLine = calculateChangedLineFromText(oldVal, newVal, cursorPos);
     const totalLines = newVal.split('\n').length;
-
-    // Extract newly typed word / letters around cursor
-    const textBefore = newVal.slice(0, cursorPos ?? newVal.length);
-    const match = textBefore.match(/([^\s\n]+)$/);
-    const typedWord = match ? match[1] : '';
-
-    if (typedWord) {
-      triggerActiveHighlight(changedLine, typedWord);
-    }
 
     // Smoothly scroll the preview to the exact changed spot
     requestAnimationFrame(() => {
@@ -1491,7 +1454,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
                       <div className="p-6 sm:p-8 bg-[#141518] border border-[#222428] rounded-2xl shadow-xl">
                         {activeContent || savedContent ? (
-                          renderGithubMarkdown(activeContent || savedContent, activeHighlight, allActiveCursors)
+                          renderGithubMarkdown(activeContent || savedContent, null, allActiveCursors)
                         ) : (
                           <p className="text-xs text-[#787C83] italic">Start typing in the editor to see real-time preview...</p>
                         )}
