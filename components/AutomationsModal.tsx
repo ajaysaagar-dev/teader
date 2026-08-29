@@ -35,7 +35,7 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [newRuleName, setNewRuleName] = useState('');
   const [newTrigger, setNewTrigger] = useState<any>('status_changed');
-  const [newAction, setNewAction] = useState<any>('complete_subtasks');
+  const [newAction, setNewAction] = useState<any>('change_status');
 
   useEffect(() => {
     if (isOpen) {
@@ -178,7 +178,6 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
                       className="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg outline-none cursor-pointer"
                     >
                       <option value="status_changed">When Status changes to Done</option>
-                      <option value="subtasks_completed">When All Subtasks Completed</option>
                       <option value="issue_created">When Task is Created</option>
                       <option value="priority_changed">When Priority is Critical</option>
                     </select>
@@ -191,7 +190,6 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
                       onChange={(e) => setNewAction(e.target.value)}
                       className="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg outline-none cursor-pointer"
                     >
-                      <option value="complete_subtasks">Auto-complete all subtasks</option>
                       <option value="change_status">Move Status to Needs Review</option>
                       <option value="set_priority">Set Priority to High</option>
                       <option value="assign_user">Assign to Project Lead</option>

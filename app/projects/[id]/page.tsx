@@ -1681,11 +1681,6 @@ export default function SingleProjectPage() {
                 onUpdateIssuePriority={handleUpdateIssuePriority}
                 onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
-                onDeleteSubtask={handleDeleteSubtask}
-                onRenameSubtask={handleRenameSubtask}
-                onMoveSubtask={handleMoveSubtask}
                 onRenameIssue={handleRenameIssue}
                 onRenameEpic={handleRenameEpic}
                 onMoveTaskToFolder={handleMoveTaskToFolder}
@@ -1734,8 +1729,6 @@ export default function SingleProjectPage() {
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
                 currentUser={currentUser}
               />
             </div>
@@ -1772,8 +1765,6 @@ export default function SingleProjectPage() {
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
               />
             </div>
           ) : (

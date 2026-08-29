@@ -365,11 +365,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                       <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
                         {issue.title}
                       </span>
-                      {(issue.subtasks || []).length > 0 && (
-                        <span className="text-[10px] text-[#787C83] font-mono bg-[#131415] px-1.5 py-0.5 rounded border border-[#2A2C30] shrink-0">
-                          {completedSubCount}/{(issue.subtasks || []).length}
-                        </span>
-                      )}
                     </div>
 
                     <div className="col-span-2 flex items-center">
@@ -644,16 +639,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                         <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
                           {issue.title}
                         </h4>
-
-                        {/* Subtasks progress indicator */}
-                        {(issue.subtasks || []).length > 0 && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
-                            <CheckSquare size={11} className="text-[#DCB001]" />
-                            <span>
-                              {completedSubCount}/{(issue.subtasks || []).length} sub-works
-                            </span>
-                          </div>
-                        )}
 
                         {/* Card Footer */}
                         <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">
