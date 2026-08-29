@@ -181,6 +181,7 @@ export function reconcileDocs(prev: ProjectDoc[], incoming: ProjectDoc[]): Proje
       existing.title === inc.title &&
       existing.fileName === inc.fileName &&
       existing.updatedAt === inc.updatedAt &&
+      (existing.folder || 'Start') === (inc.folder || 'Start') &&
       (inc.content === undefined || inc.content === existing.content)
     ) {
       reconciled.push(existing);

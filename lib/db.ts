@@ -262,11 +262,15 @@ export async function initDB(): Promise<void> {
             "title" VARCHAR(255) NOT NULL,
             "fileName" VARCHAR(255) NOT NULL UNIQUE,
             "filePath" VARCHAR(512) NOT NULL,
+            "folder" VARCHAR(255) DEFAULT 'Start',
             "content" TEXT,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
+        try {
+          await p.query(`ALTER TABLE "project_docs" ADD COLUMN IF NOT EXISTS "folder" VARCHAR(255) DEFAULT 'Start';`);
+        } catch {}
         try {
           await p.query(`ALTER TABLE "project_docs" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
         } catch {}
@@ -1301,12 +1305,12 @@ export async function createProjectDocDB(data: {
 
   try {
     const p = getPool();
-    // 1. Insert/Update document in project_docs with physical filePath & content
+    // 1. Insert/Update document in project_docs with physical filePath, folder & content
     await p.query(
-      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath", "content")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "fileName" = $6, "filePath" = $7, "content" = $8, "updatedAt" = CURRENT_TIMESTAMP`,
-      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath, content]
+      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath", "folder", "content")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "fileName" = $6, "filePath" = $7, "folder" = $8, "content" = $9, "updatedAt" = CURRENT_TIMESTAMP`,
+      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath, folder, content]
     );
 
     // 2. Reference doc id in projects table (docIds array)
@@ -1350,6 +1354,10 @@ export async function updateProjectDocDB(
     fields.push(`"filePath" = $${paramIdx++}`);
     values.push(updates.filePath);
   }
+  if (updates.folder !== undefined) {
+    fields.push(`"folder" = $${paramIdx++}`);
+    values.push(updates.folder.trim());
+  }
   if (updates.content !== undefined) {
     fields.push(`"content" = $${paramIdx++}`);
     values.push(updates.content);
@@ -1362,7 +1370,9 @@ export async function updateProjectDocDB(
       const p = getPool();
       values.push(docId);
       await p.query(`UPDATE "project_docs" SET ${fields.join(', ')} WHERE "id" = $${paramIdx}`, values);
-    } catch {}
+    } catch (e: any) {
+      console.warn('[updateProjectDocDB error]:', e.message);
+    }
   }
 
   const target = memoryProjectDocsStore.find((d) => d.id === docId);
@@ -1370,7 +1380,7 @@ export async function updateProjectDocDB(
     if (updates.title !== undefined) target.title = updates.title.trim();
     if (updates.fileName !== undefined) target.fileName = updates.fileName.trim();
     if (updates.filePath !== undefined) target.filePath = updates.filePath;
-    if (updates.folder !== undefined) target.folder = updates.folder;
+    if (updates.folder !== undefined) target.folder = updates.folder.trim();
     if (updates.content !== undefined) target.content = updates.content;
     target.updatedAt = new Date().toISOString();
   }
