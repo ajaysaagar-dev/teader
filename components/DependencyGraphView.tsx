@@ -113,13 +113,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const scrollLeftStartRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
 
-  // Ease-in-Ease-out Cubic Bezier Function: S-Curve
-  const easeInOutCubic = useCallback((t: number): number => {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  }, []);
-
-  // Programmatic Smooth Scroll with Ease-In-Ease-Out Animation
-  const smoothScrollBy = useCallback((deltaX: number, customDuration = 450) => {
+  // Programmatic Linear Scroll Animation (NO Ease-In-Ease-Out)
+  const smoothScrollBy = useCallback((deltaX: number, customDuration = 300) => {
     const el = scrollContainerRef.current;
     if (!el) return;
 
@@ -136,15 +131,15 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     if (Math.abs(distance) < 1) return;
 
     const startTime = performance.now();
-    const duration = Math.min(650, Math.max(350, customDuration));
+    const duration = Math.min(450, Math.max(200, customDuration));
 
     const step = (currentTime: number) => {
       if (!el) return;
       const elapsed = currentTime - startTime;
       const progress = Math.min(1, elapsed / duration);
-      const eased = easeInOutCubic(progress);
 
-      el.scrollLeft = startX + distance * eased;
+      // Pure Linear Motion: constant velocity, 0 ease-in / ease-out
+      el.scrollLeft = startX + distance * progress;
 
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(step);
@@ -155,9 +150,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     };
 
     animFrameRef.current = requestAnimationFrame(step);
-  }, [easeInOutCubic]);
+  }, []);
 
-  // Ultra-Smooth Ease-In-Ease-Out Horizontal Scrolling on Mouse Wheel & Trackpad
+  // Linear Horizontal Scrolling on Mouse Wheel & Trackpad (NO Ease-In-Ease-Out)
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -165,21 +160,17 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     let targetScrollLeft = el.scrollLeft;
     let startScrollLeft = el.scrollLeft;
     let animStartTime = 0;
-    let animDuration = 450;
+    let animDuration = 280;
     let isAnimating = false;
     let animFrame: number | null = null;
-
-    const easeInOutCubicMath = (t: number): number => {
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    };
 
     const animateLoop = (now: number) => {
       if (!el) return;
       const elapsed = now - animStartTime;
       const progress = Math.min(1, elapsed / animDuration);
-      const eased = easeInOutCubicMath(progress);
 
-      el.scrollLeft = startScrollLeft + (targetScrollLeft - startScrollLeft) * eased;
+      // Pure Linear Motion without S-curve ease-in/ease-out
+      el.scrollLeft = startScrollLeft + (targetScrollLeft - startScrollLeft) * progress;
 
       if (progress < 1) {
         animFrame = requestAnimationFrame(animateLoop);
@@ -202,8 +193,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       const maxScroll = el.scrollWidth - el.clientWidth;
       const currentScroll = el.scrollLeft;
 
-      // Smooth step delta with ease-in-ease-out accumulation
-      const stepDelta = rawDelta * 1.8;
+      // Linear step delta
+      const stepDelta = rawDelta * 1.4;
       const newTarget = Math.max(0, Math.min(maxScroll, (isAnimating ? targetScrollLeft : currentScroll) + stepDelta));
 
       startScrollLeft = currentScroll;
@@ -211,7 +202,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       animStartTime = performance.now();
 
       const distance = Math.abs(targetScrollLeft - startScrollLeft);
-      animDuration = Math.min(600, Math.max(380, distance * 0.75));
+      animDuration = Math.min(350, Math.max(180, distance * 0.5));
 
       if (!isAnimating) {
         isAnimating = true;
@@ -219,15 +210,15 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       }
     };
 
-    // Keyboard Arrow navigation with Ease-In-Ease-Out
+    // Keyboard Arrow navigation with Linear Motion
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        smoothScrollBy(-320, 400);
+        smoothScrollBy(-300, 250);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        smoothScrollBy(320, 400);
+        smoothScrollBy(300, 250);
       }
     };
 
@@ -562,13 +553,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
 
         {/* Right: Controls, Smooth Pan & Zoom */}
         <div className="flex items-center gap-2">
-          {/* Smooth Horizontal Scroll Navigation (Ease-In-Ease-Out) */}
+          {/* Linear Horizontal Scroll Navigation */}
           <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
             <button
               type="button"
-              onClick={() => smoothScrollBy(-380, 480)}
+              onClick={() => smoothScrollBy(-300, 250)}
               className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1F2023] rounded transition-colors"
-              title="Smooth Scroll Left (Ease In-Out)"
+              title="Pan Left (Linear)"
             >
               <ChevronLeft size={13} />
             </button>
@@ -578,9 +569,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             </div>
             <button
               type="button"
-              onClick={() => smoothScrollBy(380, 480)}
+              onClick={() => smoothScrollBy(300, 250)}
               className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1F2023] rounded transition-colors"
-              title="Smooth Scroll Right (Ease In-Out)"
+              title="Pan Right (Linear)"
             >
               <ChevronRight size={13} />
             </button>

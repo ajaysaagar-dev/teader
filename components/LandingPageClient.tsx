@@ -73,7 +73,7 @@ export default function LandingPageClient() {
       .catch(() => {});
   }, []);
 
-  // ─── Custom Momentum Smooth Scroll Engine (Non-Default Scrolling) ───────
+  // ─── Custom Linear Smooth Scroll Engine (NO Ease-In-Ease-Out) ───────────
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,13 +84,13 @@ export default function LandingPageClient() {
     let isRunning = false;
     let rafId: number;
 
-    const ease = 0.085; // Smooth damping coefficient
-
     const updateScroll = () => {
       const diff = targetY - currentY;
-      if (Math.abs(diff) > 0.4) {
-        currentY += diff * ease;
-        window.scrollTo(0, Math.round(currentY * 10) / 10);
+      if (Math.abs(diff) > 0.5) {
+        // Pure Linear constant velocity step (NO ease-in / ease-out curves)
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), Math.max(16, Math.abs(diff) * 0.22));
+        currentY += step;
+        window.scrollTo(0, Math.round(currentY));
         rafId = requestAnimationFrame(updateScroll);
       } else {
         currentY = targetY;
@@ -108,7 +108,7 @@ export default function LandingPageClient() {
 
       e.preventDefault();
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      targetY = Math.max(0, Math.min(maxScroll, targetY + e.deltaY * 1.15));
+      targetY = Math.max(0, Math.min(maxScroll, targetY + e.deltaY * 1.1));
 
       if (!isRunning) {
         isRunning = true;
