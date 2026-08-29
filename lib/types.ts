@@ -156,6 +156,8 @@ export interface Issue {
   createdAt?: string;
   updatedAt?: string;
   dueDate?: string;
+  completedByName?: string;
+  completedAt?: string;
   estimatedHours?: number;
   loggedHours?: number;
   blockedBy?: string[];

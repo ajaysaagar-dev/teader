@@ -186,12 +186,16 @@ export async function initDB(): Promise<void> {
             "loggedHours" NUMERIC(6, 2) DEFAULT 0,
             "isFavorite" BOOLEAN DEFAULT FALSE,
             "orderIndex" INT DEFAULT 0,
+            "completedByName" VARCHAR(128) DEFAULT NULL,
+            "completedAt" TIMESTAMP WITH TIME ZONE DEFAULT NULL,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
         try {
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "orderIndex" INT DEFAULT 0;`);
+          await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedByName" VARCHAR(128) DEFAULT NULL;`);
+          await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP WITH TIME ZONE DEFAULT NULL;`);
         } catch {}
 
         // 5. Create Subtasks Table
@@ -334,27 +338,27 @@ export async function initDB(): Promise<void> {
             await p.query(`INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, 2, 'member') ON CONFLICT DO NOTHING`, [hugProjId]);
             await p.query(`INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, 3, 'member') ON CONFLICT DO NOTHING`, [hugProjId]);
 
-            // Issues with rich update progression & dependencies
+            // Issues with rich update progression, assigned timestamps & completion tracking
             const seedIssues = [
-              { id: 'issue_hug_1', key: 'HUG-1', title: 'Database Schema Architecture V2 (Optimized)', desc: 'Updated relational database tables, foreign key cascading indexes, and JSON column support.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-20 08:00:00', updated: '2026-08-22 14:30:00' },
-              { id: 'issue_hug_2', key: 'HUG-2', title: 'Resilient PostgreSQL Connection Pool & Failover', desc: 'Configured connection pooling, health checks, and automatic reconnect backoff.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-21 09:00:00', updated: '2026-08-23 11:00:00' },
-              { id: 'issue_hug_3', key: 'HUG-3', title: 'JWT & Secure Cookie Session Hardening', desc: 'Updated authentication middleware, token refresh rotation, and bcrypt password verification.', status: 'needs_review', priority: 'critical', assignee: 'karri', reporter: 'jori', created: '2026-08-21 10:30:00', updated: '2026-08-24 16:00:00' },
-              { id: 'issue_hug_4', key: 'HUG-4', title: 'Dynamic Cubic Bezier Spline Engine V3', desc: 'Upgraded graph canvas with smooth curved splines and interactive revision junctions.', status: 'in_progress', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-22 11:00:00', updated: '2026-08-25 18:20:00' },
-              { id: 'issue_hug_5', key: 'HUG-5', title: 'Realtime Collaborative Cursors & Presence Stream', desc: 'Live multi-user cursor beacons, floating nametags, and immediate disconnect cleanup.', status: 'in_progress', priority: 'medium', assignee: 'karri', reporter: 'jori', created: '2026-08-22 14:00:00', updated: '2026-08-26 09:45:00' },
-              { id: 'issue_hug_6', key: 'HUG-6', title: 'GitHub Flavored Markdown Live Parser', desc: 'Real-time Markdown editor with split preview and syntax highlighting.', status: 'todo', priority: 'medium', assignee: 'jori', reporter: 'karri', created: '2026-08-23 08:00:00', updated: '2026-08-26 14:10:00' },
-              { id: 'issue_hug_7', key: 'HUG-7', title: 'Floating Live Presence Nametags & Exit Cleanup', desc: 'Instant 0ms removal of collaborator cursors upon window leave or tab close.', status: 'done', priority: 'high', assignee: 'karri', reporter: 'jori', created: '2026-08-23 15:00:00', updated: '2026-08-27 10:30:00' },
-              { id: 'issue_hug_8', key: 'HUG-8', title: 'Zero-Latency In-Place SWR State Reconciler', desc: 'Optimistic UI updates with referential memory equality preventing full DOM re-renders.', status: 'in_progress', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-24 09:00:00', updated: '2026-08-27 17:00:00' },
-              { id: 'issue_hug_9', key: 'HUG-9', title: 'Vertical Change Curves & Dynamic Scroll Metrics', desc: 'Calculates mutation deltas and renders vertical evolution Bezier curves.', status: 'needs_review', priority: 'critical', assignee: 'karri', reporter: 'jori', created: '2026-08-24 13:00:00', updated: '2026-08-28 12:00:00' },
-              { id: 'issue_hug_10', key: 'HUG-10', title: 'Automated Test Matrix & Production Build Verification', desc: 'Full vitest test coverage and Next.js static page bundle optimization.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-25 08:30:00', updated: '2026-08-28 16:00:00' },
-              { id: 'issue_hug_11', key: 'HUG-11', title: 'Linear Responsive Navigation Engine', desc: 'Smooth linear horizontal and vertical panning with zero ease-in-out hesitation.', status: 'done', priority: 'medium', assignee: 'karri', reporter: 'jori', created: '2026-08-25 14:00:00', updated: '2026-08-29 09:00:00' },
-              { id: 'issue_hug_12', key: 'HUG-12', title: 'Enterprise Technical Documentation Hub', desc: 'Comprehensive 20-section platform documentation portal with full API reference.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-26 10:00:00', updated: '2026-08-29 11:30:00' },
+              { id: 'issue_hug_1', key: 'HUG-1', title: 'Database Schema Architecture V2 (Optimized)', desc: 'Updated relational database tables, foreign key cascading indexes, and JSON column support.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-20 08:00:00', updated: '2026-08-22 14:30:00', completedBy: 'jori', completedAt: '2026-08-22 14:30:00' },
+              { id: 'issue_hug_2', key: 'HUG-2', title: 'Resilient PostgreSQL Connection Pool & Failover', desc: 'Configured connection pooling, health checks, and automatic reconnect backoff.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-21 09:00:00', updated: '2026-08-23 11:00:00', completedBy: 'jori', completedAt: '2026-08-23 11:00:00' },
+              { id: 'issue_hug_3', key: 'HUG-3', title: 'JWT & Secure Cookie Session Hardening', desc: 'Updated authentication middleware, token refresh rotation, and bcrypt password verification.', status: 'needs_review', priority: 'critical', assignee: 'karri', reporter: 'jori', created: '2026-08-21 10:30:00', updated: '2026-08-24 16:00:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_4', key: 'HUG-4', title: 'Dynamic Cubic Bezier Spline Engine V3', desc: 'Upgraded graph canvas with smooth curved splines and interactive revision junctions.', status: 'in_progress', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-22 11:00:00', updated: '2026-08-25 18:20:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_5', key: 'HUG-5', title: 'Realtime Collaborative Cursors & Presence Stream', desc: 'Live multi-user cursor beacons, floating nametags, and immediate disconnect cleanup.', status: 'in_progress', priority: 'medium', assignee: 'karri', reporter: 'jori', created: '2026-08-22 14:00:00', updated: '2026-08-26 09:45:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_6', key: 'HUG-6', title: 'GitHub Flavored Markdown Live Parser', desc: 'Real-time Markdown editor with split preview and syntax highlighting.', status: 'todo', priority: 'medium', assignee: 'jori', reporter: 'karri', created: '2026-08-23 08:00:00', updated: '2026-08-26 14:10:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_7', key: 'HUG-7', title: 'Floating Live Presence Nametags & Exit Cleanup', desc: 'Instant 0ms removal of collaborator cursors upon window leave or tab close.', status: 'done', priority: 'high', assignee: 'karri', reporter: 'jori', created: '2026-08-23 15:00:00', updated: '2026-08-27 10:30:00', completedBy: 'karri', completedAt: '2026-08-27 10:30:00' },
+              { id: 'issue_hug_8', key: 'HUG-8', title: 'Zero-Latency In-Place SWR State Reconciler', desc: 'Optimistic UI updates with referential memory equality preventing full DOM re-renders.', status: 'in_progress', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-24 09:00:00', updated: '2026-08-27 17:00:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_9', key: 'HUG-9', title: 'Vertical Change Curves & Dynamic Scroll Metrics', desc: 'Calculates mutation deltas and renders vertical evolution Bezier curves.', status: 'needs_review', priority: 'critical', assignee: 'karri', reporter: 'jori', created: '2026-08-24 13:00:00', updated: '2026-08-28 12:00:00', completedBy: null, completedAt: null },
+              { id: 'issue_hug_10', key: 'HUG-10', title: 'Automated Test Matrix & Production Build Verification', desc: 'Full vitest test coverage and Next.js static page bundle optimization.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-25 08:30:00', updated: '2026-08-28 16:00:00', completedBy: 'jori', completedAt: '2026-08-28 16:00:00' },
+              { id: 'issue_hug_11', key: 'HUG-11', title: 'Linear Responsive Navigation Engine', desc: 'Smooth linear horizontal and vertical panning with zero ease-in-out hesitation.', status: 'done', priority: 'medium', assignee: 'karri', reporter: 'jori', created: '2026-08-25 14:00:00', updated: '2026-08-29 09:00:00', completedBy: 'karri', completedAt: '2026-08-29 09:00:00' },
+              { id: 'issue_hug_12', key: 'HUG-12', title: 'Enterprise Technical Documentation Hub', desc: 'Comprehensive 20-section platform documentation portal with full API reference.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-26 10:00:00', updated: '2026-08-29 11:30:00', completedBy: 'jori', completedAt: '2026-08-29 11:30:00' },
             ];
 
             for (const item of seedIssues) {
               await p.query(
-                `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "createdAt", "updatedAt")
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT DO NOTHING`,
-                [item.id, item.key, item.title, item.desc, item.status, item.priority, item.assignee, item.reporter, hugProjId, 'Huge update/seed', item.created, item.updated]
+                `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "createdAt", "updatedAt", "completedByName", "completedAt")
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT DO NOTHING`,
+                [item.id, item.key, item.title, item.desc, item.status, item.priority, item.assignee, item.reporter, hugProjId, 'Huge update/seed', item.created, item.updated, item.completedBy, item.completedAt]
               );
             }
           }
@@ -975,6 +979,25 @@ export async function updateIssueStatusDB(
   if (updates.status !== undefined) {
     fields.push(`"status" = $${paramIdx++}`);
     values.push(updates.status);
+
+    if (updates.status === 'done') {
+      const compName = updates.completedByName || updates.assigneeName || 'karri';
+      const compAt = updates.completedAt || new Date().toISOString();
+      fields.push(`"completedByName" = $${paramIdx++}`);
+      values.push(compName);
+      fields.push(`"completedAt" = $${paramIdx++}`);
+      values.push(compAt);
+      updates.completedByName = compName;
+      updates.completedAt = compAt;
+    }
+  }
+  if (updates.completedByName !== undefined && updates.status !== 'done') {
+    fields.push(`"completedByName" = $${paramIdx++}`);
+    values.push(updates.completedByName);
+  }
+  if (updates.completedAt !== undefined && updates.status !== 'done') {
+    fields.push(`"completedAt" = $${paramIdx++}`);
+    values.push(updates.completedAt);
   }
   if (updates.title !== undefined) {
     fields.push(`"title" = $${paramIdx++}`);
@@ -1028,6 +1051,8 @@ export async function updateIssueStatusDB(
   const target = memoryIssuesStore.find((i) => i.id === id);
   if (target) {
     if (updates.status !== undefined) target.status = updates.status;
+    if (updates.completedByName !== undefined) target.completedByName = updates.completedByName;
+    if (updates.completedAt !== undefined) target.completedAt = updates.completedAt;
     if (updates.title !== undefined) target.title = updates.title.trim();
     if (updates.description !== undefined) target.description = updates.description.trim();
     if (updates.epic !== undefined) target.epic = updates.epic.trim();

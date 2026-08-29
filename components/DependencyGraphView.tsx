@@ -26,7 +26,6 @@ import {
   MoveHorizontal,
   Activity,
   TrendingUp,
-  Sliders,
   History,
   FileEdit,
   ArrowUpRight,
@@ -47,12 +46,13 @@ interface TimelineNode {
   y: number;
   width: number;
   height: number;
-  dateKey: string;
-  dateAssignedLabel: string;
+  dateTimeSlotKey: string;
+  dateTimeAssignedLabel: string;
   creatorName: string;
   creatorColor: string;
   completerName: string;
   completerColor: string;
+  completedAtLabel?: string;
   isDone: boolean;
   hasUpdates: boolean;
 }
@@ -110,12 +110,15 @@ function parseBlockedBy(blockedBy: any): string[] {
   return [];
 }
 
-// Format date assigned
-function formatDateAssigned(dateStr?: string, fallbackIndex = 0): { dateKey: string; label: string } {
+// Format Date & Time Assigned
+function formatDateTimeAssigned(dateStr?: string, fallbackIndex = 0): { slotKey: string; label: string; datePart: string; timePart: string } {
   if (!dateStr) {
+    const timePart = `${String(8 + (fallbackIndex % 6) * 2).padStart(2, '0')}:00`;
     return {
-      dateKey: `date_batch_${fallbackIndex + 1}`,
-      label: `Day ${fallbackIndex + 1}`,
+      slotKey: `slot_step_${fallbackIndex + 1}`,
+      label: `Step ${fallbackIndex + 1} • ${timePart}`,
+      datePart: `Step ${fallbackIndex + 1}`,
+      timePart,
     };
   }
 
@@ -123,16 +126,21 @@ function formatDateAssigned(dateStr?: string, fallbackIndex = 0): { dateKey: str
   if (!isNaN(d.getTime())) {
     const month = d.toLocaleDateString(undefined, { month: 'short' });
     const day = d.getDate();
-    const year = d.getFullYear();
+    const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: true });
+    const datePart = `${month} ${day}`;
     return {
-      dateKey: `${year}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-      label: `${month} ${day}, ${year}`,
+      slotKey: `${d.toISOString()}_${fallbackIndex}`,
+      label: `${datePart} • ${time}`,
+      datePart,
+      timePart: time,
     };
   }
 
   return {
-    dateKey: dateStr,
+    slotKey: dateStr,
     label: dateStr,
+    datePart: dateStr,
+    timePart: '',
   };
 }
 
@@ -154,14 +162,6 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const scrollLeftStartRef = useRef(0);
   const scrollTopStartRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
-
-  // Dynamic live scroll tracking state
-  const [scrollBounds, setScrollBounds] = useState({
-    scrollLeft: 0,
-    scrollTop: 0,
-    clientWidth: 1200,
-    clientHeight: 700,
-  });
 
   // Programmatic Linear Scroll Animation
   const smoothScrollBy = useCallback((deltaX: number, customDuration = 300) => {
@@ -260,10 +260,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        smoothScrollBy(-300, 250);
+        smoothScrollBy(-320, 250);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        smoothScrollBy(300, 250);
+        smoothScrollBy(320, 250);
       }
     };
 
@@ -319,28 +319,11 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     }
   };
 
-  // Track live container scroll position to update dynamic vertical metrics
-  const handleContainerScroll = () => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    setScrollBounds({
-      scrollLeft: el.scrollLeft,
-      scrollTop: el.scrollTop,
-      clientWidth: el.clientWidth,
-      clientHeight: el.clientHeight,
-    });
-  };
-
-  // Initial scroll container bounds measurement
-  useEffect(() => {
-    handleContainerScroll();
-  }, []);
-
   // Compute Completer Users List & Summary
   const completerList = useMemo(() => {
     const usersMap = new Map<string, { name: string; color: string; count: number; completedCount: number }>();
     issues.forEach((iss) => {
-      const completer = iss.assigneeName || iss.assignee?.name || 'Unassigned';
+      const completer = iss.completedByName || iss.assigneeName || iss.assignee?.name || 'Unassigned';
       if (!usersMap.has(completer)) {
         usersMap.set(completer, {
           name: completer,
@@ -356,13 +339,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     return Array.from(usersMap.values());
   }, [issues]);
 
-  // ─── Compute Layout: Horizontal Date Assigned & Vertical Task Creator ───────
-  const { nodes, edges, dateHeaders, creatorTracks, canvasWidth, canvasHeight } = useMemo(() => {
+  // ─── Compute Layout: Horizontal Date & Time Assigned, Vertical All User Creators ───
+  const { nodes, edges, timeSlotHeaders, userTracks, canvasWidth, canvasHeight } = useMemo(() => {
     if (issues.length === 0) {
-      return { nodes: [], edges: [], dateHeaders: [], creatorTracks: [], canvasWidth: 1200, canvasHeight: 700 };
+      return { nodes: [], edges: [], timeSlotHeaders: [], userTracks: [], canvasWidth: 1200, canvasHeight: 700 };
     }
 
-    // Sort issues chronologically by createdAt / dueDate (horizontal date assigned axis)
+    // Sort issues chronologically by assigned date & time (createdAt / dueDate)
     const sortedIssues = [...issues].sort((a, b) => {
       const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -370,66 +353,58 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       return String(a.key).localeCompare(String(b.key));
     });
 
-    // 1. Determine Horizontal Assigned Dates (X-axis)
-    const dateKeysList: string[] = [];
-    const dateLabelsMap = new Map<string, string>();
-    sortedIssues.forEach((iss, idx) => {
-      const { dateKey, label } = formatDateAssigned(iss.createdAt || iss.dueDate, idx);
-      if (!dateKeysList.includes(dateKey)) {
-        dateKeysList.push(dateKey);
-        dateLabelsMap.set(dateKey, label);
-      }
-    });
-
-    // 2. Determine Vertical Task Creators (Y-axis: Person who created the task)
-    const creatorNamesList: string[] = [];
+    // 1. Determine All Unique Users (Vertical Y-Axis Tracks: shows tasks in the line of who created them)
+    const allUsersSet = new Set<string>();
     sortedIssues.forEach((iss) => {
       const creator = iss.reporterName || iss.reporter?.name || 'System Admin';
-      if (!creatorNamesList.includes(creator)) {
-        creatorNamesList.push(creator);
-      }
+      allUsersSet.add(creator);
+      if (iss.assigneeName) allUsersSet.add(iss.assigneeName);
+      if (iss.completedByName) allUsersSet.add(iss.completedByName);
     });
+    const userTracksList = Array.from(allUsersSet);
 
     // Dimensions
-    const NODE_WIDTH = 250;
-    const NODE_HEIGHT = 86;
+    const NODE_WIDTH = 260;
+    const NODE_HEIGHT = 88;
     const COLUMN_WIDTH = 320;
     const ROW_HEIGHT = 160;
-    const START_X = 180;
+    const START_X = 200;
     const START_Y = 110;
 
-    const dateColumnsCount = Math.max(dateKeysList.length, 1);
-    const creatorTracksCount = Math.max(creatorNamesList.length, 1);
-
-    // Track slots in each cell (dateKey + creator)
-    const cellCounts = new Map<string, number>();
-
+    const timeHeaders: { slot: number; label: string; x: number }[] = [];
     const computedNodes: TimelineNode[] = [];
     const nodeMap = new Map<string, TimelineNode>();
 
     sortedIssues.forEach((iss, index) => {
-      const { dateKey, label: dateLabel } = formatDateAssigned(iss.createdAt || iss.dueDate, index);
+      const { label: dateTimeLabel } = formatDateTimeAssigned(iss.createdAt || iss.dueDate, index);
       const creator = iss.reporterName || iss.reporter?.name || 'System Admin';
-      const completer = iss.assigneeName || iss.assignee?.name || 'Unassigned';
+      const completer = iss.completedByName || iss.assigneeName || iss.assignee?.name || 'Unassigned';
 
-      let dateIndex = dateKeysList.indexOf(dateKey);
-      if (dateIndex === -1) dateIndex = 0;
+      let userIndex = userTracksList.indexOf(creator);
+      if (userIndex === -1) userIndex = 0;
 
-      let creatorIndex = creatorNamesList.indexOf(creator);
-      if (creatorIndex === -1) creatorIndex = 0;
+      // Horizontal X-Axis: Time of assignment step
+      const x = START_X + index * COLUMN_WIDTH;
 
-      const cellKey = `${dateKey}_${creator}`;
-      const subSlot = cellCounts.get(cellKey) || 0;
-      cellCounts.set(cellKey, subSlot + 1);
+      // Vertical Y-Axis: Task Creator line
+      const y = START_Y + userIndex * ROW_HEIGHT;
 
-      // Horizontal position based on Date Assigned
-      const x = START_X + dateIndex * COLUMN_WIDTH + (subSlot * 20);
-
-      // Vertical position based on Task Creator
-      const y = START_Y + creatorIndex * ROW_HEIGHT + (subSlot * 12);
+      timeHeaders.push({
+        slot: index,
+        label: dateTimeLabel,
+        x,
+      });
 
       const isDone = iss.status === 'done';
       const hasUpdates = Boolean(iss.updatedAt && iss.createdAt && iss.updatedAt !== iss.createdAt);
+
+      let completedAtFormatted: string | undefined = undefined;
+      if (iss.completedAt) {
+        const cd = new Date(iss.completedAt);
+        if (!isNaN(cd.getTime())) {
+          completedAtFormatted = cd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        }
+      }
 
       const node: TimelineNode = {
         id: iss.id,
@@ -438,12 +413,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
         y,
         width: NODE_WIDTH,
         height: NODE_HEIGHT,
-        dateKey,
-        dateAssignedLabel: dateLabel,
+        dateTimeSlotKey: `slot_${index}`,
+        dateTimeAssignedLabel: dateTimeLabel,
         creatorName: creator,
         creatorColor: getUserColor(creator),
         completerName: completer,
         completerColor: getUserColor(completer),
+        completedAtLabel: completedAtFormatted,
         isDone,
         hasUpdates,
       };
@@ -452,11 +428,11 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       nodeMap.set(iss.key, node);
     });
 
-    // ─── Compute Smooth Vertical Curves for Tasks Completed by Each User ───────
+    // ─── Horizontal Smooth Curved Lines Connecting Tasks Completed by Each User ───
     const computedEdges: TimelineEdge[] = [];
     const edgeSet = new Set<string>();
 
-    // Group tasks by Completer / Assignee to draw smooth curved workflow connectors
+    // Group tasks by completing user
     const completerTasks = new Map<string, TimelineNode[]>();
     computedNodes.forEach((node) => {
       const u = node.completerName;
@@ -467,8 +443,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     completerTasks.forEach((tasksList, compName) => {
       const userColor = getUserColor(compName);
 
-      // Sort by X (date) then Y
-      const sortedUserTasks = [...tasksList].sort((a, b) => a.x - b.x || a.y - b.y);
+      // Sort horizontally from left (earlier) to right (later)
+      const sortedUserTasks = [...tasksList].sort((a, b) => a.x - b.x);
 
       for (let i = 0; i < sortedUserTasks.length - 1; i++) {
         const fromN = sortedUserTasks[i];
@@ -495,7 +471,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       }
     });
 
-    // Add Blocking Dependency Connections as dashed alert curves
+    // Dependency Blocking links
     sortedIssues.forEach((iss) => {
       const toNode = nodeMap.get(iss.key);
       if (!toNode) return;
@@ -522,78 +498,25 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       });
     });
 
-    const dateHeadersList = dateKeysList.map((key, idx) => ({
-      key,
-      label: dateLabelsMap.get(key) || key,
-      x: START_X + idx * COLUMN_WIDTH,
-      width: COLUMN_WIDTH,
-    }));
-
-    const creatorTracksList = creatorNamesList.map((name, idx) => ({
+    const userTracksData = userTracksList.map((name, idx) => ({
       name,
       y: START_Y + idx * ROW_HEIGHT,
       color: getUserColor(name),
-      tasksCount: sortedIssues.filter((i) => (i.reporterName || i.reporter?.name || 'System Admin') === name).length,
+      createdCount: sortedIssues.filter((i) => (i.reporterName || i.reporter?.name || 'System Admin') === name).length,
     }));
 
-    const totalWidth = Math.max(1400, START_X + dateColumnsCount * COLUMN_WIDTH + 260);
-    const totalHeight = Math.max(800, START_Y + creatorTracksCount * ROW_HEIGHT + 200);
+    const totalWidth = Math.max(1400, START_X + sortedIssues.length * COLUMN_WIDTH + 260);
+    const totalHeight = Math.max(800, START_Y + userTracksList.length * ROW_HEIGHT + 200);
 
     return {
       nodes: computedNodes,
       edges: computedEdges,
-      dateHeaders: dateHeadersList,
-      creatorTracks: creatorTracksList,
+      timeSlotHeaders: timeHeaders,
+      userTracks: userTracksData,
       canvasWidth: totalWidth,
       canvasHeight: totalHeight,
     };
   }, [issues]);
-
-  // ─── Dynamic Live Scroll Viewport Metrics ─────────────────────────────────
-  const dynamicScrollMetrics = useMemo(() => {
-    if (nodes.length === 0) {
-      return {
-        visibleCount: 0,
-        completedCount: 0,
-        velocityPercent: 0,
-        visibleDateRange: 'No Data',
-        activeCompleters: [] as { name: string; count: number; color: string }[],
-      };
-    }
-
-    const minX = (scrollBounds.scrollLeft / scale) - 100;
-    const maxX = ((scrollBounds.scrollLeft + scrollBounds.clientWidth) / scale) + 100;
-
-    const visibleNodes = nodes.filter((n) => n.x + n.width >= minX && n.x <= maxX);
-    const visibleCount = visibleNodes.length;
-    const completedCount = visibleNodes.filter((n) => n.isDone).length;
-    const velocityPercent = visibleCount > 0 ? Math.round((completedCount / visibleCount) * 100) : 0;
-
-    const compMap = new Map<string, number>();
-    visibleNodes.forEach((n) => {
-      compMap.set(n.completerName, (compMap.get(n.completerName) || 0) + 1);
-    });
-
-    const activeCompleters = Array.from(compMap.entries()).map(([name, count]) => ({
-      name,
-      count,
-      color: getUserColor(name),
-    }));
-
-    const firstVisible = visibleNodes[0];
-    const lastVisible = visibleNodes[visibleNodes.length - 1];
-    const visibleDateRange = firstVisible && lastVisible
-      ? `${firstVisible.dateAssignedLabel} → ${lastVisible.dateAssignedLabel}`
-      : 'All Dates';
-
-    return {
-      visibleCount,
-      completedCount,
-      velocityPercent,
-      visibleDateRange,
-      activeCompleters,
-    };
-  }, [nodes, scrollBounds, scale]);
 
   // Filter nodes by selected completer if active
   const filteredNodes = useMemo(() => {
@@ -621,7 +544,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               <div className="flex items-center gap-1.5 text-xs font-bold text-white tracking-tight">
                 <span>Task Execution & Creator Matrix</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#1B1C1F] border border-[#2A2C30] text-[#DCB001] rounded">
-                  X: Date Assigned • Y: Task Creator
+                  X: Date & Time Assigned • Y: Task Creators
                 </span>
               </div>
             </div>
@@ -630,9 +553,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           <span className="w-px h-4 bg-[#222428] mx-1 hidden sm:inline" />
 
           {/* Completer User Legend Pills (Shows who completed which tasks) */}
-          <div className="hidden md:flex items-center gap-1.5 overflow-x-auto max-w-[36vw] custom-scrollbar py-1">
+          <div className="hidden md:flex items-center gap-1.5 overflow-x-auto max-w-[38vw] custom-scrollbar py-1">
             <span className="text-[10px] font-mono text-[#787C83] mr-1 flex items-center gap-1">
-              <UserCheck size={11} className="text-[#22C55E]" /> COMPLETERS:
+              <UserCheck size={11} className="text-[#22C55E]" /> TICKED COMPLETED BY:
             </span>
             {completerList.map((u) => {
               const isSelected = selectedCompleterFilter === u.name;
@@ -646,7 +569,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       : 'bg-[#16171A] hover:bg-[#1E2024] text-[#9BA1A6] border-[#2A2C30]'
                   }`}
                   style={{ borderLeftColor: u.color, borderLeftWidth: 3 }}
-                  title={`Completed ${u.completedCount} of ${u.count} assigned tasks`}
+                  title={`Completed ${u.completedCount} of ${u.count} tasks`}
                 >
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
@@ -682,7 +605,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             title="Toggle user completion flow curves"
           >
             <Activity size={12} />
-            <span>Completer Curves</span>
+            <span>Completion Curves</span>
           </button>
 
           {/* Linear Horizontal Scroll Navigation */}
@@ -740,48 +663,11 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
         </div>
       </div>
 
-      {/* Main Container Area with Sticky Vertical Creator Axis & Horizontal Date Header */}
+      {/* Main Canvas Area */}
       <div className="flex-1 relative flex min-h-0 w-full overflow-hidden">
-        {/* Dynamic Vertical Values Gauge HUD (Sticky Overlay on Left) */}
-        <div className="absolute bottom-4 left-4 z-30 pointer-events-none flex flex-col gap-2">
-          <div className="p-3 rounded-xl bg-[#0D0E11]/90 backdrop-blur-md border border-[#222428] shadow-2xl space-y-2 pointer-events-auto w-60">
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#1E2024] text-[10px] font-mono text-[#787C83]">
-              <span className="flex items-center gap-1 text-[#DCB001] font-bold">
-                <Sliders size={11} /> LIVE SCOPE STATS
-              </span>
-              <span className="text-[#22C55E]">ACTIVE</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div className="p-1.5 rounded bg-[#131417] border border-[#222428]">
-                <div className="text-[9px] text-[#787C83]">IN VIEW</div>
-                <div className="font-bold text-white text-sm">{dynamicScrollMetrics.visibleCount} Tasks</div>
-              </div>
-              <div className="p-1.5 rounded bg-[#131417] border border-[#222428]">
-                <div className="text-[9px] text-[#22C55E]">COMPLETED</div>
-                <div className="font-bold text-[#22C55E] text-sm">{dynamicScrollMetrics.completedCount} Done</div>
-              </div>
-            </div>
-
-            <div className="space-y-1 text-[10px] font-mono pt-1">
-              <div className="flex items-center justify-between text-[#8E939D]">
-                <span>Scope Completion:</span>
-                <span className="text-[#22C55E] font-bold">{dynamicScrollMetrics.velocityPercent}%</span>
-              </div>
-              <div className="w-full h-1.5 rounded-full bg-[#181A1E] overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-[#DCB001] to-[#22C55E] transition-all duration-300"
-                  style={{ width: `${dynamicScrollMetrics.velocityPercent}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* SVG Timeline Canvas Area */}
         <div 
           ref={scrollContainerRef}
-          onScroll={handleContainerScroll}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
@@ -805,13 +691,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               width={canvasWidth}
               height={canvasHeight}
             >
-              {/* Vertical Date Column Guides (Horizontal Date Assigned Axis) */}
-              {dateHeaders.map((hdr) => (
-                <g key={`date_col_${hdr.key}`}>
+              {/* Vertical Time Slot Column Guides (Horizontal Date & Time Assigned Axis) */}
+              {timeSlotHeaders.map((hdr) => (
+                <g key={`time_col_${hdr.slot}`}>
                   <line
-                    x1={hdr.x + 125}
+                    x1={hdr.x + 130}
                     y1={65}
-                    x2={hdr.x + 125}
+                    x2={hdr.x + 130}
                     y2={canvasHeight - 30}
                     stroke="#16171A"
                     strokeWidth={1}
@@ -820,14 +706,14 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 </g>
               ))}
 
-              {/* Horizontal Creator Lane Guides (Vertical Task Creator Axis) */}
-              {creatorTracks.map((track, idx) => (
-                <g key={`track_creator_${track.name}_${idx}`}>
+              {/* Horizontal Creator Lane Guides (Vertical User Creator Axis) */}
+              {userTracks.map((track, idx) => (
+                <g key={`track_user_${track.name}_${idx}`}>
                   <line
                     x1={40}
-                    y1={track.y + 43}
+                    y1={track.y + 44}
                     x2={canvasWidth - 40}
-                    y2={track.y + 43}
+                    y2={track.y + 44}
                     stroke="#18191D"
                     strokeWidth={1.5}
                   />
@@ -841,7 +727,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     fontWeight="bold"
                     opacity="0.6"
                   >
-                    CREATED BY: {track.name.toUpperCase()} ({track.tasksCount} Tasks)
+                    CREATOR LINE: {track.name.toUpperCase()} ({track.createdCount} Created Tasks)
                   </text>
                 </g>
               ))}
@@ -872,21 +758,21 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 </marker>
               </defs>
 
-              {/* ─── Render Smooth Vertical Curved Lines Indicating Who Ticked Each Task as Completed ─── */}
+              {/* ─── Horizontal Smooth Curved Lines Connecting Tasks Completed by Each User ─── */}
               {showCompleterCurves && filteredEdges.map((edge) => {
                 const startX = edge.fromNode.x + edge.fromNode.width;
                 const startY = edge.fromNode.y + edge.fromNode.height / 2;
                 const endX = edge.toNode.x;
                 const endY = edge.toNode.y + edge.toNode.height / 2;
 
-                const dx = Math.max(30, endX - startX);
+                const dx = Math.max(40, endX - startX);
                 const dy = endY - startY;
 
-                // Smooth Cubic Bezier Curves flowing across different creators
+                // Smooth Horizontal Directional Bezier Curve flowing from left to right across creator lanes
                 const cp1X = startX + dx * 0.5;
-                const cp1Y = startY + dy * 0.15;
+                const cp1Y = startY;
                 const cp2X = endX - dx * 0.5;
-                const cp2Y = endY - dy * 0.15;
+                const cp2Y = endY;
 
                 const midX = (startX + endX) / 2;
                 const midY = (startY + endY) / 2;
@@ -909,7 +795,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       />
                     )}
 
-                    {/* Main Curved Spline */}
+                    {/* Main Curved Spline flowing horizontally */}
                     <path
                       d={pathData}
                       fill="none"
@@ -950,23 +836,23 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               })}
             </svg>
 
-            {/* Top Horizontal Axis: DATE ASSIGNED Header Bar */}
+            {/* Top Horizontal Axis: DATE & TIME ASSIGNED Header Bar */}
             <div className="absolute top-3 left-0 right-0 h-10 flex items-center px-4 pointer-events-none">
-              {dateHeaders.map((hdr) => (
+              {timeSlotHeaders.map((hdr) => (
                 <div
-                  key={`hdr_date_${hdr.key}`}
-                  style={{ position: 'absolute', left: hdr.x + 30 }}
+                  key={`hdr_slot_${hdr.slot}`}
+                  style={{ position: 'absolute', left: hdr.x + 20 }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#131417] border border-[#222428] text-xs font-mono text-white shadow-md pointer-events-auto"
                 >
                   <Calendar size={12} className="text-[#DCB001]" />
-                  <span className="text-[#787C83] text-[10px] uppercase">Assigned:</span>
+                  <Clock size={11} className="text-[#787C83]" />
                   <span className="font-bold">{hdr.label}</span>
                 </div>
               ))}
             </div>
 
-            {/* Left Vertical Axis Labels: TASK CREATOR Sticky Bar */}
-            {creatorTracks.map((track) => (
+            {/* Left Vertical Axis: ALL USERS / CREATORS Sticky Bar */}
+            {userTracks.map((track) => (
               <div
                 key={`creator_label_${track.name}`}
                 style={{ position: 'absolute', left: 24, top: track.y + 36 }}
@@ -981,7 +867,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               </div>
             ))}
 
-            {/* Task Nodes Positioned by Date Assigned (X) and Creator (Y) */}
+            {/* Task Nodes Positioned by Date & Time Assigned (X) and Creator Line (Y) */}
             {filteredNodes.map((node) => {
               const isHovered = hoveredNodeId === node.id;
               const isBlocked = parseBlockedBy(node.issue.blockedBy).length > 0;
@@ -1019,12 +905,12 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
 
                       {/* Who Ticked as Completed / Assignee Badge */}
                       <div
-                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono truncate max-w-[130px] border ${
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono truncate max-w-[140px] border ${
                           node.isDone
                             ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30 font-bold'
                             : 'bg-white/5 text-[#9BA1A6] border-white/10'
                         }`}
-                        title={node.isDone ? `Ticked as Completed by ${node.completerName}` : `Assigned to ${node.completerName}`}
+                        title={node.isDone ? `Ticked as Completed by ${node.completerName} ${node.completedAtLabel ? `at ${node.completedAtLabel}` : ''}` : `Assigned to ${node.completerName}`}
                       >
                         {node.isDone ? (
                           <CheckCircle2 size={10} className="text-[#22C55E] shrink-0" />
@@ -1062,13 +948,13 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     {node.issue.title}
                   </div>
 
-                  {/* Footer: Date Assigned & Creator Note */}
+                  {/* Footer: Date & Time Assigned + Creator Note */}
                   <div className="flex items-center justify-between text-[9px] font-mono text-[#787C83] pt-0.5 border-t border-[#1C1D20]">
                     <span className="capitalize text-[#9BA1A6] flex items-center gap-1">
                       <UserPlus size={9} className="text-[#787C83]" />
                       Created by <strong className="text-white font-normal">{node.creatorName}</strong>
                     </span>
-                    <span className="text-[#DCB001]">{node.dateAssignedLabel}</span>
+                    <span className="text-[#DCB001]">{node.dateTimeAssignedLabel}</span>
                   </div>
                 </div>
               );
