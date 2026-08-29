@@ -16,7 +16,9 @@ import {
   LayoutGrid,
   List,
   ChevronRight,
-  GripVertical
+  GripVertical,
+  Folder,
+  FolderOpen
 } from 'lucide-react';
 
 interface KanbanBoardViewProps {
@@ -44,6 +46,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 }) => {
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
+  const [selectedFolder, setSelectedFolder] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [addingToCol, setAddingToCol] = useState<Status | null>(null);
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
@@ -64,6 +67,20 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
     issue: null,
   });
 
+  // Extract all distinct folders across issues
+  const folderList = useMemo(() => {
+    const set = new Set<string>();
+    set.add('General');
+    issues.forEach((iss) => {
+      if (iss.epic && iss.epic.trim()) set.add(iss.epic.trim());
+      if (iss.title.startsWith('📁 ')) {
+        const clean = iss.title.replace(/^📁\s*/, '').trim();
+        if (clean) set.add(clean);
+      }
+    });
+    return Array.from(set);
+  }, [issues]);
+
   // Memoized Filtered Issues
   const filteredIssues = useMemo(() => {
     const query = filterQuery.toLowerCase().trim();
@@ -72,14 +89,19 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
         query === '' ||
         issue.title.toLowerCase().includes(query) ||
         issue.key.toLowerCase().includes(query) ||
+        (issue.epic || '').toLowerCase().includes(query) ||
         (issue.labels || []).some((l) => l.toLowerCase().includes(query));
 
       const priorityMatch =
         selectedPriority === 'all' || issue.priority === selectedPriority;
 
-      return queryMatch && priorityMatch;
+      const issueFolder = issue.epic || (issue.title.startsWith('📁 ') ? issue.title.replace(/^📁\s*/, '').trim() : 'General');
+      const folderMatch =
+        selectedFolder === 'all' || issueFolder.toLowerCase() === selectedFolder.toLowerCase();
+
+      return queryMatch && priorityMatch && folderMatch;
     });
-  }, [issues, filterQuery, selectedPriority]);
+  }, [issues, filterQuery, selectedPriority, selectedFolder]);
 
   const columns: { id: Status; title: string; count: number; color: string }[] = useMemo(() => [
     {
@@ -195,6 +217,21 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                 <X size={12} />
               </button>
             )}
+          </div>
+
+          {/* Folder Filter */}
+          <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded-md h-7 shrink-0">
+            <Folder size={12} className="text-[#DCB001]" />
+            <select
+              value={selectedFolder}
+              onChange={(e) => setSelectedFolder(e.target.value)}
+              className="bg-transparent text-xs text-[#CFD4DD] outline-none font-medium cursor-pointer"
+            >
+              <option value="all" className="bg-[#1B1C1F]">All Folders</option>
+              {folderList.map((f) => (
+                <option key={f} value={f} className="bg-[#1B1C1F]">{f}</option>
+              ))}
+            </select>
           </div>
 
           {/* Priority Select */}
@@ -362,14 +399,15 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                     </div>
 
                     <div className="col-span-5 flex items-center gap-2 pr-3 truncate">
+                      {(issue.epic || issue.title.startsWith('📁 ')) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 shrink-0">
+                          <Folder size={10} className="shrink-0" />
+                          <span className="truncate max-w-[80px]">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
+                        </span>
+                      )}
                       <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
                         {issue.title}
                       </span>
-                      {(issue.subtasks || []).length > 0 && (
-                        <span className="text-[10px] text-[#787C83] font-mono bg-[#131415] px-1.5 py-0.5 rounded border border-[#2A2C30] shrink-0">
-                          {completedSubCount}/{(issue.subtasks || []).length}
-                        </span>
-                      )}
                     </div>
 
                     <div className="col-span-2 flex items-center">
@@ -640,20 +678,18 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                           </span>
                         </div>
 
-                        {/* Title */}
-                        <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
-                          {issue.title}
-                        </h4>
-
-                        {/* Subtasks progress indicator */}
-                        {(issue.subtasks || []).length > 0 && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#787C83] font-mono">
-                            <CheckSquare size={11} className="text-[#DCB001]" />
-                            <span>
-                              {completedSubCount}/{(issue.subtasks || []).length} sub-works
-                            </span>
-                          </div>
-                        )}
+                        {/* Title & Folder Tag */}
+                        <div className="space-y-1">
+                          {(issue.epic || issue.title.startsWith('📁 ')) && (
+                            <div className="inline-flex items-center gap-1 text-[9px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 max-w-full truncate">
+                              <Folder size={10} className="shrink-0" />
+                              <span className="truncate">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
+                            </div>
+                          )}
+                          <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
+                            {issue.title}
+                          </h4>
+                        </div>
 
                         {/* Card Footer */}
                         <div className="pt-1.5 border-t border-[#2A2C30]/50 flex items-center justify-between text-xs">

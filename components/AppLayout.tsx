@@ -221,11 +221,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             >
               <User size={13} className="text-[#06B6D4]" />
               <span>Account</span>
-              {currentUser && (
-                <span className="text-[10px] text-[#DCB001] font-mono font-bold hidden md:inline">
-                  ({currentUser.name})
-                </span>
-              )}
             </button>
 
             {/* Tab: Settings */}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { 
   GitFork, 
@@ -12,10 +12,23 @@ import {
   Sparkles, 
   FileText, 
   Cpu, 
-  Database,
-  LogOut,
-  LayoutDashboard,
-  Download
+  Database, 
+  LogOut, 
+  LayoutDashboard, 
+  Download,
+  FolderTree,
+  Users,
+  CheckCircle2,
+  Share2,
+  Code2,
+  Compass,
+  FileCode,
+  Search,
+  BookOpen,
+  MousePointer,
+  Keyboard,
+  Clock,
+  Sparkle
 } from 'lucide-react';
 import { TeaderSandCanvas } from '@/components/ui/TeaderSandCanvas';
 import { toast } from 'sonner';
@@ -28,21 +41,20 @@ interface AuthUser {
 }
 
 export default function LandingPageClient() {
-  const [activeTab, setActiveTab] = useState<'graph' | 'kanban' | 'docs' | 'tree'>('graph');
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('teader_user');
-        return cached ? JSON.parse(cached) : null;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [activeDocTab, setActiveDocTab] = useState<'markdown' | 'collaboration' | 'folders' | 'sync'>('collaboration');
 
-  // Check login state
+  // Check login state on mount
   useEffect(() => {
+    setMounted(true);
+    try {
+      const cached = localStorage.getItem('teader_user');
+      if (cached) {
+        setCurrentUser(JSON.parse(cached));
+      }
+    } catch {}
+
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -53,10 +65,89 @@ export default function LandingPageClient() {
           } catch {}
         } else {
           setCurrentUser(null);
+          try {
+            localStorage.removeItem('teader_user');
+          } catch {}
         }
       })
       .catch(() => {});
   }, []);
+
+
+
+  // ─── Bidirectional Dynamic Scroll Fade-In & Fade-Out ─────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let rafId: number | null = null;
+
+    const handleScrollFade = () => {
+      const elements = document.querySelectorAll<HTMLElement>('.reveal-on-scroll');
+      const viewHeight = window.innerHeight || document.documentElement.clientHeight;
+      const fadeZone = 120; // Distance in pixels from viewport top/bottom where fading occurs
+
+      elements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+
+        // 1. Completely out of viewport (above or below) -> 0 opacity
+        if (rect.bottom <= 0) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(-20px)';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+
+        if (rect.top >= viewHeight) {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(20px)';
+          el.style.pointerEvents = 'none';
+          return;
+        }
+
+        // 2. In viewport: calculate bidirectional fade
+        let opacity = 1;
+        let translateY = 0;
+
+        // Fading when entering / exiting the bottom boundary
+        if (rect.top > viewHeight - fadeZone) {
+          const progress = Math.max(0, Math.min(1, (viewHeight - rect.top) / fadeZone));
+          opacity = progress;
+          translateY = (1 - progress) * 20;
+        }
+        // Fading when exiting / entering the top boundary
+        else if (rect.bottom < fadeZone) {
+          const progress = Math.max(0, Math.min(1, rect.bottom / fadeZone));
+          opacity = progress;
+          translateY = -(1 - progress) * 20;
+        }
+
+        el.style.opacity = String(opacity);
+        el.style.transform = `translateY(${translateY}px)`;
+        el.style.pointerEvents = opacity > 0.05 ? 'auto' : 'none';
+      });
+    };
+
+    const onScroll = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(handleScrollFade);
+    };
+
+    // Run immediately and on scroll/resize
+    handleScrollFade();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    const timer1 = setTimeout(handleScrollFade, 50);
+    const timer2 = setTimeout(handleScrollFade, 300);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [mounted]);
 
   const handleLogout = async () => {
     try {
@@ -72,28 +163,29 @@ export default function LandingPageClient() {
     }
   };
 
-  const isLoggedIn = Boolean(currentUser);
+  const isLoggedIn = mounted && Boolean(currentUser);
 
   return (
-    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-landing selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
       {/* ─── Sand Dissolve Canvas Intro ──────────────────────────────── */}
       <TeaderSandCanvas />
 
       {/* ─── Navigation Header ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0B0D]/80 border-b border-[#222428]">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0B0D]/85 border-b border-[#222428]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group" aria-label="Teader Home">
               <span className="font-extrabold text-xl text-white tracking-tight flex items-center gap-1 font-prompt">
-                teader <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">{BUILD_NUMBER}</span>
+                teader
               </span>
             </Link>
 
             <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-6 text-xs font-medium text-[#9BA1A6]">
               <a href="#features" className="hover:text-white transition-colors">Features</a>
+              <a href="#documentation-suite" className="hover:text-white transition-colors">Documentation Suite</a>
               <a href="#branch-explorer" className="hover:text-white transition-colors">Branch Explorer</a>
               <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
-              <Link href="/docs" className="hover:text-white transition-colors">API Docs</Link>
+              <Link href="/documentation" className="hover:text-white transition-colors">Documentation</Link>
             </nav>
           </div>
 
@@ -111,7 +203,6 @@ export default function LandingPageClient() {
 
             {isLoggedIn ? (
               <>
-                {/* Logged in view: User badge + Launch Dashboard + Logout button */}
                 <div className="hidden md:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#16181C] border border-[#2A2C30] text-xs font-mono">
                   <div className="w-4 h-4 rounded-full bg-[#DCB001] text-[#0A0B0D] flex items-center justify-center text-[10px] font-bold">
                     {(currentUser?.name || 'U').charAt(0).toUpperCase()}
@@ -138,7 +229,6 @@ export default function LandingPageClient() {
               </>
             ) : (
               <>
-                {/* Logged out view: Sign In + Get Started */}
                 <Link
                   href="/login"
                   className="px-3.5 py-1.5 text-xs font-medium text-[#CFD4DD] hover:text-white transition-colors"
@@ -161,37 +251,38 @@ export default function LandingPageClient() {
       {/* ─── Semantic Main Area ───────────────────────────────────────── */}
       <main>
         {/* ─── Hero Section ────────────────────────────────────────────── */}
-        <section className="relative pt-20 pb-24 px-6 overflow-hidden">
+        <section className="relative pt-24 pb-28 px-6 overflow-hidden reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           {/* Ambient Glows */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-[#DCB001]/10 blur-[140px] pointer-events-none rounded-full" />
-          <div className="absolute top-1/3 left-1/3 w-[450px] h-[250px] bg-[#06B6D4]/10 blur-[120px] pointer-events-none rounded-full" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[380px] bg-[#DCB001]/10 blur-[150px] pointer-events-none rounded-full" />
+          <div className="absolute top-1/3 left-1/3 w-[500px] h-[280px] bg-[#06B6D4]/10 blur-[130px] pointer-events-none rounded-full" />
 
-          <div className="max-w-5xl mx-auto text-center space-y-6 relative z-10">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#16181C] border border-[#2E3138] text-xs text-[#DCB001] shadow-inner">
+          <div className="max-w-5xl mx-auto text-center space-y-7 relative z-10">
+            {/* Pill Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#16181C] border border-[#2E3138] text-xs text-[#DCB001] shadow-inner transition-all hover:border-[#DCB001]/40">
               <Sparkles size={13} />
-              <span>Linear Speed & Unity Version Control Style Tracking</span>
+              <span>Universal Professional Project & Documentation Management</span>
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-6xl font-extrabold text-white tracking-tight leading-[1.1]">
-              The High-Velocity Project Tracker <br />
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.08]">
+              The High-Velocity Platform <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#DCB001] via-[#FBBF24] to-[#F59E0B]">
-                Engineered for Developers.
+                For Projects & Technical Docs.
               </span>
             </h1>
 
             {/* Subheading */}
-            <p className="text-base sm:text-lg text-[#8E939D] max-w-2xl mx-auto leading-relaxed">
-              Instant 0ms optimistic UI, Unity VCS-style branch explorer graphs, hierarchical subtasks, 
-              and real-time Markdown docs. Zero latency. 100% developer focus.
+            <p className="text-base sm:text-lg text-[#8E939D] max-w-3xl mx-auto leading-relaxed">
+              Engineered for high-performing software teams, product managers, and technical organizations. 
+              Zero-latency 0ms optimistic UI, live multi-user collaborative documentation, timeline branch explorer graphs, 
+              and hierarchical task systems.
             </p>
 
             {/* Hero CTAs */}
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-3">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_30px_rgba(220,176,1,0.35)] hover:scale-105"
+                className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_30px_rgba(220,176,1,0.35)] hover:scale-105"
               >
                 <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}</span>
                 <ArrowRight size={16} />
@@ -205,7 +296,7 @@ export default function LandingPageClient() {
                 <Download size={16} className="text-[#DCB001] group-hover:-translate-y-0.5 transition-transform" />
                 <div className="flex flex-col text-left">
                   <span className="leading-tight font-bold">Download Workspace</span>
-                  <span className="text-[10px] text-[#8E939D] font-mono leading-tight">Windows (.exe) • 873 KB</span>
+                  <span className="text-[10px] text-[#8E939D] font-mono leading-tight">Windows App • 873 KB</span>
                 </div>
               </a>
 
@@ -217,16 +308,6 @@ export default function LandingPageClient() {
                   <span>Create Account</span>
                 </Link>
               )}
-
-              {isLoggedIn && (
-                <Link
-                  href="/projects"
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#16181C]/70 hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-medium text-sm transition-all shadow-sm"
-                >
-                  <FolderKanban size={15} className="text-[#DCB001]" />
-                  <span>View Projects</span>
-                </Link>
-              )}
             </div>
 
             {/* Feature Highlights Pills */}
@@ -236,160 +317,256 @@ export default function LandingPageClient() {
                 <span>0ms Optimistic UI</span>
               </div>
               <div className="flex items-center gap-2">
-                <GitFork size={14} className="text-[#06B6D4]" />
-                <span>Smooth Curved Graph Splines</span>
+                <FileText size={14} className="text-[#06B6D4]" />
+                <span>Real-Time Collaborative Docs</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GitFork size={14} className="text-[#A855F7]" />
+                <span>Timeline Branch Graphs</span>
               </div>
               <div className="flex items-center gap-2">
                 <Database size={14} className="text-[#22C55E]" />
-                <span>PostgreSQL Realtime Sync</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={14} className="text-[#A855F7]" />
-                <span>In-Place Granular Diffing</span>
+                <span>Enterprise Relational Sync</span>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* ─── Interactive Product Preview Card ────────────────────────── */}
-          <div id="branch-explorer" className="max-w-6xl mx-auto mt-14 rounded-2xl bg-[#121417] border border-[#272A30] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative group">
-            {/* Top Window Bar */}
-            <div className="h-11 px-4 bg-[#181A1F] border-b border-[#272A30] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#EF4444]/60" />
-                <span className="w-3 h-3 rounded-full bg-[#F59E0B]/60" />
-                <span className="w-3 h-3 rounded-full bg-[#22C55E]/60" />
-                <span className="text-xs font-mono text-[#787C83] ml-2">app.teader.io / workspace / TestProject</span>
+        {/* ─── Documentation Suite Showcase Section ────────────────────────── */}
+        <section id="documentation-suite" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0E0F13] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center space-y-3 max-w-3xl mx-auto">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 text-xs font-mono font-semibold">
+                <BookOpen size={13} />
+                <span>Full-Featured Documentation Engine</span>
               </div>
-
-              {/* View Switcher Tabs */}
-              <div className="flex items-center bg-[#101113] p-1 rounded-lg border border-[#272A30] text-xs font-mono">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('graph')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'graph' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Graph Timeline
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('kanban')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'kanban' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Kanban Board
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('docs')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'docs' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Markdown Docs
-                </button>
-              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Advanced Documentation Management With Detailed Options.
+              </h2>
+              <p className="text-sm text-[#8E939D] leading-relaxed">
+                Everything technical teams need to author, organize, collaborate, and persist living specifications, design docs, and release plans in real-time.
+              </p>
             </div>
 
-            {/* Interactive Preview Body */}
-            <div className="p-6 bg-[#0E1012] min-h-[380px] flex flex-col justify-center">
-              {activeTab === 'graph' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between text-xs font-mono text-[#787C83]">
-                    <span className="flex items-center gap-1.5 text-[#06B6D4]">
-                      <GitFork size={14} /> Branch Explorer (Unity Version Control Splines)
-                    </span>
-                    <span>110+ Active Nodes • Horizontal Timeline</span>
+            {/* Interactive Doc Feature Tabs */}
+            <div className="flex items-center justify-center gap-2 flex-wrap pb-2">
+              <button
+                onClick={() => setActiveDocTab('collaboration')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeDocTab === 'collaboration'
+                    ? 'bg-[#DCB001] text-[#0A0B0D] shadow-[0_0_15px_rgba(220,176,1,0.3)]'
+                    : 'bg-[#141518] text-[#8E939D] hover:text-white border border-[#222428]'
+                }`}
+              >
+                <Users size={14} />
+                <span>Multi-User Live Presence</span>
+              </button>
+
+              <button
+                onClick={() => setActiveDocTab('markdown')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeDocTab === 'markdown'
+                    ? 'bg-[#DCB001] text-[#0A0B0D] shadow-[0_0_15px_rgba(220,176,1,0.3)]'
+                    : 'bg-[#141518] text-[#8E939D] hover:text-white border border-[#222428]'
+                }`}
+              >
+                <FileCode size={14} />
+                <span>GitHub Markdown & HTML</span>
+              </button>
+
+              <button
+                onClick={() => setActiveDocTab('folders')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeDocTab === 'folders'
+                    ? 'bg-[#DCB001] text-[#0A0B0D] shadow-[0_0_15px_rgba(220,176,1,0.3)]'
+                    : 'bg-[#141518] text-[#8E939D] hover:text-white border border-[#222428]'
+                }`}
+              >
+                <FolderTree size={14} />
+                <span>Folder Trees & Drag-and-Drop</span>
+              </button>
+
+              <button
+                onClick={() => setActiveDocTab('sync')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeDocTab === 'sync'
+                    ? 'bg-[#DCB001] text-[#0A0B0D] shadow-[0_0_15px_rgba(220,176,1,0.3)]'
+                    : 'bg-[#141518] text-[#8E939D] hover:text-white border border-[#222428]'
+                }`}
+              >
+                <Zap size={14} />
+                <span>Smart Auto-Save & Sync</span>
+              </button>
+            </div>
+
+            {/* Showcase Display Card */}
+            <div className="rounded-2xl bg-[#121417] border border-[#272A30] shadow-2xl p-6 sm:p-10 space-y-8">
+              {activeDocTab === 'collaboration' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#06B6D4]/10 text-[#06B6D4] text-xs font-mono font-bold">
+                      <MousePointer size={13} />
+                      <span>Real-Time Presence</span>
+                    </div>
+                    <h3 className="text-2xl font-extrabold text-white">Live Multi-User Cursors & Floating Nametags</h3>
+                    <p className="text-xs sm:text-sm text-[#8E939D] leading-relaxed">
+                      Collaborate in documents simultaneously with team members. See exact cursor positions across paragraphs, lists, and code blocks in real time with floating custom color username nametags.
+                    </p>
+                    <ul className="space-y-2.5 text-xs text-[#CFD4DD]">
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Real-time cursor broadcasting with 0ms local perceived latency.</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Zero-latency cleanup when a teammate switches files or exits the tab.</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Smooth automated viewport scroll gliding to incoming real-time change spots.</span>
+                      </li>
+                    </ul>
                   </div>
 
-                  {/* SVG Visual Demo Splines */}
-                  <div className="h-44 w-full bg-[#131518] rounded-xl border border-[#222428] relative overflow-hidden flex items-center px-6">
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-                      <path
-                        d="M 60 70 C 140 70, 180 35, 260 35 C 340 35, 380 35, 460 35 C 540 35, 580 90, 660 90"
-                        fill="none"
-                        stroke="#06B6D4"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 60 70 C 140 70, 180 115, 260 115 C 340 115, 380 115, 460 115 C 540 115, 580 90, 660 90"
-                        fill="none"
-                        stroke="#A855F7"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 460 35 C 540 35, 580 35, 660 35 C 740 35, 780 70, 860 70"
-                        fill="none"
-                        stroke="#22C55E"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 260 115 C 340 115, 380 70, 460 70"
-                        fill="none"
-                        stroke="#EF4444"
-                        strokeWidth="2"
-                        strokeDasharray="4 3"
-                      />
-                    </svg>
-
-                    {/* Simulated Nodes */}
-                    <div className="relative z-10 flex items-center justify-between w-full">
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#06B6D4] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#06B6D4] font-bold">TEST-1</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">SIMD Matrix4x4</p>
-                        <span className="text-[9px] text-[#22C55E] font-mono">Done</span>
+                  <div className="p-6 rounded-xl bg-[#0A0B0E] border border-[#2A2C30] space-y-4 font-mono text-xs shadow-inner">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#222428] text-[11px] text-[#787C83]">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                        <span className="text-[#CFD4DD] font-bold">LIVE COLLABORATION PREVIEW</span>
                       </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#A855F7] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#A855F7] font-bold">TEST-4</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">CCD Fast Collision</p>
-                        <span className="text-[9px] text-[#F59E0B] font-mono">In Progress</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-[#06B6D4]/20 text-[#06B6D4] font-bold text-[10px]">Ajay (Line 14)</span>
+                        <span className="px-2 py-0.5 rounded bg-[#A855F7]/20 text-[#A855F7] font-bold text-[10px]">Karri (Line 22)</span>
                       </div>
+                    </div>
 
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#EF4444] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#EF4444] font-bold">TEST-8</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">GPU Particle Shaders</p>
-                        <span className="text-[9px] text-[#EF4444] font-mono">Blocked</span>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#22C55E] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#22C55E] font-bold">TEST-11</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">Docker Turbopack CI</p>
-                        <span className="text-[9px] text-[#22C55E] font-mono">Merged</span>
+                    <div className="space-y-2 text-[#9BA1A6] leading-relaxed select-none">
+                      <p className="text-white font-bold"># Architecture Specifications & Endpoints</p>
+                      <p>All endpoints operate with sub-millisecond local cache optimistic responses.</p>
+                      <div className="p-2 rounded bg-[#16181D] border border-[#2E3138] relative">
+                        <span className="text-[#06B6D4]">POST /api/projects/:id/docs</span>
+                        <span className="inline-block relative ml-1 align-middle">
+                          <span className="inline-block w-[3px] h-4 bg-[#06B6D4] animate-pulse rounded-full" />
+                          <span className="absolute -top-6 -left-3 px-1.5 py-0.5 bg-[#0A0B0D] border border-[#06B6D4] text-[#06B6D4] text-[9px] font-bold rounded shadow">Ajay</span>
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {activeTab === 'kanban' && (
-                <div className="grid grid-cols-4 gap-3 text-left">
-                  {['TODO (32)', 'IN PROGRESS (24)', 'NEEDS REVIEW (8)', 'DONE (46)'].map((col, idx) => (
-                    <div key={col} className="p-3 rounded-xl bg-[#14161A] border border-[#222428] space-y-2">
-                      <span className="text-[11px] font-mono font-bold text-[#8E939D]">{col}</span>
-                      <div className="p-2.5 rounded-lg bg-[#1B1D22] border border-[#2E3138] space-y-1">
-                        <span className="text-[10px] font-mono text-[#DCB001]">TEST-{idx * 4 + 1}</span>
-                        <p className="text-xs font-semibold text-white truncate">High-speed transform pipeline</p>
+              {activeDocTab === 'markdown' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#22C55E]/10 text-[#22C55E] text-xs font-mono font-bold">
+                      <Code2 size={13} />
+                      <span>Full Markdown Standard</span>
+                    </div>
+                    <h3 className="text-2xl font-extrabold text-white">Full GitHub-Flavored Markdown & HTML</h3>
+                    <p className="text-xs sm:text-sm text-[#8E939D] leading-relaxed">
+                      Write formatted documents with native support for tables, embedded HTML details and summary toggles, keyboard shortcut badges, alert callouts, and task checkboxes.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-1">
+                      <div className="p-3 rounded-lg bg-[#16181C] border border-[#26282E] text-xs space-y-1">
+                        <span className="font-bold text-[#DCB001]">Collapsible Sections</span>
+                        <p className="text-[11px] text-[#8E939D]">&lt;details&gt; & &lt;summary&gt; tags</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-[#16181C] border border-[#26282E] text-xs space-y-1">
+                        <span className="font-bold text-[#06B6D4]">GitHub Alert Blocks</span>
+                        <p className="text-[11px] text-[#8E939D]">&gt; [!NOTE], [!TIP], [!WARNING]</p>
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="p-6 rounded-xl bg-[#0A0B0E] border border-[#2A2C30] space-y-3 text-xs shadow-inner">
+                    <div className="p-3 rounded-lg bg-[#1E293B]/40 border-l-4 border-[#3B82F6] text-[#60A5FA] font-bold">
+                      <span>[!NOTE] Synchronized Live Split Preview</span>
+                    </div>
+                    <div className="p-3 rounded-lg bg-[#111215] border border-[#2E3138] space-y-1">
+                      <span className="font-mono text-[#DCB001] font-bold">Keyboard Shortcuts</span>
+                      <p className="text-[#8E939D] text-[11px]">Press <kbd className="px-1.5 py-0.5 bg-[#1C1E24] border border-[#2E3138] rounded text-white font-mono text-[10px]">Ctrl + S</kbd> for instant manual persistence.</p>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {activeTab === 'docs' && (
-                <div id="docs" className="grid grid-cols-12 gap-4 text-left">
-                  <div className="col-span-4 p-3 rounded-xl bg-[#14161A] border border-[#222428] space-y-1.5 text-xs font-mono">
-                    <span className="text-[10px] text-[#787C83]">PROJECT SPECS</span>
-                    <div className="p-2 rounded bg-[#1C1E23] text-[#DCB001] font-bold">proj_test_engine_overview.md</div>
-                    <div className="p-2 rounded text-[#9BA1A6]">proj_test_coding_guidelines.md</div>
+              {activeDocTab === 'folders' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#A855F7]/10 text-[#A855F7] text-xs font-mono font-bold">
+                      <FolderTree size={13} />
+                      <span>Directory Hierarchy</span>
+                    </div>
+                    <h3 className="text-2xl font-extrabold text-white">Folder Trees & Drag-and-Drop Organization</h3>
+                    <p className="text-xs sm:text-sm text-[#8E939D] leading-relaxed">
+                      Group technical specs and engineering wikis into structured directories. Drag and drop documents between folders with instant real-time disk and database re-indexing.
+                    </p>
+                    <ul className="space-y-2.5 text-xs text-[#CFD4DD]">
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Default <strong>Start</strong> folder initialization for instant document creation.</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Inline file renaming with real-time optimistic sidebar reflection.</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Folder expand/collapse state remembered in fast local cache.</span>
+                      </li>
+                    </ul>
                   </div>
-                  <div className="col-span-8 p-4 rounded-xl bg-[#14161A] border border-[#222428] font-mono text-xs text-[#9BA1A6] space-y-2">
-                    <p className="text-[#DCB001] font-bold"># TestProject Architecture</p>
-                    <p className="text-white">## 1. Core Subsystems</p>
-                    <p>- Vulkan 1.3 deferred render pass pipeline.</p>
-                    <p>- Real-time continuous collision detection (CCD).</p>
+
+                  <div className="p-6 rounded-xl bg-[#0A0B0E] border border-[#2A2C30] space-y-2 text-xs font-mono shadow-inner">
+                    <div className="flex items-center gap-2 text-[#DCB001] font-bold pb-2 border-b border-[#222428]">
+                      <FolderTree size={15} />
+                      <span>Start (Default Directory)</span>
+                    </div>
+                    <div className="pl-4 space-y-1.5 text-[#CFD4DD]">
+                      <div className="flex items-center gap-2 p-1.5 rounded bg-[#16181D] border border-[#2A2C30]">
+                        <FileText size={13} className="text-[#06B6D4]" />
+                        <span>01-getting-started.md</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-1.5 rounded hover:bg-[#16181D]/50 text-[#8E939D]">
+                        <FileText size={13} />
+                        <span>02-architecture-overview.md</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeDocTab === 'sync' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#F59E0B]/10 text-[#F59E0B] text-xs font-mono font-bold">
+                      <Zap size={13} />
+                      <span>Zero-Latency Sync</span>
+                    </div>
+                    <h3 className="text-2xl font-extrabold text-white">Smart Auto-Save & Change-Spot Tracking</h3>
+                    <p className="text-xs sm:text-sm text-[#8E939D] leading-relaxed">
+                      Never lose your work. Teader automatically debounces edits to the database while maintaining instant local cache responsiveness and surgical scroll synchronization.
+                    </p>
+                    <ul className="space-y-2.5 text-xs text-[#CFD4DD]">
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Targeted change-spot scrolling: preview glides directly to edited lines.</span>
+                      </li>
+                      <li className="flex items-center gap-2.5">
+                        <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        <span>Dual auto-save + instant manual Ctrl+S hotkey triggers.</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="p-6 rounded-xl bg-[#0A0B0E] border border-[#2A2C30] space-y-3 text-xs shadow-inner">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#222428]">
+                      <span className="text-[#22C55E] font-bold font-mono">STATUS: SYNCED</span>
+                      <span className="text-[11px] text-[#787C83] font-mono">0ms latency</span>
+                    </div>
+                    <p className="text-[#8E939D] leading-relaxed">
+                      Background worker dispatches incremental diffs over WebSocket hubs and in-process event buses without blocking typing input.
+                    </p>
                   </div>
                 </div>
               )}
@@ -397,93 +574,133 @@ export default function LandingPageClient() {
           </div>
         </section>
 
-        {/* ─── Features Grid ───────────────────────────────────────────── */}
-        <section id="features" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0C0D10]">
+        {/* ─── Core Platform Features Grid ─────────────────────────────── */}
+        <section id="features" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0C0D10] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-16">
             <div className="text-center space-y-3 max-w-3xl mx-auto">
-              <h2 className="text-xs font-mono uppercase tracking-wider text-[#DCB001]">Built For Speed</h2>
+              <h2 className="text-xs font-mono uppercase tracking-wider text-[#DCB001]">Professional Workflows</h2>
               <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                Every interaction is tuned for zero-latency workflows.
+                Complete Project Management Built For Speed.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Feature 1 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#DCB001]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#DCB001]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <Zap size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">0ms Optimistic UI & Local Cache</h3>
+                <h3 className="text-lg font-bold text-white">0ms Optimistic UI & Local SWR</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
-                  Task creations, checkbox ticking, column dragging, and document saves apply instantly on the client while background jobs sync with PostgreSQL.
+                  Task creations, checklist ticking, column dragging, and document saves apply instantly on the client with zero latency while background workers sync with PostgreSQL.
                 </p>
               </div>
 
               {/* Feature 2 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#06B6D4]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#06B6D4]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <GitFork size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Unity VCS Branch Explorer</h3>
+                <h3 className="text-lg font-bold text-white">Timeline Branch Explorer</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
-                  Horizontal timeline progression with smooth cubic Bezier curved splines. Visualizes task branches, blocking dependencies, and merge convergences.
+                  Interactive horizontal timeline graph with smooth cubic Bezier curved splines. Visualizes task branches, blocking dependencies, and merge convergences.
                 </p>
               </div>
 
               {/* Feature 3 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#A855F7]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#A855F7]/15 text-[#A855F7] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#A855F7]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#A855F7]/15 text-[#A855F7] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <Layers size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Hierarchical Subtasks & Folders</h3>
+                <h3 className="text-lg font-bold text-white">Hierarchical Subtasks & Trees</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
                   Structure complex deliverables with infinitely nestable sub-work items, folder grouping, image drag-and-drop, and full keyboard navigation.
                 </p>
               </div>
 
               {/* Feature 4 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#22C55E]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#22C55E]/15 text-[#22C55E] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#22C55E]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#22C55E]/15 text-[#22C55E] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <FileText size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">Live Markdown Project Docs</h3>
+                <h3 className="text-lg font-bold text-white">Live Markdown Specifications</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
-                  Write technical specifications in pure Markdown with real-time GitHub-flavored preview, instant Ctrl+S saving, and database persistence.
+                  Write technical documentation in pure Markdown with real-time GitHub-flavored preview, instant Ctrl+S auto-saving, and multi-user live presence cursors.
                 </p>
               </div>
 
               {/* Feature 5 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#F59E0B]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#F59E0B]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 text-[#F59E0B] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <Cpu size={20} />
                 </div>
                 <h3 className="text-lg font-bold text-white">Granular In-Place Diffing</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
-                  Surgical reconciliation prevents full page reloads and re-renders. Only the mutated node updates in DOM memory.
+                  Surgical state reconciliation prevents full page reloads and re-renders. Only mutated DOM nodes update in memory.
                 </p>
               </div>
 
               {/* Feature 6 */}
-              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#EC4899]/50 transition-all space-y-3 shadow-sm">
-                <div className="w-10 h-10 rounded-xl bg-[#EC4899]/15 text-[#EC4899] flex items-center justify-center font-bold">
+              <div className="p-7 rounded-2xl bg-[#121417] border border-[#222428] hover:border-[#EC4899]/50 transition-all space-y-3 shadow-sm group hover:translate-y-[-2px]">
+                <div className="w-10 h-10 rounded-xl bg-[#EC4899]/15 text-[#EC4899] flex items-center justify-center font-bold group-hover:scale-110 transition-transform">
                   <Database size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">PostgreSQL Enterprise Storage</h3>
+                <h3 className="text-lg font-bold text-white">Enterprise Relational Storage</h3>
                 <p className="text-xs text-[#8E939D] leading-relaxed">
-                  Hardened relational database layer with salted password hashing, JWT session cookies, and rate-limiting security.
+                  Hardened database layer with salted password hashing, JWT session cookies, WebSocket broadcasts, and rate-limiting security.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
+        {/* ─── Branch Explorer Graph Showcase ──────────────────────────── */}
+        <section id="branch-explorer" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center space-y-3 max-w-3xl mx-auto">
+              <h2 className="text-xs font-mono uppercase tracking-wider text-[#06B6D4]">Visual Dependency Graph</h2>
+              <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                Understand Complex Pipelines at a Glance.
+              </p>
+              <p className="text-xs sm:text-sm text-[#8E939D]">
+                Interactive branch graphs reveal blocking dependencies, converging milestones, and developer workstreams.
+              </p>
+            </div>
+
+            <div className="max-w-5xl mx-auto rounded-2xl bg-[#121417] border border-[#272A30] shadow-2xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-[#222428] text-xs font-mono">
+                <div className="flex items-center gap-2">
+                  <GitFork size={16} className="text-[#DCB001]" />
+                  <span className="text-white font-bold">Branch Explorer Graph Stream</span>
+                </div>
+                <span className="text-[#22C55E]">Real-Time Active</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-[#0E0F12] border border-[#26282E] space-y-2">
+                  <span className="text-xs font-bold text-[#DCB001]">Main Milestone</span>
+                  <p className="text-[11px] text-[#8E939D]">Master deliverable track with automated progress rollup.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#0E0F12] border border-[#26282E] space-y-2">
+                  <span className="text-xs font-bold text-[#06B6D4]">Feature Branches</span>
+                  <p className="text-[11px] text-[#8E939D]">Isolated parallel workflows with dedicated task checklists.</p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#0E0F12] border border-[#26282E] space-y-2">
+                  <span className="text-xs font-bold text-[#A855F7]">Dependency Blocker</span>
+                  <p className="text-[11px] text-[#8E939D]">Visual blocker detection to prevent merge collisions.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* ─── Architecture Section ─────────────────────────────────────── */}
-        <section id="architecture" className="py-20 px-6 border-t border-[#1C1E22] bg-[#0A0B0D]">
+        <section id="architecture" className="py-24 px-6 border-t border-[#1C1E22] bg-[#0A0B0D] reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center space-y-2 max-w-2xl mx-auto">
               <h2 className="text-xs font-mono uppercase tracking-wider text-[#06B6D4]">Architecture</h2>
               <p className="text-3xl font-extrabold text-white tracking-tight">
-                Built for speed, resilient to network latency.
+                Engineered For Scale, Resilient to Latency.
               </p>
             </div>
 
@@ -508,21 +725,21 @@ export default function LandingPageClient() {
 
               <div className="p-5 rounded-xl bg-[#111215] border border-[#222428] space-y-2">
                 <div className="text-[#A855F7] font-mono text-xs font-bold">04 / MILITARY VAULT</div>
-                <h3 className="text-sm font-bold text-white">AES-256-GCM Dumps</h3>
-                <p className="text-xs text-[#787C83]">Export whole workspaces as encrypted .teaderdumpfile archives with SHA-256 checksums.</p>
+                <h3 className="text-sm font-bold text-white">Encrypted Workspace Dumps</h3>
+                <p className="text-xs text-[#787C83]">Export whole workspaces as encrypted archives with complete SHA-256 integrity checksums.</p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ─── Call To Action Footer ───────────────────────────────────── */}
-        <section className="py-20 px-6 border-t border-[#1C1E22] bg-[#08090B] text-center relative overflow-hidden">
+        {/* ─── Call To Action Section ───────────────────────────────────── */}
+        <section className="py-24 px-6 border-t border-[#1C1E22] bg-[#08090B] text-center relative overflow-hidden reveal-on-scroll transition-[opacity,transform] duration-500 ease-out will-change-[opacity,transform]">
           <div className="max-w-4xl mx-auto space-y-6 relative z-10">
             <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
-              Supercharge your team&apos;s development velocity today.
+              Supercharge your organization&apos;s project velocity today.
             </h2>
             <p className="text-sm text-[#8E939D] max-w-xl mx-auto">
-              Experience the speed of Teader with instant task management, branch explorer timeline graphs, and markdown docs.
+              Experience the speed of Teader with instant task management, collaborative documentation, and branch timeline graphs.
             </p>
 
             <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
@@ -540,7 +757,7 @@ export default function LandingPageClient() {
                 className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#16181C] hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001] text-white font-semibold text-sm transition-all shadow-sm group hover:scale-105"
               >
                 <Download size={16} className="text-[#DCB001] group-hover:-translate-y-0.5 transition-transform" />
-                <span>Download Workspace (873 KB)</span>
+                <span>Download Desktop App</span>
               </a>
             </div>
           </div>
@@ -565,7 +782,7 @@ export default function LandingPageClient() {
             </a>
             <Link href="/dashboard" className="hover:text-[#CFD4DD] transition-colors">Dashboard</Link>
             <Link href="/projects" className="hover:text-[#CFD4DD] transition-colors">Projects</Link>
-            <Link href="/docs" className="hover:text-[#CFD4DD] transition-colors">API Docs</Link>
+            <Link href="/documentation" className="hover:text-[#CFD4DD] transition-colors">Documentation</Link>
             {!isLoggedIn && (
               <>
                 <Link href="/login" className="hover:text-[#CFD4DD] transition-colors">Sign In</Link>

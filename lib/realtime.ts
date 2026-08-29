@@ -13,7 +13,9 @@ export type RealtimeEventType =
   | 'MESSAGE_DELETED'
   | 'DOC_CREATED'
   | 'DOC_UPDATED'
-  | 'DOC_DELETED';
+  | 'DOC_DELETED'
+  | 'DOC_CURSOR_MOVED'
+  | 'DOC_CURSOR_LEFT';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;

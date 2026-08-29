@@ -531,6 +531,44 @@ export default function SingleProjectPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIssueId, isEditProjectModalOpen, isNewIssueModalOpen]);
 
+  // Centralized de-duplication reconciler for tasks and folders
+  const reconcileCreatedIssue = useCallback((prev: Issue[], created: Issue): Issue[] => {
+    // 1. If the exact ID already exists in the list, update it in place
+    const existingByIdIdx = prev.findIndex((iss) => iss.id === created.id);
+    if (existingByIdIdx !== -1) {
+      const updated = [...prev];
+      updated[existingByIdIdx] = { ...updated[existingByIdIdx], ...created };
+      return updated;
+    }
+
+    // 2. If this is a real server-persisted issue, replace any matching temporary optimistic issue
+    if (!String(created.id).startsWith('temp_')) {
+      const tempMatchIdx = prev.findIndex(
+        (iss) =>
+          String(iss.id).startsWith('temp_') &&
+          (iss.title === created.title || (created.key && iss.key === created.key))
+      );
+      if (tempMatchIdx !== -1) {
+        const updated = [...prev];
+        updated[tempMatchIdx] = created;
+        return updated;
+      }
+    }
+
+    // 3. Prevent duplicate temporary issues if already added
+    const filtered = prev.filter(
+      (iss) =>
+        iss.id !== created.id &&
+        !(
+          String(iss.id).startsWith('temp_') &&
+          String(created.id).startsWith('temp_') &&
+          iss.title === created.title
+        )
+    );
+
+    return [created, ...filtered];
+  }, []);
+
   // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────
   useRealtimeSubscription({
     projectId: project?.id || projectIdParam,
@@ -543,12 +581,7 @@ export default function SingleProjectPage() {
             (String(newTask.projectId) === String(projectIdParam) ||
               (project && (String(newTask.projectId) === String(project.id) || newTask.project === project.name)))
           ) {
-            setIssues((prev) => {
-              if (prev.some((i) => i.id === newTask.id || i.key === newTask.key)) {
-                return prev.map((i) => (i.id === newTask.id || i.key === newTask.key ? { ...i, ...newTask } : i));
-              }
-              return [newTask, ...prev];
-            });
+            setIssues((prev) => reconcileCreatedIssue(prev, newTask));
           }
           break;
         }
@@ -810,7 +843,7 @@ export default function SingleProjectPage() {
 
 
     // 1. Add in UI directly and immediately (0ms latency)
-    setIssues((prev) => [optimisticIssue, ...prev]);
+    setIssues((prev) => reconcileCreatedIssue(prev, optimisticIssue));
     toast.success(`Task "${title}" created!`);
 
     // 2. Process in background to PostgreSQL server
@@ -830,10 +863,7 @@ export default function SingleProjectPage() {
 
       if (res.ok) {
         const createdIssue = await res.json();
-        // Seamlessly reconcile temporary issue with real database record
-        setIssues((prev) =>
-          prev.map((iss) => (iss.id === tempId ? createdIssue : iss))
-        );
+        setIssues((prev) => reconcileCreatedIssue(prev, createdIssue));
       } else {
         throw new Error('Failed to create task on server');
       }
@@ -841,7 +871,7 @@ export default function SingleProjectPage() {
       toast.error('Failed to sync new task with server');
       setIssues((prev) => prev.filter((iss) => iss.id !== tempId));
     }
-  }, [project]);
+  }, [project, reconcileCreatedIssue]);
 
 
   // Handle Subtask Toggle (Recursive Optimistic Update)
@@ -1235,7 +1265,7 @@ export default function SingleProjectPage() {
       updatedAt: new Date().toISOString(),
     };
 
-    setIssues((prev) => [optimisticIssue, ...prev]);
+    setIssues((prev) => reconcileCreatedIssue(prev, optimisticIssue));
     toast.success(`Task created in folder "${folderName}"!`);
 
     try {
@@ -1254,14 +1284,13 @@ export default function SingleProjectPage() {
       });
       if (res.ok) {
         const createdIssue = await res.json();
-        setIssues((prev) =>
-          prev.map((iss) => (iss.id === tempId ? createdIssue : iss))
-        );
+        setIssues((prev) => reconcileCreatedIssue(prev, createdIssue));
       }
     } catch {
       toast.error('Failed to sync task to server');
+      setIssues((prev) => prev.filter((iss) => iss.id !== tempId));
     }
-  }, [project]);
+  }, [project, reconcileCreatedIssue]);
 
   // Handle Drag & Drop to Reorder Task inside Folder or between Folders
   const handleReorderTaskInFolder = useCallback(async (
@@ -1681,11 +1710,6 @@ export default function SingleProjectPage() {
                 onUpdateIssuePriority={handleUpdateIssuePriority}
                 onDeleteIssue={handleDeleteIssue}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
-                onDeleteSubtask={handleDeleteSubtask}
-                onRenameSubtask={handleRenameSubtask}
-                onMoveSubtask={handleMoveSubtask}
                 onRenameIssue={handleRenameIssue}
                 onRenameEpic={handleRenameEpic}
                 onMoveTaskToFolder={handleMoveTaskToFolder}
@@ -1734,8 +1758,6 @@ export default function SingleProjectPage() {
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
                 currentUser={currentUser}
               />
             </div>
@@ -1772,8 +1794,6 @@ export default function SingleProjectPage() {
                 onSelectIssue={(id) => handleSelectIssue(id)}
                 onUpdateIssueStatus={handleUpdateStatus}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onToggleSubtask={handleToggleSubtask}
-                onAddSubtask={handleAddSubtask}
               />
             </div>
           ) : (
@@ -1799,21 +1819,8 @@ export default function SingleProjectPage() {
             isOpen={isNewIssueModalOpen}
             onClose={() => setIsNewIssueModalOpen(false)}
             onCreateIssue={(created) =>
-              setIssues((prev) => {
-                const existingIdx = prev.findIndex(
-                  (iss) =>
-                    iss.id === created.id ||
-                    (String(iss.id).startsWith('temp_') && iss.title === created.title)
-                );
-                if (existingIdx !== -1) {
-                  const updated = [...prev];
-                  updated[existingIdx] = created;
-                  return updated;
-                }
-                return [created, ...prev];
-              })
+              setIssues((prev) => reconcileCreatedIssue(prev, created))
             }
-
             defaultProjectKey={project.key}
             defaultProjectName={project.name}
             defaultProjectId={project.id}

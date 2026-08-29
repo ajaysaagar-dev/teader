@@ -38,8 +38,6 @@ interface DevStreamViewProps {
   onSelectIssue: (id: string) => void;
   onUpdateIssueStatus: (issueId: string, newStatus: Status) => void;
   onOpenNewIssue: () => void;
-  onToggleSubtask?: (issueId: string, subId: string, completed: boolean) => void;
-  onAddSubtask?: (issueId: string, title: string) => void;
   currentUser?: any;
 }
 
@@ -50,8 +48,6 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
   onSelectIssue,
   onUpdateIssueStatus,
   onOpenNewIssue,
-  onToggleSubtask,
-  onAddSubtask,
   currentUser,
 }) => {
   const [activeFilter, setActiveFilter] = useState<DevFilter>('all');
@@ -60,8 +56,6 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
     issues.length > 0 ? issues[0].id : null
   );
   const [copiedCmd, setCopiedCmd] = useState<string | null>(null);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
   // Filter issues
   const filteredIssues = useMemo(() => {
@@ -111,57 +105,6 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
     toast.success(`Copied: ${text}`);
     setTimeout(() => setCopiedCmd(null), 2000);
   };
-
-  const handleSubtaskToggle = async (issueId: string, subId: string, currentCompleted: boolean) => {
-    const nextCompleted = !currentCompleted;
-    if (onToggleSubtask) {
-      onToggleSubtask(issueId, subId, nextCompleted);
-    } else {
-      try {
-        await fetch('/api/subtasks', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subId, completed: nextCompleted }),
-        });
-        toast.success(`Sub-work updated`);
-        const ENABLE_CELEBRATION = false;
-        if (nextCompleted && ENABLE_CELEBRATION) {
-          confetti({ particleCount: 30, spread: 40, origin: { y: 0.6 } });
-        }
-      } catch {
-
-        toast.error('Failed to update subtask');
-      }
-    }
-  };
-
-  const handleAddSubtaskSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeIssue || !newSubtaskTitle.trim()) return;
-
-    const title = newSubtaskTitle.trim();
-    setNewSubtaskTitle('');
-    setIsAddingSubtask(false);
-
-    if (onAddSubtask) {
-      onAddSubtask(activeIssue.id, title);
-    } else {
-      try {
-        await fetch('/api/subtasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ issueId: activeIssue.id, title }),
-        });
-        toast.success('Added sub-work item');
-      } catch {
-        toast.error('Failed to add sub-work');
-      }
-    }
-  };
-
-  const completedSubsCount = activeIssue?.subtasks?.filter((st) => st.completed).length || 0;
-  const totalSubsCount = activeIssue?.subtasks?.length || 0;
-  const subPercent = totalSubsCount > 0 ? Math.round((completedSubsCount / totalSubsCount) * 100) : 0;
 
   return (
     <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
@@ -461,114 +404,7 @@ export const DevStreamView: React.FC<DevStreamViewProps> = React.memo(({
                   </div>
                 </div>
 
-                {/* 3. Sub-works / Acceptance Criteria Checklist */}
-                <div className="p-3 bg-[#131415] rounded-lg border border-[#2A2C30] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckSquare size={14} className="text-[#DCB001]" />
-                      <span className="text-xs font-bold text-[#CFD4DD]">
-                        Sub-works & Acceptance Criteria ({completedSubsCount}/{totalSubsCount})
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => setIsAddingSubtask(!isAddingSubtask)}
-                      className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-[#DCB001] bg-[#17181A] hover:bg-[#222427] border border-[#DCB001]/40 rounded"
-                    >
-                      <Plus size={11} />
-                      <span>Add Item</span>
-                    </button>
-                  </div>
-
-                  {/* Progress Bar */}
-                  {totalSubsCount > 0 && (
-                    <div className="w-full h-1.5 bg-[#17181A] rounded-full overflow-hidden border border-[#2A2C30]">
-                      <div
-                        className="h-full bg-[#DCB001] transition-all duration-300"
-                        style={{ width: `${subPercent}%` }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Inline Add Item Form */}
-                  {isAddingSubtask && (
-                    <form onSubmit={handleAddSubtaskSubmit} className="flex items-center gap-1.5 pt-1">
-                      <input
-                        type="text"
-                        autoFocus
-                        value={newSubtaskTitle}
-                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                        placeholder="Type sub-work criteria..."
-                        className="flex-1 bg-[#17181A] border border-[#2A2C30] rounded px-2 py-1 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001]"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!newSubtaskTitle.trim()}
-                        className="px-2.5 py-1 bg-[#DCB001] text-[#0F1011] rounded text-xs font-bold disabled:opacity-40"
-                      >
-                        Add
-                      </button>
-                    </form>
-                  )}
-
-                  {/* Subtask Items (Recursive) */}
-                  <div className="divide-y divide-[#2A2C30]/50 pt-1 space-y-1">
-                    {totalSubsCount === 0 ? (
-                      <p className="text-[11px] text-[#787C83] py-1 font-mono">
-                        No sub-work checklist added yet. Click &quot;Add Item&quot; to break down task.
-                      </p>
-                    ) : (
-                      (() => {
-                        const renderItem = (st: any, depth = 0): React.ReactNode => (
-                          <div key={st.id} className="space-y-1">
-                            <div
-                              className="py-1.5 flex items-center justify-between"
-                              style={{ paddingLeft: `${depth * 14}px` }}
-                            >
-                              <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
-                                {st.isFolder || st.type === 'folder' ? (
-                                  <Folder size={13} className="text-[#DCB001] shrink-0" />
-                                ) : (
-                                  <input
-                                    type="checkbox"
-                                    checked={st.completed}
-                                    onChange={() => handleSubtaskToggle(activeIssue.id, st.id, st.completed)}
-                                    className="w-3.5 h-3.5 rounded border-[#3B3D41] bg-[#1A1B1D] text-[#DCB001] focus:ring-0 cursor-pointer accent-[#DCB001]"
-                                  />
-                                )}
-                                <span
-                                  className={`text-xs ${
-                                    st.isFolder || st.type === 'folder'
-                                      ? 'font-bold text-white'
-                                      : st.completed
-                                      ? 'line-through text-[#787C83]'
-                                      : 'text-[#CFD4DD]'
-                                  }`}
-                                >
-                                  {st.title}
-                                </span>
-                              </label>
-
-                              {st.imageUrl && (
-                                <span className="text-[10px] font-mono text-[#DCB001] bg-[#17181A] px-1.5 py-0.2 rounded border border-[#2A2C30]">
-                                  🖼️ Preview Attached
-                                </span>
-                              )}
-                            </div>
-
-                            {st.subtasks && st.subtasks.length > 0 && (
-                              <div className="border-l border-[#2A2C30]/60 ml-2 space-y-1">
-                                {st.subtasks.map((child: any) => renderItem(child, depth + 1))}
-                              </div>
-                            )}
-                          </div>
-                        );
-
-                        return activeIssue.subtasks.map((st) => renderItem(st));
-                      })()
-                    )}
-                  </div>
-                </div>
+                {/* 3. Description & Specifications */}
 
                 {/* 4. Description & Specifications */}
                 <div className="p-3 bg-[#131415] rounded-lg border border-[#2A2C30] space-y-1.5">

@@ -65,9 +65,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   currentRole = 'owner',
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
-  const [newSubworkTitle, setNewSubworkTitle] = useState('');
-  const [isAddingSubwork, setIsAddingSubwork] = useState(false);
-  const [uploadingSubtaskId, setUploadingSubtaskId] = useState<string | null>(null);
   const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
 
   // Description markdown edit state
@@ -265,106 +262,17 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     } catch {}
   };
 
-
-  // Toggle Subtask Completion in DB
-  const handleToggleSubtask = async (subId: string) => {
-    const targetSub = issue.subtasks.find((st) => st.id === subId);
-    if (!targetSub) return;
-
-    const nextCompleted = !targetSub.completed;
-    const updatedSubtasks = issue.subtasks.map((st) =>
-      st.id === subId ? { ...st, completed: nextCompleted } : st
-    );
-
-    let nextStatus = issue.status;
-    if (issue.status === 'done' && !nextCompleted) {
-      nextStatus = 'needs_review';
-      toast.info('Incomplete sub-work detected: Task status automatically moved to Needs Review');
-      try {
-        await fetch(`/api/issues/${issue.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: 'needs_review' }),
-        });
-      } catch {}
-    }
-
-    const allDone = updatedSubtasks.every((st) => st.completed);
-    const ENABLE_CELEBRATION = false;
-    if (allDone && updatedSubtasks.length > 0 && nextStatus !== 'needs_review') {
-      if (ENABLE_CELEBRATION) {
-        confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
-      }
-      toast.success('All sub-works completed!');
-    }
-
-
-    onUpdateIssue({
-      ...issue,
-      status: nextStatus,
-      subtasks: updatedSubtasks,
-    });
-
-    try {
-      await fetch('/api/subtasks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subId, completed: nextCompleted }),
-      });
-    } catch {}
-  };
-
-  // Add Subtask / Sub-work
-  const handleAddSubworkRealtime = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSubworkTitle.trim()) return;
-
-    const newTitle = newSubworkTitle.trim();
-    setNewSubworkTitle('');
-    setIsAddingSubwork(false);
-
-    try {
-      const res = await fetch('/api/subtasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issueId: issue.id, title: newTitle }),
-      });
-
-      let newSub: any;
-      if (res.ok) {
-        newSub = await res.json();
-      } else {
-        newSub = {
-          id: `sub_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-          title: newTitle,
-          completed: false,
-          issueId: issue.id,
-        };
-      }
-
-      onUpdateIssue({
-        ...issue,
-        subtasks: [...(issue.subtasks || []), newSub],
-      });
-      toast.success('Subtask added');
-    } catch {
-      toast.error('Failed to add subtask');
-    }
-  };
-
   // Image Upload Handler
-  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, subtaskId?: string) => {
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (subtaskId) setUploadingSubtaskId(subtaskId);
-    else setIsUploadingTaskImg(true);
+    setIsUploadingTaskImg(true);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('taskId', issue.id);
-      if (subtaskId) formData.append('subtaskId', subtaskId);
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -373,33 +281,22 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
       if (res.ok) {
         const imageRecord = await res.json();
-        toast.success('Image attached successfully');
-        if (subtaskId) {
-          onUpdateIssue({
-            ...issue,
-            subtasks: (issue.subtasks || []).map((st) =>
-              st.id === subtaskId ? { ...st, imageUrl: imageRecord.url, imageId: imageRecord.id } : st
-            ),
-          });
-        } else {
-          onUpdateIssue({
-            ...issue,
-            images: [...(issue.images || []), imageRecord],
-          });
-        }
+        toast.success('Image uploaded successfully');
+
+        onUpdateIssue({
+          ...issue,
+          images: [...(issue.images || []), imageRecord],
+        });
       } else {
         toast.error('Failed to upload image');
       }
     } catch {
       toast.error('Upload failed');
     } finally {
-      setUploadingSubtaskId(null);
       setIsUploadingTaskImg(false);
     }
   };
 
-  const completedCount = (issue.subtasks || []).filter((st) => st.completed).length;
-  const totalSubtasks = (issue.subtasks || []).length;
   const issueImages = issue.images || [];
 
   const formatTimer = (sec: number) => {
@@ -611,90 +508,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               )}
             </div>
 
-          </div>
-
-          {/* Sub-works & Subtasks Checklist Section */}
-          <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckSquare size={16} className="text-[#DCB001]" />
-                <h3 className="text-xs font-semibold text-[#CFD4DD]">
-                  Sub-tasks & Checklist ({completedCount}/{totalSubtasks})
-                </h3>
-              </div>
-
-              <button
-                onClick={() => setIsAddingSubwork(true)}
-                className="flex items-center gap-1 text-xs font-semibold text-[#DCB001] hover:underline"
-              >
-                <Plus size={13} />
-                <span>Add Subtask</span>
-              </button>
-            </div>
-
-            {/* Inline Add Subtask Input */}
-            {isAddingSubwork && (
-              <form onSubmit={handleAddSubworkRealtime} className="flex items-center gap-2 pt-1">
-                <input
-                  type="text"
-                  placeholder="What needs to be done?"
-                  value={newSubworkTitle}
-                  onChange={(e) => setNewSubworkTitle(e.target.value)}
-                  autoFocus
-                  className="flex-1 bg-[#131415] border border-[#DCB001] text-xs text-white px-2.5 py-1.5 rounded-lg outline-none"
-                />
-                <button type="submit" className="px-3 py-1.5 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-lg">
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingSubwork(false)}
-                  className="px-2.5 py-1.5 text-xs text-[#787C83] hover:text-white"
-                >
-                  Cancel
-                </button>
-              </form>
-            )}
-
-            {/* Subtasks List */}
-            <div className="space-y-2 pt-1">
-              {(issue.subtasks || []).length === 0 && !isAddingSubwork && (
-                <p className="text-xs text-[#787C83] italic">No sub-tasks attached to this issue.</p>
-              )}
-
-              {(issue.subtasks || []).map((st) => (
-                <div
-                  key={st.id}
-                  className="flex items-center justify-between p-2.5 bg-[#131415] hover:bg-[#1A1B1D] border border-[#2A2C30] rounded-lg group transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    <button
-                      onClick={() => handleToggleSubtask(st.id)}
-                      className={`w-4 h-4 rounded flex items-center justify-center transition-colors ${
-                        st.completed
-                          ? 'bg-[#22C55E] text-[#0F1011]'
-                          : 'border border-[#787C83] hover:border-[#DCB001]'
-                      }`}
-                    >
-                      {st.completed && <Check size={11} className="stroke-[3]" />}
-                    </button>
-                    <span className={`text-xs truncate ${st.completed ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}`}>
-                      {st.title}
-                    </span>
-                  </div>
-
-                  <label className="text-[#787C83] hover:text-[#DCB001] p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera size={13} />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageFileUpload(e, st.id)}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Task Attachments Section */}

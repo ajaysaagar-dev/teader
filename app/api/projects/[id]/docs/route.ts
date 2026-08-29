@@ -177,6 +177,7 @@ export async function POST(
 
     const body = await req.json();
     const title = (body.title || 'Untitled Document').trim();
+    const folder = (body.folder || 'Start').trim();
     const initialContent = body.content || `# ${title}\n\nStart writing documentation here...`;
 
     const cleanSlug = title
@@ -202,10 +203,11 @@ export async function POST(
       title,
       fileName,
       filePath,
+      folder,
       content: initialContent,
     });
 
-    const docPayload = { ...createdRecord, content: initialContent };
+    const docPayload = { ...createdRecord, folder, content: initialContent };
 
     broadcastRealtimeEvent({
       type: 'DOC_CREATED',

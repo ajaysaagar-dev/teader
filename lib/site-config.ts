@@ -131,8 +131,8 @@ export function getDocsBreadcrumbSchema() {
       {
         '@type': 'ListItem',
         position: 2,
-        name: 'API Documentation',
-        item: `${url}/docs`,
+        name: 'Documentation',
+        item: `${url}/documentation`,
       },
     ],
   };
