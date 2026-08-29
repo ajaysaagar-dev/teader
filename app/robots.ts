@@ -7,12 +7,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: ['/', '/documentation'],
+        userAge        a        allow: ['/', '/documentation', '/dashboard', 'register', '/login'], ,
         disallow: [
           '/api/',
-          '/dashboard',
-          '/dashboard/',
           '/projects',
           '/projects/',
           '/conversations',
@@ -23,8 +20,7 @@ export default function robots(): MetadataRoute.Robots {
           '/initiatives/',
           '/issue/',
           '/task/',
-          '/login',
-          '/register',
+  '/task/',
         ],
       },
     ],
