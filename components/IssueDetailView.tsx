@@ -81,8 +81,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [newCommentText, setNewCommentText] = useState('');
-  const [newBlockerKey, setNewBlockerKey] = useState('');
-  const [isAddingBlocker, setIsAddingBlocker] = useState(false);
 
 
   // Timer interval effect
@@ -216,50 +214,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       setIsTimerRunning(true);
       toast.info('Live time tracker started');
     }
-  };
-
-  // Add Blocker Dependency
-  const handleAddBlocker = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const key = newBlockerKey.trim().toUpperCase();
-    if (!key) return;
-
-    const currentBlockers = parseBlockedBy(issue.blockedBy);
-    if (currentBlockers.includes(key)) {
-      toast.error('Blocker is already added');
-      return;
-    }
-
-    const updatedBlockers = [...currentBlockers, key];
-    const updated = { ...issue, blockedBy: updatedBlockers };
-    onUpdateIssue(updated);
-    setNewBlockerKey('');
-    setIsAddingBlocker(false);
-    toast.success(`Added blocker ${key}`);
-
-    try {
-      await fetch(`/api/issues/${issue.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockedBy: updatedBlockers }),
-      });
-    } catch {}
-  };
-
-  // Remove Blocker Dependency
-  const handleRemoveBlocker = async (keyToRemove: string) => {
-    const updatedBlockers = parseBlockedBy(issue.blockedBy).filter((k) => k !== keyToRemove);
-    const updated = { ...issue, blockedBy: updatedBlockers };
-    onUpdateIssue(updated);
-    toast.success(`Removed blocker ${keyToRemove}`);
-
-    try {
-      await fetch(`/api/issues/${issue.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockedBy: updatedBlockers }),
-      });
-    } catch {}
   };
 
   // Image Upload Handler
@@ -442,73 +396,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             )}
           </div>
 
-
-          {/* Task Dependencies Section (§1.1) */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldAlert size={15} className="text-[#DCB001]" />
-                <h3 className="text-xs font-semibold text-white">Dependencies & Blocking Relations</h3>
-              </div>
-              <button
-                onClick={() => setIsAddingBlocker(true)}
-                className="text-[11px] text-[#DCB001] hover:underline flex items-center gap-1 font-mono"
-              >
-                <Plus size={12} /> Add Blocker
-              </button>
-            </div>
-
-            {/* Add Blocker Form */}
-            {isAddingBlocker && (
-              <form onSubmit={handleAddBlocker} className="flex items-center gap-2 pt-1">
-                <input
-                  type="text"
-                  placeholder="Enter blocking task key (e.g. CORE-101)..."
-                  value={newBlockerKey}
-                  onChange={(e) => setNewBlockerKey(e.target.value)}
-                  autoFocus
-                  className="flex-1 bg-[#131415] border border-[#DCB001] text-xs text-white px-2.5 py-1 rounded outline-none font-mono"
-                />
-                <button type="submit" className="px-3 py-1 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded">
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAddingBlocker(false)}
-                  className="px-2 py-1 text-xs text-[#787C83] hover:text-white"
-                >
-                  Cancel
-                </button>
-              </form>
-            )}
-
-            {/* Blocker Tags */}
-            <div className="space-y-1.5">
-              {parseBlockedBy(issue.blockedBy).length === 0 ? (
-                <p className="text-xs text-[#787C83] italic">No active blockers on this issue.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {parseBlockedBy(issue.blockedBy).map((key) => (
-                    <div
-                      key={key}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EF4444]/15 border border-[#EF4444]/30 text-xs font-mono text-[#EF4444]"
-                    >
-                      <AlertTriangle size={12} />
-                      <span>Blocked by {key}</span>
-                      <button
-                        onClick={() => handleRemoveBlocker(key)}
-                        className="hover:text-white ml-1"
-                        title="Remove blocker"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-          </div>
 
           {/* Task Attachments Section */}
           <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">

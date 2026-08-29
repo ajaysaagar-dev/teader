@@ -33,9 +33,14 @@ export async function POST(req: Request) {
       priority: data.priority || 'medium',
       project: data.project,
       projectId: data.projectId,
+      epic: data.epic,
+      sprint: data.sprint,
+      dueDate: data.dueDate,
+      estimatedHours: data.estimatedHours,
       labels: data.labels,
       subtasks: data.subtasks,
       assigneeName: data.assigneeName,
+      reporterName: data.reporterName || session.name || session.email || 'Current User',
     });
 
     broadcastRealtimeEvent({

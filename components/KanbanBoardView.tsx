@@ -47,7 +47,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedFolder, setSelectedFolder] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [addingToCol, setAddingToCol] = useState<Status | null>(null);
   const [inlineTaskTitle, setInlineTaskTitle] = useState('');
   
@@ -250,32 +249,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 
         {/* Right Action Controls */}
         <div className="flex items-center gap-2">
-          {/* View Mode Switcher */}
-          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-md p-0.5">
-            <button
-              onClick={() => setViewMode('board')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'board'
-                  ? 'bg-[#2A2C30] text-[#DCB001]'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Board View"
-            >
-              <LayoutGrid size={13} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-[#2A2C30] text-[#DCB001]'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Compact List View"
-            >
-              <List size={13} />
-            </button>
-          </div>
-
           <span className="text-[11px] text-[#787C83] font-mono whitespace-nowrap">
             {filteredIssues.length} {filteredIssues.length === 1 ? 'task' : 'tasks'}
           </span>
@@ -291,171 +264,8 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
         </div>
       </div>
 
-      {/* Main View: Kanban Board or Compact List */}
-      {viewMode === 'list' ? (
-        /* Compact List / Table View with Drag-and-Drop Reordering */
-        <div className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-lg overflow-hidden flex flex-col min-h-0">
-          <div className="px-3 py-1.5 bg-[#17181A] border-b border-[#2A2C30] grid grid-cols-12 text-[10px] font-mono text-[#787C83] uppercase tracking-wider items-center">
-            <div className="col-span-2">Key</div>
-            <div className="col-span-5">Title</div>
-            <div className="col-span-2">Status</div>
-            <div className="col-span-1">Priority</div>
-            <div className="col-span-2 text-right">Assignee</div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto divide-y divide-[#2A2C30]/50">
-            {filteredIssues.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#787C83] font-mono">
-                No tasks found matching filter.
-              </div>
-            ) : (
-              filteredIssues.map((issue) => {
-                const issueAny = issue as any;
-                const completedSubCount = (issue.subtasks || []).filter((st) => st.completed).length;
-                const assigneeUser = issue.assignee || {
-                  id: 'usr_default',
-                  name: issueAny.assigneeName || 'User',
-                  avatar: issueAny.assigneeAvatar,
-                  email: '',
-                  role: '',
-                };
-                const isDragging = draggedIssueId === issue.id;
-                const isOverThis = dragOverIssueId === issue.id;
-
-                return (
-                  <div
-                    key={issue.id}
-                    draggable={true}
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData('text/plain', issue.id);
-                      e.dataTransfer.effectAllowed = 'move';
-                      setDraggedIssueId(issue.id);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedIssueId(null);
-                      setDragOverIssueId(null);
-                      setDropPosition(null);
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (draggedIssueId && draggedIssueId !== issue.id) {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
-                        const pos = isTopHalf ? 'before' : 'after';
-                        if (dragOverIssueId !== issue.id || dropPosition !== pos) {
-                          setDragOverIssueId(issue.id);
-                          setDropPosition(pos);
-                        }
-                      }
-                    }}
-                    onDragLeave={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                        if (dragOverIssueId === issue.id) {
-                          setDragOverIssueId(null);
-                          setDropPosition(null);
-                        }
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const droppedId = e.dataTransfer.getData('text/plain') || draggedIssueId;
-                      if (droppedId && droppedId !== issue.id) {
-                        handleReorder(droppedId, issue.id, dropPosition || 'before', null);
-                      }
-                      setDraggedIssueId(null);
-                      setDragOverIssueId(null);
-                      setDropPosition(null);
-                    }}
-                    onClick={() => onSelectIssue(issue.id)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setContextMenu({
-                        isOpen: true,
-                        position: { x: e.clientX, y: e.clientY },
-                        issue,
-                      });
-                    }}
-                    className={`relative px-3 py-2 grid grid-cols-12 items-center hover:bg-[#131415] cursor-grab active:cursor-grabbing transition-all text-xs group select-none ${
-                      isDragging ? 'opacity-30 bg-[#131415]' : ''
-                    }`}
-                  >
-                    {/* Top Drop Indicator Line */}
-                    {isOverThis && dropPosition === 'before' && (
-                      <div className="absolute -top-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
-                    )}
-
-                    {/* Bottom Drop Indicator Line */}
-                    {isOverThis && dropPosition === 'after' && (
-                      <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
-                    )}
-
-                    <div className="col-span-2 flex items-center gap-2 font-mono font-bold text-[#DCB001] text-[11px]">
-                      <GripVertical size={12} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
-                      <span>{issue.key}</span>
-                    </div>
-
-                    <div className="col-span-5 flex items-center gap-2 pr-3 truncate">
-                      {(issue.epic || issue.title.startsWith('📁 ')) && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 shrink-0">
-                          <Folder size={10} className="shrink-0" />
-                          <span className="truncate max-w-[80px]">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
-                        </span>
-                      )}
-                      <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
-                        {issue.title}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 flex items-center">
-                      <span
-                        className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full capitalize ${
-                          issue.status === 'done'
-                            ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
-                            : issue.status === 'in_progress'
-                            ? 'bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30'
-                            : issue.status === 'needs_review'
-                            ? 'bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30'
-                            : 'bg-[#2A2C30] text-[#787C83]'
-                        }`}
-                      >
-                        {issue.status.replace('_', ' ')}
-                      </span>
-                    </div>
-
-                    <div className="col-span-1">
-                      <span
-                        className={`text-[10px] font-mono uppercase font-semibold ${
-                          issue.priority === 'critical'
-                            ? 'text-[#C0393B]'
-                            : issue.priority === 'high'
-                            ? 'text-[#DCB001]'
-                            : 'text-[#787C83]'
-                        }`}
-                      >
-                        {issue.priority}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 flex items-center justify-end gap-2">
-                      <Avatar user={assigneeUser} size="xs" />
-                      <span className="text-[11px] text-[#787C83] font-mono truncate max-w-[80px]">
-                        {assigneeUser.name}
-                      </span>
-                      <ChevronRight size={13} className="text-[#787C83] group-hover:text-white shrink-0" />
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-      ) : (
-        /* High-Density Kanban Board Columns Grid with Drag & Drop Reordering */
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 overflow-y-auto min-h-0">
+      {/* Kanban Board Columns Grid with Drag & Drop Reordering */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 overflow-y-auto min-h-0">
           {columns.map((col) => {
             const isColumnOver = dragOverColId === col.id && !dragOverIssueId;
             const columnCards = filteredIssues.filter((i) => i.status === col.id);
@@ -774,7 +584,6 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
             );
           })}
         </div>
-      )}
 
       {/* Task Right-Click Context Menu */}
       <TaskContextMenu

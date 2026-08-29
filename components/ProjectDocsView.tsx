@@ -41,7 +41,8 @@ import {
   FolderPlus,
   ChevronRight,
   ChevronDown,
-  GripVertical
+  GripVertical,
+  Users
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -55,6 +56,15 @@ interface ProjectDocsViewProps {
   projectId: string | number;
   projectName?: string;
   projectKey?: string;
+}
+
+interface DocsPresence {
+  presenceId: string;
+  userId: string;
+  userName: string;
+  docId: string;
+  docTitle: string;
+  lastSeen: number;
 }
 
 const DEFAULT_FOLDER = 'Start';
@@ -99,6 +109,9 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newDocTitle, setNewDocTitle] = useState('');
   const [copiedFile, setCopiedFile] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name: string } | null>(null);
+  const [activeDocsPresence, setActiveDocsPresence] = useState<Record<string, DocsPresence>>({});
+  const docsPresenceIdRef = useRef(`docs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
 
   // Folder management state
   const [customFolders, setCustomFolders] = useState<string[]>(() => {
@@ -130,6 +143,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const savedContentRef = useRef<string>(savedContent);
   const docsRef = useRef<ProjectDoc[]>(docs);
   const selectedDocIdCurrentRef = useRef<string | null>(selectedDocId);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data?.user?.id) {
+          setCurrentUser({ id: String(data.user.id), name: data.user.name || 'Collaborator' });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     docsRef.current = docs;
@@ -589,6 +617,37 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           }
           break;
         }
+
+        case 'DOC_PRESENCE_UPDATED': {
+          const presence = event.payload;
+          if (presence?.presenceId && presence.userId && presence.presenceId !== docsPresenceIdRef.current) {
+            setActiveDocsPresence((previous) => ({
+              ...previous,
+              [presence.presenceId]: {
+                presenceId: String(presence.presenceId),
+                userId: String(presence.userId),
+                userName: String(presence.userName || 'Collaborator'),
+                docId: String(presence.docId || ''),
+                docTitle: String(presence.docTitle || 'No document selected'),
+                lastSeen: Date.now(),
+              },
+            }));
+          }
+          break;
+        }
+
+        case 'DOC_PRESENCE_LEFT': {
+          const presence = event.payload;
+          if (presence?.presenceId) {
+            setActiveDocsPresence((previous) => {
+              if (!previous[presence.presenceId]) return previous;
+              const next = { ...previous };
+              delete next[presence.presenceId];
+              return next;
+            });
+          }
+          break;
+        }
       }
     }, [projectId]),
   });
@@ -596,6 +655,66 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const selectedDoc = useMemo(() => {
     return docs.find((d) => String(d.id) === String(selectedDocId)) || null;
   }, [docs, selectedDocId]);
+
+  const publishDocsPresence = useCallback((leaving = false) => {
+    if (!currentUser) return;
+    const activeDoc = docsRef.current.find((doc) => String(doc.id) === String(selectedDocIdCurrentRef.current));
+    publishClientRealtimeEvent({
+      type: leaving ? 'DOC_PRESENCE_LEFT' : 'DOC_PRESENCE_UPDATED',
+      projectId,
+      payload: {
+        presenceId: docsPresenceIdRef.current,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        docId: activeDoc ? String(activeDoc.id) : '',
+        docTitle: activeDoc?.fileName || activeDoc?.title || 'No document selected',
+        timestamp: Date.now(),
+      },
+    });
+  }, [currentUser, projectId]);
+
+  useEffect(() => {
+    if (!currentUser || !selectedDoc) return;
+    publishDocsPresence();
+    const heartbeat = window.setInterval(() => publishDocsPresence(), 5000);
+    return () => {
+      window.clearInterval(heartbeat);
+      publishDocsPresence(true);
+    };
+  }, [currentUser, selectedDoc?.id, selectedDoc?.title, selectedDoc?.fileName, publishDocsPresence]);
+
+  useEffect(() => {
+    const leaveDocs = () => publishDocsPresence(true);
+    window.addEventListener('pagehide', leaveDocs);
+    window.addEventListener('beforeunload', leaveDocs);
+    return () => {
+      window.removeEventListener('pagehide', leaveDocs);
+      window.removeEventListener('beforeunload', leaveDocs);
+    };
+  }, [publishDocsPresence]);
+
+  useEffect(() => {
+    const cleanup = window.setInterval(() => {
+      const expiry = Date.now() - 12_000;
+      setActiveDocsPresence((previous) => {
+        const next = Object.fromEntries(
+          Object.entries(previous).filter(([, presence]) => presence.lastSeen > expiry)
+        ) as Record<string, DocsPresence>;
+        return Object.keys(next).length === Object.keys(previous).length ? previous : next;
+      });
+    }, 3000);
+    return () => window.clearInterval(cleanup);
+  }, []);
+
+  const activeDocCollaborators = useMemo(() => {
+    const byUser = new Map<string, DocsPresence>();
+    Object.values(activeDocsPresence).forEach((presence) => {
+      if (presence.userId === currentUser?.id || !presence.docId) return;
+      const previous = byUser.get(presence.userId);
+      if (!previous || previous.lastSeen < presence.lastSeen) byUser.set(presence.userId, presence);
+    });
+    return Array.from(byUser.values());
+  }, [activeDocsPresence, currentUser?.id]);
 
   const hasUnsavedChanges = useMemo(() => {
     return activeContent !== savedContent || activeTitle !== savedTitle;
@@ -1019,7 +1138,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   }, [docs, customFolders, searchQuery]);
 
   return (
-    <div className="flex-1 h-full min-h-0 flex flex-col bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-hidden">
+    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-hidden">
       {/* ─── Main Two-Column Layout ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* ─── Left Sidebar: Folders & Markdown Files (Drag and Drop) ─────── */}
@@ -1539,6 +1658,24 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           )}
         </div>
       </div>
+
+      {activeDocCollaborators.length > 0 && (
+        <div className="absolute bottom-3 left-3 z-30 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1.5 rounded-xl border border-[#2A2C30] bg-[#111215]/95 px-2.5 py-2 shadow-xl backdrop-blur-sm">
+          <Users size={13} className="text-[#22C55E]" />
+          <span className="mr-1 text-[10px] font-mono uppercase tracking-wider text-[#787C83]">Active</span>
+          {activeDocCollaborators.map((presence) => (
+            <div key={presence.userId} className="group relative">
+              <span className="inline-flex cursor-default items-center gap-1.5 rounded-md border border-[#22C55E]/25 bg-[#22C55E]/10 px-2 py-1 text-[11px] font-semibold text-[#CFD4DD]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] shadow-[0_0_6px_#22C55E]" />
+                {presence.userName}
+              </span>
+              <div className="pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-max max-w-56 rounded-lg border border-[#2A2C30] bg-[#1B1C1F] px-2.5 py-1.5 text-[11px] text-[#CFD4DD] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                Viewing: <span className="font-mono text-[#DCB001]">{presence.docTitle}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

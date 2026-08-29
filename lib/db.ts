@@ -103,6 +103,7 @@ let memoryMembersStore: any[] = [];
 let memoryIssuesStore: any[] = [];
 let memoryImagesStore: any[] = [];
 let memoryProjectDocsStore: any[] = [];
+let memoryJoinRequestsStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -163,6 +164,22 @@ export async function initDB(): Promise<void> {
           );
         `);
 
+        // 3b. Create Project Join Requests Table
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_join_requests" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "userId" INT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "userName" VARCHAR(128) NOT NULL,
+            "userEmail" VARCHAR(255) NOT NULL,
+            "userAvatar" VARCHAR(255),
+            "status" VARCHAR(32) NOT NULL DEFAULT 'pending',
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "unique_user_project_request" UNIQUE ("projectId", "userId")
+          );
+        `);
+
         // 4. Create Issues Table
         await p.query(`
           CREATE TABLE IF NOT EXISTS "issues" (
@@ -178,7 +195,7 @@ export async function initDB(): Promise<void> {
             "reporterAvatar" VARCHAR(255) DEFAULT 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
             "labels" TEXT,
             "sprint" VARCHAR(64) DEFAULT 'Sprint 24.3',
-            "epic" VARCHAR(128) DEFAULT 'Platform Core',
+            "epic" VARCHAR(128) DEFAULT 'General',
             "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
             "project" VARCHAR(128) DEFAULT 'Teader Platform Core',
             "dueDate" VARCHAR(64),
@@ -304,85 +321,71 @@ export async function initDB(): Promise<void> {
         `);
 
 
-        // Seed default users if table is empty
-        const userCheck = await p.query(`SELECT COUNT(*) as cnt FROM "users"`);
-        const userCount = Number(userCheck.rows?.[0]?.cnt || 0);
+        // Seed all core team users if not present
+        const defaultUsers = [
+          { id: 1, name: 'karri', email: 'karri@teader.io', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+          { id: 2, name: 'jori', email: 'jori@teader.io', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+          { id: 3, name: 'ajaysaagar', email: 'ajaysaagar@teader.io', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
+          { id: 4, name: 'sarah', email: 'sarah@teader.io', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
+          { id: 5, name: 'alex', email: 'alex@teader.io', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+          { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
+          { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80' },
+          { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+        ];
 
-        if (userCount === 0) {
+        for (const u of defaultUsers) {
           const pass = await hashPassword('password123');
           await p.query(
-            `INSERT INTO "users" ("name", "email", "password", "avatar") VALUES ($1, $2, $3, $4)`,
-            ['karri', 'karri@teader.io', pass, 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80']
-          );
-          await p.query(
-            `INSERT INTO "users" ("name", "email", "password", "avatar") VALUES ($1, $2, $3, $4)`,
-            ['jori', 'jori@teader.io', pass, 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80']
-          );
-          await p.query(
-            `INSERT INTO "users" ("name", "email", "password", "avatar") VALUES ($1, $2, $3, $4)`,
-            ['ajaysaagar', 'ajaysaagar@teader.io', pass, 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80']
+            `INSERT INTO "users" ("id", "name", "email", "password", "avatar")
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT ("id") DO UPDATE SET "name" = $2, "avatar" = $5`,
+            [u.id, u.name, u.email, pass, u.avatar]
           );
         }
 
-        // Seed "Huge update/seed" Project & Issues if not present
-        const projCheck = await p.query(`SELECT "id" FROM "projects" WHERE "name" = $1 OR "key" = $2 LIMIT 1`, ['Huge update/seed', 'HUG']);
-        let hugProjId = projCheck.rows?.[0]?.id;
+        // Seed or Ensure "Huge" and "Huge update/seed" Projects
+        const projHugeCheck = await p.query(`SELECT "id", "key", "name" FROM "projects" WHERE "name" ILIKE '%huge%' OR "key" IN ('HUGE', 'HUG')`);
+        let hugProjId = projHugeCheck.rows?.[0]?.id;
 
         if (!hugProjId) {
           const insProj = await p.query(
             `INSERT INTO "projects" ("key", "name", "description", "owner_id", "creatorId", "ownerName")
              VALUES ($1, $2, $3, $4, $5, $6) RETURNING "id"`,
-            ['HUG', 'Huge update/seed', 'Multi-branch dynamic evolution, task mutations, and vertical curve tracking.', 1, 1, 'karri']
+            ['HUGE', 'Huge', 'Enterprise Scale Cloud Initiative: High-throughput distributed microservices, multi-region database sharding, real-time sync engine, AI indexing, and unified design system.', 13, 13, 'ajaysaagar']
           );
           hugProjId = insProj.rows?.[0]?.id;
+        }
 
-          if (hugProjId) {
-            // Project Members
-            await p.query(`INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, 1, 'owner') ON CONFLICT DO NOTHING`, [hugProjId]);
-            await p.query(`INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, 2, 'member') ON CONFLICT DO NOTHING`, [hugProjId]);
-            await p.query(`INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, 3, 'member') ON CONFLICT DO NOTHING`, [hugProjId]);
-
-            // Issues with rich update progression, assigned timestamps & completion tracking
-            const seedIssues = [
-              { id: 'issue_hug_1', key: 'HUG-1', title: 'Database Schema Architecture V2 (Optimized)', desc: 'Updated relational database tables, foreign key cascading indexes, and JSON column support.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'karri', created: '2026-08-20 08:00:00', updated: '2026-08-22 14:30:00', completedBy: 'jori', completedAt: '2026-08-22 14:30:00' },
-              { id: 'issue_hug_2', key: 'HUG-2', title: 'Resilient PostgreSQL Connection Pool & Failover', desc: 'Configured connection pooling, health checks, and automatic reconnect backoff.', status: 'done', priority: 'high', assignee: 'jori', reporter: 'ajaysaagar', created: '2026-08-21 09:00:00', updated: '2026-08-23 11:00:00', completedBy: 'jori', completedAt: '2026-08-23 11:00:00' },
-              { id: 'issue_hug_3', key: 'HUG-3', title: 'JWT & Secure Cookie Session Hardening', desc: 'Updated authentication middleware, token refresh rotation, and bcrypt password verification.', status: 'needs_review', priority: 'critical', assignee: 'karri', reporter: 'elena', created: '2026-08-21 10:30:00', updated: '2026-08-24 16:00:00', completedBy: null, completedAt: null },
-              { id: 'issue_hug_4', key: 'HUG-4', title: 'Dynamic Cubic Bezier Spline Engine V3', desc: 'Upgraded graph canvas with smooth curved splines and interactive revision junctions.', status: 'done', priority: 'high', assignee: 'ajaysaagar', reporter: 'david', created: '2026-08-22 11:00:00', updated: '2026-08-25 18:20:00', completedBy: 'ajaysaagar', completedAt: '2026-08-25 18:20:00' },
-              { id: 'issue_hug_5', key: 'HUG-5', title: 'Realtime Collaborative Cursors & Presence Stream', desc: 'Live multi-user cursor beacons, floating nametags, and immediate disconnect cleanup.', status: 'in_progress', priority: 'medium', assignee: 'karri', reporter: 'jori', created: '2026-08-22 14:00:00', updated: '2026-08-26 09:45:00', completedBy: null, completedAt: null },
-              { id: 'issue_hug_6', key: 'HUG-6', title: 'GitHub Flavored Markdown Live Parser', desc: 'Real-time Markdown editor with split preview and syntax highlighting.', status: 'done', priority: 'medium', assignee: 'elena', reporter: 'karri', created: '2026-08-23 08:00:00', updated: '2026-08-26 14:10:00', completedBy: 'elena', completedAt: '2026-08-26 14:10:00' },
-              { id: 'issue_hug_7', key: 'HUG-7', title: 'Floating Live Presence Nametags & Exit Cleanup', desc: 'Instant 0ms removal of collaborator cursors upon window leave or tab close.', status: 'done', priority: 'high', assignee: 'karri', reporter: 'ajaysaagar', created: '2026-08-23 15:00:00', updated: '2026-08-27 10:30:00', completedBy: 'karri', completedAt: '2026-08-27 10:30:00' },
-              { id: 'issue_hug_8', key: 'HUG-8', title: 'Zero-Latency In-Place SWR State Reconciler', desc: 'Optimistic UI updates with referential memory equality preventing full DOM re-renders.', status: 'done', priority: 'high', assignee: 'ajaysaagar', reporter: 'david', created: '2026-08-24 09:00:00', updated: '2026-08-27 17:00:00', completedBy: 'ajaysaagar', completedAt: '2026-08-27 17:00:00' },
-              { id: 'issue_hug_9', key: 'HUG-9', title: 'Vertical Change Curves & Dynamic Scroll Metrics', desc: 'Calculates mutation deltas and renders vertical evolution Bezier curves.', status: 'needs_review', priority: 'critical', assignee: 'david', reporter: 'elena', created: '2026-08-24 13:00:00', updated: '2026-08-28 12:00:00', completedBy: null, completedAt: null },
-              { id: 'issue_hug_10', key: 'HUG-10', title: 'Automated Test Matrix & Production Build Verification', desc: 'Full vitest test coverage and Next.js static page bundle optimization.', status: 'done', priority: 'high', assignee: 'david', reporter: 'jori', created: '2026-08-25 08:30:00', updated: '2026-08-28 16:00:00', completedBy: 'david', completedAt: '2026-08-28 16:00:00' },
-              { id: 'issue_hug_11', key: 'HUG-11', title: 'Linear Responsive Navigation Engine', desc: 'Smooth linear horizontal and vertical panning with zero ease-in-out hesitation.', status: 'done', priority: 'medium', assignee: 'karri', reporter: 'karri', created: '2026-08-25 14:00:00', updated: '2026-08-29 09:00:00', completedBy: 'karri', completedAt: '2026-08-29 09:00:00' },
-              { id: 'issue_hug_12', key: 'HUG-12', title: 'Enterprise Technical Documentation Hub', desc: 'Comprehensive 20-section platform documentation portal with full API reference.', status: 'done', priority: 'high', assignee: 'david', reporter: 'david', created: '2026-08-26 10:00:00', updated: '2026-08-29 11:30:00', completedBy: 'david', completedAt: '2026-08-29 11:30:00' },
-            ];
-
-            for (const item of seedIssues) {
-              await p.query(
-                `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "createdAt", "updatedAt", "completedByName", "completedAt")
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) ON CONFLICT DO NOTHING`,
-                [item.id, item.key, item.title, item.desc, item.status, item.priority, item.assignee, item.reporter, hugProjId, 'Huge update/seed', item.created, item.updated, item.completedBy, item.completedAt]
-              );
-            }
+        if (hugProjId) {
+          // Project Members - Owner and diverse members
+          const memberIds = [13, 1, 2, 3, 4, 5, 14, 15];
+          for (const mId of memberIds) {
+            const role = mId === 13 ? 'owner' : (mId === 1 ? 'admin' : 'member');
+            await p.query(
+              `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, $3)
+               ON CONFLICT ("projectId", "userId") DO UPDATE SET "role" = $3`,
+              [hugProjId, mId, role]
+            );
           }
         }
 
-        // Memory Store Fallbacks for Huge update/seed
-        if (!memoryProjectsStore.some((p) => p.key === 'HUG')) {
+        // Memory Store Fallbacks for Huge
+        if (!memoryProjectsStore.some((p) => p.key === 'HUGE' || p.key === 'HUG')) {
           const memProj = {
-            id: 99,
-            key: 'HUG',
-            name: 'Huge update/seed',
-            description: 'Multi-branch dynamic evolution, task mutations, and vertical curve tracking.',
-            owner_id: 1,
-            creatorId: 1,
-            ownerName: 'karri',
+            id: 12,
+            key: 'HUGE',
+            name: 'Huge',
+            description: 'Enterprise Scale Cloud Initiative: High-throughput distributed microservices, multi-region database sharding, real-time sync engine, AI indexing, and unified design system.',
+            owner_id: 13,
+            creatorId: 13,
+            ownerName: 'ajaysaagar',
           };
           memoryProjectsStore.push(memProj);
-          memoryMembersStore.push({ projectId: 99, userId: 1, role: 'owner' });
-          memoryMembersStore.push({ projectId: 99, userId: 2, role: 'member' });
-          memoryMembersStore.push({ projectId: 99, userId: 3, role: 'member' });
+          memoryMembersStore.push({ projectId: 12, userId: 13, role: 'owner' });
+          memoryMembersStore.push({ projectId: 12, userId: 1, role: 'admin' });
+          memoryMembersStore.push({ projectId: 12, userId: 2, role: 'member' });
+          memoryMembersStore.push({ projectId: 12, userId: 14, role: 'member' });
+          memoryMembersStore.push({ projectId: 12, userId: 15, role: 'member' });
         }
 
         initialized = true;
@@ -569,9 +572,16 @@ export async function getAllProjectsDB(userId?: number | string) {
     if (userId !== undefined && userId !== null && userId !== '') {
       const numericUserId = Number(userId);
       const result = await p.query(
-        `SELECT DISTINCT p.* FROM "projects" p
-         LEFT JOIN "project_members" pm ON p."id" = pm."projectId"
-         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1
+        `SELECT DISTINCT p.*, 
+          CASE 
+            WHEN p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1 THEN 'active'
+            WHEN pjr."status" = 'pending' THEN 'pending'
+            ELSE 'none'
+          END as "joinStatus"
+         FROM "projects" p
+         LEFT JOIN "project_members" pm ON p."id" = pm."projectId" AND pm."userId" = $1
+         LEFT JOIN "project_join_requests" pjr ON p."id" = pjr."projectId" AND pjr."userId" = $1 AND pjr."status" = 'pending'
+         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1 OR pjr."status" = 'pending'
          ORDER BY p."id" ASC`,
         [numericUserId]
       );
@@ -590,12 +600,28 @@ export async function getAllProjectsDB(userId?: number | string) {
       .filter((m) => Number(m.userId) === numericUserId)
       .map((m) => Number(m.projectId));
 
-    const filtered = memoryProjectsStore.filter(
-      (p) =>
-        Number(p.owner_id) === numericUserId ||
-        Number(p.creatorId) === numericUserId ||
-        memberProjectIds.includes(Number(p.id))
-    );
+    const pendingProjectIds = memoryJoinRequestsStore
+      .filter((r) => Number(r.userId) === numericUserId && r.status === 'pending')
+      .map((r) => Number(r.projectId));
+
+    const filtered = memoryProjectsStore
+      .filter(
+        (p) =>
+          Number(p.owner_id) === numericUserId ||
+          Number(p.creatorId) === numericUserId ||
+          memberProjectIds.includes(Number(p.id)) ||
+          pendingProjectIds.includes(Number(p.id))
+      )
+      .map((p) => {
+        const isMember =
+          Number(p.owner_id) === numericUserId ||
+          Number(p.creatorId) === numericUserId ||
+          memberProjectIds.includes(Number(p.id));
+        return {
+          ...p,
+          joinStatus: isMember ? 'active' : 'pending',
+        };
+      });
     return filtered;
   }
   return memoryProjectsStore;
@@ -719,7 +745,13 @@ export async function getProjectMembersDB(projectId: string | number) {
   }
 }
 
-export async function joinProjectDB(userId: string | number, projectKey: string) {
+export async function createJoinRequestDB(
+  userId: string | number,
+  projectKey: string,
+  userName?: string,
+  userEmail?: string,
+  userAvatar?: string
+) {
   await initDB();
   const numUserId = Number(userId);
   const cleanKey = projectKey.trim().toUpperCase();
@@ -729,19 +761,189 @@ export async function joinProjectDB(userId: string | number, projectKey: string)
     throw new Error(`Project with key "${cleanKey}" does not exist.`);
   }
 
+  if (Number(project.owner_id) === numUserId || Number(project.creatorId) === numUserId) {
+    throw new Error('You are the creator of this project.');
+  }
+
+  // Check if already an active member
+  try {
+    const p = getPool();
+    const memCheck = await p.query(
+      `SELECT 1 FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2`,
+      [project.id, numUserId]
+    );
+    if (memCheck.rows.length > 0) {
+      throw new Error('You are already an active member of this project.');
+    }
+  } catch (err: any) {
+    if (err.message.includes('already an active member')) throw err;
+  }
+
+  if (memoryMembersStore.some((m) => Number(m.projectId) === Number(project.id) && Number(m.userId) === numUserId)) {
+    throw new Error('You are already an active member of this project.');
+  }
+
+  const name = userName || 'Team Member';
+  const email = userEmail || '';
+  const avatar = userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+
   try {
     const p = getPool();
     await p.query(
-      `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`,
-      [project.id, numUserId]
+      `INSERT INTO "project_join_requests" ("projectId", "userId", "userName", "userEmail", "userAvatar", "status", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, 'pending', CURRENT_TIMESTAMP)
+       ON CONFLICT ("projectId", "userId") 
+       DO UPDATE SET "status" = 'pending', "userName" = $3, "userEmail" = $4, "userAvatar" = $5, "updatedAt" = CURRENT_TIMESTAMP`,
+      [project.id, numUserId, name, email, avatar]
     );
   } catch {}
 
-  if (!memoryMembersStore.some((m) => m.projectId === project.id && m.userId === numUserId)) {
-    memoryMembersStore.push({ projectId: project.id, userId: numUserId, role: 'member' });
+  const memReq = memoryJoinRequestsStore.find(
+    (r) => Number(r.projectId) === Number(project.id) && Number(r.userId) === numUserId
+  );
+  if (memReq) {
+    memReq.status = 'pending';
+    memReq.userName = name;
+    memReq.userEmail = email;
+    memReq.userAvatar = avatar;
+    memReq.updatedAt = new Date().toISOString();
+  } else {
+    memoryJoinRequestsStore.push({
+      id: memoryJoinRequestsStore.length + 1,
+      projectId: Number(project.id),
+      userId: numUserId,
+      userName: name,
+      userEmail: email,
+      userAvatar: avatar,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
   }
 
-  return project;
+  return { project, status: 'pending' };
+}
+
+// Backward-compatibility alias
+export async function joinProjectDB(userId: string | number, projectKey: string) {
+  return createJoinRequestDB(userId, projectKey);
+}
+
+export async function getProjectJoinRequestsDB(projectId: string | number) {
+  await initDB();
+  const numProjId = Number(projectId);
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT "id", "projectId", "userId", "userName", "userEmail", "userAvatar", "status", "createdAt"
+       FROM "project_join_requests"
+       WHERE "projectId" = $1 AND "status" = 'pending'
+       ORDER BY "createdAt" DESC`,
+      [numProjId]
+    );
+    return result.rows || [];
+  } catch {
+    return memoryJoinRequestsStore.filter(
+      (r) => Number(r.projectId) === numProjId && r.status === 'pending'
+    );
+  }
+}
+
+export async function handleJoinRequestActionDB(
+  projectId: string | number,
+  targetUserId: string | number,
+  action: 'accept' | 'reject'
+) {
+  await initDB();
+  const numProjId = Number(projectId);
+  const numUserId = Number(targetUserId);
+
+  try {
+    const p = getPool();
+    if (action === 'accept') {
+      await p.query(
+        `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, 'member') ON CONFLICT DO NOTHING`,
+        [numProjId, numUserId]
+      );
+      await p.query(
+        `UPDATE "project_join_requests" SET "status" = 'accepted', "updatedAt" = CURRENT_TIMESTAMP WHERE "projectId" = $1 AND "userId" = $2`,
+        [numProjId, numUserId]
+      );
+    } else {
+      await p.query(
+        `UPDATE "project_join_requests" SET "status" = 'rejected', "updatedAt" = CURRENT_TIMESTAMP WHERE "projectId" = $1 AND "userId" = $2`,
+        [numProjId, numUserId]
+      );
+    }
+  } catch {}
+
+  const req = memoryJoinRequestsStore.find(
+    (r) => Number(r.projectId) === numProjId && Number(r.userId) === numUserId
+  );
+  if (req) {
+    req.status = action === 'accept' ? 'accepted' : 'rejected';
+  }
+
+  if (action === 'accept') {
+    if (!memoryMembersStore.some((m) => Number(m.projectId) === numProjId && Number(m.userId) === numUserId)) {
+      memoryMembersStore.push({ projectId: numProjId, userId: numUserId, role: 'member' });
+    }
+  }
+
+  return { success: true, action };
+}
+
+export async function kickProjectMemberDB(
+  projectId: string | number,
+  targetUserId: string | number
+) {
+  await initDB();
+  const numProjId = Number(projectId);
+  const numTargetId = Number(targetUserId);
+
+  try {
+    const p = getPool();
+    await p.query(
+      `DELETE FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2`,
+      [numProjId, numTargetId]
+    );
+    await p.query(
+      `DELETE FROM "project_join_requests" WHERE "projectId" = $1 AND "userId" = $2`,
+      [numProjId, numTargetId]
+    );
+  } catch {}
+
+  memoryMembersStore = memoryMembersStore.filter(
+    (m) => !(Number(m.projectId) === numProjId && Number(m.userId) === numTargetId)
+  );
+  memoryJoinRequestsStore = memoryJoinRequestsStore.filter(
+    (r) => !(Number(r.projectId) === numProjId && Number(r.userId) === numTargetId)
+  );
+
+  return { success: true };
+}
+
+export async function cancelJoinRequestDB(
+  projectId: string | number,
+  userId: string | number
+) {
+  await initDB();
+  const numProjId = Number(projectId);
+  const numUserId = Number(userId);
+
+  try {
+    const p = getPool();
+    await p.query(
+      `DELETE FROM "project_join_requests" WHERE "projectId" = $1 AND "userId" = $2`,
+      [numProjId, numUserId]
+    );
+  } catch {}
+
+  memoryJoinRequestsStore = memoryJoinRequestsStore.filter(
+    (r) => !(Number(r.projectId) === numProjId && Number(r.userId) === numUserId)
+  );
+
+  return { success: true };
 }
 
 export async function leaveProjectDB(userId: string | number, projectIdOrKey: string | number) {
@@ -761,6 +963,10 @@ export async function leaveProjectDB(userId: string | number, projectIdOrKey: st
         `DELETE FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2`,
         [numProjId, numUserId]
       );
+      await p.query(
+        `DELETE FROM "project_join_requests" WHERE "projectId" = $1 AND "userId" = $2`,
+        [numProjId, numUserId]
+      );
     }
   } catch (err: any) {
     console.warn('[leaveProjectDB Error]:', err.message);
@@ -768,6 +974,9 @@ export async function leaveProjectDB(userId: string | number, projectIdOrKey: st
 
   memoryMembersStore = memoryMembersStore.filter(
     (m) => !(Number(m.projectId) === numProjId && Number(m.userId) === numUserId)
+  );
+  memoryJoinRequestsStore = memoryJoinRequestsStore.filter(
+    (r) => !(Number(r.projectId) === numProjId && Number(r.userId) === numUserId)
   );
 
   return { success: true };
@@ -896,6 +1105,8 @@ export async function createIssueDB(data: {
   projectId?: number;
   project?: string;
   labels?: string[];
+  epic?: string;
+  sprint?: string;
   dueDate?: string;
   estimatedHours?: number;
   subtasks?: any[];
@@ -908,19 +1119,21 @@ export async function createIssueDB(data: {
   const status = data.status || 'todo';
   const priority = data.priority || 'medium';
   const assigneeName = data.assigneeName || 'General (Anyone)';
-  const reporterName = data.reporterName || 'karri';
+  const reporterName = data.reporterName || 'Current User';
   const projectId = data.projectId ? Number(data.projectId) : 1;
   const project = data.project || 'Teader Platform Core';
-  const labelsStr = JSON.stringify(data.labels || ['Platform Core']);
+  const epic = data.epic ? data.epic.trim() : 'General';
+  const sprint = data.sprint || 'Sprint 24.3';
+  const labelsStr = JSON.stringify(data.labels || ['General']);
   const estimatedHours = Number(data.estimatedHours) || 2;
   const dueDate = data.dueDate || null;
 
   try {
     const p = getPool();
     await p.query(
-      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "estimatedHours", "dueDate")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, estimatedHours, dueDate]
+      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "estimatedHours", "dueDate", "epic", "sprint")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, estimatedHours, dueDate, epic, sprint]
     );
 
     if (data.subtasks && Array.isArray(data.subtasks)) {
@@ -946,7 +1159,9 @@ export async function createIssueDB(data: {
     reporterName,
     projectId,
     project,
-    labels: data.labels || ['Platform Core'],
+    epic,
+    sprint,
+    labels: data.labels || ['General'],
     dueDate,
     estimatedHours,
     loggedHours: 0,
@@ -985,7 +1200,7 @@ export async function updateIssueStatusDB(
     values.push(updates.status);
 
     if (updates.status === 'done') {
-      const compName = updates.completedByName || updates.assigneeName || 'karri';
+      const compName = updates.completedByName || updates.assigneeName || 'Current User';
       const compAt = updates.completedAt || new Date().toISOString();
       fields.push(`"completedByName" = $${paramIdx++}`);
       values.push(compName);
@@ -993,15 +1208,12 @@ export async function updateIssueStatusDB(
       values.push(compAt);
       updates.completedByName = compName;
       updates.completedAt = compAt;
+    } else {
+      fields.push(`"completedByName" = NULL`);
+      fields.push(`"completedAt" = NULL`);
+      updates.completedByName = null;
+      updates.completedAt = null;
     }
-  }
-  if (updates.completedByName !== undefined && updates.status !== 'done') {
-    fields.push(`"completedByName" = $${paramIdx++}`);
-    values.push(updates.completedByName);
-  }
-  if (updates.completedAt !== undefined && updates.status !== 'done') {
-    fields.push(`"completedAt" = $${paramIdx++}`);
-    values.push(updates.completedAt);
   }
   if (updates.title !== undefined) {
     fields.push(`"title" = $${paramIdx++}`);

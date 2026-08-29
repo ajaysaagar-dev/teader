@@ -15,7 +15,6 @@ import {
   Layers, 
   FolderTree, 
   LayoutGrid, 
-  Terminal, 
   Users, 
   Sparkles, 
   ArrowUpRight,
@@ -35,7 +34,7 @@ interface ProjectOverviewViewProps {
     ownerName?: string;
   } | null;
   members?: Array<{ id: number | string; name: string; email: string; avatar: string }>;
-  onNavigateTab: (tab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => void;
+  onNavigateTab: (tab: 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => void;
   onOpenNewIssue: () => void;
 }
 
@@ -437,10 +436,10 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
           <div className="pt-3 border-t border-[#2A2C30]/50 flex items-center justify-between text-[11px] text-[#787C83]">
             <span>Active blocker mitigation active</span>
             <button
-              onClick={() => onNavigateTab('dev')}
+              onClick={() => onNavigateTab('list')}
               className="text-[#3B82F6] hover:underline font-semibold flex items-center gap-0.5"
             >
-              Open Dev Stream <ArrowUpRight size={12} />
+              Open List <ArrowUpRight size={12} />
             </button>
           </div>
         </div>
@@ -456,10 +455,10 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
               Epic & Feature Progress
             </h3>
             <button
-              onClick={() => onNavigateTab('hierarchy')}
+              onClick={() => onNavigateTab('list')}
               className="text-xs text-[#A855F7] hover:underline font-semibold flex items-center gap-0.5"
             >
-              Hierarchical Tree <ArrowUpRight size={12} />
+              Open List <ArrowUpRight size={12} />
             </button>
           </div>
 
