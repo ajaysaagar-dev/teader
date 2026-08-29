@@ -15,10 +15,74 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+export interface ActiveHighlightInfo {
+  lineIndex: number;
+  word?: string;
+  timestamp: number;
+}
+
+/**
+ * Animated letter-by-letter fading highlight for newly typed words in realtime
+ */
+export function TypingLetterFade({
+  text,
+  animKey = 'default',
+}: {
+  text: string;
+  animKey?: string | number;
+}) {
+  if (!text) return null;
+
+  return (
+    <span key={`fade_grp_${animKey}`} className="inline">
+      {text.split('').map((char, index) => (
+        <span
+          key={`char_${animKey}_${index}`}
+          className="animate-letter-fade"
+          style={{
+            animationDelay: `${index * 45}ms`,
+          }}
+        >
+          {char === ' ' ? '\u00A0' : char}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function renderTextWithHighlight(
+  textSlice: string,
+  keyIdx: number,
+  highlight?: ActiveHighlightInfo | null
+): React.ReactNode {
+  if (!highlight || !highlight.word || !highlight.word.trim()) {
+    return textSlice;
+  }
+
+  const targetWord = highlight.word.trim();
+  const wordIdx = textSlice.indexOf(targetWord);
+
+  if (wordIdx !== -1) {
+    const before = textSlice.slice(0, wordIdx);
+    const match = textSlice.slice(wordIdx, wordIdx + targetWord.length);
+    const after = textSlice.slice(wordIdx + targetWord.length);
+
+    return (
+      <span key={`hl_wrap_${keyIdx}`}>
+        {before}
+        <TypingLetterFade text={match} animKey={highlight.timestamp} />
+        {after}
+      </span>
+    );
+  }
+
+  return textSlice;
+}
+
 /**
  * Parses inline GitHub Markdown and embedded HTML tags (<b>, <i>, <code>, <kbd>, <a>, <img>, <br>, <span>, <del>, <sub>, <sup>, etc.)
  */
-export function parseInlineMarkdown(text: string): React.ReactNode[] {
+export function parseInlineMarkdown(text: string, highlight?: ActiveHighlightInfo | null): React.ReactNode[] {
   if (!text) return [];
   const tokens: React.ReactNode[] = [];
   let remaining = text;
@@ -317,14 +381,14 @@ export function parseInlineMarkdown(text: string): React.ReactNode[] {
     // Regular plain text slice until next special marker
     const nextSpecial = remaining.search(/[`*_~\[<]/);
     if (nextSpecial === -1) {
-      tokens.push(remaining);
+      tokens.push(renderTextWithHighlight(remaining, keyIdx++, highlight));
       break;
     } else if (nextSpecial === 0) {
       // Unmatched marker character
-      tokens.push(remaining[0]);
+      tokens.push(renderTextWithHighlight(remaining[0], keyIdx++, highlight));
       remaining = remaining.slice(1);
     } else {
-      tokens.push(remaining.slice(0, nextSpecial));
+      tokens.push(renderTextWithHighlight(remaining.slice(0, nextSpecial), keyIdx++, highlight));
       remaining = remaining.slice(nextSpecial);
     }
   }
@@ -372,9 +436,12 @@ export function CollapsibleDetails({
 }
 
 /**
- * Full GitHub-Flavored Markdown + HTML Parser
+ * Full GitHub-Flavored Markdown + HTML Parser with realtime letter-by-letter fade highlight
  */
-export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null {
+export function renderGithubMarkdown(
+  markdown: string,
+  activeHighlight?: ActiveHighlightInfo | null
+): React.ReactNode[] | null {
   if (!markdown || !markdown.trim()) return null;
   const lines = markdown.split(/\r?\n/);
   const elements: React.ReactNode[] = [];
@@ -383,6 +450,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
   while (i < lines.length) {
     const line = lines[i];
     const trimmed = line.trim();
+    const lineHighlight = activeHighlight && activeHighlight.lineIndex === i ? activeHighlight : null;
 
     // 0. Skip HTML comment line
     if (trimmed.startsWith('<!--') && trimmed.endsWith('-->')) {
@@ -607,25 +675,25 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
       if (tag === 'h1') {
         elements.push(
           <h1 key={`h1_html_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
-            {parseInlineMarkdown(content)}
+            {parseInlineMarkdown(content, lineHighlight)}
           </h1>
         );
       } else if (tag === 'h2') {
         elements.push(
           <h2 key={`h2_html_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
-            {parseInlineMarkdown(content)}
+            {parseInlineMarkdown(content, lineHighlight)}
           </h2>
         );
       } else if (tag === 'h3') {
         elements.push(
           <h3 key={`h3_html_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
-            {parseInlineMarkdown(content)}
+            {parseInlineMarkdown(content, lineHighlight)}
           </h3>
         );
       } else {
         elements.push(
           <h4 key={`h4_html_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
-            {parseInlineMarkdown(content)}
+            {parseInlineMarkdown(content, lineHighlight)}
           </h4>
         );
       }
@@ -637,7 +705,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
     if (trimmed.startsWith('# ')) {
       elements.push(
         <h1 key={`h1_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(2))}
+          {parseInlineMarkdown(trimmed.slice(2), lineHighlight)}
         </h1>
       );
       i++;
@@ -646,7 +714,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
     if (trimmed.startsWith('## ')) {
       elements.push(
         <h2 key={`h2_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(3))}
+          {parseInlineMarkdown(trimmed.slice(3), lineHighlight)}
         </h2>
       );
       i++;
@@ -655,7 +723,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
     if (trimmed.startsWith('### ')) {
       elements.push(
         <h3 key={`h3_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
-          {parseInlineMarkdown(trimmed.slice(4))}
+          {parseInlineMarkdown(trimmed.slice(4), lineHighlight)}
         </h3>
       );
       i++;
@@ -664,7 +732,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
     if (trimmed.startsWith('#### ')) {
       elements.push(
         <h4 key={`h4_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
-          {parseInlineMarkdown(trimmed.slice(5))}
+          {parseInlineMarkdown(trimmed.slice(5), lineHighlight)}
         </h4>
       );
       i++;
@@ -683,7 +751,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
 
       elements.push(
         <div key={`center_${i}`} className="my-4 text-center">
-          {renderGithubMarkdown(centerLines.join('\n'))}
+          {renderGithubMarkdown(centerLines.join('\n'), activeHighlight)}
         </div>
       );
       continue;
@@ -710,7 +778,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
           className="my-3 pl-4 py-2 border-l-4 border-[#DCB001] bg-[#1B1C1F]/60 rounded-r-xl text-xs sm:text-sm text-[#CFD4DD] italic leading-relaxed"
         >
           {quoteLines.map((q, idx) => (
-            <p key={idx} className="my-0.5">{parseInlineMarkdown(q)}</p>
+            <p key={idx} className="my-0.5">{parseInlineMarkdown(q, lineHighlight)}</p>
           ))}
         </blockquote>
       );
@@ -730,7 +798,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
             className="mt-1 w-3.5 h-3.5 rounded accent-[#DCB001] bg-[#1B1C1F] border-[#2A2C30] cursor-default"
           />
           <span className={isChecked ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}>
-            {parseInlineMarkdown(taskText)}
+            {parseInlineMarkdown(taskText, lineHighlight)}
           </span>
         </div>
       );
@@ -744,7 +812,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
       elements.push(
         <div key={`ul_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
           <span className="text-[#DCB001] font-bold text-sm leading-none mt-1.5">•</span>
-          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText)}</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText, lineHighlight)}</span>
         </div>
       );
       i++;
@@ -757,7 +825,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
       elements.push(
         <div key={`ol_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
           <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0 mt-0.5">{numMatch[1]}.</span>
-          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2])}</span>
+          <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2], lineHighlight)}</span>
         </div>
       );
       i++;
@@ -774,7 +842,7 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
     // 16. Paragraph
     elements.push(
       <p key={`p_${i}`} className="my-1.5 text-xs sm:text-sm text-[#CFD4DD] leading-relaxed">
-        {parseInlineMarkdown(line)}
+        {parseInlineMarkdown(line, lineHighlight)}
       </p>
     );
     i++;
@@ -783,14 +851,22 @@ export function renderGithubMarkdown(markdown: string): React.ReactNode[] | null
   return elements;
 }
 
-export function MarkdownRenderer({ content, className = '' }: { content?: string; className?: string }) {
+export function MarkdownRenderer({
+  content,
+  activeHighlight,
+  className = '',
+}: {
+  content?: string;
+  activeHighlight?: ActiveHighlightInfo | null;
+  className?: string;
+}) {
   if (!content || !content.trim()) {
     return <p className="text-xs text-[#787C83] italic">No description provided.</p>;
   }
 
   return (
     <div className={`space-y-1 font-sans text-xs leading-relaxed ${className}`}>
-      {renderGithubMarkdown(content)}
+      {renderGithubMarkdown(content, activeHighlight)}
     </div>
   );
 }
