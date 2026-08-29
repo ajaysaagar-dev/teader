@@ -49,6 +49,7 @@ export interface ProjectDoc {
   title: string;
   fileName: string;
   filePath?: string;
+  folder?: string;
   createdAt?: string;
   updatedAt?: string;
   content?: string;

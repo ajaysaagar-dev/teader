@@ -1138,6 +1138,7 @@ export interface ProjectDocRecord {
   title: string;
   fileName: string;
   filePath: string;
+  folder?: string;
   content?: string;
   createdAt: string;
   updatedAt: string;
@@ -1184,6 +1185,7 @@ export async function createProjectDocDB(data: {
   title: string;
   fileName: string;
   filePath: string;
+  folder?: string;
   content?: string;
 }) {
   await initDB();
@@ -1196,6 +1198,7 @@ export async function createProjectDocDB(data: {
   const userName = data.userName || 'karri';
   const now = new Date().toISOString();
   const content = data.content || '';
+  const folder = data.folder || 'Start';
 
   const record: ProjectDocRecord = {
     id: data.id,
@@ -1205,6 +1208,7 @@ export async function createProjectDocDB(data: {
     title: data.title,
     fileName: data.fileName,
     filePath: data.filePath,
+    folder,
     content,
     createdAt: now,
     updatedAt: now,
@@ -1242,7 +1246,7 @@ export async function createProjectDocDB(data: {
 
 export async function updateProjectDocDB(
   docId: string,
-  updates: { title?: string; fileName?: string; filePath?: string; content?: string }
+  updates: { title?: string; fileName?: string; filePath?: string; folder?: string; content?: string }
 ) {
   await initDB();
   const fields: string[] = [];
@@ -1281,6 +1285,7 @@ export async function updateProjectDocDB(
     if (updates.title !== undefined) target.title = updates.title.trim();
     if (updates.fileName !== undefined) target.fileName = updates.fileName.trim();
     if (updates.filePath !== undefined) target.filePath = updates.filePath;
+    if (updates.folder !== undefined) target.folder = updates.folder;
     if (updates.content !== undefined) target.content = updates.content;
     target.updatedAt = new Date().toISOString();
   }

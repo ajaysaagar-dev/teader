@@ -98,8 +98,24 @@ export async function PUT(
     }
 
     const body = await req.json();
-    const { title, content } = body;
-    const localPath = path.join(DOCS_DIR, doc.fileName);
+    const { title, fileName: newFileName, folder, content } = body;
+    let currentFileName = doc.fileName;
+    let localPath = path.join(DOCS_DIR, currentFileName);
+
+    // If fileName was renamed, rename disk file
+    if (newFileName && newFileName.trim() && newFileName.trim() !== currentFileName) {
+      const sanitizedName = newFileName.trim().endsWith('.md') ? newFileName.trim() : `${newFileName.trim()}.md`;
+      const newPath = path.join(DOCS_DIR, sanitizedName);
+      try {
+        if (fs.existsSync(localPath)) {
+          fs.renameSync(localPath, newPath);
+        }
+        currentFileName = sanitizedName;
+        localPath = newPath;
+      } catch (e: any) {
+        console.warn('Could not rename doc file on disk:', e.message);
+      }
+    }
 
     // 1. Write updated content to server .md file on disk
     if (content !== undefined) {
@@ -110,9 +126,11 @@ export async function PUT(
       }
     }
 
-    // 2. Update database record with title, content, and localPath
+    // 2. Update database record with title, fileName, folder, content, and localPath
     await updateProjectDocDB(docId, {
       title: title !== undefined ? title.trim() : undefined,
+      fileName: currentFileName,
+      folder: folder !== undefined ? folder.trim() : undefined,
       content: content !== undefined ? content : undefined,
       filePath: localPath,
     });
@@ -120,8 +138,9 @@ export async function PUT(
     const docUpdatePayload = {
       id: docId,
       projectId: (doc as any).projectId || resolvedParams.id,
-      title: title || doc.title,
-      fileName: doc.fileName,
+      title: title !== undefined ? title.trim() : doc.title,
+      fileName: currentFileName,
+      folder: folder !== undefined ? folder.trim() : (doc as any).folder || 'Start',
       content,
       updatedAt: new Date().toISOString(),
     };
@@ -136,8 +155,9 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       id: docId,
-      title: title || doc.title,
-      fileName: doc.fileName,
+      title: docUpdatePayload.title,
+      fileName: docUpdatePayload.fileName,
+      folder: docUpdatePayload.folder,
       updatedAt: docUpdatePayload.updatedAt,
     });
   } catch (err: any) {
