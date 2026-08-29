@@ -47,7 +47,7 @@ import {
 import { toast } from 'sonner';
 import { RandomLoadingText } from './ui/RandomLoadingText';
 import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache';
-import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { useRealtimeSubscription, RealtimeEvent, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { renderGithubMarkdown, parseInlineMarkdown, ActiveHighlightInfo, ActiveCursorInfo } from '@/components/ui/MarkdownRenderer';
 
@@ -58,6 +58,26 @@ interface ProjectDocsViewProps {
 }
 
 const DEFAULT_FOLDER = 'Start';
+
+const COLLABORATOR_COLORS = [
+  '#06B6D4', // Cyan
+  '#22C55E', // Green
+  '#A855F7', // Purple
+  '#EC4899', // Pink
+  '#F97316', // Orange
+  '#3B82F6', // Blue
+  '#EAB308', // Yellow
+  '#14B8A6', // Teal
+];
+
+function getCollaboratorColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < (userId || '').length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % COLLABORATOR_COLORS.length;
+  return COLLABORATOR_COLORS[index];
+}
 
 export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   projectId,
@@ -217,7 +237,46 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     lineIndex: 0,
     col: 1,
     offset: 0,
+    isLocal: true,
+    color: '#DCB001',
   });
+
+  const [remoteCursors, setRemoteCursors] = useState<Record<string, ActiveCursorInfo & { lastActive: number }>>({});
+  const broadcastCursorThrottleRef = useRef<NodeJS.Timeout | null>(null);
+
+  const broadcastCursor = useCallback((lineIndex: number, col: number, offset: number) => {
+    if (broadcastCursorThrottleRef.current) return;
+    broadcastCursorThrottleRef.current = setTimeout(() => {
+      broadcastCursorThrottleRef.current = null;
+    }, 80);
+
+    const curId = selectedDocIdCurrentRef.current;
+    if (!curId) return;
+
+    let user: any = null;
+    try {
+      const raw = localStorage.getItem('teader_user');
+      user = raw ? JSON.parse(raw) : null;
+    } catch {}
+
+    const userId = user?.id || user?.email || 'local_user';
+    const userName = user?.name || 'Collaborator';
+
+    publishClientRealtimeEvent({
+      type: 'DOC_CURSOR_MOVED',
+      projectId,
+      payload: {
+        docId: String(curId),
+        userId: String(userId),
+        userName,
+        color: getCollaboratorColor(String(userId)),
+        lineIndex,
+        col,
+        offset,
+        timestamp: Date.now(),
+      },
+    });
+  }, [projectId]);
 
   const updateCursorPos = useCallback(() => {
     const textarea = textareaRef.current;
@@ -233,8 +292,43 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       lineIndex,
       col,
       offset,
+      isLocal: true,
+      color: '#DCB001',
     });
+
+    broadcastCursor(lineIndex, col, offset);
+  }, [broadcastCursor]);
+
+  // Periodically cleanup stale remote cursors
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setRemoteCursors((prev) => {
+        let changed = false;
+        const next: typeof prev = {};
+        for (const [k, v] of Object.entries(prev)) {
+          if (now - (v.lastActive || 0) < 10000) {
+            next[k] = v;
+          } else {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
+
+  const allActiveCursors = useMemo(() => {
+    const now = Date.now();
+    const activeRemotes = Object.values(remoteCursors).filter(
+      (c) => now - (c.lastActive || 0) < 10000
+    );
+    return [
+      { ...cursorPos, isLocal: true, color: '#DCB001' },
+      ...activeRemotes,
+    ];
+  }, [cursorPos, remoteCursors]);
 
   // 1. Fetch all docs for this project
   const fetchDocsList = useCallback(async (selectNewestId?: string) => {
@@ -398,6 +492,36 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 return remaining;
               });
             }
+          }
+          break;
+        }
+
+        case 'DOC_CURSOR_MOVED': {
+          const p = event.payload;
+          let currentUserId = 'local_user';
+          try {
+            const raw = localStorage.getItem('teader_user');
+            if (raw) currentUserId = String(JSON.parse(raw)?.id || JSON.parse(raw)?.email || 'local_user');
+          } catch {}
+
+          if (
+            p &&
+            String(p.docId) === String(selectedDocIdCurrentRef.current) &&
+            String(p.userId) !== String(currentUserId)
+          ) {
+            setRemoteCursors((prev) => ({
+              ...prev,
+              [p.userId]: {
+                lineIndex: Number(p.lineIndex) || 0,
+                col: Number(p.col) || 1,
+                offset: Number(p.offset) || 0,
+                userId: String(p.userId),
+                userName: String(p.userName || 'Collaborator'),
+                color: p.color || getCollaboratorColor(String(p.userId)),
+                isLocal: false,
+                lastActive: Date.now(),
+              },
+            }));
           }
           break;
         }
@@ -1279,9 +1403,27 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <div className="max-w-4xl mx-auto space-y-2 text-[#CFD4DD] font-sans">
                       {viewMode === 'split' && (
                         <div className="flex items-center justify-between pb-2 text-[11px] font-mono text-[#787C83] border-b border-[#222428] mb-4">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_8px_#22C55E]" />
                             <span className="text-[#CFD4DD] font-bold">SYNCHRONIZED PREVIEW</span>
+                            {Object.values(remoteCursors).length > 0 && (
+                              <div className="flex items-center gap-1.5 ml-2">
+                                {Object.values(remoteCursors).map((rc) => (
+                                  <span
+                                    key={rc.userId}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border"
+                                    style={{
+                                      backgroundColor: `${rc.color}15`,
+                                      borderColor: `${rc.color}40`,
+                                      color: rc.color,
+                                    }}
+                                  >
+                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: rc.color }} />
+                                    <span>{rc.userName}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <span>Ln {cursorPos.lineIndex + 1}:{cursorPos.col || 1}</span>
                         </div>
@@ -1289,7 +1431,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
                       <div className="p-6 sm:p-8 bg-[#141518] border border-[#222428] rounded-2xl shadow-xl">
                         {activeContent || savedContent ? (
-                          renderGithubMarkdown(activeContent || savedContent, activeHighlight, cursorPos)
+                          renderGithubMarkdown(activeContent || savedContent, activeHighlight, allActiveCursors)
                         ) : (
                           <p className="text-xs text-[#787C83] italic">Start typing in the editor to see real-time preview...</p>
                         )}

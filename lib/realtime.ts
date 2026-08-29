@@ -13,7 +13,8 @@ export type RealtimeEventType =
   | 'MESSAGE_DELETED'
   | 'DOC_CREATED'
   | 'DOC_UPDATED'
-  | 'DOC_DELETED';
+  | 'DOC_DELETED'
+  | 'DOC_CURSOR_MOVED';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;
