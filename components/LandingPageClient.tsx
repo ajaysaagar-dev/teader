@@ -73,66 +73,7 @@ export default function LandingPageClient() {
       .catch(() => {});
   }, []);
 
-  // ─── Custom Linear Smooth Scroll Engine (NO Ease-In-Ease-Out) ───────────
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    let targetY = window.scrollY;
-    let currentY = window.scrollY;
-    let isRunning = false;
-    let rafId: number;
-
-    const updateScroll = () => {
-      const diff = targetY - currentY;
-      if (Math.abs(diff) > 0.5) {
-        // Pure Linear constant velocity step (NO ease-in / ease-out curves)
-        const step = Math.sign(diff) * Math.min(Math.abs(diff), Math.max(16, Math.abs(diff) * 0.22));
-        currentY += step;
-        window.scrollTo(0, Math.round(currentY));
-        rafId = requestAnimationFrame(updateScroll);
-      } else {
-        currentY = targetY;
-        window.scrollTo(0, currentY);
-        isRunning = false;
-      }
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      // Allow default behavior for interactive nested scroll areas
-      const target = e.target as HTMLElement;
-      if (target && target.closest('.allow-native-scroll, textarea, pre, code')) {
-        return;
-      }
-
-      e.preventDefault();
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      targetY = Math.max(0, Math.min(maxScroll, targetY + e.deltaY * 1.1));
-
-      if (!isRunning) {
-        isRunning = true;
-        currentY = window.scrollY;
-        rafId = requestAnimationFrame(updateScroll);
-      }
-    };
-
-    const onScroll = () => {
-      if (!isRunning) {
-        targetY = window.scrollY;
-        currentY = window.scrollY;
-      }
-    };
-
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('scroll', onScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('wheel', onWheel);
-      window.removeEventListener('scroll', onScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, []);
 
   // ─── Scroll Reveal Observer for Simple Smooth Animations ─────────────────
   useEffect(() => {
@@ -176,7 +117,7 @@ export default function LandingPageClient() {
   const isLoggedIn = mounted && Boolean(currentUser);
 
   return (
-    <div ref={scrollContainerRef} className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-landing selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
+    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-landing selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
       {/* ─── Sand Dissolve Canvas Intro ──────────────────────────────── */}
       <TeaderSandCanvas />
 
