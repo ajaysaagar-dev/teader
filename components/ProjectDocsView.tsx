@@ -278,6 +278,29 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     });
   }, [projectId]);
 
+  const broadcastCursorExit = useCallback((targetDocId?: string | number | null) => {
+    const docId = targetDocId || selectedDocIdCurrentRef.current;
+    if (!docId) return;
+
+    let user: any = null;
+    try {
+      const raw = localStorage.getItem('teader_user');
+      user = raw ? JSON.parse(raw) : null;
+    } catch {}
+
+    const userId = user?.id || user?.email || 'local_user';
+
+    publishClientRealtimeEvent({
+      type: 'DOC_CURSOR_LEFT',
+      projectId,
+      payload: {
+        docId: String(docId),
+        userId: String(userId),
+        timestamp: Date.now(),
+      },
+    });
+  }, [projectId]);
+
   const updateCursorPos = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -298,6 +321,30 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     broadcastCursor(lineIndex, col, offset);
   }, [broadcastCursor]);
+
+  // Immediately remove cursor when document changes, user exits tab, or closes browser
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      broadcastCursorExit();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        broadcastCursorExit();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      broadcastCursorExit(selectedDocId);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedDocId, broadcastCursorExit]);
 
   // Periodically cleanup stale remote cursors
   useEffect(() => {
@@ -522,6 +569,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 lastActive: Date.now(),
               },
             }));
+          }
+          break;
+        }
+
+        case 'DOC_CURSOR_LEFT': {
+          const p = event.payload;
+          if (p && p.userId) {
+            setRemoteCursors((prev) => {
+              if (!prev[p.userId]) return prev;
+              const next = { ...prev };
+              delete next[p.userId];
+              return next;
+            });
           }
           break;
         }

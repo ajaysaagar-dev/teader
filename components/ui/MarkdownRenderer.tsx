@@ -47,30 +47,44 @@ export function LiveCursorBeacon({
   color?: string;
   isLocal?: boolean;
 }) {
-  const badgeText = userName || (isLocal ? 'You' : `Ln ${lineIndex + 1}:${col}`);
+  const displayName = userName || (isLocal ? 'You' : `Ln ${lineIndex + 1}:${col}`);
 
   return (
     <span
-      className="inline-block relative align-middle -translate-y-0.5 mx-0.5 z-30 pointer-events-none group/cursor"
-      title={userName ? `${userName}'s cursor at Line ${lineIndex + 1}, Col ${col}` : `Live Cursor at Line ${lineIndex + 1}, Column ${col}`}
+      className="inline-block relative align-middle -translate-y-0.5 mx-0.5 z-30 pointer-events-none group/cursor select-none"
+      title={userName ? `${userName}'s cursor (Line ${lineIndex + 1}, Col ${col})` : `Live Cursor at Line ${lineIndex + 1}, Column ${col}`}
     >
+      {/* Glowing Pulsing Caret Bar */}
       <span
-        className="inline-block w-[2.5px] h-4 animate-pulse rounded-full"
+        className="inline-block w-[3px] h-[18px] animate-pulse rounded-full align-middle shadow-md transition-transform"
         style={{
           backgroundColor: color,
-          boxShadow: `0 0 10px ${color}`,
+          boxShadow: `0 0 12px ${color}`,
         }}
       />
+      {/* Floating Username Nametag Badge near the text cursor */}
       <span
-        className="absolute -top-5 -left-3 px-1.5 py-0.2 text-[9px] font-mono font-bold rounded shadow-lg whitespace-nowrap opacity-95 scale-90 transition-all border flex items-center gap-1"
+        className="absolute -top-6 -left-2 px-1.5 py-0.5 text-[10px] font-sans font-bold rounded-md shadow-xl whitespace-nowrap opacity-100 transition-all border flex items-center gap-1.5 z-40 pointer-events-none"
         style={{
-          backgroundColor: '#16181C',
+          backgroundColor: '#0F1014',
           borderColor: color,
-          color: color,
+          color: '#FFFFFF',
+          boxShadow: `0 4px 12px rgba(0,0,0,0.6), 0 0 8px ${color}33`,
         }}
       >
-        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-        <span>{badgeText}</span>
+        <span
+          className="w-2 h-2 rounded-full shrink-0 shadow-sm"
+          style={{ backgroundColor: color }}
+        />
+        <span className="leading-none text-white tracking-wide">{displayName}</span>
+        {/* Tiny triangular pointer attached to cursor */}
+        <span
+          className="absolute -bottom-1 left-2 w-2 h-2 rotate-45 border-r border-b"
+          style={{
+            backgroundColor: '#0F1014',
+            borderColor: color,
+          }}
+        />
       </span>
     </span>
   );
