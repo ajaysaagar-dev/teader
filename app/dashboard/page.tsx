@@ -93,8 +93,13 @@ export default function DashboardPage() {
           const newTask = event.payload;
           if (newTask) {
             setIssues((prev) => {
-              if (prev.some((i) => i.id === newTask.id || i.key === newTask.key)) {
-                return prev.map((i) => (i.id === newTask.id || i.key === newTask.key ? { ...i, ...newTask } : i));
+              const existingIdx = prev.findIndex(
+                (i) => i.id === newTask.id || (String(i.id).startsWith('temp_') && (i.title === newTask.title || i.key === newTask.key))
+              );
+              if (existingIdx !== -1) {
+                const next = [...prev];
+                next[existingIdx] = newTask;
+                return next;
               }
               return [newTask, ...prev];
             });
