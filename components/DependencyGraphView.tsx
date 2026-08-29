@@ -872,7 +872,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 </marker>
               </defs>
 
-              {/* ─── Render Smooth Vertical Curved Lines Indicating Who Completed Each Task ─── */}
+              {/* ─── Render Smooth Vertical Curved Lines Indicating Who Ticked Each Task as Completed ─── */}
               {showCompleterCurves && filteredEdges.map((edge) => {
                 const startX = edge.fromNode.x + edge.fromNode.width;
                 const startY = edge.fromNode.y + edge.fromNode.height / 2;
@@ -887,6 +887,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 const cp1Y = startY + dy * 0.15;
                 const cp2X = endX - dx * 0.5;
                 const cp2Y = endY - dy * 0.15;
+
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
 
                 const pathData = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
                 const isHovered = hoveredNodeId === edge.fromNode.id || hoveredNodeId === edge.toNode.id;
@@ -916,6 +919,14 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       strokeOpacity={isHovered ? 1 : 0.75}
                       markerEnd={edge.isCompleted ? 'url(#arrow-completer)' : undefined}
                     />
+
+                    {/* Midpoint Ticked Badge if Completed */}
+                    {edge.isCompleted && (
+                      <g transform={`translate(${midX - 10}, ${midY - 10})`}>
+                        <circle cx={10} cy={10} r={9} fill="#0A0B0D" stroke={strokeColor} strokeWidth={1.5} />
+                        <path d="M 6 10 L 9 13 L 14 7" fill="none" stroke="#22C55E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </g>
+                    )}
 
                     {/* Junction Nodes */}
                     <circle
@@ -948,6 +959,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#131417] border border-[#222428] text-xs font-mono text-white shadow-md pointer-events-auto"
                 >
                   <Calendar size={12} className="text-[#DCB001]" />
+                  <span className="text-[#787C83] text-[10px] uppercase">Assigned:</span>
                   <span className="font-bold">{hdr.label}</span>
                 </div>
               ))}
@@ -957,7 +969,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             {creatorTracks.map((track) => (
               <div
                 key={`creator_label_${track.name}`}
-                style={{ position: 'absolute', left: 24, top: track.y + 40 }}
+                style={{ position: 'absolute', left: 24, top: track.y + 36 }}
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#121316] border border-[#222428] text-xs font-mono shadow-md pointer-events-auto"
               >
                 <div
@@ -965,7 +977,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   style={{ backgroundColor: track.color }}
                 />
                 <span className="font-bold text-white">{track.name}</span>
-                <span className="text-[10px] text-[#787C83]">Creator</span>
+                <span className="text-[10px] text-[#DCB001] px-1 py-0.2 bg-[#DCB001]/10 rounded border border-[#DCB001]/20">Creator</span>
               </div>
             ))}
 
@@ -986,7 +998,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     top: node.y,
                     width: node.width,
                     height: node.height,
-                    borderLeftColor: node.completerColor,
+                    borderLeftColor: node.isDone ? '#22C55E' : node.completerColor,
                     borderLeftWidth: 4,
                   }}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer shadow-lg flex flex-col justify-between group ${
@@ -1005,14 +1017,23 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                         {node.issue.key}
                       </span>
 
-                      {/* Completer / Assignee Badge */}
+                      {/* Who Ticked as Completed / Assignee Badge */}
                       <div
-                        className="flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-mono truncate max-w-[95px] border border-white/5"
-                        style={{ backgroundColor: `${node.completerColor}15`, color: node.completerColor }}
-                        title={`Completed by ${node.completerName}`}
+                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono truncate max-w-[130px] border ${
+                          node.isDone
+                            ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30 font-bold'
+                            : 'bg-white/5 text-[#9BA1A6] border-white/10'
+                        }`}
+                        title={node.isDone ? `Ticked as Completed by ${node.completerName}` : `Assigned to ${node.completerName}`}
                       >
-                        <UserCheck size={9} />
-                        <span className="truncate">{node.completerName}</span>
+                        {node.isDone ? (
+                          <CheckCircle2 size={10} className="text-[#22C55E] shrink-0" />
+                        ) : (
+                          <Clock size={10} className="text-[#DCB001] shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {node.isDone ? `✓ Ticked: ${node.completerName}` : node.completerName}
+                        </span>
                       </div>
                     </div>
 
@@ -1042,10 +1063,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   </div>
 
                   {/* Footer: Date Assigned & Creator Note */}
-                  <div className="flex items-center justify-between text-[9px] font-mono text-[#787C83]">
+                  <div className="flex items-center justify-between text-[9px] font-mono text-[#787C83] pt-0.5 border-t border-[#1C1D20]">
                     <span className="capitalize text-[#9BA1A6] flex items-center gap-1">
                       <UserPlus size={9} className="text-[#787C83]" />
-                      Created by {node.creatorName}
+                      Created by <strong className="text-white font-normal">{node.creatorName}</strong>
                     </span>
                     <span className="text-[#DCB001]">{node.dateAssignedLabel}</span>
                   </div>
