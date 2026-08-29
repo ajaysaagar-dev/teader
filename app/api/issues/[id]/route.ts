@@ -17,6 +17,16 @@ export async function PATCH(
     return NextResponse.json({ error: 'Validation failed', issues: error.issues }, { status: 400 });
   }
 
+  // Ensure completedByName defaults to the current session user when marking done
+  if (data.status === 'done') {
+    if (!data.completedByName) {
+      data.completedByName = session.name || session.email || 'Current User';
+    }
+    if (!data.completedAt) {
+      data.completedAt = new Date().toISOString();
+    }
+  }
+
   try {
     await updateIssueStatusDB(resolvedParams.id, data);
     const updated = await getIssueByIdDB(resolvedParams.id);

@@ -14,7 +14,11 @@ import {
   Lock,
   LogOut,
   FolderKanban,
-  ShieldCheck
+  ShieldCheck,
+  UserCheck,
+  UserX,
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -34,6 +38,8 @@ interface ProjectSettingsViewProps {
   onOpenDeleteModal?: () => void;
   onOpenLeaveModal?: () => void;
   onOpenEditModal?: () => void;
+  onMemberKicked?: (userId: number | string) => void;
+  onMembersUpdated?: (updatedMembers: any[]) => void;
 }
 
 export function ProjectSettingsView({
@@ -44,8 +50,105 @@ export function ProjectSettingsView({
   onOpenDeleteModal,
   onOpenLeaveModal,
   onOpenEditModal,
+  onMemberKicked,
+  onMembersUpdated,
 }: ProjectSettingsViewProps) {
   const [copiedKey, setCopiedKey] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [kickingUserId, setKickingUserId] = useState<string | number | null>(null);
+  const [processingRequestId, setProcessingRequestId] = useState<string | number | null>(null);
+
+  // Fetch pending join requests for project owner
+  React.useEffect(() => {
+    if (!project?.id || !isCreator) return;
+    let isMounted = true;
+    setLoadingRequests(true);
+
+    fetch(`/api/projects/${project.id}/join-requests`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setJoinRequests(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoadingRequests(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [project?.id, isCreator]);
+
+  // Accept or Reject Join Request
+  const handleJoinRequestAction = async (targetUserId: number | string, action: 'accept' | 'reject') => {
+    if (!project?.id) return;
+    setProcessingRequestId(targetUserId);
+
+    try {
+      const res = await fetch(`/api/projects/${project.id}/join-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId, action }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Failed to ${action} request`);
+      }
+
+      setJoinRequests((prev) => prev.filter((r) => String(r.userId) !== String(targetUserId)));
+
+      if (action === 'accept') {
+        toast.success('Join request accepted! Member added to project.');
+        // Refresh project members
+        const memRes = await fetch(`/api/projects/${project.id}/members`);
+        if (memRes.ok) {
+          const freshMembers = await memRes.json();
+          if (onMembersUpdated) onMembersUpdated(freshMembers);
+        }
+      } else {
+        toast.info('Join request rejected.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'An error occurred.');
+    } finally {
+      setProcessingRequestId(null);
+    }
+  };
+
+  // Kick / Remove Member
+  const handleKickMember = async (targetUserId: number | string, targetName: string) => {
+    if (!project?.id) return;
+    const confirmed = window.confirm(`Are you sure you want to remove "${targetName}" from this project workspace?`);
+    if (!confirmed) return;
+
+    setKickingUserId(targetUserId);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/members?userId=${targetUserId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to remove member');
+      }
+
+      toast.success(`Removed ${targetName} from the project.`);
+      if (onMemberKicked) {
+        onMemberKicked(targetUserId);
+      }
+      if (onMembersUpdated) {
+        onMembersUpdated(members.filter((m) => String(m.id || m.userId) !== String(targetUserId)));
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove member.');
+    } finally {
+      setKickingUserId(null);
+    }
+  };
 
   const handleCopyKey = async () => {
     if (!project?.key) return;
@@ -211,7 +314,84 @@ export function ProjectSettingsView({
           </div>
         </div>
 
-        {/* 3. Collaborators & Joined Members */}
+        {/* 3. Join Requests (Owner Only) */}
+        {isCreator && (
+          <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-[#DCB001]" />
+                <h3 className="text-sm font-bold text-white">Pending Join Requests</h3>
+              </div>
+              <span className="text-xs font-mono text-[#DCB001] bg-[#DCB001]/10 px-2 py-0.5 rounded border border-[#DCB001]/30">
+                {joinRequests.length} pending
+              </span>
+            </div>
+
+            {loadingRequests ? (
+              <div className="flex items-center justify-center p-6 text-xs text-[#787C83] gap-2">
+                <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+                <span>Checking join requests...</span>
+              </div>
+            ) : joinRequests.length === 0 ? (
+              <div className="p-4 rounded-xl bg-[#101114] border border-[#222428] text-center">
+                <p className="text-xs text-[#787C83]">No pending join requests for this project workspace.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {joinRequests.map((req) => {
+                  const isProcessing = String(processingRequestId) === String(req.userId);
+                  return (
+                    <div
+                      key={req.id || req.userId}
+                      className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#2A2C30] hover:border-[#DCB001]/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={req.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                          alt={req.userName}
+                          className="w-9 h-9 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{req.userName}</p>
+                          <p className="text-[10px] font-mono text-[#787C83] truncate">{req.userEmail}</p>
+                          <p className="text-[9px] font-mono text-[#DCB001] pt-0.5">
+                            Requested {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'recently'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {/* Accept Button */}
+                        <button
+                          disabled={isProcessing}
+                          onClick={() => handleJoinRequestAction(req.userId, 'accept')}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#22C55E]/15 hover:bg-[#22C55E]/25 text-[#22C55E] border border-[#22C55E]/30 text-xs font-semibold transition-all disabled:opacity-50"
+                          title="Accept join request"
+                        >
+                          <UserCheck size={12} />
+                          <span>Accept</span>
+                        </button>
+
+                        {/* Reject Button */}
+                        <button
+                          disabled={isProcessing}
+                          onClick={() => handleJoinRequestAction(req.userId, 'reject')}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/30 text-xs font-semibold transition-all disabled:opacity-50"
+                          title="Reject join request"
+                        >
+                          <UserX size={12} />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 4. Collaborators & Joined Members */}
         <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -224,6 +404,9 @@ export function ProjectSettingsView({
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {members.map((m) => {
               const isCurrentUser = currentUser && String(m.id || m.userId) === String(currentUser.id);
+              const isOwnerUser = Number(project?.owner_id) === Number(m.id || m.userId) || Number(project?.creatorId) === Number(m.id || m.userId);
+              const isKicking = String(kickingUserId) === String(m.id || m.userId);
+
               return (
                 <div
                   key={m.id || m.userId}
@@ -245,20 +428,40 @@ export function ProjectSettingsView({
                             You
                           </span>
                         )}
+                        {isOwnerUser && (
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30">
+                            Owner
+                          </span>
+                        )}
                       </div>
                       <p className="text-[10px] font-mono text-[#787C83] truncate">{m.email}</p>
                     </div>
                   </div>
 
-                  {isCurrentUser && onOpenLeaveModal && (
-                    <button
-                      onClick={onOpenLeaveModal}
-                      title="Leave this project"
-                      className="ml-2 p-1.5 rounded-lg bg-[#241512] hover:bg-[#341B17] text-[#F97316] hover:text-white border border-[#F97316]/30 transition-colors shrink-0"
-                    >
-                      <LogOut size={13} />
-                    </button>
-                  )}
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {/* Kick Member Button (For Owner, except on themselves or owner) */}
+                    {isCreator && !isCurrentUser && !isOwnerUser && (
+                      <button
+                        disabled={isKicking}
+                        onClick={() => handleKickMember(m.id || m.userId, m.name)}
+                        title={`Remove ${m.name} from project`}
+                        className="p-1.5 rounded-lg bg-[#241512] hover:bg-[#381614] text-[#EF4444] hover:text-white border border-[#EF4444]/30 transition-colors shrink-0 disabled:opacity-50 flex items-center gap-1 text-xs"
+                      >
+                        <UserX size={13} />
+                        <span className="text-[10px] font-semibold hidden group-hover:inline">Kick</span>
+                      </button>
+                    )}
+
+                    {isCurrentUser && onOpenLeaveModal && (
+                      <button
+                        onClick={onOpenLeaveModal}
+                        title="Leave this project"
+                        className="p-1.5 rounded-lg bg-[#241512] hover:bg-[#341B17] text-[#F97316] hover:text-white border border-[#F97316]/30 transition-colors shrink-0"
+                      >
+                        <LogOut size={13} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}

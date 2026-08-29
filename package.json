@@ -10,9 +10,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:setup": "node scripts/db-seed.js",
-    "db:seed": "node scripts/db-seed.js",
-    "db:reset": "node scripts/db-seed.js"
+    "db:setup": "tsx scripts/db-seed.ts",
+    "db:seed": "tsx scripts/db-seed.ts",
+    "db:reset": "tsx scripts/db-seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^7.9.0",

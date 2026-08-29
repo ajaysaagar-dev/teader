@@ -149,11 +149,53 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   onSelectIssue,
 }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<{
+    id: string;
+    completerName: string;
+    color: string;
+    fromKey: string;
+    fromTitle: string;
+    toKey: string;
+    toTitle: string;
+    isCompleted: boolean;
+    cursorX: number;
+    cursorY: number;
+  } | null>(null);
   const [scale, setScale] = useState(1);
   const [selectedCompleterFilter, setSelectedCompleterFilter] = useState<string | null>(null);
   const [showCompleterCurves, setShowCompleterCurves] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(620);
   const [isGrabbing, setIsGrabbing] = useState(false);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const handleResize = () => {
+      if (el.clientHeight > 0) {
+        setContainerHeight(el.clientHeight);
+      }
+    };
+
+    handleResize();
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(el);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const getCanvasCoords = useCallback((e: React.MouseEvent) => {
+    const el = scrollContainerRef.current;
+    if (!el) return { x: e.clientX, y: e.clientY };
+    const rect = el.getBoundingClientRect();
+    const rawX = (e.clientX - rect.left + el.scrollLeft) / scale;
+    const rawY = (e.clientY - rect.top + el.scrollTop) / scale;
+    return { x: rawX, y: rawY };
+  }, [scale]);
 
   // Drag-to-pan state
   const isDraggingRef = useRef(false);
@@ -323,7 +365,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   const completerList = useMemo(() => {
     const usersMap = new Map<string, { name: string; color: string; count: number; completedCount: number }>();
     issues.forEach((iss) => {
-      const completer = iss.completedByName || iss.assigneeName || iss.assignee?.name || 'Unassigned';
+      const completer = iss.completedByName || (iss.status === 'done' ? (iss.assigneeName || iss.assignee?.name || 'Current User') : (iss.assigneeName || iss.assignee?.name || 'Unassigned'));
       if (!usersMap.has(completer)) {
         usersMap.set(completer, {
           name: completer,
@@ -342,7 +384,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   // ─── Compute Layout: Horizontal Date & Time Assigned, Vertical All User Creators ───
   const { nodes, edges, timeSlotHeaders, userTracks, canvasWidth, canvasHeight } = useMemo(() => {
     if (issues.length === 0) {
-      return { nodes: [], edges: [], timeSlotHeaders: [], userTracks: [], canvasWidth: 1200, canvasHeight: 700 };
+      return { nodes: [], edges: [], timeSlotHeaders: [], userTracks: [], canvasWidth: 1200, canvasHeight: containerHeight };
     }
 
     // Sort issues chronologically by assigned date & time (createdAt / dueDate)
@@ -362,14 +404,20 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       if (iss.completedByName) allUsersSet.add(iss.completedByName);
     });
     const userTracksList = Array.from(allUsersSet);
+    const numTracks = Math.max(1, userTracksList.length);
 
-    // Dimensions
-    const NODE_WIDTH = 260;
-    const NODE_HEIGHT = 88;
-    const COLUMN_WIDTH = 320;
-    const ROW_HEIGHT = 160;
-    const START_X = 200;
-    const START_Y = 110;
+    // Dimensions: Automatically fit within vertical screen height (no vertical scrolling needed)
+    const TOP_HEADER_OFFSET = 52;
+    const BOTTOM_PADDING = 14;
+    const availableVerticalHeight = Math.max(220, containerHeight - TOP_HEADER_OFFSET - BOTTOM_PADDING);
+
+    // Calculate dynamic row height to fit all user lanes evenly within the vertical viewport
+    const ROW_HEIGHT = Math.max(75, Math.min(160, availableVerticalHeight / numTracks));
+    const NODE_HEIGHT = Math.max(62, Math.min(84, ROW_HEIGHT - 12));
+    const NODE_WIDTH = 250;
+    const COLUMN_WIDTH = 300;
+    const START_X = 190;
+    const START_Y = TOP_HEADER_OFFSET + 6;
 
     const timeHeaders: { slot: number; label: string; x: number }[] = [];
     const computedNodes: TimelineNode[] = [];
@@ -378,7 +426,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
     sortedIssues.forEach((iss, index) => {
       const { label: dateTimeLabel } = formatDateTimeAssigned(iss.createdAt || iss.dueDate, index);
       const creator = iss.reporterName || iss.reporter?.name || 'System Admin';
-      const completer = iss.completedByName || iss.assigneeName || iss.assignee?.name || 'Unassigned';
+      const completer = iss.completedByName || (iss.status === 'done' ? (iss.assigneeName || iss.assignee?.name || 'Current User') : (iss.assigneeName || iss.assignee?.name || 'Unassigned'));
 
       let userIndex = userTracksList.indexOf(creator);
       if (userIndex === -1) userIndex = 0;
@@ -386,8 +434,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       // Horizontal X-Axis: Time of assignment step
       const x = START_X + index * COLUMN_WIDTH;
 
-      // Vertical Y-Axis: Task Creator line
-      const y = START_Y + userIndex * ROW_HEIGHT;
+      // Vertical Y-Axis: Centered inside user's creator line
+      const trackY = START_Y + userIndex * ROW_HEIGHT;
+      const y = trackY + (ROW_HEIGHT - NODE_HEIGHT) / 2;
 
       timeHeaders.push({
         slot: index,
@@ -428,45 +477,144 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       nodeMap.set(iss.key, node);
     });
 
-    // ─── Horizontal Smooth Curved Lines Connecting Tasks Completed by Each User ───
+    // ─── Dynamic Workstream & Work-Done Lines for Each User ───
     const computedEdges: TimelineEdge[] = [];
     const edgeSet = new Set<string>();
 
-    // Group tasks by completing user
-    const completerTasks = new Map<string, TimelineNode[]>();
-    computedNodes.forEach((node) => {
-      const u = node.completerName;
-      if (!completerTasks.has(u)) completerTasks.set(u, []);
-      completerTasks.get(u)!.push(node);
-    });
+    userTracksList.forEach((userName) => {
+      const userColor = getUserColor(userName);
+      const userIndex = userTracksList.indexOf(userName);
+      const trackY = START_Y + userIndex * ROW_HEIGHT;
 
-    completerTasks.forEach((tasksList, compName) => {
-      const userColor = getUserColor(compName);
+      // Find all tasks created in this user's lane
+      const userLaneTasks = computedNodes
+        .filter((node) => node.creatorName === userName)
+        .sort((a, b) => a.x - b.x);
 
-      // Sort horizontally from left (earlier) to right (later)
-      const sortedUserTasks = [...tasksList].sort((a, b) => a.x - b.x);
+      // Find all tasks completed by this user (including across other creator lanes)
+      const userDoneTasks = computedNodes
+        .filter((node) => node.isDone && node.completerName === userName)
+        .sort((a, b) => a.x - b.x);
 
-      for (let i = 0; i < sortedUserTasks.length - 1; i++) {
-        const fromN = sortedUserTasks[i];
-        const toN = sortedUserTasks[i + 1];
-        const edgeId = `user_flow_${compName}_${fromN.issue.key}_${toN.issue.key}`;
+      if (userDoneTasks.length === 0) {
+        // User has NOT completed any tasks yet:
+        // The line goes straight to their last task in their lane
+        if (userLaneTasks.length > 0) {
+          const lastTask = userLaneTasks[userLaneTasks.length - 1];
+          const entryStartX = Math.max(30, userLaneTasks[0].x - 120);
+          const edgeId = `user_workstream_straight_${userName}_${lastTask.issue.key}`;
+
+          if (!edgeSet.has(edgeId)) {
+            edgeSet.add(edgeId);
+            computedEdges.push({
+              id: edgeId,
+              fromKey: `${userName} (Lane Start)`,
+              toKey: lastTask.issue.key,
+              fromNode: {
+                ...lastTask,
+                x: entryStartX,
+                y: trackY + (ROW_HEIGHT - NODE_HEIGHT) / 2,
+                width: 0,
+                height: NODE_HEIGHT,
+              },
+              toNode: lastTask,
+              completerName: userName,
+              color: userColor,
+              isCrossCreator: false,
+              isCompleted: false,
+            });
+          }
+        }
+      } else if (userDoneTasks.length === 1) {
+        // User has completed 1 task: draw smooth curve leading into this completed task
+        const taskNode = userDoneTasks[0];
+        const entryStartX = Math.max(30, taskNode.x - 120);
+        const edgeId = `user_work_done_entry_${userName}_${taskNode.issue.key}`;
 
         if (!edgeSet.has(edgeId)) {
           edgeSet.add(edgeId);
-          const isCrossCreator = fromN.creatorName !== toN.creatorName;
-          const isCompleted = toN.isDone;
-
           computedEdges.push({
             id: edgeId,
-            fromKey: fromN.issue.key,
-            toKey: toN.issue.key,
-            fromNode: fromN,
-            toNode: toN,
-            completerName: compName,
+            fromKey: userName,
+            toKey: taskNode.issue.key,
+            fromNode: {
+              ...taskNode,
+              x: entryStartX,
+              width: 0,
+            },
+            toNode: taskNode,
+            completerName: userName,
             color: userColor,
-            isCrossCreator,
-            isCompleted,
+            isCrossCreator: false,
+            isCompleted: true,
           });
+        }
+
+        // If there is a subsequent pending/latest task in the user's stream, curve to it as needed
+        const pendingTasks = userLaneTasks.filter((n) => !n.isDone && n.x > taskNode.x);
+        if (pendingTasks.length > 0) {
+          const nextTask = pendingTasks[pendingTasks.length - 1];
+          const flowId = `user_work_flow_${userName}_${taskNode.issue.key}_${nextTask.issue.key}`;
+          if (!edgeSet.has(flowId)) {
+            edgeSet.add(flowId);
+            computedEdges.push({
+              id: flowId,
+              fromKey: taskNode.issue.key,
+              toKey: nextTask.issue.key,
+              fromNode: taskNode,
+              toNode: nextTask,
+              completerName: userName,
+              color: userColor,
+              isCrossCreator: taskNode.creatorName !== nextTask.creatorName,
+              isCompleted: false,
+            });
+          }
+        }
+      } else {
+        // User has completed 2+ tasks: connect chronologically from task to task across lanes
+        for (let i = 0; i < userDoneTasks.length - 1; i++) {
+          const fromN = userDoneTasks[i];
+          const toN = userDoneTasks[i + 1];
+          const edgeId = `user_work_done_${userName}_${fromN.issue.key}_${toN.issue.key}`;
+
+          if (!edgeSet.has(edgeId)) {
+            edgeSet.add(edgeId);
+            const isCrossCreator = fromN.creatorName !== toN.creatorName;
+
+            computedEdges.push({
+              id: edgeId,
+              fromKey: fromN.issue.key,
+              toKey: toN.issue.key,
+              fromNode: fromN,
+              toNode: toN,
+              completerName: userName,
+              color: userColor,
+              isCrossCreator,
+              isCompleted: true,
+            });
+          }
+        }
+
+        // From the last completed task, extend to the latest active task if pending tasks remain
+        const lastDoneTask = userDoneTasks[userDoneTasks.length - 1];
+        const pendingTasks = userLaneTasks.filter((n) => !n.isDone && n.x > lastDoneTask.x);
+        if (pendingTasks.length > 0) {
+          const nextTask = pendingTasks[pendingTasks.length - 1];
+          const flowId = `user_work_flow_${userName}_${lastDoneTask.issue.key}_${nextTask.issue.key}`;
+          if (!edgeSet.has(flowId)) {
+            edgeSet.add(flowId);
+            computedEdges.push({
+              id: flowId,
+              fromKey: lastDoneTask.issue.key,
+              toKey: nextTask.issue.key,
+              fromNode: lastDoneTask,
+              toNode: nextTask,
+              completerName: userName,
+              color: userColor,
+              isCrossCreator: lastDoneTask.creatorName !== nextTask.creatorName,
+              isCompleted: false,
+            });
+          }
         }
       }
     });
@@ -498,15 +646,21 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       });
     });
 
-    const userTracksData = userTracksList.map((name, idx) => ({
-      name,
-      y: START_Y + idx * ROW_HEIGHT,
-      color: getUserColor(name),
-      createdCount: sortedIssues.filter((i) => (i.reporterName || i.reporter?.name || 'System Admin') === name).length,
-    }));
+    const userTracksData = userTracksList.map((name, idx) => {
+      const trackY = START_Y + idx * ROW_HEIGHT;
+      const centerY = trackY + ROW_HEIGHT / 2;
+      return {
+        name,
+        y: trackY,
+        centerY,
+        height: ROW_HEIGHT,
+        color: getUserColor(name),
+        createdCount: sortedIssues.filter((i) => (i.reporterName || i.reporter?.name || 'System Admin') === name).length,
+      };
+    });
 
-    const totalWidth = Math.max(1400, START_X + sortedIssues.length * COLUMN_WIDTH + 260);
-    const totalHeight = Math.max(800, START_Y + userTracksList.length * ROW_HEIGHT + 200);
+    const totalWidth = Math.max(1200, START_X + sortedIssues.length * COLUMN_WIDTH + 240);
+    const totalHeight = containerHeight;
 
     return {
       nodes: computedNodes,
@@ -516,7 +670,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
       canvasWidth: totalWidth,
       canvasHeight: totalHeight,
     };
-  }, [issues]);
+  }, [issues, containerHeight]);
 
   // Filter nodes by selected completer if active
   const filteredNodes = useMemo(() => {
@@ -555,7 +709,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           {/* Completer User Legend Pills (Shows who completed which tasks) */}
           <div className="hidden md:flex items-center gap-1.5 overflow-x-auto max-w-[38vw] custom-scrollbar py-1">
             <span className="text-[10px] font-mono text-[#787C83] mr-1 flex items-center gap-1">
-              <UserCheck size={11} className="text-[#22C55E]" /> TICKED COMPLETED BY:
+              <UserCheck size={11} className="text-[#22C55E]" /> WORK DONE BY:
             </span>
             {completerList.map((u) => {
               const isSelected = selectedCompleterFilter === u.name;
@@ -602,10 +756,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40'
                 : 'bg-[#16171A] text-[#787C83] border-[#222428] hover:text-white'
             }`}
-            title="Toggle user completion flow curves"
+            title="Toggle dynamic work-done curves for each user"
           >
             <Activity size={12} />
-            <span>Completion Curves</span>
+            <span>Work-Done Curves</span>
           </button>
 
           {/* Linear Horizontal Scroll Navigation */}
@@ -672,7 +826,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
           onMouseLeave={handleMouseUpOrLeave}
-          className={`flex-1 overflow-auto bg-[#0A0B0D] relative graph-scrollbar custom-scrollbar select-none ${
+          className={`flex-1 overflow-x-auto overflow-y-hidden bg-[#0A0B0D] relative graph-scrollbar custom-scrollbar select-none h-full ${
             isGrabbing ? 'cursor-grabbing' : 'cursor-grab'
           }`}
         >
@@ -681,9 +835,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               transform: `scale(${scale})`,
               transformOrigin: 'top left',
               width: canvasWidth,
-              height: canvasHeight,
+              height: '100%',
+              minHeight: canvasHeight,
             }}
-            className="relative transition-transform duration-100 min-h-full"
+            className="relative transition-transform duration-100"
           >
             {/* Background Grid & Axis Lines */}
             <svg
@@ -695,10 +850,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               {timeSlotHeaders.map((hdr) => (
                 <g key={`time_col_${hdr.slot}`}>
                   <line
-                    x1={hdr.x + 130}
-                    y1={65}
-                    x2={hdr.x + 130}
-                    y2={canvasHeight - 30}
+                    x1={hdr.x + 125}
+                    y1={52}
+                    x2={hdr.x + 125}
+                    y2={canvasHeight - 12}
                     stroke="#16171A"
                     strokeWidth={1}
                     strokeDasharray="4 4"
@@ -710,24 +865,24 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               {userTracks.map((track, idx) => (
                 <g key={`track_user_${track.name}_${idx}`}>
                   <line
-                    x1={40}
-                    y1={track.y + 44}
-                    x2={canvasWidth - 40}
-                    y2={track.y + 44}
+                    x1={30}
+                    y1={track.centerY}
+                    x2={canvasWidth - 30}
+                    y2={track.centerY}
                     stroke="#18191D"
                     strokeWidth={1.5}
                   />
                   {/* Creator Lane Header Label */}
                   <text
-                    x={55}
-                    y={track.y + 25}
+                    x={200}
+                    y={track.centerY - track.height / 2 + 14}
                     fill={track.color}
-                    fontSize="11"
+                    fontSize="10"
                     fontFamily="monospace"
                     fontWeight="bold"
-                    opacity="0.6"
+                    opacity="0.4"
                   >
-                    CREATOR LINE: {track.name.toUpperCase()} ({track.createdCount} Created Tasks)
+                    CREATOR LINE: {track.name.toUpperCase()} ({track.createdCount} {track.createdCount === 1 ? 'Task' : 'Tasks'})
                   </text>
                 </g>
               ))}
@@ -766,9 +921,6 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 const endY = edge.toNode.y + edge.toNode.height / 2;
 
                 const dx = Math.max(40, endX - startX);
-                const dy = endY - startY;
-
-                // Smooth Horizontal Directional Bezier Curve flowing from left to right across creator lanes
                 const cp1X = startX + dx * 0.5;
                 const cp1Y = startY;
                 const cp2X = endX - dx * 0.5;
@@ -777,10 +929,55 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 const midX = (startX + endX) / 2;
                 const midY = (startY + endY) / 2;
 
+                // Smooth Horizontal Directional Bezier Curve flowing from left to right across creator lanes
                 const pathData = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
-                const isHovered = hoveredNodeId === edge.fromNode.id || hoveredNodeId === edge.toNode.id;
 
+                const isHovered = hoveredEdge?.id === edge.id || hoveredNodeId === edge.fromNode.id || hoveredNodeId === edge.toNode.id;
                 const strokeColor = edge.color;
+
+                const handleLineMouseEnter = (e: React.MouseEvent) => {
+                  const coords = getCanvasCoords(e);
+                  setHoveredEdge({
+                    id: edge.id,
+                    completerName: edge.completerName,
+                    color: strokeColor,
+                    fromKey: edge.fromKey,
+                    fromTitle: edge.fromNode.issue.title,
+                    toKey: edge.toKey,
+                    toTitle: edge.toNode.issue.title,
+                    isCompleted: edge.isCompleted,
+                    cursorX: coords.x,
+                    cursorY: coords.y,
+                  });
+                };
+
+                const handleLineMouseMove = (e: React.MouseEvent) => {
+                  const coords = getCanvasCoords(e);
+                  setHoveredEdge((prev) =>
+                    prev && prev.id === edge.id
+                      ? {
+                          ...prev,
+                          cursorX: coords.x,
+                          cursorY: coords.y,
+                        }
+                      : {
+                          id: edge.id,
+                          completerName: edge.completerName,
+                          color: strokeColor,
+                          fromKey: edge.fromKey,
+                          fromTitle: edge.fromNode.issue.title,
+                          toKey: edge.toKey,
+                          toTitle: edge.toNode.issue.title,
+                          isCompleted: edge.isCompleted,
+                          cursorX: coords.x,
+                          cursorY: coords.y,
+                        }
+                  );
+                };
+
+                const handleLineMouseLeave = () => {
+                  setHoveredEdge(null);
+                };
 
                 return (
                   <g key={edge.id} className="transition-opacity duration-200">
@@ -790,26 +987,50 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                         d={pathData}
                         fill="none"
                         stroke={strokeColor}
-                        strokeWidth={7}
-                        strokeOpacity={0.3}
+                        strokeWidth={8}
+                        strokeOpacity={0.35}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                       />
                     )}
 
-                    {/* Main Curved Spline flowing horizontally */}
+                    {/* Main Straight Horizontal Line */}
                     <path
                       d={pathData}
                       fill="none"
                       stroke={strokeColor}
                       strokeWidth={isHovered ? 3.5 : edge.isCompleted ? 2.5 : 1.75}
-                      strokeDasharray={edge.isCompleted ? 'none' : '4 3'}
-                      strokeOpacity={isHovered ? 1 : 0.75}
+                      strokeDasharray={edge.isCompleted ? 'none' : '5 4'}
+                      strokeOpacity={isHovered ? 1 : 0.85}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                       markerEnd={edge.isCompleted ? 'url(#arrow-completer)' : undefined}
+                    />
+
+                    {/* Invisible Wide Hitbox for Effortless Hover Detection */}
+                    <path
+                      d={pathData}
+                      fill="none"
+                      stroke="transparent"
+                      strokeWidth={24}
+                      style={{ pointerEvents: 'all' }}
+                      className="cursor-pointer"
+                      onMouseEnter={handleLineMouseEnter}
+                      onMouseMove={handleLineMouseMove}
+                      onMouseLeave={handleLineMouseLeave}
                     />
 
                     {/* Midpoint Ticked Badge if Completed */}
                     {edge.isCompleted && (
-                      <g transform={`translate(${midX - 10}, ${midY - 10})`}>
-                        <circle cx={10} cy={10} r={9} fill="#0A0B0D" stroke={strokeColor} strokeWidth={1.5} />
+                      <g 
+                        transform={`translate(${midX - 10}, ${midY - 10})`}
+                        style={{ pointerEvents: 'all' }}
+                        className="cursor-pointer"
+                        onMouseEnter={handleLineMouseEnter}
+                        onMouseMove={handleLineMouseMove}
+                        onMouseLeave={handleLineMouseLeave}
+                      >
+                        <circle cx={10} cy={10} r={9} fill="#0A0B0D" stroke={strokeColor} strokeWidth={isHovered ? 2.5 : 1.5} />
                         <path d="M 6 10 L 9 13 L 14 7" fill="none" stroke="#22C55E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                       </g>
                     )}
@@ -818,7 +1039,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     <circle
                       cx={startX}
                       cy={startY}
-                      r={3.5}
+                      r={isHovered ? 5 : 3.5}
                       fill={strokeColor}
                       stroke="#0A0B0D"
                       strokeWidth={1.5}
@@ -826,7 +1047,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     <circle
                       cx={endX}
                       cy={endY}
-                      r={3.5}
+                      r={isHovered ? 5 : 3.5}
                       fill={strokeColor}
                       stroke="#0A0B0D"
                       strokeWidth={1.5}
@@ -837,15 +1058,15 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             </svg>
 
             {/* Top Horizontal Axis: DATE & TIME ASSIGNED Header Bar */}
-            <div className="absolute top-3 left-0 right-0 h-10 flex items-center px-4 pointer-events-none">
+            <div className="absolute top-2.5 left-0 right-0 h-10 flex items-center px-4 pointer-events-none">
               {timeSlotHeaders.map((hdr) => (
                 <div
                   key={`hdr_slot_${hdr.slot}`}
                   style={{ position: 'absolute', left: hdr.x + 20 }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#131417] border border-[#222428] text-xs font-mono text-white shadow-md pointer-events-auto"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#131417] border border-[#222428] text-xs font-mono text-white shadow-md pointer-events-auto"
                 >
-                  <Calendar size={12} className="text-[#DCB001]" />
-                  <Clock size={11} className="text-[#787C83]" />
+                  <Calendar size={11} className="text-[#DCB001]" />
+                  <Clock size={10} className="text-[#787C83]" />
                   <span className="font-bold">{hdr.label}</span>
                 </div>
               ))}
@@ -855,15 +1076,15 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             {userTracks.map((track) => (
               <div
                 key={`creator_label_${track.name}`}
-                style={{ position: 'absolute', left: 24, top: track.y + 36 }}
-                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#121316] border border-[#222428] text-xs font-mono shadow-md pointer-events-auto"
+                style={{ position: 'absolute', left: 20, top: track.centerY - 13 }}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#121316]/95 border border-[#222428] text-xs font-mono shadow-md pointer-events-auto z-20"
               >
                 <div
-                  className="w-2.5 h-2.5 rounded-full"
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: track.color }}
                 />
-                <span className="font-bold text-white">{track.name}</span>
-                <span className="text-[10px] text-[#DCB001] px-1 py-0.2 bg-[#DCB001]/10 rounded border border-[#DCB001]/20">Creator</span>
+                <span className="font-bold text-white truncate max-w-[110px]">{track.name}</span>
+                <span className="text-[9px] text-[#DCB001] px-1 py-0.2 bg-[#DCB001]/10 rounded border border-[#DCB001]/20 shrink-0">Creator</span>
               </div>
             ))}
 
@@ -959,6 +1180,52 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 </div>
               );
             })}
+
+            {/* Hover Tooltip at Cursor for Completion Line */}
+            {hoveredEdge && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: hoveredEdge.cursorX,
+                  top: hoveredEdge.cursorY - 14,
+                  transform: 'translate(-50%, -100%)',
+                  pointerEvents: 'none',
+                  zIndex: 100,
+                }}
+                className="bg-[#121316]/95 border border-[#2A2C30] text-white px-3 py-2 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[210px] max-w-[300px] backdrop-blur-md transition-all duration-75 select-none"
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-[#222428] pb-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                      style={{ backgroundColor: hoveredEdge.color }}
+                    />
+                    <span className="text-xs font-bold text-white truncate">
+                      {hoveredEdge.completerName}'s {hoveredEdge.isCompleted ? 'Work-Done Line' : 'Active Workstream'}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
+                      hoveredEdge.isCompleted
+                        ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30'
+                        : 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
+                    }`}
+                  >
+                    {hoveredEdge.isCompleted ? '✓ Completed' : 'In Progress'}
+                  </span>
+                </div>
+
+                <div className="text-[10px] font-mono text-[#9BA1A6] flex items-center justify-between gap-1 pt-0.5">
+                  <span className="text-[#DCB001] font-bold">{hoveredEdge.fromKey}</span>
+                  <span className="text-[#787C83]">────────►</span>
+                  <span className="text-[#DCB001] font-bold">{hoveredEdge.toKey}</span>
+                </div>
+
+                <div className="text-[10px] text-[#787C83] truncate">
+                  {hoveredEdge.fromTitle} → {hoveredEdge.toTitle}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -41,7 +41,9 @@ interface TreeViewProps {
   onUpdateIssueStatus?: (id: string, status: Status) => void;
   onUpdateIssuePriority?: (id: string, priority: Priority) => void;
   onDeleteIssue?: (issueId: string) => void;
+  onDeleteFolder?: (folderName: string, deleteTasks: boolean) => void;
   onOpenNewIssue?: () => void;
+  onOpenNewFolder?: () => void;
   onRenameIssue?: (issueId: string, newTitle: string) => void;
   onRenameEpic?: (oldEpicName: string, newEpicName: string) => void;
   onMoveTaskToFolder?: (issueId: string, targetFolder: string) => void;
@@ -89,7 +91,9 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   onUpdateIssueStatus,
   onUpdateIssuePriority,
   onDeleteIssue,
+  onDeleteFolder,
   onOpenNewIssue,
+  onOpenNewFolder,
   onRenameIssue,
   onRenameEpic,
   onMoveTaskToFolder,
@@ -104,6 +108,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   const [activeFolderTaskInput, setActiveFolderTaskInput] = useState<string | null>(null);
   const [newTaskInFolderTitle, setNewTaskInFolderTitle] = useState('');
   const [dragOverTask, setDragOverTask] = useState<{ issueId: string; position: 'before' | 'after' } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<{ folderName: string; taskCount: number } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -137,8 +142,10 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     };
 
     const getFolderCleanName = (i: Issue) => {
-      if (i.epic && i.epic !== 'General') return i.epic.trim();
-      return i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
+      const cleanTitle = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
+      if (cleanTitle) return cleanTitle;
+      if (i.epic && i.epic !== 'General' && i.epic !== 'Platform Core') return i.epic.trim();
+      return 'General';
     };
 
     // 1. First register any explicit folder entities as folder containers
@@ -151,10 +158,13 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
       }
     });
 
-    // 2. Also register any custom epics referenced on issues
+    // 2. Also register any custom epics referenced on issues (ignoring default/system epics like 'Platform Core' if not created as a folder)
     issues.forEach((issue) => {
-      if (issue.epic && issue.epic.trim() && !groups[issue.epic.trim()]) {
-        groups[issue.epic.trim()] = [];
+      if (!isFolderEntity(issue) && issue.epic && issue.epic.trim() && issue.epic !== 'General' && issue.epic !== 'Platform Core') {
+        const epicName = issue.epic.trim();
+        if (!groups[epicName]) {
+          groups[epicName] = [];
+        }
       }
     });
 
@@ -189,10 +199,8 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
         }
         return;
       }
-      const targetFolder = issue.epic && issue.epic.trim() ? issue.epic.trim() : 'General';
-      if (!groups[targetFolder]) {
-        groups[targetFolder] = [];
-      }
+      const rawFolder = issue.epic && issue.epic.trim() && issue.epic !== 'Platform Core' ? issue.epic.trim() : 'General';
+      const targetFolder = groups[rawFolder] ? rawFolder : 'General';
       groups[targetFolder].push(issue);
     });
 
@@ -381,10 +389,10 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
             <span className="hidden sm:inline">Collapse</span>
           </button>
 
-          {onOpenNewIssue && (
+          {(onOpenNewIssue || onOpenNewFolder) && (
             <div className="flex items-center gap-1.5 shrink-0">
               <button
-                onClick={onOpenNewIssue}
+                onClick={onOpenNewFolder || onOpenNewIssue}
                 className="flex items-center gap-1 px-2.5 py-1 bg-[#1A1B1D] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] font-bold text-xs rounded transition-all shrink-0"
                 title="Create New Folder / Group"
               >
@@ -576,24 +584,42 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {dragOverEpic === epicName ? (
                         <span className="text-[11px] font-bold text-[#DCB001] font-mono animate-pulse">
                           Drop to move here &darr;
                         </span>
                       ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
-                            setActiveFolderTaskInput((prev) => (prev === epicName ? null : epicName));
-                          }}
-                          className="flex items-center gap-1 px-2 py-0.5 bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] text-[11px] font-medium rounded transition-colors"
-                          title={`Create new task inside folder "${epicName}"`}
-                        >
-                          <Plus size={11} />
-                          <span>Task</span>
-                        </button>
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                              setActiveFolderTaskInput((prev) => (prev === epicName ? null : epicName));
+                            }}
+                            className="flex items-center gap-1 px-2 py-0.5 bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] text-[11px] font-medium rounded transition-colors"
+                            title={`Create new task inside folder "${epicName}"`}
+                          >
+                            <Plus size={11} />
+                            <span>Task</span>
+                          </button>
+
+                          {!isGeneralFolder && canDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setFolderToDelete({
+                                  folderName: epicName,
+                                  taskCount: epicIssues.length,
+                                });
+                              }}
+                              className="p-1 hover:bg-[#EF4444]/15 rounded text-[#787C83] hover:text-[#EF4444] transition-all opacity-0 group-hover/epic:opacity-100"
+                              title={`Delete folder "${epicName}"`}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -944,6 +970,146 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
         onUpdatePriority={onUpdateIssuePriority}
         canDelete={canDelete}
       />
+
+      {/* Delete Folder Confirmation Dialog */}
+      <AnimatePresence>
+        {folderToDelete && (
+          <div 
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete Folder Confirmation"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden p-5 space-y-4"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#EF4444]/15 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] shrink-0">
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Delete Folder</h3>
+                    <p className="text-xs text-[#787C83] mt-0.5">
+                      Folder: <span className="text-[#DCB001] font-semibold font-mono">📁 {folderToDelete.folderName}</span>
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setFolderToDelete(null)}
+                  className="text-[#787C83] hover:text-white p-1 rounded-lg transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Content Body */}
+              {folderToDelete.taskCount > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-xs text-[#CFD4DD] leading-relaxed">
+                    This folder currently contains <span className="text-white font-bold">{folderToDelete.taskCount} {folderToDelete.taskCount === 1 ? 'task' : 'tasks'}</span>. What would you like to do?
+                  </p>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {/* Option 1: Delete Folder Only (Move tasks to General) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onDeleteFolder) {
+                          onDeleteFolder(folderToDelete.folderName, false);
+                        }
+                        setFolderToDelete(null);
+                      }}
+                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#222428] border border-[#2A2C30] hover:border-[#DCB001]/60 rounded-xl transition-all text-left group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#DCB001]/10 text-[#DCB001] flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <FolderOpen size={15} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-white group-hover:text-[#DCB001] transition-colors flex items-center gap-1.5 flex-wrap">
+                          <span>Delete Folder Only</span>
+                          <span className="text-[10px] font-mono bg-[#DCB001]/15 text-[#DCB001] px-1.5 py-0.2 rounded font-bold">Recommended</span>
+                        </div>
+                        <p className="text-[11px] text-[#787C83] mt-0.5 leading-snug">
+                          Keep all {folderToDelete.taskCount} task(s) and move them safely into the <strong className="text-[#CFD4DD]">General</strong> folder.
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Option 2: Delete Folder AND All Tasks */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onDeleteFolder) {
+                          onDeleteFolder(folderToDelete.folderName, true);
+                        }
+                        setFolderToDelete(null);
+                      }}
+                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#EF4444]/10 border border-[#2A2C30] hover:border-[#EF4444]/60 rounded-xl transition-all text-left group"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                        <Trash2 size={15} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-bold text-[#EF4444]">
+                          Delete Folder & All {folderToDelete.taskCount} Tasks
+                        </div>
+                        <p className="text-[11px] text-[#787C83] mt-0.5 leading-snug">
+                          Permanently delete this folder and all tasks inside it.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs text-[#CFD4DD]">
+                    Are you sure you want to delete the empty folder <strong className="text-white">"{folderToDelete.folderName}"</strong>?
+                  </p>
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setFolderToDelete(null)}
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-white bg-[#17181A] border border-[#2A2C30] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onDeleteFolder) {
+                          onDeleteFolder(folderToDelete.folderName, false);
+                        }
+                        setFolderToDelete(null);
+                      }}
+                      className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-[#EF4444] hover:bg-[#dc2626] transition-colors shadow-sm"
+                    >
+                      Delete Folder
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Footer cancel button if taskCount > 0 */}
+              {folderToDelete.taskCount > 0 && (
+                <div className="flex items-center justify-end pt-2 border-t border-[#2A2C30]">
+                  <button
+                    type="button"
+                    onClick={() => setFolderToDelete(null)}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-white bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });

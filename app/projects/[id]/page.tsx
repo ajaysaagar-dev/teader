@@ -26,9 +26,8 @@ import {
   Pencil,
   Crown,
   Plus,
-  Layers,
   LayoutGrid,
-  Terminal,
+  List,
   FolderTree,
   BarChart3,
   Calendar,
@@ -43,6 +42,7 @@ import {
   FileText,
   Sparkles,
   Loader2,
+  Clock,
   MessageSquare,
   Trash2,
   AlertTriangle,
@@ -65,12 +65,8 @@ const KanbanBoardView = dynamic(
   () => import('@/components/KanbanBoardView').then((m) => ({ default: m.KanbanBoardView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
-const HierarchicalView = dynamic(
-  () => import('@/components/HierarchicalView').then((m) => ({ default: m.HierarchicalView })),
-  { ssr: false, loading: () => <ViewLoadingFallback /> }
-);
-const DevStreamView = dynamic(
-  () => import('@/components/DevStreamView').then((m) => ({ default: m.DevStreamView })),
+const CompactListView = dynamic(
+  () => import('@/components/CompactListView').then((m) => ({ default: m.CompactListView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
 const TreeView = dynamic(
@@ -120,6 +116,7 @@ interface ProjectItem {
   creatorId?: number;
   owner_id?: number;
   ownerName?: string;
+  joinStatus?: 'active' | 'pending';
 }
 
 interface MemberItem {
@@ -129,7 +126,7 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings' {
+function parseViewTab(view?: string): 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings' {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
@@ -139,8 +136,7 @@ function parseViewTab(view?: string): 'overview' | 'board' | 'hierarchy' | 'dev'
   if (v === 'conversation' || v === 'chat' || v === 'messages' || v === 'discuss') return 'conversation';
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
   if (v === 'tree') return 'tree';
-  if (v === 'dev' || v === 'devstream' || v === 'stream') return 'dev';
-  if (v === 'hierarchy' || v === 'hierarchical') return 'hierarchy';
+  if (v === 'list' || v === 'compact-list') return 'list';
   if (v === 'board' || v === 'kanban') return 'board';
   return 'overview';
 }
@@ -156,7 +152,7 @@ export default function SingleProjectPage() {
   const viewParam = params?.view as string | undefined;
   const taskQuery = searchParams?.get('task');
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings'>(() => parseViewTab(viewParam));
 
   useEffect(() => {
     if (viewParam) {
@@ -181,7 +177,7 @@ export default function SingleProjectPage() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [projectIdParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'hierarchy' | 'dev' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => {
+  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => {
     setActiveTab(newTab);
     if (typeof window !== 'undefined') {
       const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
@@ -206,15 +202,21 @@ export default function SingleProjectPage() {
   }, [taskQuery, selectedIssueId, searchParams]);
 
   const handleSelectIssue = useCallback((id: string | null) => {
-    if (id) {
-      router.push(`/task/${id}/details`);
-    } else {
-      setSelectedIssueId(null);
+    setSelectedIssueId(id);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (id) {
+        url.searchParams.set('task', id);
+      } else {
+        url.searchParams.delete('task');
+      }
+      window.history.replaceState(null, '', url.toString());
     }
-  }, [router]);
+  }, []);
 
   // Modals
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
+  const [newIssueModalInitialMode, setNewIssueModalInitialMode] = useState<'task' | 'folder'>('task');
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteProjectModalOpen, setIsDeleteProjectModalOpen] = useState(false);
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
@@ -293,6 +295,21 @@ export default function SingleProjectPage() {
       setIsLeavingProject(false);
     }
   }, [project, isLeavingProject, router]);
+
+  const handleCancelJoinRequest = useCallback(async () => {
+    if (!project) return;
+    try {
+      const res = await fetch(`/api/projects/${project.id}/join-requests`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Unable to cancel the join request.');
+      }
+      toast.success('Join request cancelled.');
+      router.push('/projects');
+    } catch (err: any) {
+      toast.error(err.message || 'Unable to cancel the join request.');
+    }
+  }, [project, router]);
 
 
   // In-UI Export Project Dump Modal State
@@ -716,30 +733,47 @@ export default function SingleProjectPage() {
     const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
-    if (newStatus === 'done' && !isCreator) {
-      toast.error(`Permission Denied: Only the creator of this project (${project?.ownerName || 'Creator'}) can move tasks to Done.`);
-      return;
-    }
-
     const previousIssues = issues;
+    const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
+    const isDone = newStatus === 'done';
+    const completedAt = isDone ? new Date().toISOString() : undefined;
+    const completedByName = isDone ? currentUserName : undefined;
+
     setIssues((prev) =>
-      prev.map((i) => (i.id === issueId ? { ...i, status: newStatus } : i))
+      prev.map((i) =>
+        i.id === issueId
+          ? {
+              ...i,
+              status: newStatus,
+              completedByName: isDone ? currentUserName : undefined,
+              completedAt: isDone ? completedAt : undefined,
+            }
+          : i
+      )
     );
 
     try {
       const res = await fetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          status: newStatus,
+          completedByName: isDone ? currentUserName : null,
+          completedAt: isDone ? completedAt : null,
+        }),
       });
 
       if (!res.ok) throw new Error('Failed to update DB');
-      toast.success(`Updated status to ${newStatus.replace('_', ' ')}`);
+      toast.success(
+        isDone
+          ? `Task marked as completed by ${currentUserName}`
+          : `Updated status to ${newStatus.replace('_', ' ')}`
+      );
     } catch {
       toast.error('Error updating status in database');
       setIssues(previousIssues);
     }
-  }, [issues, isCreator, project]);
+  }, [issues, currentUser]);
 
   // Reorder Issues Handler for Board / List View Drag & Drop with Database Persistence
   const handleReorderIssues = useCallback(async (reorderedProjectIssues: Issue[]) => {
@@ -826,6 +860,7 @@ export default function SingleProjectPage() {
 
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
+    const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
@@ -835,6 +870,8 @@ export default function SingleProjectPage() {
       priority: 'medium',
       project: project.name,
       projectId: project.id,
+      reporterName: currentUserName,
+      assigneeName: currentUserName,
       labels: ['Task'],
       subtasks: [],
       createdAt: new Date().toISOString(),
@@ -857,6 +894,8 @@ export default function SingleProjectPage() {
           priority: 'medium',
           project: project.name,
           projectId: project.id,
+          reporterName: currentUserName,
+          assigneeName: currentUserName,
           labels: ['Task'],
         }),
       });
@@ -1169,27 +1208,133 @@ export default function SingleProjectPage() {
   // Handle Rename Epic (Optimistic Update)
   const handleRenameEpic = useCallback(async (oldEpicName: string, newEpicName: string) => {
     setIssues((prev) =>
-      prev.map((iss) =>
-        (iss.epic || 'General Tasks') === oldEpicName
-          ? { ...iss, epic: newEpicName }
-          : iss
-      )
+      prev.map((iss) => {
+        const isFolderEntity =
+          iss.title === `📁 ${oldEpicName}` ||
+          iss.title === `[Folder] ${oldEpicName}` ||
+          (iss.labels && iss.labels.some((l) => l.toLowerCase() === 'folder') && (iss.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim() === oldEpicName));
+        const matchesEpic = (iss.epic || 'General Tasks') === oldEpicName || iss.epic === oldEpicName;
+
+        if (isFolderEntity || matchesEpic) {
+          return {
+            ...iss,
+            epic: newEpicName,
+            ...(isFolderEntity ? { title: `📁 ${newEpicName}` } : {}),
+          };
+        }
+        return iss;
+      })
     );
 
     try {
-      const matching = issues.filter((i) => (i.epic || 'General Tasks') === oldEpicName);
+      const matching = issues.filter((iss) => {
+        const isFolderEntity =
+          iss.title === `📁 ${oldEpicName}` ||
+          iss.title === `[Folder] ${oldEpicName}` ||
+          (iss.labels && iss.labels.some((l) => l.toLowerCase() === 'folder') && (iss.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim() === oldEpicName));
+        return (iss.epic || 'General Tasks') === oldEpicName || iss.epic === oldEpicName || isFolderEntity;
+      });
+
       await Promise.all(
-        matching.map((iss) =>
-          fetch(`/api/issues/${iss.id}`, {
+        matching.map((iss) => {
+          const isFolderEntity =
+            iss.title === `📁 ${oldEpicName}` ||
+            iss.title === `[Folder] ${oldEpicName}` ||
+            (iss.labels && iss.labels.some((l) => l.toLowerCase() === 'folder') && (iss.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim() === oldEpicName));
+          return fetch(`/api/issues/${iss.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ epic: newEpicName }),
-          })
-        )
+            body: JSON.stringify({
+              epic: newEpicName,
+              ...(isFolderEntity ? { title: `📁 ${newEpicName}` } : {}),
+            }),
+          });
+        })
       );
     } catch {
-      toast.error('Failed to rename epic');
+      toast.error('Failed to rename folder');
       fetchProjectData();
+    }
+  }, [issues, fetchProjectData]);
+
+  // Handle Delete Folder (Option: Delete folder only -> tasks moved to General, OR delete folder & all tasks)
+  const handleDeleteFolder = useCallback(async (folderName: string, deleteTasks: boolean) => {
+    if (!folderName || folderName.toLowerCase() === 'general' || folderName.toLowerCase() === 'general tasks') {
+      toast.info('The "General" folder is the default workspace folder and cannot be deleted.');
+      return;
+    }
+
+    const isThisFolderEntity = (i: Issue) => {
+      const isFolder =
+        (i.labels && i.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
+        i.title.startsWith('📁 ') ||
+        i.title.startsWith('[Folder]');
+      const cleanTitle = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
+      return (isFolder && (cleanTitle === folderName || i.epic === folderName)) ||
+        i.title === `📁 ${folderName}` ||
+        i.title === `[Folder] ${folderName}`;
+    };
+
+    const isTaskInThisFolder = (i: Issue) => {
+      return !isThisFolderEntity(i) && ((i.epic || '').trim() === folderName);
+    };
+
+    if (deleteTasks) {
+      // Option B: Delete Folder AND All Tasks
+      const allMatching = issues.filter((i) => isThisFolderEntity(i) || isTaskInThisFolder(i));
+      setIssues((prev) => prev.filter((i) => !isThisFolderEntity(i) && !isTaskInThisFolder(i)));
+      toast.success(`Folder "${folderName}" and all tasks deleted.`);
+
+      try {
+        await Promise.all(
+          allMatching.map((iss) =>
+            fetch(`/api/issues/${iss.id}`, {
+              method: 'DELETE',
+            })
+          )
+        );
+      } catch {
+        toast.error('Failed to sync deletion with server');
+        fetchProjectData();
+      }
+    } else {
+      // Option A: Delete Folder Only -> move tasks inside it to General
+      const folderEntities = issues.filter(isThisFolderEntity);
+      const childTasks = issues.filter(isTaskInThisFolder);
+
+      setIssues((prev) =>
+        prev
+          .filter((i) => !isThisFolderEntity(i))
+          .map((i) => (isTaskInThisFolder(i) ? { ...i, epic: 'General' } : i))
+      );
+      toast.success(
+        childTasks.length > 0
+          ? `Folder "${folderName}" deleted. ${childTasks.length} task(s) moved to General.`
+          : `Folder "${folderName}" deleted.`
+      );
+
+      try {
+        await Promise.all(
+          folderEntities.map((iss) =>
+            fetch(`/api/issues/${iss.id}`, {
+              method: 'DELETE',
+            })
+          )
+        );
+
+        await Promise.all(
+          childTasks.map((iss) =>
+            fetch(`/api/issues/${iss.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ epic: 'General' }),
+            })
+          )
+        );
+      } catch {
+        toast.error('Failed to update tasks on server');
+        fetchProjectData();
+      }
     }
   }, [issues, fetchProjectData]);
 
@@ -1249,6 +1394,7 @@ export default function SingleProjectPage() {
 
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
+    const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
@@ -1258,6 +1404,8 @@ export default function SingleProjectPage() {
       priority: 'medium',
       project: project.name,
       projectId: project.id,
+      reporterName: currentUserName,
+      assigneeName: currentUserName,
       epic: folderName || 'General',
       labels: ['General'],
       subtasks: [],
@@ -1278,6 +1426,8 @@ export default function SingleProjectPage() {
           priority: 'medium',
           project: project.name,
           projectId: project.id,
+          reporterName: currentUserName,
+          assigneeName: currentUserName,
           epic: folderName || 'General',
           labels: ['General'],
         }),
@@ -1381,6 +1531,20 @@ export default function SingleProjectPage() {
             >
               Back to My Projects
             </button>
+          </div>
+        </div>
+      ) : project?.joinStatus === 'pending' ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[#131415] text-[#CFD4DD]">
+          <div className="w-14 h-14 rounded-2xl bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
+            <Clock size={28} />
+          </div>
+          <h2 className="text-lg font-bold text-white">Joining Request Pending Approval</h2>
+          <p className="text-xs text-[#787C83] max-w-md">
+            Your request to join <span className="text-[#CFD4DD] font-semibold">{project.name}</span> has been sent to the project owner. You will get workspace access once it is approved.
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button onClick={() => router.push('/projects')} className="px-4 py-2 border border-[#2A2C30] text-[#CFD4DD] text-xs font-bold rounded-xl hover:bg-[#1B1C1F] transition-colors">Back to My Projects</button>
+            <button onClick={handleCancelJoinRequest} className="px-4 py-2 bg-[#C0393B] text-white text-xs font-bold rounded-xl hover:bg-[#A32D2F] transition-colors">Cancel Request</button>
           </div>
         </div>
       ) : (
@@ -1542,15 +1706,15 @@ export default function SingleProjectPage() {
             </button>
 
             <button
-              onClick={() => handleTabSwitch('hierarchy')}
+              onClick={() => handleTabSwitch('list')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'hierarchy'
+                activeTab === 'list'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
               }`}
             >
-              <Layers size={13} />
-              <span>Hierarchical</span>
+              <List size={13} />
+              <span>List</span>
               <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
             </button>
 
@@ -1621,20 +1785,6 @@ export default function SingleProjectPage() {
             </button>
 
             <button
-              onClick={() => handleTabSwitch('dev')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'dev'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Developer Workstation Stream"
-            >
-              <Terminal size={13} />
-              <span>Dev Stream</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
               onClick={() => handleTabSwitch('settings')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'settings'
@@ -1654,42 +1804,9 @@ export default function SingleProjectPage() {
 
 
 
-        {/* Task Details, Tree View, Hierarchical View, Dev Stream, or Compact Kanban Board with Error Boundaries */}
+        {/* Tree View, Hierarchical View, Dev Stream, Graph View, or Kanban Board */}
         <ErrorBoundary>
-          {selectedIssue ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <div className="h-9 px-3.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
-                <button
-                  onClick={() => handleSelectIssue(null)}
-                  className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors"
-                >
-                  <ArrowLeft size={12} />
-                  <span>Back to {activeTab === 'overview' ? 'Overview' : activeTab === 'tree' ? 'Tree' : activeTab === 'dev' ? 'Dev Stream' : activeTab === 'hierarchy' ? 'Hierarchy' : 'Board'}</span>
-                </button>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
-                  <select
-                    value={selectedIssue.status}
-                    onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
-                    className="bg-[#131415] text-xs text-[#DCB001] border border-[#2A2C30] rounded px-2 py-0.5 outline-none cursor-pointer font-semibold"
-                  >
-                    <option value="todo">Todo</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="needs_review">Needs Review</option>
-                    <option value="done (Creator Only)">Done (Creator Only)</option>
-                  </select>
-                </div>
-              </div>
-
-              <IssueDetailView
-                issue={selectedIssue}
-                onUpdateIssue={(updated) => setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))}
-                onOpenDiffModal={() => {}}
-                currentRole={isCreator ? 'owner' : 'member'}
-              />
-            </div>
-          ) : activeTab === 'overview' ? (
+          {activeTab === 'overview' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectOverviewView
                 issues={projectIssues}
@@ -1709,7 +1826,15 @@ export default function SingleProjectPage() {
                 onUpdateIssueStatus={handleUpdateStatus}
                 onUpdateIssuePriority={handleUpdateIssuePriority}
                 onDeleteIssue={handleDeleteIssue}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                onDeleteFolder={handleDeleteFolder}
+                onOpenNewIssue={() => {
+                  setNewIssueModalInitialMode('task');
+                  setIsNewIssueModalOpen(true);
+                }}
+                onOpenNewFolder={() => {
+                  setNewIssueModalInitialMode('folder');
+                  setIsNewIssueModalOpen(true);
+                }}
                 onRenameIssue={handleRenameIssue}
                 onRenameEpic={handleRenameEpic}
                 onMoveTaskToFolder={handleMoveTaskToFolder}
@@ -1751,16 +1876,17 @@ export default function SingleProjectPage() {
                 currentUser={currentUser}
               />
             </div>
-          ) : activeTab === 'dev' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <DevStreamView
-                issues={projectIssues}
-                onSelectIssue={(id) => handleSelectIssue(id)}
-                onUpdateIssueStatus={handleUpdateStatus}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                currentUser={currentUser}
-              />
-            </div>
+          ) : activeTab === 'list' ? (
+            <CompactListView
+              issues={projectIssues}
+              onSelectIssue={(id) => handleSelectIssue(id)}
+              onUpdateIssueStatus={handleUpdateStatus}
+              onReorderIssues={handleReorderIssues}
+              onUpdateIssuePriority={handleUpdateIssuePriority}
+              onDeleteIssue={handleDeleteIssue}
+              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+              canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+            />
           ) : activeTab === 'settings' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectSettingsView
@@ -1783,18 +1909,10 @@ export default function SingleProjectPage() {
                     setIsEditProjectModalOpen(true);
                   }
                 }}
+                onMemberKicked={(userId) => setJoinedMembers((members) => members.filter((member) => String(member.id) !== String(userId)))}
+                onMembersUpdated={setJoinedMembers}
               />
 
-            </div>
-          ) : activeTab === 'hierarchy' ? (
-
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <HierarchicalView
-                issues={projectIssues}
-                onSelectIssue={(id) => handleSelectIssue(id)}
-                onUpdateIssueStatus={handleUpdateStatus}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              />
             </div>
           ) : (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
@@ -1813,6 +1931,82 @@ export default function SingleProjectPage() {
           )}
         </ErrorBoundary>
 
+        {/* Task Details Modal View Overlay with Close Icon */}
+        <AnimatePresence>
+          {selectedIssue && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Task Details"
+              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/65 backdrop-blur-sm animate-in fade-in duration-150"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) handleSelectIssue(null);
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="bg-[#121316] border border-[#2A2C30] w-full max-w-5xl h-[90vh] max-h-[880px] rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none"
+              >
+                {/* Task Details View Header Bar */}
+                <div className="h-12 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 shrink-0">
+                      {selectedIssue.key}
+                    </span>
+                    <span className="text-sm font-semibold text-white truncate max-w-[420px]">
+                      {selectedIssue.title}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Status Dropdown */}
+                    <div className="flex items-center gap-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg px-2 py-1">
+                      <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
+                      <select
+                        value={selectedIssue.status}
+                        onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
+                        className="bg-transparent text-xs text-[#DCB001] outline-none cursor-pointer font-semibold capitalize"
+                      >
+                        <option value="todo" className="bg-[#131415] text-white">Todo</option>
+                        <option value="in_progress" className="bg-[#131415] text-white">In Progress</option>
+                        <option value="needs_review" className="bg-[#131415] text-white">Needs Review</option>
+                        <option value="done" className="bg-[#131415] text-white">Done</option>
+                        <option value="blocked" className="bg-[#131415] text-white">Blocked</option>
+                        <option value="cancelled" className="bg-[#131415] text-white">Cancelled</option>
+                      </select>
+                    </div>
+
+                    {/* Close Button with X Icon */}
+                    <button
+                      onClick={() => handleSelectIssue(null)}
+                      className="p-1.5 rounded-lg bg-[#1F2023] hover:bg-[#2A2C30] text-[#9BA1A6] hover:text-white transition-colors border border-[#2A2C30] cursor-pointer flex items-center justify-center"
+                      title="Close Task View (Esc)"
+                      aria-label="Close Task View"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Scrollable Body with IssueDetailView */}
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                  <IssueDetailView
+                    issue={selectedIssue}
+                    onUpdateIssue={(updated) =>
+                      setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
+                    }
+                    onOpenDiffModal={() => {}}
+                    currentRole={isCreator ? 'owner' : 'member'}
+                  />
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
         {/* New Issue Modal */}
         {project && isNewIssueModalOpen && (
           <NewIssueModal
@@ -1824,7 +2018,10 @@ export default function SingleProjectPage() {
             defaultProjectKey={project.key}
             defaultProjectName={project.name}
             defaultProjectId={project.id}
+            initialMode={newIssueModalInitialMode}
+            allowFolderCreation={activeTab === 'tree'}
             isProjectLocked={true}
+            currentUser={currentUser}
           />
         )}
 

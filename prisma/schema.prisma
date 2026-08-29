@@ -109,7 +109,7 @@ model Issue {
   issueLabels  IssueLabel[]
 
   // Epic as free text (Sprint/Epic FK models added above)
-  epic         String?      @default("Platform Core")
+  epic         String?      @default("General")
 
   // Sprint FK
   sprintId     Int?

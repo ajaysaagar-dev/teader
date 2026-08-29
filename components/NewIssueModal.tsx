@@ -32,6 +32,9 @@ interface NewIssueModalProps {
   defaultProjectName?: string;
   defaultProjectId?: number | string;
   isProjectLocked?: boolean;
+  initialMode?: 'task' | 'folder';
+  allowFolderCreation?: boolean;
+  currentUser?: { id: number | string; name: string; username?: string; email?: string } | null;
 }
 
 export const NewIssueModal: React.FC<NewIssueModalProps> = ({
@@ -41,9 +44,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   defaultProjectKey = 'TDR',
   defaultProjectName,
   defaultProjectId,
+  initialMode = 'task',
+  allowFolderCreation = false,
+  currentUser,
 }) => {
   // Primary Switch: Task (default) or Folder
-  const [creationMode, setCreationMode] = useState<'task' | 'folder'>('task');
+  const [creationMode, setCreationMode] = useState<'task' | 'folder'>(
+    allowFolderCreation ? initialMode : 'task'
+  );
 
   // Complexity Mode: Quick (default) or Advanced
   const [formView, setFormView] = useState<'quick' | 'advanced'>('quick');
@@ -55,7 +63,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [priority, setPriority] = useState<Priority>('medium');
   const [assigneeName, setAssigneeName] = useState('General (Anyone)');
   const [targetFolder, setTargetFolder] = useState('General');
-  const [labels, setLabels] = useState<string>('Platform Core, Backend');
+  const [labels, setLabels] = useState<string>('General, Feature');
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState(2);
 
@@ -73,6 +81,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   useEffect(() => {
     if (defaultProjectKey) setProjectKey(defaultProjectKey);
   }, [defaultProjectKey]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCreationMode(allowFolderCreation ? initialMode : 'task');
+    }
+  }, [isOpen, initialMode, allowFolderCreation]);
 
   // Fetch Joined Project Members & Existing Issues for Duplication Detection
   useEffect(() => {
@@ -159,7 +173,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     }
 
     setIsSubmitting(true);
-    const targetProjectName = defaultProjectName || 'Teader Platform Core';
+    const targetProjectName = defaultProjectName || 'Project';
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${projectKey}-${Date.now().toString().slice(-4)}`;
 
@@ -172,6 +186,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       : ['Folder', 'Group', ...(formView === 'advanced' ? labels.split(',').map((l) => l.trim()).filter(Boolean) : [])];
     const finalSubtasks = creationMode === 'folder' ? folderTasks : [];
 
+    const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
+
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
@@ -180,6 +196,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       status: 'todo',
       priority: (creationMode === 'task' && formView === 'advanced') ? priority : 'medium',
       assigneeName: (creationMode === 'task' && formView === 'advanced') ? assigneeName : 'General (Anyone)',
+      reporterName: currentUserName,
       dueDate: (formView === 'advanced' && dueDate) ? dueDate : undefined,
       estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
       project: targetProjectName,
@@ -207,6 +224,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           status: 'todo',
           priority: (creationMode === 'task' && formView === 'advanced') ? priority : 'medium',
           assigneeName: (creationMode === 'task' && formView === 'advanced') ? assigneeName : 'General (Anyone)',
+          reporterName: currentUserName,
           dueDate: (formView === 'advanced' && dueDate) ? dueDate : undefined,
           estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
           project: targetProjectName,
@@ -273,34 +291,36 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
           {/* Mode Switcher Bars: 1) Task vs Folder & 2) Quick vs Advanced */}
           <div className="flex items-center justify-between px-5 py-2 bg-[#131415] border-b border-[#2A2C30] flex-wrap gap-2">
-            {/* Primary Mode: Task vs Folder */}
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setCreationMode('task')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  creationMode === 'task'
-                    ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                    : 'text-[#787C83] hover:text-[#CFD4DD]'
-                }`}
-              >
-                <ListTodo size={13} />
-                <span>Task</span>
-              </button>
+            {/* Folder creation is intentionally exposed only from the Tree page. */}
+            {allowFolderCreation && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCreationMode('task')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    creationMode === 'task'
+                      ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  }`}
+                >
+                  <ListTodo size={13} />
+                  <span>Task</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setCreationMode('folder')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  creationMode === 'folder'
-                    ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                    : 'text-[#787C83] hover:text-[#CFD4DD]'
-                }`}
-              >
-                <Folder size={13} />
-                <span>Folder / Group</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setCreationMode('folder')}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    creationMode === 'folder'
+                      ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  }`}
+                >
+                  <Folder size={13} />
+                  <span>Folder / Group</span>
+                </button>
+              </div>
+            )}
 
             {/* Complexity Switch: Quick vs Advanced */}
             <div className="flex items-center bg-[#1A1B1E] border border-[#2A2C30] p-0.5 rounded-lg">

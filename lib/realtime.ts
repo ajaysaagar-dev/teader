@@ -15,7 +15,9 @@ export type RealtimeEventType =
   | 'DOC_UPDATED'
   | 'DOC_DELETED'
   | 'DOC_CURSOR_MOVED'
-  | 'DOC_CURSOR_LEFT';
+  | 'DOC_CURSOR_LEFT'
+  | 'DOC_PRESENCE_UPDATED'
+  | 'DOC_PRESENCE_LEFT';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;

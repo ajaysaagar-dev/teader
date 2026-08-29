@@ -33,6 +33,7 @@ interface ProjectItem {
   owner_id?: number;
   creatorId?: number;
   ownerName?: string;
+  joinStatus?: 'active' | 'pending';
 }
 
 function generate30CharKeyClient(): string {
@@ -213,11 +214,13 @@ export default function ProjectsPage() {
 
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Joined project ${data.name} (${data.key}) successfully!`);
+        const joinedProject = data.project;
+        if (!joinedProject) throw new Error('The server did not return the requested project.');
+        toast.success(data.message || `Join request sent for ${joinedProject.name}.`);
         setIsJoinProjectModalOpen(false);
         setJoinKeyInput('');
         fetchDataFromDB();
-        router.push(`/projects/${data.id}`);
+        router.push(`/projects/${joinedProject.id}`);
       } else {
         toast.error(data.error || 'Project key not found');
       }
@@ -412,6 +415,7 @@ export default function ProjectsPage() {
                 String(currentUser.id) === String(proj.creatorId) ||
                 currentUser.name === proj.ownerName
               );
+              const isPending = proj.joinStatus === 'pending';
 
               return (
                 <div
@@ -435,6 +439,11 @@ export default function ProjectsPage() {
                         {proj.key}
                       </span>
                       <div className="flex items-center gap-2">
+                        {isPending && (
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-[#DCB001]/40 bg-[#DCB001]/10 text-[#DCB001]">
+                            Pending Request
+                          </span>
+                        )}
                         <span className="text-[11px] font-mono text-[#787C83] flex items-center gap-1">
                           <User size={12} />
                           {proj.ownerName || 'karri'} {isOwner ? '(Owner)' : '(Member)'}
@@ -483,7 +492,7 @@ export default function ProjectsPage() {
                   <div className="pt-3 border-t border-[#2A2C30] flex items-center justify-between text-xs">
                     <span className="text-[#787C83] font-mono">{projTaskCount} tasks in board</span>
                     <span className="text-[#DCB001] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                      Open Board <ArrowRight size={13} />
+                      {isPending ? 'View Request' : 'Open Board'} <ArrowRight size={13} />
                     </span>
                   </div>
                 </div>
