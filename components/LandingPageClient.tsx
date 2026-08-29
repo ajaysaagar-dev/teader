@@ -28,21 +28,19 @@ interface AuthUser {
 }
 
 export default function LandingPageClient() {
-  const [activeTab, setActiveTab] = useState<'graph' | 'kanban' | 'docs' | 'tree'>('graph');
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('teader_user');
-        return cached ? JSON.parse(cached) : null;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Check login state
+  // Check login state on mount
   useEffect(() => {
+    setMounted(true);
+    try {
+      const cached = localStorage.getItem('teader_user');
+      if (cached) {
+        setCurrentUser(JSON.parse(cached));
+      }
+    } catch {}
+
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
@@ -53,6 +51,9 @@ export default function LandingPageClient() {
           } catch {}
         } else {
           setCurrentUser(null);
+          try {
+            localStorage.removeItem('teader_user');
+          } catch {}
         }
       })
       .catch(() => {});
@@ -72,7 +73,7 @@ export default function LandingPageClient() {
     }
   };
 
-  const isLoggedIn = Boolean(currentUser);
+  const isLoggedIn = mounted && Boolean(currentUser);
 
   return (
     <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-landing selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-x-hidden">
@@ -85,29 +86,17 @@ export default function LandingPageClient() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 group" aria-label="Teader Home">
               <span className="font-extrabold text-xl text-white tracking-tight flex items-center gap-1 font-prompt">
-                teader <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">{BUILD_NUMBER}</span>
+                teader
               </span>
             </Link>
 
             <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-6 text-xs font-medium text-[#9BA1A6]">
-              <a href="#features" className="hover:text-white transition-colors">Features</a>
-              <a href="#branch-explorer" className="hover:text-white transition-colors">Branch Explorer</a>
-              <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
               <Link href="/documentation" className="hover:text-white transition-colors">Documentation</Link>
             </nav>
           </div>
 
           {/* Auth Header Buttons & Download App */}
           <div className="flex items-center gap-3">
-            <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
-              download
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16181C] hover:bg-[#1E2025] text-[#CFD4DD] hover:text-white border border-[#2A2C30] hover:border-[#DCB001]/40 text-xs font-medium transition-all shadow-sm"
-              title="Download Desktop App for Windows"
-            >
-              <Download size={13} className="text-[#DCB001]" />
-              <span>Download App</span>
-            </a>
 
             {isLoggedIn ? (
               <>
@@ -118,14 +107,6 @@ export default function LandingPageClient() {
                   </div>
                   <span className="text-white font-bold">{currentUser?.name}</span>
                 </div>
-
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
-                >
-                  <LayoutDashboard size={13} />
-                  <span>Go to Dashboard</span>
-                </Link>
 
                 <button
                   onClick={handleLogout}
@@ -205,7 +186,6 @@ export default function LandingPageClient() {
                 <Download size={16} className="text-[#DCB001] group-hover:-translate-y-0.5 transition-transform" />
                 <div className="flex flex-col text-left">
                   <span className="leading-tight font-bold">Download Workspace</span>
-                  <span className="text-[10px] text-[#8E939D] font-mono leading-tight">Windows (.exe) • 873 KB</span>
                 </div>
               </a>
 
@@ -215,16 +195,6 @@ export default function LandingPageClient() {
                   className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#16181C]/70 hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-medium text-sm transition-all shadow-sm"
                 >
                   <span>Create Account</span>
-                </Link>
-              )}
-
-              {isLoggedIn && (
-                <Link
-                  href="/projects"
-                  className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#16181C]/70 hover:bg-[#1F2126] border border-[#2E3138] hover:border-[#DCB001]/50 text-white font-medium text-sm transition-all shadow-sm"
-                >
-                  <FolderKanban size={15} className="text-[#DCB001]" />
-                  <span>View Projects</span>
                 </Link>
               )}
             </div>
@@ -250,151 +220,6 @@ export default function LandingPageClient() {
             </div>
           </div>
 
-          {/* ─── Interactive Product Preview Card ────────────────────────── */}
-          <div id="branch-explorer" className="max-w-6xl mx-auto mt-14 rounded-2xl bg-[#121417] border border-[#272A30] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden relative group">
-            {/* Top Window Bar */}
-            <div className="h-11 px-4 bg-[#181A1F] border-b border-[#272A30] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full bg-[#EF4444]/60" />
-                <span className="w-3 h-3 rounded-full bg-[#F59E0B]/60" />
-                <span className="w-3 h-3 rounded-full bg-[#22C55E]/60" />
-                <span className="text-xs font-mono text-[#787C83] ml-2">app.teader.io / workspace / TestProject</span>
-              </div>
-
-              {/* View Switcher Tabs */}
-              <div className="flex items-center bg-[#101113] p-1 rounded-lg border border-[#272A30] text-xs font-mono">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('graph')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'graph' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Graph Timeline
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('kanban')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'kanban' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Kanban Board
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('docs')}
-                  className={`px-3 py-1 rounded transition-all ${
-                    activeTab === 'docs' ? 'bg-[#DCB001] text-[#0A0B0D] font-bold' : 'text-[#787C83] hover:text-white'
-                  }`}
-                >
-                  Markdown Docs
-                </button>
-              </div>
-            </div>
-
-            {/* Interactive Preview Body */}
-            <div className="p-6 bg-[#0E1012] min-h-[380px] flex flex-col justify-center">
-              {activeTab === 'graph' && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between text-xs font-mono text-[#787C83]">
-                    <span className="flex items-center gap-1.5 text-[#06B6D4]">
-                      <GitFork size={14} /> Branch Explorer (Unity Version Control Splines)
-                    </span>
-                    <span>110+ Active Nodes • Horizontal Timeline</span>
-                  </div>
-
-                  {/* SVG Visual Demo Splines */}
-                  <div className="h-44 w-full bg-[#131518] rounded-xl border border-[#222428] relative overflow-hidden flex items-center px-6">
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-                      <path
-                        d="M 60 70 C 140 70, 180 35, 260 35 C 340 35, 380 35, 460 35 C 540 35, 580 90, 660 90"
-                        fill="none"
-                        stroke="#06B6D4"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 60 70 C 140 70, 180 115, 260 115 C 340 115, 380 115, 460 115 C 540 115, 580 90, 660 90"
-                        fill="none"
-                        stroke="#A855F7"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 460 35 C 540 35, 580 35, 660 35 C 740 35, 780 70, 860 70"
-                        fill="none"
-                        stroke="#22C55E"
-                        strokeWidth="2.5"
-                      />
-                      <path
-                        d="M 260 115 C 340 115, 380 70, 460 70"
-                        fill="none"
-                        stroke="#EF4444"
-                        strokeWidth="2"
-                        strokeDasharray="4 3"
-                      />
-                    </svg>
-
-                    {/* Simulated Nodes */}
-                    <div className="relative z-10 flex items-center justify-between w-full">
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#06B6D4] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#06B6D4] font-bold">TEST-1</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">SIMD Matrix4x4</p>
-                        <span className="text-[9px] text-[#22C55E] font-mono">Done</span>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#A855F7] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#A855F7] font-bold">TEST-4</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">CCD Fast Collision</p>
-                        <span className="text-[9px] text-[#F59E0B] font-mono">In Progress</span>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#EF4444] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#EF4444] font-bold">TEST-8</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">GPU Particle Shaders</p>
-                        <span className="text-[9px] text-[#EF4444] font-mono">Blocked</span>
-                      </div>
-
-                      <div className="p-2.5 rounded-lg bg-[#181A1F] border border-[#22C55E] text-left text-xs shadow-lg">
-                        <span className="font-mono text-[10px] text-[#22C55E] font-bold">TEST-11</span>
-                        <p className="text-white font-semibold text-xs truncate max-w-[140px]">Docker Turbopack CI</p>
-                        <span className="text-[9px] text-[#22C55E] font-mono">Merged</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'kanban' && (
-                <div className="grid grid-cols-4 gap-3 text-left">
-                  {['TODO (32)', 'IN PROGRESS (24)', 'NEEDS REVIEW (8)', 'DONE (46)'].map((col, idx) => (
-                    <div key={col} className="p-3 rounded-xl bg-[#14161A] border border-[#222428] space-y-2">
-                      <span className="text-[11px] font-mono font-bold text-[#8E939D]">{col}</span>
-                      <div className="p-2.5 rounded-lg bg-[#1B1D22] border border-[#2E3138] space-y-1">
-                        <span className="text-[10px] font-mono text-[#DCB001]">TEST-{idx * 4 + 1}</span>
-                        <p className="text-xs font-semibold text-white truncate">High-speed transform pipeline</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'docs' && (
-                <div id="docs" className="grid grid-cols-12 gap-4 text-left">
-                  <div className="col-span-4 p-3 rounded-xl bg-[#14161A] border border-[#222428] space-y-1.5 text-xs font-mono">
-                    <span className="text-[10px] text-[#787C83]">PROJECT SPECS</span>
-                    <div className="p-2 rounded bg-[#1C1E23] text-[#DCB001] font-bold">proj_test_engine_overview.md</div>
-                    <div className="p-2 rounded text-[#9BA1A6]">proj_test_coding_guidelines.md</div>
-                  </div>
-                  <div className="col-span-8 p-4 rounded-xl bg-[#14161A] border border-[#222428] font-mono text-xs text-[#9BA1A6] space-y-2">
-                    <p className="text-[#DCB001] font-bold"># TestProject Architecture</p>
-                    <p className="text-white">## 1. Core Subsystems</p>
-                    <p>- Vulkan 1.3 deferred render pass pipeline.</p>
-                    <p>- Real-time continuous collision detection (CCD).</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </section>
 
         {/* ─── Features Grid ───────────────────────────────────────────── */}
