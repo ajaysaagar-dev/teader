@@ -106,8 +106,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   });
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({
-    [DEFAULT_FOLDER]: true,
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>(() => {
+    return getLocalCache<Record<string, boolean>>(`docs_open_folders_${projectId}`, {
+      [DEFAULT_FOLDER]: true,
+    });
   });
   const [activeFolderForCreation, setActiveFolderForCreation] = useState<string>(DEFAULT_FOLDER);
   const [draggingDocId, setDraggingDocId] = useState<string | null>(null);
@@ -126,7 +128,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const activeContentRef = useRef<string>(activeContent);
   const activeTitleRef = useRef<string>(activeTitle);
   const savedContentRef = useRef<string>(savedContent);
+  const docsRef = useRef<ProjectDoc[]>(docs);
   const selectedDocIdCurrentRef = useRef<string | null>(selectedDocId);
+
+  useEffect(() => {
+    docsRef.current = docs;
+  }, [docs]);
 
   useEffect(() => {
     activeContentRef.current = activeContent;
@@ -148,6 +155,31 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   useEffect(() => {
     setLocalCache(`docs_folders_${projectId}`, customFolders);
   }, [customFolders, projectId]);
+
+  // Persist open folders
+  useEffect(() => {
+    setLocalCache(`docs_open_folders_${projectId}`, openFolders);
+  }, [openFolders, projectId]);
+
+  // Auto-discover custom folders from docs
+  useEffect(() => {
+    if (docs.length > 0) {
+      const docFolders = Array.from(
+        new Set(docs.map((d) => (d.folder && d.folder.trim() ? d.folder.trim() : DEFAULT_FOLDER)))
+      ).filter((f) => f !== DEFAULT_FOLDER);
+
+      if (docFolders.length > 0) {
+        setCustomFolders((prev) => {
+          const merged = Array.from(new Set([...prev, ...docFolders]));
+          if (merged.length !== prev.length) {
+            setLocalCache(`docs_folders_${projectId}`, merged);
+            return merged;
+          }
+          return prev;
+        });
+      }
+    }
+  }, [docs, projectId]);
 
   // Hydrate from client cache safely on mount
   useEffect(() => {
@@ -612,8 +644,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     const contentToSave = activeContentRef.current;
     const cleanTitle = (activeTitleRef.current || 'Untitled Document').trim().replace(/\.md$/i, '');
-    const currentDoc = docs.find((d) => String(d.id) === String(docId));
-    const folder = currentDoc?.folder || DEFAULT_FOLDER;
 
     setIsAutoSaving(true);
     try {
@@ -623,7 +653,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         body: JSON.stringify({
           title: cleanTitle,
           content: contentToSave,
-          folder,
         }),
       });
 
@@ -638,7 +667,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               ? {
                   ...d,
                   title: cleanTitle,
-                  folder: data.folder || folder,
+                  folder: data.folder || d.folder || DEFAULT_FOLDER,
                   updatedAt: data.updatedAt || new Date().toISOString(),
                 }
               : d
@@ -650,7 +679,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     } finally {
       setIsAutoSaving(false);
     }
-  }, [projectId, docs]);
+  }, [projectId]);
 
   // Explicit Manual Save with visual feedback and toast
   const performManualSave = useCallback(async () => {
@@ -659,8 +688,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
     const contentToSave = activeContentRef.current;
     const cleanTitle = (activeTitleRef.current || 'Untitled Document').trim().replace(/\.md$/i, '');
-    const currentDoc = docs.find((d) => String(d.id) === String(docId));
-    const folder = currentDoc?.folder || DEFAULT_FOLDER;
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
@@ -674,7 +701,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         body: JSON.stringify({
           title: cleanTitle,
           content: contentToSave,
-          folder,
         }),
       });
 
@@ -689,7 +715,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               ? {
                   ...d,
                   title: cleanTitle,
-                  folder: data.folder || folder,
+                  folder: data.folder || d.folder || DEFAULT_FOLDER,
                   updatedAt: data.updatedAt || new Date().toISOString(),
                 }
               : d
@@ -706,7 +732,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [projectId, docs]);
+  }, [projectId]);
 
   // Debounced auto-save triggering on any content or title change
   useEffect(() => {
@@ -795,10 +821,22 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     setDragOverFolder(null);
     setDraggingDocId(null);
 
+    // If target folder is a new custom folder, track it in state and cache
+    if (cleanFolder !== DEFAULT_FOLDER) {
+      setCustomFolders((prev) => {
+        if (prev.includes(cleanFolder)) return prev;
+        const next = [...prev, cleanFolder];
+        setLocalCache(`docs_folders_${projectId}`, next);
+        return next;
+      });
+    }
+
     // Optimistic UI update immediately (0ms)
-    setDocs((prev) =>
-      prev.map((d) => (String(d.id) === String(docId) ? { ...d, folder: cleanFolder } : d))
-    );
+    setDocs((prev) => {
+      const next = prev.map((d) => (String(d.id) === String(docId) ? { ...d, folder: cleanFolder } : d));
+      setLocalCache(`docs_${projectId}`, next);
+      return next;
+    });
     setOpenFolders((prev) => ({ ...prev, [cleanFolder]: true }));
 
     try {
@@ -809,6 +847,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       });
 
       if (res.ok) {
+        const data = await res.json();
+        if (data.folder) {
+          setDocs((prev) => {
+            const next = prev.map((d) => (String(d.id) === String(docId) ? { ...d, folder: data.folder } : d));
+            setLocalCache(`docs_${projectId}`, next);
+            return next;
+          });
+        }
         toast.success(`Moved to ${cleanFolder}`);
       } else {
         toast.error('Failed to move file');
@@ -951,7 +997,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
   // Group docs by folder: "Start" (default) is always first
   const groupedFolders = useMemo(() => {
-    const allFolderNames = Array.from(new Set([DEFAULT_FOLDER, ...customFolders]));
+    const docFolders = docs.map((d) => (d.folder && d.folder.trim() ? d.folder.trim() : DEFAULT_FOLDER));
+    const allFolderNames = Array.from(new Set([DEFAULT_FOLDER, ...customFolders, ...docFolders]));
     const groups: { folder: string; items: ProjectDoc[] }[] = [];
 
     allFolderNames.forEach((folderName) => {
@@ -1112,13 +1159,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   key={folder}
                   onDragOver={(e) => {
                     e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
                     if (dragOverFolder !== folder) setDragOverFolder(folder);
                   }}
-                  onDragLeave={() => {
-                    if (dragOverFolder === folder) setDragOverFolder(null);
+                  onDragLeave={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setDragOverFolder(null);
+                    }
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
+                    setDragOverFolder(null);
+                    setDraggingDocId(null);
                     const docId = e.dataTransfer.getData('text/plain') || draggingDocId;
                     if (docId) {
                       handleMoveDocToFolder(docId, folder);

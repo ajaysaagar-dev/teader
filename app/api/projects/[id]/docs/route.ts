@@ -146,6 +146,7 @@ export async function GET(
       const content = resolveDiskContent(doc);
       return {
         ...doc,
+        folder: doc.folder && doc.folder.trim() ? doc.folder.trim() : 'Start',
         content,
       };
     });

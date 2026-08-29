@@ -135,13 +135,14 @@ export async function PUT(
       filePath: localPath,
     });
 
+    const finalFolder = folder !== undefined ? folder.trim() : ((doc as any).folder || 'Start');
     const docUpdatePayload = {
       id: docId,
       projectId: (doc as any).projectId || resolvedParams.id,
       title: title !== undefined ? title.trim() : doc.title,
       fileName: currentFileName,
-      folder: folder !== undefined ? folder.trim() : (doc as any).folder || 'Start',
-      content,
+      folder: finalFolder,
+      content: content !== undefined ? content : doc.content,
       updatedAt: new Date().toISOString(),
     };
 
