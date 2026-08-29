@@ -157,21 +157,39 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   }, [docs, projectId]);
 
-  // ─── Synchronized Smooth Scrolling to Preview on Changes ───────────────────
-  const syncPreviewScroll = useCallback(() => {
-    const textarea = textareaRef.current;
+  // ─── Smooth Scrolling to Changed Spot Only ─────────────────────────────────
+  const calculateChangedLineFromText = useCallback(
+    (oldText: string, newText: string, cursorIndex?: number): number => {
+      if (cursorIndex !== undefined && cursorIndex >= 0) {
+        const textBefore = newText.slice(0, cursorIndex);
+        return Math.max(0, textBefore.split('\n').length - 1);
+      }
+
+      const oldLines = oldText.split('\n');
+      const newLines = newText.split('\n');
+      const max = Math.max(oldLines.length, newLines.length);
+
+      for (let i = 0; i < max; i++) {
+        if (oldLines[i] !== newLines[i]) {
+          return i;
+        }
+      }
+      return 0;
+    },
+    []
+  );
+
+  const scrollToChangeLocation = useCallback((lineIndex: number, totalLinesCount: number) => {
     const preview = previewContainerRef.current;
-    if (!textarea || !preview) return;
+    if (!preview) return;
 
-    const maxTextareaScroll = textarea.scrollHeight - textarea.clientHeight;
-    if (maxTextareaScroll <= 0) {
-      preview.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
+    const totalLines = Math.max(1, totalLinesCount);
+    const ratio = Math.max(0, Math.min(1, lineIndex / totalLines));
+    const maxScroll = preview.scrollHeight - preview.clientHeight;
 
-    const scrollPercentage = textarea.scrollTop / maxTextareaScroll;
-    const targetScrollTop = scrollPercentage * (preview.scrollHeight - preview.clientHeight);
+    if (maxScroll <= 0) return;
 
+    const targetScrollTop = ratio * maxScroll;
     preview.scrollTo({
       top: targetScrollTop,
       behavior: 'smooth',
@@ -276,18 +294,30 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               )
             );
 
-            // If the updated doc is currently open, and current user has no uncommitted local edits
+            // If the updated doc is currently open
             if (String(selectedDocIdCurrentRef.current) === String(updatedDoc.id)) {
               const cleanTitle = updatedDoc.title ? updatedDoc.title.replace(/\.md$/i, '') : '';
               setSavedTitle(cleanTitle);
               if (updatedDoc.content !== undefined) {
-                setSavedContent(updatedDoc.content);
+                const oldContent = activeContentRef.current || savedContentRef.current || '';
+                const newContent = updatedDoc.content;
+
+                setSavedContent(newContent);
                 setActiveContent((prev) => {
                   if (!prev || prev === savedContentRef.current) {
-                    return updatedDoc.content;
+                    return newContent;
                   }
                   return prev;
                 });
+
+                // Smoothly scroll preview for viewing users in realtime to the changed spot!
+                if (oldContent !== newContent) {
+                  const changedLine = calculateChangedLineFromText(oldContent, newContent);
+                  const totalLines = newContent.split('\n').length;
+                  requestAnimationFrame(() => {
+                    scrollToChangeLocation(changedLine, totalLines);
+                  });
+                }
               }
             }
           }
@@ -343,8 +373,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     if (historyIndexRef.current > 0) {
       historyIndexRef.current--;
       const prevVal = historyRef.current[historyIndexRef.current];
+      const oldVal = activeContent;
       setActiveContent(prevVal);
-      syncPreviewScroll();
+      const changedLine = calculateChangedLineFromText(oldVal, prevVal);
+      const totalLines = prevVal.split('\n').length;
+      requestAnimationFrame(() => {
+        scrollToChangeLocation(changedLine, totalLines);
+      });
     }
   };
 
@@ -352,8 +387,13 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     if (historyIndexRef.current < historyRef.current.length - 1) {
       historyIndexRef.current++;
       const nextVal = historyRef.current[historyIndexRef.current];
+      const oldVal = activeContent;
       setActiveContent(nextVal);
-      syncPreviewScroll();
+      const changedLine = calculateChangedLineFromText(oldVal, nextVal);
+      const totalLines = nextVal.split('\n').length;
+      requestAnimationFrame(() => {
+        scrollToChangeLocation(changedLine, totalLines);
+      });
     }
   };
 
@@ -480,11 +520,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     };
   }, [activeContent, activeTitle, savedContent, savedTitle, selectedDocId, performAutoSave]);
 
-  // Handle Textarea Change with live smooth preview scroll
-  const handleContentChange = (newVal: string) => {
+  // Handle Textarea Change with smooth preview scroll to changed spot
+  const handleContentChange = (newVal: string, e?: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const oldVal = activeContent;
     setActiveContent(newVal);
     pushToHistory(newVal);
-    requestAnimationFrame(syncPreviewScroll);
+
+    // Calculate changed line number
+    const cursorPos = e?.target?.selectionStart ?? textareaRef.current?.selectionStart;
+    const changedLine = calculateChangedLineFromText(oldVal, newVal, cursorPos);
+    const totalLines = newVal.split('\n').length;
+
+    // Smoothly scroll the preview to the exact changed spot
+    requestAnimationFrame(() => {
+      scrollToChangeLocation(changedLine, totalLines);
+    });
   };
 
   // Handle Title Change in Realtime
@@ -1136,10 +1186,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <textarea
                       ref={textareaRef}
                       value={activeContent}
-                      onChange={(e) => handleContentChange(e.target.value)}
-                      onScroll={syncPreviewScroll}
-                      onKeyUp={syncPreviewScroll}
-                      onClick={syncPreviewScroll}
+                      onChange={(e) => handleContentChange(e.target.value, e)}
                       placeholder="Write markdown documentation and GitHub HTML tags here..."
                       className="w-full h-full flex-1 p-4 bg-[#111215] border border-[#222428] focus:border-[#DCB001]/60 rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
                     />
