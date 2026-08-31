@@ -34,7 +34,7 @@ interface ProjectOverviewViewProps {
     ownerName?: string;
   } | null;
   members?: Array<{ id: number | string; name: string; email: string; avatar: string }>;
-  onNavigateTab: (tab: 'overview' | 'tasks' | 'docs' | 'settings', mode?: 'board' | 'list' | 'tree' | 'timeline' | 'dependencies') => void;
+  onNavigateTab: (tab: 'overview' | 'tasks' | 'docs' | 'settings', mode?: 'structure' | 'board' | 'timeline' | 'list' | 'dependencies' | 'tree') => void;
   onOpenNewIssue: () => void;
 }
 
@@ -172,11 +172,11 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
           </button>
 
           <button
-            onClick={() => onNavigateTab('tasks', 'tree')}
+            onClick={() => onNavigateTab('tasks', 'structure')}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#CFD4DD] bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] rounded-xl transition-all shadow-sm"
           >
             <FolderTree size={13} className="text-[#3B82F6]" />
-            <span>Tree Explorer</span>
+            <span>Structure View</span>
           </button>
 
           <button

@@ -128,7 +128,7 @@ interface MemberItem {
 }
 
 export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'settings';
-export type TaskViewMode = 'board' | 'list' | 'tree' | 'timeline' | 'dependencies';
+export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
   if (!view) return 'overview';
@@ -143,6 +143,7 @@ function parseViewTab(view?: string): ProjectTab {
     v === 'list' ||
     v === 'compact-list' ||
     v === 'tree' ||
+    v === 'structure' ||
     v === 'calendar' ||
     v === 'schedule' ||
     v === 'timeline' ||
@@ -157,11 +158,12 @@ function parseViewTab(view?: string): ProjectTab {
 
 function parseTaskMode(view?: string, modeParam?: string | null): TaskViewMode {
   const m = (modeParam || view || '').toLowerCase();
-  if (m === 'list' || m === 'compact-list') return 'list';
-  if (m === 'tree') return 'tree';
+  if (m === 'board' || m === 'kanban') return 'board';
   if (m === 'timeline' || m === 'calendar' || m === 'schedule') return 'timeline';
+  if (m === 'list' || m === 'compact-list') return 'list';
   if (m === 'dependencies' || m === 'graph' || m === 'dag') return 'dependencies';
-  return 'board';
+  if (m === 'tree' || m === 'structure' || m === 'hierarchy') return 'structure';
+  return 'structure'; // Default view per DEVELOPMENT.md Section 1 & 12
 }
 
 // Module memory to prevent re-triggering splash screen on tab switches within the same project
@@ -1796,7 +1798,9 @@ export default function SingleProjectPage() {
                 issues={projectIssues}
                 project={project}
                 members={joinedMembers}
-                onNavigateTab={(tab, mode) => handleTabSwitch(tab, mode)}
+                onNavigateTab={(tab, mode) =>
+                  handleTabSwitch(tab, mode === 'tree' ? 'structure' : (mode as TaskViewMode))
+                }
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
               />
             </div>
@@ -1835,11 +1839,24 @@ export default function SingleProjectPage() {
               />
             </div>
           ) : (
-            /* Tasks Page (5 View Modes: Board | List | Tree | Timeline | Dependencies) */
+            /* Tasks Page (5 View Modes: Structure | Board | Timeline | List | Dependencies) */
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              {/* Secondary Task View Mode Segmented Switcher */}
+              {/* Secondary Task View Mode Segmented Switcher (Structure | Board | Timeline | List | Dependencies) */}
               <div className="px-4 py-2 border-b border-[#222428] bg-[#121316] flex items-center justify-between gap-3 shrink-0">
                 <div className="flex items-center bg-[#181A1F] p-0.5 rounded-lg border border-[#2A2C30] text-xs">
+                  <button
+                    onClick={() => handleTaskModeSwitch('structure')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'structure'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Hierarchical Project Structure & Tree Explorer"
+                  >
+                    <FolderTree size={12} />
+                    <span>Structure</span>
+                  </button>
+
                   <button
                     onClick={() => handleTaskModeSwitch('board')}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
@@ -1854,32 +1871,6 @@ export default function SingleProjectPage() {
                   </button>
 
                   <button
-                    onClick={() => handleTaskModeSwitch('list')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'list'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
-                    }`}
-                    title="Compact List View"
-                  >
-                    <List size={12} />
-                    <span>List</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTaskModeSwitch('tree')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'tree'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
-                    }`}
-                    title="Folder Tree Explorer"
-                  >
-                    <FolderTree size={12} />
-                    <span>Tree</span>
-                  </button>
-
-                  <button
                     onClick={() => handleTaskModeSwitch('timeline')}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
                       taskViewMode === 'timeline'
@@ -1890,6 +1881,19 @@ export default function SingleProjectPage() {
                   >
                     <Calendar size={12} />
                     <span>Timeline</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskModeSwitch('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'list'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Compact List View"
+                  >
+                    <List size={12} />
+                    <span>List</span>
                   </button>
 
                   <button
@@ -1913,7 +1917,25 @@ export default function SingleProjectPage() {
 
               {/* Render Active Task View Component */}
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-                {taskViewMode === 'list' ? (
+                {taskViewMode === 'board' ? (
+                  <KanbanBoardView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onUpdateIssueStatus={handleUpdateStatus}
+                    onReorderIssues={handleReorderIssues}
+                    onUpdateIssuePriority={handleUpdateIssuePriority}
+                    onDeleteIssue={handleDeleteIssue}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                    onAddNewTaskToColumn={handleAddNewTaskToColumn}
+                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                  />
+                ) : taskViewMode === 'timeline' ? (
+                  <CalendarView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                  />
+                ) : taskViewMode === 'list' ? (
                   <CompactListView
                     issues={projectIssues}
                     onSelectIssue={(id) => handleSelectIssue(id)}
@@ -1924,7 +1946,13 @@ export default function SingleProjectPage() {
                     onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                     canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
                   />
-                ) : taskViewMode === 'tree' ? (
+                ) : taskViewMode === 'dependencies' ? (
+                  <DependencyGraphView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                  />
+                ) : (
                   <TreeView
                     issues={projectIssues}
                     projectName={project?.name}
@@ -1947,30 +1975,6 @@ export default function SingleProjectPage() {
                     onMoveTaskToFolder={handleMoveTaskToFolder}
                     onAddTaskToFolder={handleAddTaskToFolder}
                     onReorderTaskInFolder={handleReorderTaskInFolder}
-                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
-                  />
-                ) : taskViewMode === 'timeline' ? (
-                  <CalendarView
-                    issues={projectIssues}
-                    onSelectIssue={(id) => handleSelectIssue(id)}
-                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                  />
-                ) : taskViewMode === 'dependencies' ? (
-                  <DependencyGraphView
-                    issues={projectIssues}
-                    onSelectIssue={(id) => handleSelectIssue(id)}
-                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                  />
-                ) : (
-                  <KanbanBoardView
-                    issues={projectIssues}
-                    onSelectIssue={(id) => handleSelectIssue(id)}
-                    onUpdateIssueStatus={handleUpdateStatus}
-                    onReorderIssues={handleReorderIssues}
-                    onUpdateIssuePriority={handleUpdateIssuePriority}
-                    onDeleteIssue={handleDeleteIssue}
-                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                    onAddNewTaskToColumn={handleAddNewTaskToColumn}
                     canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
                   />
                 )}
@@ -2067,7 +2071,7 @@ export default function SingleProjectPage() {
             defaultProjectName={project.name}
             defaultProjectId={project.id}
             initialMode={newIssueModalInitialMode}
-            allowFolderCreation={activeTab === 'tasks' && taskViewMode === 'tree'}
+            allowFolderCreation={activeTab === 'tasks' && taskViewMode === 'structure'}
             isProjectLocked={true}
             currentUser={currentUser}
           />
