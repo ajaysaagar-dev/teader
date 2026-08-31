@@ -83,6 +83,50 @@ function extractDroppedIssueId(e: React.DragEvent): string | null {
   return null;
 }
 
+function isFolderEntity(i: Issue): boolean {
+  return (
+    (i.labels && i.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
+    i.title.startsWith('📁 ') ||
+    i.title.startsWith('[Folder]')
+  );
+}
+
+function getFolderCleanName(i: Issue): string {
+  const cleanTitle = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
+  if (cleanTitle) return cleanTitle;
+  if (i.epic && i.epic !== 'General' && i.epic !== 'Platform Core') return i.epic.trim();
+  return 'General';
+}
+
+function getFolderTimestamp(name: string, issues: Issue[], folderIssues: Issue[]): number {
+  let maxTime = 0;
+
+  // 1. Explicit folder entity timestamp
+  const folderEntity = issues.find(
+    (i) => isFolderEntity(i) && getFolderCleanName(i).toLowerCase() === name.toLowerCase()
+  );
+  if (folderEntity) {
+    const t = folderEntity.createdAt ? new Date(folderEntity.createdAt).getTime() : 0;
+    const u = folderEntity.updatedAt ? new Date(folderEntity.updatedAt).getTime() : 0;
+    const parsed = Math.max(t, u);
+    if (!isNaN(parsed) && parsed > maxTime) {
+      maxTime = parsed;
+    }
+  }
+
+  // 2. Descendant tasks timestamps
+  folderIssues.forEach((issue) => {
+    const t = issue.createdAt ? new Date(issue.createdAt).getTime() : 0;
+    const u = issue.updatedAt ? new Date(issue.updatedAt).getTime() : 0;
+    const parsed = Math.max(t, u);
+    if (!isNaN(parsed) && parsed > maxTime) {
+      maxTime = parsed;
+    }
+  });
+
+  return maxTime;
+}
+
 export const TreeView: React.FC<TreeViewProps> = React.memo(({
   issues,
   projectName = 'Project Tree',
@@ -131,21 +175,6 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   const epicGroups = useMemo(() => {
     const groups: Record<string, Issue[]> = {
       'General': [], // Always common & undeletable default folder
-    };
-
-    const isFolderEntity = (i: Issue) => {
-      return (
-        (i.labels && i.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
-        i.title.startsWith('📁 ') ||
-        i.title.startsWith('[Folder]')
-      );
-    };
-
-    const getFolderCleanName = (i: Issue) => {
-      const cleanTitle = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
-      if (cleanTitle) return cleanTitle;
-      if (i.epic && i.epic !== 'General' && i.epic !== 'Platform Core') return i.epic.trim();
-      return 'General';
     };
 
     // 1. First register any explicit folder entities as folder containers
@@ -207,7 +236,26 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     return groups;
   }, [issues]);
 
-  const epicNames = useMemo(() => Object.keys(epicGroups), [epicGroups]);
+  // List folders in latest first (newest) and oldest last order
+  const epicNames = useMemo(() => {
+    const names = Object.keys(epicGroups);
+
+    const folderTimestamps: Record<string, number> = {};
+    names.forEach((name) => {
+      folderTimestamps[name] = getFolderTimestamp(name, issues, epicGroups[name] || []);
+    });
+
+    return names.sort((a, b) => {
+      const timeA = folderTimestamps[a] || 0;
+      const timeB = folderTimestamps[b] || 0;
+      if (timeA !== timeB) {
+        return timeB - timeA; // Descending: latest first, oldest last
+      }
+      if (a === 'General') return 1;
+      if (b === 'General') return -1;
+      return a.localeCompare(b);
+    });
+  }, [epicGroups, issues]);
 
   // Expand all by default initially
   React.useEffect(() => {
