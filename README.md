@@ -1,6 +1,6 @@
 # Teader
 
-AI-native project management platform. Built with Next.js 16 (App Router), React 19, TypeScript, MySQL, and TailwindCSS.
+Project management platform. Built with Next.js 16 (App Router), React 19, TypeScript, PostgreSQL, and TailwindCSS.
 
 ## Features
 
@@ -8,16 +8,16 @@ AI-native project management platform. Built with Next.js 16 (App Router), React
 - **Hierarchical View** — epic → task → subtask tree grouped by epic, status, or assignee
 - **Tree View** — infinite recursive folder explorer with drag-and-drop parent switching
 - **Dev Stream** — developer workstation view with Git command generators and task checklists
-- **AI Assistant** — streaming Claude integration with issue context (requires `ANTHROPIC_API_KEY`)
 - **Project Management** — create, join, and manage multiple projects with member roles
 - **Inline Editing** — rename anything in-place; full issue editing with description, epic, priority
+- **Real-time Sync** — SSE and WebSocket live sync with project-scoped authorization
 
 ## Quick Start
 
 ### 1. Prerequisites
 
 - Node.js 20+
-- MySQL 8+
+- PostgreSQL 15+
 
 ### 2. Clone & Install
 
@@ -33,7 +33,7 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your MySQL credentials and `JWT_SECRET`. See `.env.example` for all available variables.
+Edit `.env` and fill in your PostgreSQL credentials and `JWT_SECRET`. See `.env.example` for all available variables.
 
 Generate a `JWT_SECRET`:
 ```bash
@@ -62,14 +62,14 @@ Open [http://localhost:3000](http://localhost:3000) and log in with:
 
 | Variable | Required | Description |
 |---|---|---|
-| `MYSQL_HOST` | Yes | MySQL host (default: localhost) |
-| `MYSQL_PORT` | No | MySQL port (default: 3306) |
-| `MYSQL_USER` | **Yes** | MySQL username |
-| `MYSQL_PASSWORD` | **Yes** | MySQL password |
-| `MYSQL_DATABASE` | **Yes** | Database name |
-| `DATABASE_URL` | Yes (Prisma) | Full MySQL connection URL |
+| `POSTGRES_HOST` | Yes | PostgreSQL host (default: localhost) |
+| `POSTGRES_PORT` | No | PostgreSQL port (default: 5678) |
+| `POSTGRES_USER` | **Yes** | PostgreSQL username |
+| `POSTGRES_PASSWORD` | **Yes** | PostgreSQL password |
+| `POSTGRES_DATABASE` | **Yes** | Database name |
+| `DATABASE_URL` | Yes (Prisma) | Full PostgreSQL connection URL |
 | `JWT_SECRET` | **Yes** | 64+ byte random hex string for JWT signing |
-| `ANTHROPIC_API_KEY` | No | Enables AI chat panel (claude-3-5-sonnet) |
+| `INTERNAL_BROADCAST_SECRET` | Recommended | Shared secret for WS broadcast endpoint auth |
 | `NEXT_PUBLIC_APP_URL` | No | Public URL of the app |
 
 ## Project Structure
@@ -77,19 +77,20 @@ Open [http://localhost:3000](http://localhost:3000) and log in with:
 ```
 app/
   api/             # All API routes
-    ai/chat/       # AI streaming chat (Anthropic)
     auth/          # Login, register, logout, me
-    issues/        # Issue CRUD
+    issues/        # Issue CRUD (project-scoped authorization)
     projects/      # Project CRUD + members + join
-    subtasks/      # Subtask/folder CRUD
+    subtasks/      # Subtask/folder CRUD (project-scoped authorization)
     upload/        # Image upload (auth-gated, magic-byte verified)
+    realtime/      # SSE stream (session + project membership verified)
   projects/[id]/
     page.tsx       # Single project — Board/Hierarchy/Tree/Dev views
     [view]/        # URL routing: /projects/4/tree, /dev, /hierarchy
 components/        # All UI components
 lib/
   auth.ts          # JWT signing, bcrypt passwords, requireAuth helper
-  db.ts            # MySQL raw queries and data access helpers
+  authz.ts         # Project-scoped authorization (assertProjectAccess)
+  db.ts            # PostgreSQL raw queries and data access helpers
   ratelimit.ts     # In-memory auth rate limiter
   types.ts         # TypeScript interfaces
   validation.ts    # Zod schemas for all API routes
@@ -98,13 +99,16 @@ prisma/
   schema.prisma    # Full schema with Comment, Activity, Sprint, Label models
 scripts/
   db-seed.js       # Database initialization and demo data seed
+server/
+  ws-server.js     # Authenticated WebSocket hub (JWT + project membership)
 ```
 
 ## Scripts
 
 | Script | Description |
 |---|---|
-| `npm run dev` | Start development server (Turbopack, port 3000) |
+| `npm run dev` | Start development server (port 3000) |
+| `npm run ws` | Start WebSocket hub (port 3001) |
 | `npm run build` | Production build |
 | `npm run db:setup` | Initialize DB and seed demo data |
 | `npm run db:seed` | Re-seed demo data |
@@ -112,8 +116,11 @@ scripts/
 ## Security
 
 - All API routes are protected by middleware JWT verification (except `/api/auth/*`)
+- All mutation routes enforce project-scoped authorization (owner/member checks)
 - Passwords hashed with bcrypt (cost 12), with automatic migration from old SHA-256 hashes on login
 - Session stored as signed JWT cookie (`teader_session`, httpOnly, sameSite: lax)
 - Rate limiting (10 req / 15 min per IP+email) on login and register
 - Upload endpoint: requires auth, verifies magic bytes, enforces 5 MB size cap, MIME allowlist
-- No hardcoded DB credentials — throws startup error if env vars are missing
+- Database credentials must be provided via environment variables — startup fails if not configured
+- WebSocket server requires JWT token on connect and verifies project membership before room subscription
+- Broadcast endpoint requires `INTERNAL_BROADCAST_SECRET` header (server-to-server only)
