@@ -88,23 +88,14 @@ export default function LandingPageClient() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#DCB001] to-[#F59E0B] flex items-center justify-center text-[#0B0C0E] font-extrabold shadow-[0_0_12px_rgba(220,176,1,0.3)]">
-                T
-              </div>
               <span className="font-extrabold text-xl text-white tracking-tight">
                 teader
               </span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6 text-sm text-[#9CA3AF]">
-              <a href="#features" className="hover:text-white transition-colors">
-                Features
-              </a>
-              <a href="#how-it-works" className="hover:text-white transition-colors">
-                How It Works
-              </a>
               <Link href="/documentation" className="hover:text-white transition-colors">
-                Docs
+                documentation
               </Link>
             </nav>
           </div>
@@ -117,7 +108,6 @@ export default function LandingPageClient() {
               title="Download Desktop App for Windows"
             >
               <Download size={13} className="text-[#DCB001]" />
-              <span>Download App</span>
             </a>
 
             {isLoggedIn ? (
@@ -131,10 +121,10 @@ export default function LandingPageClient() {
 
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#DCB001] hover:bg-[#F59E0B] text-[#0B0C0E] font-bold text-xs transition-all shadow-[0_0_15px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#DCB001] hover:bg-[#F59E0B] text-[#0B0C0E] font-bold text-xs transition-all shadow-[0_0_12px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
                 >
-                  <LayoutDashboard size={14} />
-                  <span>Go to Dashboard</span>
+                  <LayoutDashboard size={13} />
+                  <span>Dashboard</span>
                 </Link>
 
                 <button
@@ -174,7 +164,6 @@ export default function LandingPageClient() {
         <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           {/* Friendly Top Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#181A20] border border-[#2E323C] text-xs font-medium text-[#FBBF24]">
-            <Sparkles size={13} className="text-[#DCB001]" />
             <span>Simple, friendly project tracking for modern teams</span>
           </div>
 
@@ -197,7 +186,7 @@ export default function LandingPageClient() {
               href="/dashboard"
               className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#DCB001] hover:bg-[#F59E0B] text-[#0B0C0E] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] hover:scale-105"
             >
-              <span>{isLoggedIn ? 'Go to My Projects' : 'Get Started Free'}</span>
+              <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}</span>
               <ArrowRight size={16} />
             </Link>
 
