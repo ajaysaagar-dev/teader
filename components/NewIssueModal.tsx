@@ -23,6 +23,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { getTaskShortId } from '@/lib/task-id';
 
 interface NewIssueModalProps {
   isOpen: boolean;
@@ -41,11 +42,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   isOpen,
   onClose,
   onCreateIssue,
-  defaultProjectKey = 'TDR',
+  defaultProjectKey = 'PRJ',
   defaultProjectName,
   defaultProjectId,
+  isProjectLocked = false,
   initialMode = 'task',
-  allowFolderCreation = false,
+  allowFolderCreation = true,
   currentUser,
 }) => {
   // Primary Switch: Task (default) or Folder
@@ -66,6 +68,9 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [labels, setLabels] = useState<string>('General, Feature');
   const [dueDate, setDueDate] = useState('');
   const [estimatedHours, setEstimatedHours] = useState(2);
+  const [taggedTasks, setTaggedTasks] = useState<string[]>([]);
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const [taskPickerSearch, setTaskPickerSearch] = useState('');
 
   // Folder Form State
   const [folderName, setFolderName] = useState('');
@@ -75,7 +80,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [newFolderTaskTitle, setNewFolderTaskTitle] = useState('');
 
   const [joinedMembers, setJoinedMembers] = useState<{ id: number | string; name: string }[]>([]);
-  const [existingIssues, setExistingIssues] = useState<{ id: string; key: string; title: string }[]>([]);
+  const [existingIssues, setExistingIssues] = useState<Issue[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -85,6 +90,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCreationMode(allowFolderCreation ? initialMode : 'task');
+      setTaggedTasks([]);
+      setShowTaskPicker(false);
     }
   }, [isOpen, initialMode, allowFolderCreation]);
 
@@ -106,7 +113,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
-            setExistingIssues(data.map((i: any) => ({ id: i.id, key: i.key, title: i.title })));
+            setExistingIssues(data);
           }
         })
         .catch(() => {});
@@ -206,6 +213,10 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
 
+    const descMentions = (finalDescription.match(/@T\d+/gi) || []).map((m) => m.replace(/^@/, '').toUpperCase());
+    const titleMentions = (finalTitle.match(/@T\d+/gi) || []).map((m) => m.replace(/^@/, '').toUpperCase());
+    const combinedTags = Array.from(new Set([...taggedTasks, ...descMentions, ...titleMentions]));
+
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
@@ -221,6 +232,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
       epic: creationMode === 'task' ? (targetFolder || 'General') : folderName.trim(),
       labels: finalLabels,
+      tags: combinedTags,
       subtasks: finalSubtasks as any,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -249,6 +261,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
           epic: creationMode === 'task' ? (targetFolder || 'General') : folderName.trim(),
           labels: finalLabels,
+          tags: combinedTags,
           subtasks: finalSubtasks,
         }),
       });
@@ -418,12 +431,118 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         <span className="text-[10px] text-[#787C83] font-mono">Real-time preview on right &rarr;</span>
                       </div>
                       <textarea
-                        rows={formView === 'quick' ? 8 : 4}
-                        placeholder="Write detailed task specifications, markdown notes, code snippets, or acceptance criteria..."
+                        rows={formView === 'quick' ? 6 : 4}
+                        placeholder="Write detailed task specifications, markdown notes, code snippets, or acceptance criteria (use @T1, @T2 to tag other tasks)..."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
                       />
+                    </div>
+
+                    {/* @ Tag Related Tasks */}
+                    <div className="space-y-2 pt-1 border-t border-[#2A2C30]/70">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                          <Tag size={12} className="text-[#38BDF8]" />
+                          <span>Tagged & Related Tasks (@)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowTaskPicker((prev) => !prev)}
+                          className="flex items-center gap-1 text-[11px] font-mono text-[#38BDF8] hover:text-white bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-[#38BDF8]/50 px-2 py-0.5 rounded transition-all cursor-pointer"
+                        >
+                          <Plus size={11} />
+                          <span>Tag Task (@)</span>
+                        </button>
+                      </div>
+
+                      {/* Active Tagged Task Pills */}
+                      {taggedTasks.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {taggedTasks.map((tKey) => {
+                            const matchingTask = existingIssues.find(
+                              (i) => getTaskShortId(i, existingIssues).toUpperCase() === tKey.toUpperCase() || i.key.toUpperCase() === tKey.toUpperCase()
+                            );
+                            return (
+                              <span
+                                key={tKey}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-xs font-mono text-[#38BDF8]"
+                              >
+                                <span>@{tKey}</span>
+                                {matchingTask && (
+                                  <span className="text-[#CFD4DD] truncate max-w-[120px] font-sans">
+                                    {matchingTask.title}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setTaggedTasks((prev) => prev.filter((k) => k !== tKey))}
+                                  className="hover:text-[#EF4444] transition-colors ml-0.5 cursor-pointer"
+                                >
+                                  <X size={11} />
+                                </button>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Task Picker Dropdown */}
+                      {showTaskPicker && (
+                        <div className="p-2.5 bg-[#131415] border border-[#38BDF8]/40 rounded-xl space-y-2 shadow-xl animate-in fade-in">
+                          <input
+                            type="text"
+                            placeholder="Search tasks to tag (e.g. T1, auth, UI)..."
+                            value={taskPickerSearch}
+                            onChange={(e) => setTaskPickerSearch(e.target.value)}
+                            className="w-full bg-[#1B1C1F] border border-[#2A2C30] focus:border-[#38BDF8] rounded-lg px-2.5 py-1 text-xs text-white outline-none"
+                            autoFocus
+                          />
+                          <div className="max-h-36 overflow-y-auto space-y-1 custom-scrollbar">
+                            {existingIssues
+                              .filter((i) => !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
+                              .filter((i) => {
+                                const shortId = getTaskShortId(i, existingIssues);
+                                const q = taskPickerSearch.toLowerCase();
+                                return (
+                                  shortId.toLowerCase().includes(q) ||
+                                  i.title.toLowerCase().includes(q) ||
+                                  i.key.toLowerCase().includes(q)
+                                );
+                              })
+                              .map((task) => {
+                                const shortId = getTaskShortId(task, existingIssues);
+                                const isSelected = taggedTasks.includes(shortId);
+                                return (
+                                  <button
+                                    key={task.id}
+                                    type="button"
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setTaggedTasks((prev) => prev.filter((k) => k !== shortId));
+                                      } else {
+                                        setTaggedTasks((prev) => [...prev, shortId]);
+                                      }
+                                    }}
+                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs text-left transition-colors cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
+                                        : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 truncate">
+                                      <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1 py-0.2 rounded text-[10px]">
+                                        {shortId}
+                                      </span>
+                                      <span className="truncate">{task.title}</span>
+                                    </div>
+                                    {isSelected && <Check size={12} className="text-[#38BDF8] shrink-0 ml-1" />}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Advanced Configuration Options (Only shown in Advanced Mode) */}

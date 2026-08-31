@@ -32,17 +32,19 @@ import {
   Pencil,
   Terminal,
   GitBranch,
-  Copy
+  Copy,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
-import confetti from 'canvas-confetti';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { getTaskShortId, findIssueByTag } from '@/lib/task-id';
 
 interface IssueDetailViewProps {
-
   issue: Issue;
+  allIssues?: Issue[];
+  onSelectIssue?: (issueId: string) => void;
   onUpdateIssue: (updated: Issue) => void;
-  onOpenDiffModal: () => void;
+  onOpenDiffModal?: () => void;
   currentRole?: string;
 }
 
@@ -64,6 +66,8 @@ function parseBlockedBy(blockedBy: any): string[] {
 
 export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   issue,
+  allIssues,
+  onSelectIssue,
   onUpdateIssue,
   currentRole = 'owner',
 }) => {
@@ -74,6 +78,51 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState(issue.description || '');
   const [isSavingDesc, setIsSavingDesc] = useState(false);
+
+  // Tag picker state
+  const [showAddTagPicker, setShowAddTagPicker] = useState(false);
+  const [tagPickerSearch, setTagPickerSearch] = useState('');
+
+  const currentTaskTags = React.useMemo(() => {
+    const t = issue.tags || [];
+    return Array.isArray(t) ? t : [];
+  }, [issue.tags]);
+
+  const handleToggleTaskTag = async (shortId: string) => {
+    const clean = shortId.replace(/^@/, '');
+    const exists = currentTaskTags.some((t) => t.replace(/^@/, '').toUpperCase() === clean.toUpperCase());
+    let newTags: string[];
+    if (exists) {
+      newTags = currentTaskTags.filter((t) => t.replace(/^@/, '').toUpperCase() !== clean.toUpperCase());
+    } else {
+      newTags = [...currentTaskTags, `@${clean}`];
+    }
+
+    onUpdateIssue({ ...issue, tags: newTags });
+    toast.success(exists ? `Removed tag @${clean}` : `Tagged task @${clean}`);
+
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: newTags }),
+      });
+    } catch {}
+  };
+
+  const handleRemoveTaskTag = async (tagStr: string) => {
+    const newTags = currentTaskTags.filter((t) => t !== tagStr);
+    onUpdateIssue({ ...issue, tags: newTags });
+    toast.success(`Removed tag ${tagStr}`);
+
+    try {
+      await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tags: newTags }),
+      });
+    } catch {}
+  };
 
   useEffect(() => {
     setDescValue(issue.description || '');
@@ -289,7 +338,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/10 border border-[#DCB001]/30 px-2 py-0.5 rounded">
+                  {getTaskShortId(issue, allIssues)}
+                </span>
+                <span className="font-mono text-[11px] text-[#787C83] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded">
                   {issue.key}
                 </span>
                 {issue.epic && (
@@ -304,14 +356,13 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 {/* Copy Link Button */}
                 <button
                   onClick={handleCopyLink}
-                  className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors"
+                  className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors cursor-pointer"
                   title="Copy Task Link"
                 >
                   {copiedLink ? <Check size={14} className="text-[#22C55E]" /> : <Link size={14} />}
                 </button>
               </div>
             </div>
-
 
             {/* Task Title */}
             <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
@@ -329,7 +380,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsEditingDesc(true)}
-                  className="flex items-center gap-1 text-[11px] font-mono text-[#787C83] hover:text-[#DCB001] transition-colors opacity-80 group-hover/desc:opacity-100"
+                  className="flex items-center gap-1 text-[11px] font-mono text-[#787C83] hover:text-[#DCB001] transition-colors opacity-80 group-hover/desc:opacity-100 cursor-pointer"
                 >
                   <Pencil size={11} />
                   <span>Edit</span>
@@ -342,7 +393,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                       setDescValue(issue.description || '');
                       setIsEditingDesc(false);
                     }}
-                    className="text-[11px] text-[#787C83] hover:text-white"
+                    className="text-[11px] text-[#787C83] hover:text-white cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -369,11 +420,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         toast.error('Network error syncing description');
                       }
                     }}
-                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all"
+                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all cursor-pointer"
                   >
                     Save
                   </button>
-
                 </div>
               )}
             </div>
@@ -383,7 +433,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <textarea
                   value={descValue}
                   onChange={(e) => setDescValue(e.target.value)}
-                  placeholder="Write task description in Markdown (e.g. ## Overview, **bold**, - list)..."
+                  placeholder="Write task description in Markdown (use @T1, @T2 to tag other tasks)..."
                   rows={6}
                   className="w-full p-3 bg-[#131415] border border-[#DCB001]/60 focus:border-[#DCB001] rounded-xl font-mono text-xs text-white outline-none resize-y leading-relaxed"
                 />
@@ -395,6 +445,148 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             ) : (
               <div className="pt-1">
                 <MarkdownRenderer content={issue.description} />
+              </div>
+            )}
+          </div>
+
+          {/* Tagged & Related Tasks Section */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Tag size={15} className="text-[#38BDF8]" />
+                <h3 className="text-xs font-bold text-[#CFD4DD] uppercase tracking-wider font-mono">
+                  Tagged & Related Tasks ({currentTaskTags.length})
+                </h3>
+              </div>
+
+              {allIssues && allIssues.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddTagPicker((prev) => !prev)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-[#38BDF8]/60 text-[#38BDF8] text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                >
+                  <Plus size={12} />
+                  <span>Tag Task (@)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Tagged Tasks List */}
+            {currentTaskTags.length > 0 ? (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {currentTaskTags.map((tagStr) => {
+                  const found = allIssues ? findIssueByTag(tagStr, allIssues) : undefined;
+                  const displayTag = tagStr.startsWith('@') ? tagStr : `@${tagStr}`;
+                  const displayTitle = found ? found.title : '';
+
+                  return (
+                    <div
+                      key={tagStr}
+                      className="group/pill inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#131415] hover:bg-[#1F242C] border border-[#38BDF8]/30 hover:border-[#38BDF8] text-xs transition-all shadow-sm"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (found && onSelectIssue) {
+                            onSelectIssue(found.id);
+                          } else {
+                            toast.info(`Tagged task ${displayTag}`);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-[#38BDF8] hover:text-white font-mono font-bold text-left cursor-pointer"
+                        title={found ? `Click to open ${found.title}` : `Tagged ${displayTag}`}
+                      >
+                        <span>{displayTag}</span>
+                        {displayTitle && (
+                          <span className="text-[#CFD4DD] font-sans font-normal truncate max-w-[160px] sm:max-w-[220px]">
+                            {displayTitle}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTaskTag(tagStr)}
+                        className="text-[#787C83] hover:text-[#EF4444] p-0.5 rounded transition-colors cursor-pointer"
+                        title="Remove tag"
+                      >
+                        <X size={11} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-[#787C83] italic pt-1">
+                No other tasks tagged yet. Click &quot;Tag Task (@)&quot; to relate previous tasks.
+              </p>
+            )}
+
+            {/* Add Task Tag Dropdown Picker */}
+            {showAddTagPicker && allIssues && (
+              <div className="p-3 bg-[#131415] border border-[#38BDF8]/50 rounded-xl space-y-2.5 shadow-2xl animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                    Select Task to Relate / Tag
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddTagPicker(false)}
+                    className="text-[#787C83] hover:text-white p-0.5 cursor-pointer"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Search tasks by ID or name (e.g. T1, auth)..."
+                  value={tagPickerSearch}
+                  onChange={(e) => setTagPickerSearch(e.target.value)}
+                  className="w-full bg-[#1B1C1F] border border-[#2A2C30] focus:border-[#38BDF8] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none font-mono"
+                  autoFocus
+                />
+
+                <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
+                  {allIssues
+                    .filter((i) => i.id !== issue.id && !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
+                    .filter((i) => {
+                      const shortId = getTaskShortId(i, allIssues);
+                      const q = tagPickerSearch.toLowerCase();
+                      return (
+                        shortId.toLowerCase().includes(q) ||
+                        i.title.toLowerCase().includes(q) ||
+                        i.key.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((t) => {
+                      const shortId = getTaskShortId(t, allIssues);
+                      const isTagActive = currentTaskTags.some(
+                        (ct) => ct.toUpperCase() === shortId.toUpperCase() || ct.toUpperCase() === `@${shortId.toUpperCase()}`
+                      );
+
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => handleToggleTaskTag(shortId)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
+                            isTagActive
+                              ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
+                              : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 truncate">
+                            <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.2 rounded text-[10px] border border-[#DCB001]/25">
+                              {shortId}
+                            </span>
+                            <span className="truncate">{t.title}</span>
+                          </div>
+                          {isTagActive && <Check size={12} className="text-[#38BDF8] shrink-0 ml-1" />}
+                        </button>
+                      );
+                    })}
+                </div>
               </div>
             )}
           </div>

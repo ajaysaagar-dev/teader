@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Eye
 } from 'lucide-react';
+import { getTaskShortId } from '@/lib/task-id';
 
 interface CompactListViewProps {
   issues: Issue[];
@@ -307,13 +308,15 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                     <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
                   )}
 
-                  {/* Key */}
+                  {/* Key (T1, T2... Tn) */}
                   <div className="col-span-2 flex items-center gap-2 font-mono font-bold text-[#DCB001] text-[11px]">
                     <GripVertical size={12} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
-                    <span>{issue.key}</span>
+                    <span className="bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/30">
+                      {getTaskShortId(issue, issues)}
+                    </span>
                   </div>
 
-                  {/* Title & Folder Tag */}
+                  {/* Title & Folder Tag & Related Task Pills */}
                   <div className="col-span-5 flex items-center gap-2 pr-3 truncate">
                     {(issue.epic || issue.title.startsWith('📁 ')) && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 shrink-0">
@@ -324,6 +327,15 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                     <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
                       {issue.title}
                     </span>
+                    {issue.tags && issue.tags.length > 0 && (
+                      <div className="hidden md:flex items-center gap-1 shrink-0 ml-1">
+                        {issue.tags.slice(0, 2).map((t, idx) => (
+                          <span key={idx} className="text-[9px] font-mono text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/30 px-1 py-0.2 rounded">
+                            @{t.replace(/^@/, '')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Status */}

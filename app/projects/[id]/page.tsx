@@ -56,6 +56,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
+import { getTaskShortId } from '@/lib/task-id';
 
 // Dynamic lazy-loaded view components for optimal code-splitting and load speed
 const ProjectOverviewView = dynamic(
@@ -2006,6 +2007,9 @@ export default function SingleProjectPage() {
                 <div className="h-12 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 shrink-0">
+                      {getTaskShortId(selectedIssue, issues)}
+                    </span>
+                    <span className="text-xs font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
                       {selectedIssue.key}
                     </span>
                     <span className="text-sm font-semibold text-white truncate max-w-[420px]">
@@ -2047,6 +2051,8 @@ export default function SingleProjectPage() {
                 <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                   <IssueDetailView
                     issue={selectedIssue}
+                    allIssues={issues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
                     onUpdateIssue={(updated) =>
                       setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
                     }

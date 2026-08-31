@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { getTaskShortId } from '@/lib/task-id';
 
 interface TreeViewProps {
   issues: Issue[];
@@ -897,11 +898,14 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                     issue,
                                   });
                                 }}
-                                className={`bg-[#17181A] border transition-all shadow-sm rounded-lg p-2.5 select-none cursor-grab active:cursor-grabbing ${
+                                className={`bg-[#17181A] border transition-all shadow-sm rounded-lg p-2.5 select-none cursor-pointer ${
                                   isHoveredBefore || isHoveredAfter
                                     ? 'border-[#DCB001] bg-[#DCB001]/10'
-                                    : 'border-[#2A2C30] hover:border-[#DCB001]/50'
+                                    : 'border-[#2A2C30] hover:border-[#DCB001]/50 hover:bg-[#1C1E22]'
                                 }`}
+                                onClick={() => {
+                                  if (!isEditingThisIssue) onSelectIssue(issue.id);
+                                }}
                               >
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                   {/* Left: Drag grip, File icon, Key, Title, Priority */}
@@ -911,13 +915,16 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                       <FileCode size={12} />
                                     </span>
 
-                                    {/* Issue Key */}
+                                    {/* Issue Key (T1, T2, ... Tn) */}
                                     <button
-                                      onClick={() => onSelectIssue(issue.id)}
-                                      className="text-xs font-mono font-bold text-[#DCB001] hover:underline shrink-0"
-                                      title="Inspect Task Details"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSelectIssue(issue.id);
+                                      }}
+                                      className="text-xs font-mono font-bold text-[#DCB001] hover:underline shrink-0 bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/30"
+                                      title={`Inspect Task Details (${issue.key})`}
                                     >
-                                      {issue.key}
+                                      {getTaskShortId(issue, issues)}
                                     </button>
 
                                     {/* Priority dot */}
@@ -931,7 +938,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
                                     {/* Task Title (Inline Editable) */}
                                     {isEditingThisIssue ? (
-                                      <div className="flex items-center gap-1 flex-1 max-w-md">
+                                      <div className="flex items-center gap-1 flex-1 max-w-md" onClick={(e) => e.stopPropagation()}>
                                         <input
                                           type="text"
                                           value={editingIssueTitleValue}
@@ -954,19 +961,24 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                     ) : (
                                       <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
                                         <span
-                                          onDoubleClick={() => {
+                                          onDoubleClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingIssueTitleValue(issue.title);
                                             setEditingIssueId(issue.id);
                                           }}
-                                          onClick={() => onSelectIssue(issue.id)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSelectIssue(issue.id);
+                                          }}
                                           className="text-xs font-semibold text-[#CFD4DD] hover:text-white cursor-pointer truncate max-w-md"
-                                          title="Click to inspect, double-click to rename"
+                                          title="Click to inspect task details"
                                         >
                                           {issue.title}
                                         </span>
 
                                         <button
-                                          onClick={() => {
+                                          onClick={(e) => {
+                                            e.stopPropagation();
                                             setEditingIssueTitleValue(issue.title);
                                             setEditingIssueId(issue.id);
                                           }}
@@ -975,12 +987,32 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                         >
                                           <Pencil size={10} />
                                         </button>
+
+                                        {/* Tagged Task Pills on Card */}
+                                        {issue.tags && issue.tags.length > 0 && (
+                                          <div className="hidden sm:flex items-center gap-1 shrink-0 ml-1">
+                                            {issue.tags.slice(0, 3).map((tag, tIdx) => (
+                                              <span
+                                                key={tIdx}
+                                                className="text-[9px] font-mono text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/30 px-1 py-0.2 rounded"
+                                                title={`Related / Tagged: ${tag}`}
+                                              >
+                                                @{tag.replace(/^@/, '')}
+                                              </span>
+                                            ))}
+                                            {issue.tags.length > 3 && (
+                                              <span className="text-[9px] font-mono text-[#787C83]">
+                                                +{issue.tags.length - 3}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                   </div>
 
                                   {/* Right: Status Pill, Assignee & Actions */}
-                                  <div className="flex items-center gap-2 shrink-0">
+                                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                                     {/* Status Switcher Dropdown */}
                                     <select
                                       value={issue.status}

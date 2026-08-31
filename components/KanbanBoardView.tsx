@@ -20,6 +20,7 @@ import {
   Folder,
   FolderOpen
 } from 'lucide-react';
+import { getTaskShortId } from '@/lib/task-id';
 
 interface KanbanBoardViewProps {
   issues: Issue[];
@@ -469,10 +470,10 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 
                         {/* Key, Priority & Drag Handle */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <GripVertical size={12} className="text-[#787C83] opacity-40 group-hover:opacity-100 group-hover:text-[#DCB001] transition-all shrink-0 cursor-grab" />
-                            <span className="font-mono text-[11px] font-bold text-[#DCB001]">
-                              {issue.key}
+                            <span className="font-mono text-[11px] font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.2 rounded border border-[#DCB001]/30">
+                              {getTaskShortId(issue, issues)}
                             </span>
                           </div>
                           <span
@@ -490,12 +491,23 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
 
                         {/* Title & Folder Tag */}
                         <div className="space-y-1">
-                          {(issue.epic || issue.title.startsWith('📁 ')) && (
-                            <div className="inline-flex items-center gap-1 text-[9px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 max-w-full truncate">
-                              <Folder size={10} className="shrink-0" />
-                              <span className="truncate">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {(issue.epic || issue.title.startsWith('📁 ')) && (
+                              <div className="inline-flex items-center gap-1 text-[9px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 max-w-full truncate">
+                                <Folder size={10} className="shrink-0" />
+                                <span className="truncate">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
+                              </div>
+                            )}
+                            {issue.tags && issue.tags.length > 0 && (
+                              <div className="flex items-center gap-1">
+                                {issue.tags.slice(0, 2).map((t, idx) => (
+                                  <span key={idx} className="text-[9px] font-mono text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/30 px-1 py-0.2 rounded">
+                                    @{t.replace(/^@/, '')}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           <h4 className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white line-clamp-2 leading-snug">
                             {issue.title}
                           </h4>

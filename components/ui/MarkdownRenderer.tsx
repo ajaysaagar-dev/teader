@@ -178,6 +178,23 @@ export function parseInlineMarkdown(
       continue;
     }
 
+    // 4.5 Task / Issue Tag Reference: @T1, @T2, @TDR-123
+    const taskTagMatch = remaining.match(/^@(T\d+|[A-Za-z0-9_-]+)/);
+    if (taskTagMatch) {
+      const tagLabel = taskTagMatch[1];
+      tokens.push(
+        <span
+          key={`task_tag_${keyIdx++}`}
+          className="inline-flex items-center px-1.5 py-0.2 mx-0.5 font-mono text-[11px] font-bold text-[#38BDF8] bg-[#38BDF8]/15 border border-[#38BDF8]/30 rounded cursor-pointer hover:bg-[#38BDF8]/25 hover:underline"
+          title={`Tagged Task Reference: @${tagLabel}`}
+        >
+          @{tagLabel}
+        </span>
+      );
+      remaining = remaining.slice(taskTagMatch[0].length);
+      continue;
+    }
+
     // 5. HTML: <b>...</b> or <strong>...</strong>
     const strongHtmlMatch = remaining.match(/^<(b|strong)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>/i);
     if (strongHtmlMatch) {
