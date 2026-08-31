@@ -53,7 +53,21 @@ const DEFAULT_CHANNELS: Channel[] = [
   { id: 'qa-sync', name: 'qa-sync', desc: 'Bug reports, test results & QA verification' },
 ];
 
-const EMOJIS = ['🚀', '⚡', '🔥', '✅', '👏', '🎉', '💡', '🤖', '👀', '❤️'];
+const EMOJIS = ['🚀', '⚡', '🔥', '✅', '👏', '🎉', '💡', '🤖', '👀', '❤️', '👍', '🙌'];
+
+function formatMessageDate(dateStr?: string) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (isToday) return 'Today';
+  if (isYesterday) return 'Yesterday';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function ConversationsPage() {
   const searchParams = useSearchParams();
@@ -559,70 +573,118 @@ export default function ConversationsPage() {
               </div>
             ) : (
               messages.map((msg, idx) => {
-                const isMe = msg.userId === currentUser?.id;
+                const isMe = Number(msg.userId) === Number(currentUser?.id) || msg.userName === currentUser?.name || msg.userName === 'You';
                 const isOwner = msg.userRole === 'owner';
                 const isAdmin = msg.userRole === 'admin';
                 const canDelete = isMe || isUserAdmin || currentUser?.id === 1;
 
+                const prevMsg = idx > 0 ? messages[idx - 1] : null;
+                const currentDateLabel = formatMessageDate(msg.createdAt);
+                const prevDateLabel = prevMsg ? formatMessageDate(prevMsg.createdAt) : null;
+                const showDateSeparator = currentDateLabel !== prevDateLabel;
+
                 return (
-                  <div
-                    key={`msg_${msg.id ?? 'opt'}_${idx}`}
-                    className={`group flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
-                      isMe ? 'bg-[#15161A]/50 hover:bg-[#18191E]' : 'hover:bg-[#15161A]'
-                    }`}
-                  >
-                    {/* Author Avatar */}
-                    <img
-                      src={msg.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                      alt={msg.userName}
-                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#2A2C30] shrink-0 mt-0.5"
-                    />
-
-                    {/* Message Body */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-xs text-white truncate">
-                          {msg.userName}
-                        </span>
-
-                        {isOwner && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
-                            OWNER
-                          </span>
-                        )}
-
-                        {isAdmin && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                            ADMIN
-                          </span>
-                        )}
-
-                        <span className="text-[10px] font-mono text-[#6A6E75]">
-                          {msg.createdAt
-                            ? new Date(msg.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
+                  <React.Fragment key={`msg_frag_${msg.id ?? 'opt'}_${idx}`}>
+                    {showDateSeparator && (
+                      <div className="flex items-center justify-center my-3 select-none">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#17181C] border border-[#26282E] text-[10px] font-mono text-[#787C83]">
+                          {currentDateLabel}
                         </span>
                       </div>
-
-                      <div className="text-xs text-[#CFD4DD] leading-relaxed break-words whitespace-pre-wrap">
-                        {msg.content}
-                      </div>
-                    </div>
-
-                    {/* Role-based Message Deletion: Admins can delete all, others only delete their own */}
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[#2A2C30] text-[#787C83] hover:text-[#EF4444] transition-opacity"
-                        title={isUserAdmin && !isMe ? 'Delete Message (Admin Privilege)' : 'Delete your message'}
-                      >
-                        <Trash2 size={13} />
-                      </button>
                     )}
-                  </div>
+
+                    <div
+                      className={`flex items-end gap-2 group/msg ${
+                        isMe ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      {!isMe && (
+                        <img
+                          src={msg.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                          alt={msg.userName}
+                          className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#26282E] shrink-0 mb-0.5"
+                        />
+                      )}
+
+                      <div
+                        className={`flex flex-col min-w-0 max-w-[85%] sm:max-w-[75%] ${
+                          isMe ? 'items-end' : 'items-start'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 px-1 mb-1 select-none">
+                          <span className="text-[11px] font-bold text-white truncate">
+                            {isMe ? 'You' : msg.userName}
+                          </span>
+
+                          {isOwner && (
+                            <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                              OWNER
+                            </span>
+                          )}
+
+                          {isAdmin && (
+                            <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                              ADMIN
+                            </span>
+                          )}
+
+                          <span className="text-[9px] font-mono text-[#6A6E75]">
+                            {msg.createdAt
+                              ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : ''}
+                          </span>
+                        </div>
+
+                        <div
+                          className={`relative px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
+                            isMe
+                              ? 'bg-[#DCB001]/15 text-white border border-[#DCB001]/35 rounded-br-xs'
+                              : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-bl-xs'
+                          }`}
+                        >
+                          {msg.content}
+
+                          <div
+                            className={`absolute top-1 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#111215]/95 border border-[#2A2C30] rounded-lg p-0.5 shadow-md ${
+                              isMe ? 'right-full mr-1.5' : 'left-full ml-1.5'
+                            }`}
+                          >
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(msg.content);
+                                toast.success('Copied message text');
+                              }}
+                              className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                              title="Copy text"
+                            >
+                              <Copy size={11} />
+                            </button>
+
+                            {canDelete && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg.id)}
+                                className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-[#EF4444] transition-colors cursor-pointer"
+                                title={isUserAdmin && !isMe ? 'Delete (Admin)' : 'Delete'}
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isMe && (
+                        <img
+                          src={msg.userAvatar || currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
+                          alt="You"
+                          className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#DCB001]/40 shrink-0 mb-0.5"
+                        />
+                      )}
+                    </div>
+                  </React.Fragment>
                 );
               })
             )}
