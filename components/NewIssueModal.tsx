@@ -116,13 +116,25 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   // Extract available folder names
   const availableFolders = React.useMemo(() => {
     const set = new Set<string>(['General']);
-    existingIssues.forEach((i) => {
-      if (i.title.startsWith('📁 ')) {
-        set.add(i.title.replace('📁 ', '').trim());
+    existingIssues.forEach((i: any) => {
+      if (i.title && (i.title.startsWith('📁 ') || i.title.startsWith('[Folder]'))) {
+        set.add(i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim());
+      }
+      if (i.labels && Array.isArray(i.labels) && i.labels.some((l: string) => l.toLowerCase() === 'folder')) {
+        set.add(i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim());
+      }
+      if (i.epic && i.epic.trim() && i.epic !== 'General' && i.epic !== 'Platform Core') {
+        set.add(i.epic.trim());
       }
     });
     return Array.from(set);
   }, [existingIssues]);
+
+  const isFolderDuplicate = React.useMemo(() => {
+    if (creationMode !== 'folder' || !folderName.trim()) return false;
+    const clean = folderName.trim().toLowerCase();
+    return availableFolders.some((f) => f.toLowerCase().trim() === clean);
+  }, [creationMode, folderName, availableFolders]);
 
   // Real-time Duplicate Issue Detection
   const detectedDuplicates = React.useMemo(() => {
@@ -167,9 +179,15 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       return;
     }
 
-    if (creationMode === 'folder' && !folderName.trim()) {
-      toast.error('Please enter a folder name');
-      return;
+    if (creationMode === 'folder') {
+      if (!folderName.trim()) {
+        toast.error('Please enter a folder name');
+        return;
+      }
+      if (isFolderDuplicate) {
+        toast.error(`A folder named "${folderName.trim()}" already exists. Please choose a unique name.`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -582,9 +600,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                           placeholder="e.g. Authentication & Security, Database Layer, Release v1.0..."
                           value={folderName}
                           onChange={(e) => setFolderName(e.target.value)}
-                          className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg pl-9 pr-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
+                          className={`w-full bg-[#131415] border rounded-lg pl-9 pr-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors ${
+                            isFolderDuplicate ? 'border-[#EF4444] focus:border-[#EF4444]' : 'border-[#2A2C30] focus:border-[#DCB001]'
+                          }`}
                         />
                       </div>
+                      {isFolderDuplicate && (
+                        <p className="text-[11px] text-[#EF4444] font-medium flex items-center gap-1 mt-1.5 animate-in fade-in">
+                          <AlertTriangle size={12} className="shrink-0" />
+                          <span>A folder named &quot;{folderName.trim()}&quot; already exists. Please enter a unique folder name.</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* Folder Description */}
@@ -883,8 +909,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                  disabled={isSubmitting || (creationMode === 'folder' && isFolderDuplicate)}
+                  className="px-5 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   {creationMode === 'task' ? (
                     <>

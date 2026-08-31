@@ -328,7 +328,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
       return;
     }
     const trimmed = editingEpicValue.trim();
-    if (trimmed && trimmed !== oldName && onRenameEpic) {
+    if (!trimmed || trimmed === oldName) {
+      setEditingEpicName(null);
+      return;
+    }
+    const isDuplicate = epicNames.some(
+      (n) => n.toLowerCase() === trimmed.toLowerCase() && n.toLowerCase() !== oldName.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast.error(`A folder named "${trimmed}" already exists. Please choose a unique name.`);
+      setEditingEpicName(null);
+      return;
+    }
+    if (onRenameEpic) {
       onRenameEpic(oldName, trimmed);
     }
     setEditingEpicName(null);
