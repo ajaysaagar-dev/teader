@@ -10,6 +10,7 @@ import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } f
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
+import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
 
@@ -548,43 +549,7 @@ export default function SingleProjectPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIssueId, isEditProjectModalOpen, isNewIssueModalOpen]);
 
-  // Centralized de-duplication reconciler for tasks and folders
-  const reconcileCreatedIssue = useCallback((prev: Issue[], created: Issue): Issue[] => {
-    // 1. If the exact ID already exists in the list, update it in place
-    const existingByIdIdx = prev.findIndex((iss) => iss.id === created.id);
-    if (existingByIdIdx !== -1) {
-      const updated = [...prev];
-      updated[existingByIdIdx] = { ...updated[existingByIdIdx], ...created };
-      return updated;
-    }
 
-    // 2. If this is a real server-persisted issue, replace any matching temporary optimistic issue
-    if (!String(created.id).startsWith('temp_')) {
-      const tempMatchIdx = prev.findIndex(
-        (iss) =>
-          String(iss.id).startsWith('temp_') &&
-          (iss.title === created.title || (created.key && iss.key === created.key))
-      );
-      if (tempMatchIdx !== -1) {
-        const updated = [...prev];
-        updated[tempMatchIdx] = created;
-        return updated;
-      }
-    }
-
-    // 3. Prevent duplicate temporary issues if already added
-    const filtered = prev.filter(
-      (iss) =>
-        iss.id !== created.id &&
-        !(
-          String(iss.id).startsWith('temp_') &&
-          String(created.id).startsWith('temp_') &&
-          iss.title === created.title
-        )
-    );
-
-    return [created, ...filtered];
-  }, []);
 
   // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────
   useRealtimeSubscription({

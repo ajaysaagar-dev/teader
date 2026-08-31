@@ -28,6 +28,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { Issue, FileDiff } from '@/lib/types';
+import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
@@ -152,7 +153,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, []);
 
   const handleCreateIssue = (newIssue: Issue) => {
-    setIssues(prev => [newIssue, ...prev]);
+    setIssues(prev => reconcileCreatedIssue(prev, newIssue));
     toast.success(`Created ${newIssue.key}`);
   };
 
