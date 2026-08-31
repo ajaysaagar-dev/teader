@@ -1,43 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Issue, Status, Priority, TimeEntry } from '@/lib/types';
+import React, { useState, useEffect } from 'react';
+import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { 
-  Star, 
-  MoreHorizontal, 
-  ChevronUp, 
-  ChevronDown, 
-  Link, 
   Check,
-  CheckSquare,
   Plus,
-  Camera,
-  Image as ImageIcon,
-  Folder,
-  FolderPlus,
-  Sparkles,
-  Clock,
-  Play,
-  Square,
-  AlertTriangle,
-  ShieldAlert,
   Calendar,
   Layers,
-  MessageSquare,
-  Send,
   Trash2,
   Tag,
-  Hash,
   Pencil,
-  Terminal,
-  GitBranch,
-  Copy,
-  X
+  Link,
+  X,
+  ExternalLink,
+  ArrowLeft,
+  Circle,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  ShieldAlert
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
-import { getTaskShortId, findIssueByTag } from '@/lib/task-id';
+import { getTaskShortId, findIssueByTag, getAvailableTaskMentions, TaskMentionOption } from '@/lib/task-id';
+import { TaskMentionPopover } from '@/components/ui/TaskMentionPopover';
 
 interface IssueDetailViewProps {
   issue: Issue;
@@ -46,7 +33,15 @@ interface IssueDetailViewProps {
   onUpdateIssue: (updated: Issue) => void;
   onOpenDiffModal?: () => void;
   currentRole?: string;
+  onClose?: () => void;
 }
+
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
+  todo: { label: 'Todo', bg: 'bg-[#787C83]/10', text: 'text-[#787C83]', border: 'border-[#787C83]/30' },
+  in_progress: { label: 'In Progress', bg: 'bg-[#DCB001]/10', text: 'text-[#DCB001]', border: 'border-[#DCB001]/30' },
+  needs_review: { label: 'Needs Review', bg: 'bg-[#A855F7]/10', text: 'text-[#A855F7]', border: 'border-[#A855F7]/30' },
+  done: { label: 'Done', bg: 'bg-[#22C55E]/10', text: 'text-[#22C55E]', border: 'border-[#22C55E]/30' },
+};
 
 function parseBlockedBy(blockedBy: any): string[] {
   if (!blockedBy) return [];
@@ -66,27 +61,53 @@ function parseBlockedBy(blockedBy: any): string[] {
 
 export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   issue,
-  allIssues,
+  allIssues = [],
   onSelectIssue,
   onUpdateIssue,
   currentRole = 'owner',
+  onClose,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
-  const [isUploadingTaskImg, setIsUploadingTaskImg] = useState(false);
 
   // Description markdown edit state
   const [isEditingDesc, setIsEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState(issue.description || '');
-  const [isSavingDesc, setIsSavingDesc] = useState(false);
 
   // Tag picker state
   const [showAddTagPicker, setShowAddTagPicker] = useState(false);
   const [tagPickerSearch, setTagPickerSearch] = useState('');
+  const [tagPickerIndex, setTagPickerIndex] = useState(0);
+
+  // Top / Stacked Task Overlay state (opens clicked tagged task on top of current task)
+  const [overlayIssueId, setOverlayIssueId] = useState<string | null>(null);
+
+  const overlayIssue = React.useMemo(() => {
+    if (!overlayIssueId || !allIssues) return null;
+    return allIssues.find((i) => String(i.id) === String(overlayIssueId)) || null;
+  }, [overlayIssueId, allIssues]);
 
   const currentTaskTags = React.useMemo(() => {
     const t = issue.tags || [];
     return Array.isArray(t) ? t : [];
   }, [issue.tags]);
+
+  const mentionOptions = React.useMemo(() => getAvailableTaskMentions(allIssues), [allIssues]);
+
+  const filteredTagCandidates = React.useMemo(() => {
+    const q = tagPickerSearch.toLowerCase().trim();
+    return allIssues
+      .filter((i) => String(i.id) !== String(issue.id) && !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
+      .filter((i) => {
+        const shortId = getTaskShortId(i, allIssues);
+        if (!q) return true;
+        return (
+          shortId.toLowerCase().includes(q) ||
+          i.title.toLowerCase().includes(q) ||
+          i.key.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 10);
+  }, [allIssues, issue.id, tagPickerSearch]);
 
   const handleToggleTaskTag = async (shortId: string) => {
     const clean = shortId.replace(/^@/, '');
@@ -127,24 +148,6 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   useEffect(() => {
     setDescValue(issue.description || '');
   }, [issue.description]);
-
-  // Time tracking & live timer state
-
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [newCommentText, setNewCommentText] = useState('');
-
-
-  // Timer interval effect
-  useEffect(() => {
-    let interval: any;
-    if (isTimerRunning) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning]);
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/task/${issue.id}/details`;
@@ -211,114 +214,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
     } catch {}
   };
 
-  // Estimate handler
-  const handleEstimateChange = async (hours: number) => {
-    const updated = { ...issue, estimatedHours: hours };
-    onUpdateIssue(updated);
-    try {
-      await fetch(`/api/issues/${issue.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estimatedHours: hours }),
-      });
-      toast.success('Estimate updated');
-    } catch {}
-  };
-
-  // Toggle Live Timer
-  const handleToggleTimer = async () => {
-    if (isTimerRunning) {
-      // Stopping timer: Log minutes
-      const minutesSpent = Math.max(1, Math.round(timerSeconds / 60));
-      const newEntry: TimeEntry = {
-        id: `time_${Date.now()}`,
-        durationMinutes: minutesSpent,
-        note: `Work session on ${issue.key}`,
-        createdAt: new Date().toISOString(),
-        userName: 'Current User',
-      };
-
-      const updatedEntries = [...(issue.timeEntries || []), newEntry];
-      const newLoggedHours = Number(((issue.loggedHours || 0) + minutesSpent / 60).toFixed(2));
-
-      const updated = {
-        ...issue,
-        timeEntries: updatedEntries,
-        loggedHours: newLoggedHours,
-      };
-
-      onUpdateIssue(updated);
-      setIsTimerRunning(false);
-      setTimerSeconds(0);
-      toast.success(`Logged ${minutesSpent} min to ${issue.key}`);
-
-      try {
-        await fetch(`/api/issues/${issue.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            timeEntries: updatedEntries,
-            loggedHours: newLoggedHours,
-          }),
-        });
-      } catch {}
-    } else {
-      setIsTimerRunning(true);
-      toast.info('Live time tracker started');
-    }
-  };
-
-  // Image Upload Handler
-  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploadingTaskImg(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('taskId', issue.id);
-
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (res.ok) {
-        const imageRecord = await res.json();
-        toast.success('Image uploaded successfully');
-
-        onUpdateIssue({
-          ...issue,
-          images: [...(issue.images || []), imageRecord],
-        });
-      } else {
-        toast.error('Failed to upload image');
-      }
-    } catch {
-      toast.error('Upload failed');
-    } finally {
-      setIsUploadingTaskImg(false);
-    }
-  };
-
-  const issueImages = issue.images || [];
-
-  const formatTimer = (sec: number) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   const activeBlockers = parseBlockedBy(issue.blockedBy);
   const isBlocked = activeBlockers.length > 0;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] overflow-y-auto font-sans select-none">
+    <div className="relative flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] overflow-y-auto font-sans select-none">
       {/* Top Warning Banner if Task is Blocked */}
       {isBlocked && (
-        <div className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 flex items-center justify-between text-xs text-[#EF4444] font-medium">
+        <div className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 flex items-center justify-between text-xs text-[#EF4444] font-medium shrink-0">
           <div className="flex items-center gap-2">
             <ShieldAlert size={15} />
             <span>This task has active blocking dependencies: <strong>{activeBlockers.join(', ')}</strong></span>
@@ -329,9 +232,8 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         </div>
       )}
 
-
       {/* Main Container */}
-      <div className="p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-12 gap-6">
+      <div className="p-4 sm:p-6 max-w-6xl w-full mx-auto grid grid-cols-12 gap-6 flex-1">
         {/* Left / Center Content Column */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           {/* Header Row */}
@@ -361,6 +263,15 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 >
                   {copiedLink ? <Check size={14} className="text-[#22C55E]" /> : <Link size={14} />}
                 </button>
+                {onClose && (
+                  <button
+                    onClick={onClose}
+                    className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                    title="Close Details"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -400,22 +311,17 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={async () => {
-                      // 1. Immediately update UI and exit edit mode (0ms)
                       const updatedDescription = descValue;
                       onUpdateIssue({ ...issue, description: updatedDescription });
                       setIsEditingDesc(false);
                       toast.success('Description saved!');
 
-                      // 2. Process in background to database
                       try {
-                        const res = await fetch(`/api/issues/${issue.id}`, {
+                        await fetch(`/api/issues/${issue.id}`, {
                           method: 'PATCH',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ description: updatedDescription }),
                         });
-                        if (!res.ok) {
-                          toast.error('Failed to sync description with database');
-                        }
                       } catch {
                         toast.error('Network error syncing description');
                       }
@@ -449,12 +355,12 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             )}
           </div>
 
-          {/* Tagged & Related Tasks Section */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3">
+          {/* ─── TAGGED & RELATED TASKS SECTION (Interactive Cards & Separate Stack View) ─── */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Tag size={15} className="text-[#38BDF8]" />
-                <h3 className="text-xs font-bold text-[#CFD4DD] uppercase tracking-wider font-mono">
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
                   Tagged & Related Tasks ({currentTaskTags.length})
                 </h3>
               </div>
@@ -463,264 +369,209 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddTagPicker((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-2.5 py-1 bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-[#38BDF8]/60 text-[#38BDF8] text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[#131415] hover:bg-[#202226] border border-[#38BDF8]/40 hover:border-[#38BDF8] text-[#38BDF8] text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm"
                 >
-                  <Plus size={12} />
+                  <Plus size={13} />
                   <span>Tag Task (@)</span>
                 </button>
               )}
             </div>
 
-            {/* Tagged Tasks List */}
+            {/* Tagged Tasks Cards Grid */}
             {currentTaskTags.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 {currentTaskTags.map((tagStr) => {
                   const found = allIssues ? findIssueByTag(tagStr, allIssues) : undefined;
                   const displayTag = tagStr.startsWith('@') ? tagStr : `@${tagStr}`;
-                  const displayTitle = found ? found.title : '';
+                  const shortId = found ? getTaskShortId(found, allIssues) : displayTag.replace(/^@/, '');
+                  const statusCfg = found ? (STATUS_CONFIG[found.status] || STATUS_CONFIG.todo) : STATUS_CONFIG.todo;
 
                   return (
                     <div
                       key={tagStr}
-                      className="group/pill inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#131415] hover:bg-[#1F242C] border border-[#38BDF8]/30 hover:border-[#38BDF8] text-xs transition-all shadow-sm"
+                      className="group/card relative flex flex-col justify-between p-3.5 rounded-xl bg-[#17181A] hover:bg-[#1C1E22] border border-[#2A2C30] hover:border-[#38BDF8]/70 transition-all shadow-md"
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (found && onSelectIssue) {
-                            onSelectIssue(found.id);
-                          } else {
-                            toast.info(`Tagged task ${displayTag}`);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 text-[#38BDF8] hover:text-white font-mono font-bold text-left cursor-pointer"
-                        title={found ? `Click to open ${found.title}` : `Tagged ${displayTag}`}
-                      >
-                        <span>{displayTag}</span>
-                        {displayTitle && (
-                          <span className="text-[#CFD4DD] font-sans font-normal truncate max-w-[160px] sm:max-w-[220px]">
-                            {displayTitle}
-                          </span>
-                        )}
-                      </button>
+                      <div>
+                        {/* Card Header: Tag Badge & Status & Remove button */}
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/15 border border-[#DCB001]/30 px-2 py-0.5 rounded">
+                              {shortId}
+                            </span>
+                            {found?.key && (
+                              <span className="font-mono text-[10px] text-[#787C83]">
+                                {found.key}
+                              </span>
+                            )}
+                            {found && (
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${statusCfg.bg} ${statusCfg.text} ${statusCfg.border}`}>
+                                {statusCfg.label}
+                              </span>
+                            )}
+                          </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveTaskTag(tagStr)}
-                        className="text-[#787C83] hover:text-[#EF4444] p-0.5 rounded transition-colors cursor-pointer"
-                        title="Remove tag"
-                      >
-                        <X size={11} />
-                      </button>
+                          {/* Remove Tag Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTaskTag(tagStr)}
+                            className="p-1 rounded-md text-[#787C83] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors cursor-pointer"
+                            title={`Remove tag ${displayTag}`}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+
+                        {/* Card Title */}
+                        <h4 className="text-xs font-bold text-white group-hover/card:text-[#38BDF8] transition-colors line-clamp-2 leading-relaxed">
+                          {found ? found.title : displayTag}
+                        </h4>
+
+                        {/* Folder / Epic Tag */}
+                        {found?.epic && (
+                          <div className="flex items-center gap-1 mt-2 text-[10px] font-mono text-[#A855F7]">
+                            <Layers size={10} />
+                            <span className="truncate">{found.epic}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Click to Open Tagged Task Button (Opens on top in separate view) */}
+                      <div className="pt-3 mt-2 border-t border-[#2A2C30]/70 flex items-center justify-between">
+                        <span className="text-[10px] text-[#787C83]">
+                          {found?.assigneeName ? `Assignee: ${found.assigneeName}` : 'Click to inspect'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (found) {
+                              setOverlayIssueId(found.id);
+                            } else {
+                              toast.info(`Tagged task ${displayTag}`);
+                            }
+                          }}
+                          className="flex items-center gap-1 text-xs font-bold text-[#38BDF8] hover:text-white bg-[#38BDF8]/10 hover:bg-[#38BDF8] hover:text-[#0F1011] px-2.5 py-1 rounded-md transition-all cursor-pointer"
+                        >
+                          <span>Open Task</span>
+                          <ExternalLink size={11} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
               <p className="text-xs text-[#787C83] italic pt-1">
-                No other tasks tagged yet. Click &quot;Tag Task (@)&quot; to relate previous tasks.
+                No other tasks tagged yet. Click &quot;Tag Task (@)&quot; above to relate previous tasks.
               </p>
             )}
 
-            {/* Add Task Tag Dropdown Picker */}
+            {/* Add Task Tag Dropdown / Picker Modal */}
             {showAddTagPicker && allIssues && (
-              <div className="p-3 bg-[#131415] border border-[#38BDF8]/50 rounded-xl space-y-2.5 shadow-2xl animate-in fade-in">
+              <div className="p-3.5 bg-[#131415] border border-[#38BDF8]/60 rounded-xl space-y-3 shadow-2xl animate-in fade-in">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
-                    Select Task to Relate / Tag
+                  <span className="text-xs font-mono font-bold text-[#38BDF8] flex items-center gap-1.5">
+                    <Tag size={13} />
+                    <span>Select or Type Task to Tag (@)</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowAddTagPicker(false)}
                     className="text-[#787C83] hover:text-white p-0.5 cursor-pointer"
                   >
-                    <X size={13} />
+                    <X size={14} />
                   </button>
                 </div>
 
                 <input
                   type="text"
-                  placeholder="Search tasks by ID or name (e.g. T1, auth, or type tag)..."
+                  placeholder="Search tasks by ID or name (e.g. T1, database, or write @T...)..."
                   value={tagPickerSearch}
-                  onChange={(e) => setTagPickerSearch(e.target.value)}
+                  onChange={(e) => {
+                    setTagPickerSearch(e.target.value);
+                    setTagPickerIndex(0);
+                  }}
                   onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      setTagPickerIndex((prev) => (prev + 1) % (filteredTagCandidates.length || 1));
+                      return;
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      setTagPickerIndex((prev) => (prev - 1 + filteredTagCandidates.length) % (filteredTagCandidates.length || 1));
+                      return;
+                    }
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      const matching = allIssues
-                        .filter((i) => i.id !== issue.id && !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
-                        .filter((i) => {
-                          const shortId = getTaskShortId(i, allIssues);
-                          const q = tagPickerSearch.toLowerCase().trim();
-                          return (
-                            shortId.toLowerCase() === q ||
-                            `@${shortId.toLowerCase()}` === q ||
-                            shortId.toLowerCase().includes(q) ||
-                            i.title.toLowerCase().includes(q) ||
-                            i.key.toLowerCase().includes(q)
-                          );
-                        });
-                      if (matching.length > 0) {
-                        const targetShortId = getTaskShortId(matching[0], allIssues);
+                      if (filteredTagCandidates.length > 0) {
+                        const targetShortId = getTaskShortId(filteredTagCandidates[tagPickerIndex] || filteredTagCandidates[0], allIssues);
                         handleToggleTaskTag(targetShortId);
                         setTagPickerSearch('');
+                        setShowAddTagPicker(false);
                       } else if (tagPickerSearch.trim()) {
                         const manualTag = tagPickerSearch.trim().replace(/^@/, '');
                         handleToggleTaskTag(manualTag);
                         setTagPickerSearch('');
+                        setShowAddTagPicker(false);
                       }
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      setShowAddTagPicker(false);
                     }
                   }}
-                  className="w-full bg-[#1B1C1F] border border-[#2A2C30] focus:border-[#38BDF8] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none font-mono"
+                  className="w-full bg-[#1B1C1F] border border-[#38BDF8]/50 focus:border-[#38BDF8] rounded-lg px-3 py-2 text-xs text-white outline-none font-mono"
                   autoFocus
                 />
 
-                <div className="max-h-40 overflow-y-auto space-y-1 custom-scrollbar">
-                  {allIssues
-                    .filter((i) => i.id !== issue.id && !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
-                    .filter((i) => {
-                      const shortId = getTaskShortId(i, allIssues);
-                      const q = tagPickerSearch.toLowerCase();
-                      return (
-                        shortId.toLowerCase().includes(q) ||
-                        i.title.toLowerCase().includes(q) ||
-                        i.key.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((t) => {
-                      const shortId = getTaskShortId(t, allIssues);
-                      const isTagActive = currentTaskTags.some(
-                        (ct) => ct.toUpperCase() === shortId.toUpperCase() || ct.toUpperCase() === `@${shortId.toUpperCase()}`
-                      );
+                <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                  {filteredTagCandidates.map((t, idx) => {
+                    const shortId = getTaskShortId(t, allIssues);
+                    const isTagActive = currentTaskTags.some(
+                      (ct) => ct.toUpperCase() === shortId.toUpperCase() || ct.toUpperCase() === `@${shortId.toUpperCase()}`
+                    );
+                    const isSelected = idx === tagPickerIndex;
 
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => handleToggleTaskTag(shortId)}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
-                            isTagActive
-                              ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
-                              : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.2 rounded text-[10px] border border-[#DCB001]/25">
-                              {shortId}
-                            </span>
-                            <span className="truncate">{t.title}</span>
-                          </div>
-                          {isTagActive && <Check size={12} className="text-[#38BDF8] shrink-0 ml-1" />}
-                        </button>
-                      );
-                    })}
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          handleToggleTaskTag(shortId);
+                          setShowAddTagPicker(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#38BDF8]/20 text-white border border-[#38BDF8]/50'
+                            : isTagActive
+                            ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
+                            : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded text-[11px] border border-[#DCB001]/25 shrink-0">
+                            {shortId}
+                          </span>
+                          <span className="truncate text-xs">{t.title}</span>
+                        </div>
+                        {isTagActive && <Check size={13} className="text-[#38BDF8] shrink-0 ml-1.5" />}
+                      </button>
+                    );
+                  })}
+
+                  {filteredTagCandidates.length === 0 && tagPickerSearch.trim() && (
+                    <div className="p-2 text-center text-xs text-[#787C83]">
+                      Press Enter to add tag <strong className="text-[#38BDF8]">@{tagPickerSearch.trim().replace(/^@/, '')}</strong>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-
-
-          {/* Task Attachments Section */}
-          <div className="space-y-3 p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ImageIcon size={16} className="text-[#DCB001]" />
-                <h3 className="text-xs font-semibold text-[#CFD4DD]">Attachments & Screenshots ({issueImages.length})</h3>
-              </div>
-
-              <label className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg cursor-pointer transition-all shadow-sm">
-                <Camera size={13} />
-                <span>{isUploadingTaskImg ? 'Uploading...' : 'Upload Image'}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageFileUpload(e)}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {issueImages.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3 pt-2">
-                {issueImages.map((img: any) => (
-                  <div key={img.id} className="relative group rounded-lg overflow-hidden border border-[#2A2C30]">
-                    <img src={img.url} alt={img.fileName} className="w-full h-24 object-cover" />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end text-[10px] font-mono text-white truncate">
-                      <span className="truncate">{img.fileName}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-[#787C83] italic pt-1">No attachments uploaded yet.</p>
             )}
           </div>
         </div>
 
-        {/* Right Properties & Time Tracking Sidebar */}
+        {/* Right Properties Sidebar */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          {/* Time Tracking Card (§1.5) */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2A2C30]">
-              <div className="flex items-center gap-2">
-                <Clock size={15} className="text-[#DCB001]" />
-                <span className="text-xs font-bold text-white">Time Tracking</span>
-              </div>
-              <span className="text-[11px] font-mono text-[#DCB001] font-bold">
-                {issue.loggedHours || 0}h logged
-              </span>
-            </div>
-
-            {/* Live Timer Widget */}
-            <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl flex items-center justify-between">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-mono text-[#787C83] uppercase tracking-wider block">Live Session</span>
-                <span className="text-base font-mono font-bold text-white">
-                  {isTimerRunning ? formatTimer(timerSeconds) : '00:00'}
-                </span>
-              </div>
-
-              <button
-                onClick={handleToggleTimer}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-md transition-all ${
-                  isTimerRunning
-                    ? 'bg-[#EF4444] hover:bg-[#dc2626] text-white animate-pulse'
-                    : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
-                }`}
-              >
-                {isTimerRunning ? <Square size={12} /> : <Play size={12} />}
-                <span>{isTimerRunning ? 'Stop Timer' : 'Start Timer'}</span>
-              </button>
-            </div>
-
-            {/* Estimate & Progress */}
-            <div className="space-y-1.5 text-xs">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-[#787C83]">Estimate:</span>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={issue.estimatedHours || 0}
-                    onChange={(e) => handleEstimateChange(parseFloat(e.target.value) || 0)}
-                    className="w-14 bg-[#131415] border border-[#2A2C30] text-right text-xs text-[#DCB001] font-mono rounded px-1.5 py-0.5 outline-none"
-                  />
-                  <span className="text-[#787C83] font-mono">hrs</span>
-                </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-full bg-[#131415] h-2 rounded-full overflow-hidden border border-[#2A2C30]">
-                <div
-                  className="bg-[#DCB001] h-full transition-all duration-300"
-                  style={{
-                    width: `${Math.min(100, issue.estimatedHours ? ((issue.loggedHours || 0) / issue.estimatedHours) * 100 : 0)}%`,
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Properties Card */}
           <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4 text-xs">
             <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block pb-2 border-b border-[#2A2C30]">
@@ -729,7 +580,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Status Selector */}
             <div>
-              <span className="text-[#787C83] block mb-1">Status</span>
+              <span className="text-[#787C83] block mb-1 font-medium">Status</span>
               <select
                 value={issue.status}
                 onChange={(e) => handleStatusChange(e.target.value as Status)}
@@ -744,7 +595,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Priority Selector */}
             <div>
-              <span className="text-[#787C83] block mb-1">Priority</span>
+              <span className="text-[#787C83] block mb-1 font-medium">Priority</span>
               <select
                 value={issue.priority}
                 onChange={(e) => handlePriorityChange(e.target.value as Priority)}
@@ -759,7 +610,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Due Date */}
             <div>
-              <span className="text-[#787C83] block mb-1 flex items-center gap-1">
+              <span className="text-[#787C83] block mb-1 flex items-center gap-1 font-medium">
                 <Calendar size={12} /> Due Date
               </span>
               <input
@@ -772,7 +623,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Assigned User */}
             <div>
-              <span className="text-[#787C83] block mb-1">Assigned To</span>
+              <span className="text-[#787C83] block mb-1 font-medium">Assigned To</span>
               <div className="flex items-center gap-2 p-2 bg-[#131415] border border-[#2A2C30] rounded-lg">
                 <Avatar
                   user={{
@@ -790,69 +641,74 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               </div>
             </div>
 
-              {/* Project */}
+            {/* Project */}
             <div>
-              <span className="text-[#787C83] block mb-1">Project Workspace</span>
+              <span className="text-[#787C83] block mb-1 font-medium">Project Workspace</span>
               <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
                 {issue.project} ({issue.key.split('-')[0]})
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Developer & Git Automation Section */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2A2C30]">
-              <div className="flex items-center gap-1.5 font-bold text-white">
-                <Terminal size={14} className="text-[#DCB001]" />
-                <span>Dev & Git Automation</span>
+      {/* ─── STACKED / TOP TASK OVERLAY MODAL ─── */}
+      {overlayIssue && (
+        <div 
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Inspecting Tagged Task ${overlayIssue.key}`}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in"
+        >
+          <div className="relative w-full max-w-5xl h-[90vh] bg-[#131415] border border-[#38BDF8]/60 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            {/* Overlay Top Bar */}
+            <div className="px-5 py-3 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOverlayIssueId(null)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-white text-xs font-bold text-[#CFD4DD] hover:text-white rounded-lg transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Back to {getTaskShortId(issue, allIssues)}</span>
+                </button>
+                <div className="h-4 w-[1px] bg-[#2A2C30]" />
+                <div className="flex items-center gap-2">
+                  <Tag size={14} className="text-[#38BDF8]" />
+                  <span className="text-xs font-mono text-[#38BDF8] font-bold">Tagged Task View:</span>
+                  <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/10 px-2 py-0.5 rounded border border-[#DCB001]/30">
+                    {getTaskShortId(overlayIssue, allIssues)}
+                  </span>
+                  <span className="font-bold text-white text-xs truncate max-w-[200px] sm:max-w-[320px]">
+                    {overlayIssue.title}
+                  </span>
+                </div>
               </div>
-              <span className="text-[10px] font-mono text-[#787C83]">Quick Copy</span>
+
+              <button
+                type="button"
+                onClick={() => setOverlayIssueId(null)}
+                className="p-1.5 text-[#787C83] hover:text-white bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                title="Close overlay"
+              >
+                <X size={15} />
+              </button>
             </div>
 
-            {/* Branch name */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono text-[#787C83] block">Checkout Branch</span>
-              <div className="flex items-center justify-between gap-2 p-2 bg-[#131415] rounded-lg border border-[#2A2C30]">
-                <code className="text-[11px] font-mono text-[#DCB001] truncate">
-                  git checkout -b feature/{issue.key.toLowerCase()}-{issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30)}
-                </code>
-                <button
-                  onClick={() => {
-                    const branch = `feature/${issue.key.toLowerCase()}-${issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30)}`;
-                    navigator.clipboard.writeText(`git checkout -b ${branch}`);
-                    toast.success('Copied git checkout command');
-                  }}
-                  className="p-1 text-[#787C83] hover:text-white bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] transition-colors shrink-0"
-                  title="Copy git checkout command"
-                >
-                  <Copy size={12} />
-                </button>
-              </div>
-            </div>
-
-            {/* Commit message */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono text-[#787C83] block">Commit Message</span>
-              <div className="flex items-center justify-between gap-2 p-2 bg-[#131415] rounded-lg border border-[#2A2C30]">
-                <code className="text-[11px] font-mono text-[#CFD4DD] truncate">
-                  [{issue.key}] {issue.title}
-                </code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`git commit -m "[${issue.key}] ${issue.title}"`);
-                    toast.success('Copied git commit command');
-                  }}
-                  className="p-1 text-[#787C83] hover:text-white bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] transition-colors shrink-0"
-                  title="Copy git commit command"
-                >
-                  <Copy size={12} />
-                </button>
-              </div>
+            {/* Render nested task details */}
+            <div className="flex-1 overflow-hidden">
+              <IssueDetailView
+                issue={overlayIssue}
+                allIssues={allIssues}
+                onSelectIssue={onSelectIssue}
+                onUpdateIssue={onUpdateIssue}
+                currentRole={currentRole}
+                onClose={() => setOverlayIssueId(null)}
+              />
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
-

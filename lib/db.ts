@@ -203,6 +203,7 @@ export async function initDB(): Promise<void> {
             "reporterName" VARCHAR(128) DEFAULT 'karri',
             "reporterAvatar" VARCHAR(255) DEFAULT 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
             "labels" TEXT,
+            "tags" TEXT DEFAULT '[]',
             "sprint" VARCHAR(64) DEFAULT 'Sprint 24.3',
             "epic" VARCHAR(128) DEFAULT 'General',
             "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
@@ -219,6 +220,7 @@ export async function initDB(): Promise<void> {
           );
         `);
         try {
+          await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "tags" TEXT DEFAULT '[]';`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "orderIndex" INT DEFAULT 0;`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedByName" VARCHAR(128) DEFAULT NULL;`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP WITH TIME ZONE DEFAULT NULL;`);
@@ -1080,9 +1082,17 @@ export async function getAllIssuesDB(userId?: number | string) {
         blockedBy = iss.blockedBy ? String(iss.blockedBy).split(',').map((s: string) => s.trim()).filter(Boolean) : [];
       }
 
+      let tags: string[] = [];
+      try {
+        tags = typeof iss.tags === 'string' ? JSON.parse(iss.tags) : (iss.tags || []);
+      } catch {
+        tags = iss.tags ? String(iss.tags).split(',').map((t) => t.trim()) : [];
+      }
+
       return {
         ...iss,
         labels,
+        tags,
         blockedBy,
         orderIndex: Number(iss.orderIndex) || 0,
         estimatedHours: Number(iss.estimatedHours) || 0,
@@ -1114,6 +1124,7 @@ export async function createIssueDB(data: {
   projectId?: number;
   project?: string;
   labels?: string[];
+  tags?: string[];
   epic?: string;
   sprint?: string;
   dueDate?: string;
@@ -1134,15 +1145,16 @@ export async function createIssueDB(data: {
   const epic = data.epic ? data.epic.trim() : 'General';
   const sprint = data.sprint || 'Sprint 24.3';
   const labelsStr = JSON.stringify(data.labels || ['General']);
+  const tagsStr = JSON.stringify(data.tags || []);
   const estimatedHours = Number(data.estimatedHours) || 2;
   const dueDate = data.dueDate || null;
 
   try {
     const p = getPool();
     await p.query(
-      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "estimatedHours", "dueDate", "epic", "sprint")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, estimatedHours, dueDate, epic, sprint]
+      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "tags", "estimatedHours", "dueDate", "epic", "sprint")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, tagsStr, estimatedHours, dueDate, epic, sprint]
     );
 
     if (data.subtasks && Array.isArray(data.subtasks)) {
@@ -1172,6 +1184,7 @@ export async function createIssueDB(data: {
     epic,
     sprint,
     labels: data.labels || ['General'],
+    tags: data.tags || [],
     dueDate,
     estimatedHours,
     loggedHours: 0,
@@ -1263,6 +1276,10 @@ export async function updateIssueStatusDB(
     fields.push(`"labels" = $${paramIdx++}`);
     values.push(JSON.stringify(updates.labels));
   }
+  if (updates.tags !== undefined) {
+    fields.push(`"tags" = $${paramIdx++}`);
+    values.push(JSON.stringify(updates.tags));
+  }
   if (updates.orderIndex !== undefined) {
     fields.push(`"orderIndex" = $${paramIdx++}`);
     values.push(Number(updates.orderIndex) || 0);
@@ -1293,6 +1310,7 @@ export async function updateIssueStatusDB(
     if (updates.estimatedHours !== undefined) target.estimatedHours = updates.estimatedHours;
     if (updates.loggedHours !== undefined) target.loggedHours = updates.loggedHours;
     if (updates.labels !== undefined) target.labels = updates.labels;
+    if (updates.tags !== undefined) target.tags = updates.tags;
     if (updates.blockedBy !== undefined) target.blockedBy = updates.blockedBy;
     if (updates.blocks !== undefined) target.blocks = updates.blocks;
     if (updates.timeEntries !== undefined) target.timeEntries = updates.timeEntries;

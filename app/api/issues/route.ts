@@ -49,6 +49,7 @@ export async function POST(req: Request) {
       dueDate: data.dueDate,
       estimatedHours: data.estimatedHours,
       labels: data.labels,
+      tags: data.tags,
       subtasks: data.subtasks,
       assigneeName: data.assigneeName,
       reporterName: data.reporterName || session.name || session.email || 'Current User',
