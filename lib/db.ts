@@ -1157,6 +1157,7 @@ export async function createIssueDB(data: {
     }
   } catch {}
 
+  const nowIso = new Date().toISOString();
   const newIssue = {
     id,
     key,
@@ -1175,6 +1176,8 @@ export async function createIssueDB(data: {
     estimatedHours,
     loggedHours: 0,
     subtasks: data.subtasks || [],
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
   memoryIssuesStore.unshift(newIssue);

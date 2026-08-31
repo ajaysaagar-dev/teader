@@ -98,29 +98,54 @@ function getFolderCleanName(i: Issue): string {
   return 'General';
 }
 
-function getFolderTimestamp(name: string, issues: Issue[], folderIssues: Issue[]): number {
-  let maxTime = 0;
-
-  // 1. Explicit folder entity timestamp
-  const folderEntity = issues.find(
-    (i) => isFolderEntity(i) && getFolderCleanName(i).toLowerCase() === name.toLowerCase()
-  );
-  if (folderEntity) {
-    const t = folderEntity.createdAt ? new Date(folderEntity.createdAt).getTime() : 0;
-    const u = folderEntity.updatedAt ? new Date(folderEntity.updatedAt).getTime() : 0;
-    const parsed = Math.max(t, u);
-    if (!isNaN(parsed) && parsed > maxTime) {
-      maxTime = parsed;
+function parseTimestamp(val: any, id?: string | number): number {
+  if (val) {
+    if (typeof val === 'number' && !isNaN(val) && val > 0) return val;
+    const parsed = new Date(val).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  if (id !== undefined && id !== null) {
+    const strId = String(id);
+    const match = strId.match(/(?:temp|iss|st|sub|_)*(\d{10,15})/);
+    if (match && match[1]) {
+      const parsed = Number(match[1]);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
     }
   }
+  return 0;
+}
 
-  // 2. Descendant tasks timestamps
+function getFolderTimestamp(name: string, issues: Issue[], folderIssues: Issue[]): number {
+  let maxTime = 0;
+  const lowerName = name.toLowerCase().trim();
+
+  // 1. Check all issues for matching folder entities or issues belonging to this folder
+  issues.forEach((issue) => {
+    const isThisFolderEntity =
+      isFolderEntity(issue) &&
+      (getFolderCleanName(issue).toLowerCase().trim() === lowerName ||
+        (issue.epic && issue.epic.toLowerCase().trim() === lowerName));
+
+    const isThisFolderTask =
+      issue.epic && issue.epic.toLowerCase().trim() === lowerName;
+
+    if (isThisFolderEntity || isThisFolderTask) {
+      const t = parseTimestamp(issue.createdAt || (issue as any).created_at, issue.id);
+      const u = parseTimestamp(issue.updatedAt || (issue as any).updated_at, issue.id);
+      const best = Math.max(t, u);
+      if (best > maxTime) {
+        maxTime = best;
+      }
+    }
+  });
+
+  // 2. Also check direct folder issues list
   folderIssues.forEach((issue) => {
-    const t = issue.createdAt ? new Date(issue.createdAt).getTime() : 0;
-    const u = issue.updatedAt ? new Date(issue.updatedAt).getTime() : 0;
-    const parsed = Math.max(t, u);
-    if (!isNaN(parsed) && parsed > maxTime) {
-      maxTime = parsed;
+    const t = parseTimestamp(issue.createdAt || (issue as any).created_at, issue.id);
+    const u = parseTimestamp(issue.updatedAt || (issue as any).updated_at, issue.id);
+    const best = Math.max(t, u);
+    if (best > maxTime) {
+      maxTime = best;
     }
   });
 
