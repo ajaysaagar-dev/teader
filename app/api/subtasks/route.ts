@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { addSubtaskDB, updateSubtaskDB, deleteSubtaskDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
+import { assertIssueAccess } from '@/lib/authz';
 import { parseBody, AddSubtaskSchema, UpdateSubtaskSchema } from '@/lib/validation';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
 
@@ -14,6 +15,9 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Verify the user is a member of the project that owns the parent issue
+    await assertIssueAccess(session.id, data.issueId);
+
     const subtask = await addSubtaskDB(
       data.issueId,
       data.title,
@@ -44,6 +48,11 @@ export async function PATCH(req: Request) {
   }
 
   try {
+    // Verify the user is a member of the project that owns the parent issue
+    if (data.issueId) {
+      await assertIssueAccess(session.id, data.issueId);
+    }
+
     await updateSubtaskDB(data.subId, {
       title: data.title,
       completed: data.completed,

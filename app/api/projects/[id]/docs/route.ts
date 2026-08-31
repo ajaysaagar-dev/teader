@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { assertProjectAccess } from '@/lib/authz';
 import { getProjectDocsDB, createProjectDocDB, updateProjectDocDB, getProjectByIdDB } from '@/lib/db';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
 import fs from 'fs';
@@ -70,6 +71,14 @@ export async function GET(
     const project = await getProjectByIdDB(rawProjectId);
     const targetProjId = project ? project.id : (Number(rawProjectId) || rawProjectId);
     const projName = project?.name || 'Project Workspace';
+
+    // Verify the user is a member of this project
+    try {
+      await assertProjectAccess(session.id, targetProjId);
+    } catch (err: any) {
+      const status = err.status || 403;
+      return NextResponse.json({ error: err.message }, { status });
+    }
 
     let docs = await getProjectDocsDB(targetProjId);
 
@@ -175,6 +184,14 @@ export async function POST(
     ensureDocsDir();
     const project = await getProjectByIdDB(rawProjectId);
     const targetProjId = project ? project.id : (Number(rawProjectId) || rawProjectId);
+
+    // Verify the user is a member of this project
+    try {
+      await assertProjectAccess(session.id, targetProjId);
+    } catch (err: any) {
+      const status = err.status || 403;
+      return NextResponse.json({ error: err.message }, { status });
+    }
 
     const body = await req.json();
     const title = (body.title || 'Untitled Document').trim();

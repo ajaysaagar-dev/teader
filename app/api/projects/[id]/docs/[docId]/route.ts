@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { assertProjectAccess } from '@/lib/authz';
 import { getProjectDocByIdDB, updateProjectDocDB, deleteProjectDocDB } from '@/lib/db';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
 import fs from 'fs';
@@ -25,7 +26,15 @@ export async function GET(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const resolvedParams = await params;
-  const { docId } = resolvedParams;
+  const { id: projectIdParam, docId } = resolvedParams;
+
+  // Verify the user is a member of this project
+  try {
+    await assertProjectAccess(session.id, projectIdParam);
+  } catch (err: any) {
+    const status = err.status || 403;
+    return NextResponse.json({ error: err.message }, { status });
+  }
 
   try {
     ensureDocsDir();
@@ -88,7 +97,15 @@ export async function PUT(
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const resolvedParams = await params;
-  const { docId } = resolvedParams;
+  const { id: projectIdParam, docId } = resolvedParams;
+
+  // Verify the user is a member of this project
+  try {
+    await assertProjectAccess(session.id, projectIdParam);
+  } catch (err: any) {
+    const status = err.status || 403;
+    return NextResponse.json({ error: err.message }, { status });
+  }
 
   try {
     ensureDocsDir();
@@ -179,6 +196,14 @@ export async function DELETE(
 
   const resolvedParams = await params;
   const { id: projectId, docId } = resolvedParams;
+
+  // Verify the user is a member of this project
+  try {
+    await assertProjectAccess(session.id, projectId);
+  } catch (err: any) {
+    const status = err.status || 403;
+    return NextResponse.json({ error: err.message }, { status });
+  }
 
   try {
     ensureDocsDir();

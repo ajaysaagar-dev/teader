@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllIssuesDB, createIssueDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
+import { assertProjectAccess } from '@/lib/authz';
 import { parseBody, CreateIssueSchema } from '@/lib/validation';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
 
@@ -26,6 +27,16 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Verify the user is a member of the target project before creating
+    if (data.projectId) {
+      try {
+        await assertProjectAccess(session.id, data.projectId);
+      } catch (err: any) {
+        const status = err.status || 403;
+        return NextResponse.json({ error: err.message }, { status });
+      }
+    }
+
     const created = await createIssueDB({
       title: data.title,
       description: data.description,
