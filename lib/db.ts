@@ -3,12 +3,21 @@ import crypto from 'crypto';
 import { hashPassword, verifyPassword } from './auth';
 
 // PostgreSQL Connection Configuration
-const DB_HOST = process.env.POSTGRES_HOST || process.env.MYSQL_HOST || 'localhost';
-const DB_USER = process.env.POSTGRES_USER || process.env.MYSQL_USER || 'ajaysaagar';
-const DB_PASSWORD = process.env.POSTGRES_PASSWORD || process.env.MYSQL_PASSWORD || 'aass209c';
-const DB_NAME = process.env.POSTGRES_DATABASE || process.env.MYSQL_DATABASE || 'teader_db';
-const DB_PORT = Number(process.env.POSTGRES_PORT || process.env.MYSQL_PORT) || 5678;
+// Require explicit configuration — no hardcoded fallbacks for security.
 const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL && !process.env.POSTGRES_HOST) {
+  throw new Error(
+    'Database not configured. Set DATABASE_URL (e.g. "postgresql://user:pass@localhost:5678/teader_db") ' +
+    'or individual POSTGRES_HOST / POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DATABASE env vars in .env'
+  );
+}
+
+const DB_HOST = process.env.POSTGRES_HOST || 'localhost';
+const DB_USER = process.env.POSTGRES_USER || 'postgres';
+const DB_PASSWORD = process.env.POSTGRES_PASSWORD || '';
+const DB_NAME = process.env.POSTGRES_DATABASE || 'teader_db';
+const DB_PORT = Number(process.env.POSTGRES_PORT) || 5678;
 
 let pgPool: Pool | null = null;
 let initialized = false;
@@ -1088,8 +1097,8 @@ export async function getAllIssuesDB(userId?: number | string) {
   }
 }
 
-export async function getIssueByIdDB(id: string) {
-  const all = await getAllIssuesDB();
+export async function getIssueByIdDB(id: string, userId?: number | string) {
+  const all = await getAllIssuesDB(userId);
   return all.find((i: any) => i.id === id || i.key === id) || null;
 }
 
