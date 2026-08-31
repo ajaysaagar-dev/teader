@@ -86,9 +86,9 @@ const ProjectDocsView = dynamic(
   () => import('@/components/ProjectDocsView').then((m) => ({ default: m.ProjectDocsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
-const ProjectConversationView = dynamic(
-  () => import('@/components/ProjectConversationView').then((m) => ({ default: m.ProjectConversationView })),
-  { ssr: false, loading: () => <ViewLoadingFallback /> }
+const ConversationDrawer = dynamic(
+  () => import('@/components/ConversationDrawer').then((m) => ({ default: m.ConversationDrawer })),
+  { ssr: false }
 );
 const ProjectSettingsView = dynamic(
   () => import('@/components/ProjectSettingsView').then((m) => ({ default: m.ProjectSettingsView })),
@@ -127,19 +127,41 @@ interface MemberItem {
   avatar: string;
 }
 
-function parseViewTab(view?: string): 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings' {
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'settings';
+export type TaskViewMode = 'board' | 'list' | 'tree' | 'timeline' | 'dependencies';
+
+function parseViewTab(view?: string): ProjectTab {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
-  if (v === 'calendar' || v === 'schedule' || v === 'timeline') return 'calendar';
-  if (v === 'graph' || v === 'dependencies' || v === 'dag') return 'graph';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
-  if (v === 'conversation' || v === 'chat' || v === 'messages' || v === 'discuss') return 'conversation';
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
-  if (v === 'tree') return 'tree';
-  if (v === 'list' || v === 'compact-list') return 'list';
-  if (v === 'board' || v === 'kanban') return 'board';
+  if (
+    v === 'tasks' ||
+    v === 'board' ||
+    v === 'kanban' ||
+    v === 'list' ||
+    v === 'compact-list' ||
+    v === 'tree' ||
+    v === 'calendar' ||
+    v === 'schedule' ||
+    v === 'timeline' ||
+    v === 'graph' ||
+    v === 'dependencies' ||
+    v === 'dag'
+  ) {
+    return 'tasks';
+  }
   return 'overview';
+}
+
+function parseTaskMode(view?: string, modeParam?: string | null): TaskViewMode {
+  const m = (modeParam || view || '').toLowerCase();
+  if (m === 'list' || m === 'compact-list') return 'list';
+  if (m === 'tree') return 'tree';
+  if (m === 'timeline' || m === 'calendar' || m === 'schedule') return 'timeline';
+  if (m === 'dependencies' || m === 'graph' || m === 'dag') return 'dependencies';
+  return 'board';
 }
 
 // Module memory to prevent re-triggering splash screen on tab switches within the same project
@@ -153,13 +175,37 @@ export default function SingleProjectPage() {
   const viewParam = params?.view as string | undefined;
   const taskQuery = searchParams?.get('task');
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings'>(() => parseViewTab(viewParam));
+  const [activeTab, setActiveTab] = useState<ProjectTab>(() => parseViewTab(viewParam));
+  const [taskViewMode, setTaskViewMode] = useState<TaskViewMode>(() =>
+    parseTaskMode(viewParam, searchParams?.get('mode'))
+  );
+  const [isChatOpen, setIsChatOpen] = useState(
+    () =>
+      searchParams?.get('chat') === 'open' ||
+      viewParam === 'conversation' ||
+      viewParam === 'chat' ||
+      viewParam === 'messages'
+  );
 
   useEffect(() => {
     if (viewParam) {
-      setActiveTab(parseViewTab(viewParam));
+      const v = String(viewParam).toLowerCase();
+      if (v === 'conversation' || v === 'chat' || v === 'messages' || v === 'discuss') {
+        setIsChatOpen(true);
+      }
+      const tab = parseViewTab(viewParam);
+      setActiveTab(tab);
+      if (tab === 'tasks') {
+        setTaskViewMode(parseTaskMode(viewParam, searchParams?.get('mode')));
+      }
     }
-  }, [viewParam]);
+  }, [viewParam, searchParams]);
+
+  useEffect(() => {
+    if (searchParams?.get('chat') === 'open') {
+      setIsChatOpen(true);
+    }
+  }, [searchParams]);
 
   // Handle browser back/forward buttons smoothly without page reload
   useEffect(() => {
@@ -168,7 +214,12 @@ export default function SingleProjectPage() {
         const segments = window.location.pathname.split('/');
         const lastSegment = segments[segments.length - 1];
         if (lastSegment && lastSegment !== projectIdParam) {
-          setActiveTab(parseViewTab(lastSegment));
+          const tab = parseViewTab(lastSegment);
+          setActiveTab(tab);
+          if (tab === 'tasks') {
+            const urlParams = new URLSearchParams(window.location.search);
+            setTaskViewMode(parseTaskMode(lastSegment, urlParams.get('mode')));
+          }
         } else {
           setActiveTab('overview');
         }
@@ -178,13 +229,37 @@ export default function SingleProjectPage() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [projectIdParam]);
 
-  const handleTabSwitch = useCallback((newTab: 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => {
-    setActiveTab(newTab);
-    if (typeof window !== 'undefined') {
-      const search = searchParams?.toString() ? `?${searchParams.toString()}` : '';
-      window.history.pushState(null, '', `/projects/${projectIdParam}/${newTab}${search}`);
-    }
-  }, [projectIdParam, searchParams]);
+  const handleTabSwitch = useCallback(
+    (newTab: ProjectTab, mode?: TaskViewMode) => {
+      setActiveTab(newTab);
+      if (mode) setTaskViewMode(mode);
+      if (typeof window !== 'undefined') {
+        const search = new URLSearchParams(window.location.search);
+        if (newTab === 'tasks') {
+          search.set('mode', mode || taskViewMode);
+        } else {
+          search.delete('mode');
+        }
+        const searchStr = search.toString() ? `?${search.toString()}` : '';
+        const path = newTab === 'overview' ? `/projects/${projectIdParam}` : `/projects/${projectIdParam}/${newTab}`;
+        window.history.pushState(null, '', `${path}${searchStr}`);
+      }
+    },
+    [projectIdParam, taskViewMode]
+  );
+
+  const handleTaskModeSwitch = useCallback(
+    (newMode: TaskViewMode) => {
+      setTaskViewMode(newMode);
+      if (typeof window !== 'undefined') {
+        const search = new URLSearchParams(window.location.search);
+        search.set('mode', newMode);
+        const searchStr = search.toString() ? `?${search.toString()}` : '';
+        window.history.pushState(null, '', `/projects/${projectIdParam}/tasks${searchStr}`);
+      }
+    },
+    [projectIdParam]
+  );
 
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -1641,9 +1716,9 @@ export default function SingleProjectPage() {
           </div>
         </div>
 
-        {/* 2. Dedicated View Switcher Subheader Bar (Under current header, exclusively for tabs) */}
-        <div className="h-10 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center overflow-x-auto shrink-0 select-none custom-scrollbar">
-          <div className="flex items-center gap-1">
+        {/* 2. 4-Page Primary Navigation Bar (Overview | Tasks | Docs | Settings + Chat Drawer Toggle) */}
+        <div className="h-11 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3">
+          <div className="flex items-center gap-1 bg-[#101113] p-1 rounded-xl border border-[#222428]">
             <button
               onClick={() => handleTabSwitch('overview')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
@@ -1658,69 +1733,17 @@ export default function SingleProjectPage() {
             </button>
 
             <button
-              onClick={() => handleTabSwitch('board')}
+              onClick={() => handleTabSwitch('tasks')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'board'
+                activeTab === 'tasks'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
               }`}
+              title="Project Tasks & Views (Board, List, Tree, Timeline, Dependencies)"
             >
               <LayoutGrid size={13} />
-              <span>Board</span>
+              <span>Tasks</span>
               <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('list')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'list'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-            >
-              <List size={13} />
-              <span>List</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('tree')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'tree'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Tree Explorer"
-            >
-              <FolderTree size={13} />
-              <span>Tree</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('calendar')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'calendar'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Project Deadlines & Calendar"
-            >
-              <Calendar size={13} />
-              <span>Calendar</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('graph')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'graph'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="DAG Dependency Graph"
-            >
-              <GitFork size={13} />
-              <span>Graph</span>
             </button>
 
             <button
@@ -1737,19 +1760,6 @@ export default function SingleProjectPage() {
             </button>
 
             <button
-              onClick={() => handleTabSwitch('conversation')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                activeTab === 'conversation'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
-              }`}
-              title="Team Project Chat & Conversations"
-            >
-              <MessageSquare size={13} />
-              <span>Conversation</span>
-            </button>
-
-            <button
               onClick={() => handleTabSwitch('settings')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'settings'
@@ -1762,14 +1772,23 @@ export default function SingleProjectPage() {
               <span>Settings</span>
             </button>
           </div>
+
+          {/* Quick Chat Drawer Toggle Button */}
+          <button
+            onClick={() => setIsChatOpen((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-xl border transition-all ${
+              isChatOpen
+                ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 shadow-sm'
+                : 'bg-[#101113] text-[#787C83] hover:text-[#CFD4DD] border-[#222428]'
+            }`}
+            title="Toggle Team Conversation Drawer"
+          >
+            <MessageSquare size={13} className={isChatOpen ? 'text-[#DCB001]' : ''} />
+            <span>Chat</span>
+          </button>
         </div>
 
-
-
-
-
-
-        {/* Tree View, Hierarchical View, Dev Stream, Graph View, or Kanban Board */}
+        {/* 4-Page Workspace Content Area */}
         <ErrorBoundary>
           {activeTab === 'overview' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
@@ -1777,50 +1796,7 @@ export default function SingleProjectPage() {
                 issues={projectIssues}
                 project={project}
                 members={joinedMembers}
-                onNavigateTab={handleTabSwitch}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              />
-            </div>
-          ) : activeTab === 'tree' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <TreeView
-                issues={projectIssues}
-                projectName={project?.name}
-                projectKey={project?.key}
-                onSelectIssue={(id) => handleSelectIssue(id)}
-                onUpdateIssueStatus={handleUpdateStatus}
-                onUpdateIssuePriority={handleUpdateIssuePriority}
-                onDeleteIssue={handleDeleteIssue}
-                onDeleteFolder={handleDeleteFolder}
-                onOpenNewIssue={() => {
-                  setNewIssueModalInitialMode('task');
-                  setIsNewIssueModalOpen(true);
-                }}
-                onOpenNewFolder={() => {
-                  setNewIssueModalInitialMode('folder');
-                  setIsNewIssueModalOpen(true);
-                }}
-                onRenameIssue={handleRenameIssue}
-                onRenameEpic={handleRenameEpic}
-                onMoveTaskToFolder={handleMoveTaskToFolder}
-                onAddTaskToFolder={handleAddTaskToFolder}
-                onReorderTaskInFolder={handleReorderTaskInFolder}
-                canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
-              />
-            </div>
-          ) : activeTab === 'calendar' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <CalendarView
-                issues={projectIssues}
-                onSelectIssue={(id) => handleSelectIssue(id)}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              />
-            </div>
-          ) : activeTab === 'graph' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <DependencyGraphView
-                issues={projectIssues}
-                onSelectIssue={(id) => handleSelectIssue(id)}
+                onNavigateTab={(tab, mode) => handleTabSwitch(tab, mode)}
                 onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
               />
             </div>
@@ -1832,26 +1808,6 @@ export default function SingleProjectPage() {
                 projectKey={project?.key}
               />
             </div>
-          ) : activeTab === 'conversation' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectConversationView
-                projectId={project?.id || projectIdParam || 1}
-                projectName={project?.name}
-                projectKey={project?.key}
-                currentUser={currentUser}
-              />
-            </div>
-          ) : activeTab === 'list' ? (
-            <CompactListView
-              issues={projectIssues}
-              onSelectIssue={(id) => handleSelectIssue(id)}
-              onUpdateIssueStatus={handleUpdateStatus}
-              onReorderIssues={handleReorderIssues}
-              onUpdateIssuePriority={handleUpdateIssuePriority}
-              onDeleteIssue={handleDeleteIssue}
-              onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
-            />
           ) : activeTab === 'settings' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectSettingsView
@@ -1877,21 +1833,148 @@ export default function SingleProjectPage() {
                 onMemberKicked={(userId) => setJoinedMembers((members) => members.filter((member) => String(member.id) !== String(userId)))}
                 onMembersUpdated={setJoinedMembers}
               />
-
             </div>
           ) : (
+            /* Tasks Page (5 View Modes: Board | List | Tree | Timeline | Dependencies) */
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <KanbanBoardView
-                issues={projectIssues}
-                onSelectIssue={(id) => handleSelectIssue(id)}
-                onUpdateIssueStatus={handleUpdateStatus}
-                onReorderIssues={handleReorderIssues}
-                onUpdateIssuePriority={handleUpdateIssuePriority}
-                onDeleteIssue={handleDeleteIssue}
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                onAddNewTaskToColumn={handleAddNewTaskToColumn}
-                canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
-              />
+              {/* Secondary Task View Mode Segmented Switcher */}
+              <div className="px-4 py-2 border-b border-[#222428] bg-[#121316] flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center bg-[#181A1F] p-0.5 rounded-lg border border-[#2A2C30] text-xs">
+                  <button
+                    onClick={() => handleTaskModeSwitch('board')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'board'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Kanban Board View"
+                  >
+                    <LayoutGrid size={12} />
+                    <span>Board</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskModeSwitch('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'list'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Compact List View"
+                  >
+                    <List size={12} />
+                    <span>List</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskModeSwitch('tree')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'tree'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Folder Tree Explorer"
+                  >
+                    <FolderTree size={12} />
+                    <span>Tree</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskModeSwitch('timeline')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'timeline'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="Timeline & Calendar View"
+                  >
+                    <Calendar size={12} />
+                    <span>Timeline</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTaskModeSwitch('dependencies')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                      taskViewMode === 'dependencies'
+                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    }`}
+                    title="DAG Dependency Graph View"
+                  >
+                    <GitFork size={12} />
+                    <span>Dependencies</span>
+                  </button>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-2 text-[11px] text-[#787C83] font-mono">
+                  <span>{projectIssues.length} tasks</span>
+                </div>
+              </div>
+
+              {/* Render Active Task View Component */}
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                {taskViewMode === 'list' ? (
+                  <CompactListView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onUpdateIssueStatus={handleUpdateStatus}
+                    onReorderIssues={handleReorderIssues}
+                    onUpdateIssuePriority={handleUpdateIssuePriority}
+                    onDeleteIssue={handleDeleteIssue}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                  />
+                ) : taskViewMode === 'tree' ? (
+                  <TreeView
+                    issues={projectIssues}
+                    projectName={project?.name}
+                    projectKey={project?.key}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onUpdateIssueStatus={handleUpdateStatus}
+                    onUpdateIssuePriority={handleUpdateIssuePriority}
+                    onDeleteIssue={handleDeleteIssue}
+                    onDeleteFolder={handleDeleteFolder}
+                    onOpenNewIssue={() => {
+                      setNewIssueModalInitialMode('task');
+                      setIsNewIssueModalOpen(true);
+                    }}
+                    onOpenNewFolder={() => {
+                      setNewIssueModalInitialMode('folder');
+                      setIsNewIssueModalOpen(true);
+                    }}
+                    onRenameIssue={handleRenameIssue}
+                    onRenameEpic={handleRenameEpic}
+                    onMoveTaskToFolder={handleMoveTaskToFolder}
+                    onAddTaskToFolder={handleAddTaskToFolder}
+                    onReorderTaskInFolder={handleReorderTaskInFolder}
+                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                  />
+                ) : taskViewMode === 'timeline' ? (
+                  <CalendarView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                  />
+                ) : taskViewMode === 'dependencies' ? (
+                  <DependencyGraphView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                  />
+                ) : (
+                  <KanbanBoardView
+                    issues={projectIssues}
+                    onSelectIssue={(id) => handleSelectIssue(id)}
+                    onUpdateIssueStatus={handleUpdateStatus}
+                    onReorderIssues={handleReorderIssues}
+                    onUpdateIssuePriority={handleUpdateIssuePriority}
+                    onDeleteIssue={handleDeleteIssue}
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                    onAddNewTaskToColumn={handleAddNewTaskToColumn}
+                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                  />
+                )}
+              </div>
             </div>
           )}
         </ErrorBoundary>
@@ -1984,7 +2067,7 @@ export default function SingleProjectPage() {
             defaultProjectName={project.name}
             defaultProjectId={project.id}
             initialMode={newIssueModalInitialMode}
-            allowFolderCreation={activeTab === 'tree'}
+            allowFolderCreation={activeTab === 'tasks' && taskViewMode === 'tree'}
             isProjectLocked={true}
             currentUser={currentUser}
           />
@@ -2342,6 +2425,16 @@ export default function SingleProjectPage() {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Global Slide-Over Conversation Drawer (Available across all 4 project pages) */}
+        <ConversationDrawer
+          projectId={project?.id || projectIdParam || 1}
+          projectName={project?.name}
+          projectKey={project?.key}
+          currentUser={currentUser}
+          isOpen={isChatOpen}
+          onOpenChange={setIsChatOpen}
+        />
       </div>
       )}
     </AppLayout>

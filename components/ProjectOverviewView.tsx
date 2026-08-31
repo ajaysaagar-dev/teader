@@ -34,7 +34,7 @@ interface ProjectOverviewViewProps {
     ownerName?: string;
   } | null;
   members?: Array<{ id: number | string; name: string; email: string; avatar: string }>;
-  onNavigateTab: (tab: 'overview' | 'board' | 'list' | 'tree' | 'calendar' | 'graph' | 'docs' | 'conversation' | 'settings') => void;
+  onNavigateTab: (tab: 'overview' | 'tasks' | 'docs' | 'settings', mode?: 'board' | 'list' | 'tree' | 'timeline' | 'dependencies') => void;
   onOpenNewIssue: () => void;
 }
 
@@ -164,7 +164,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2 z-10">
           <button
-            onClick={() => onNavigateTab('board')}
+            onClick={() => onNavigateTab('tasks', 'board')}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#CFD4DD] bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] rounded-xl transition-all shadow-sm"
           >
             <LayoutGrid size={13} className="text-[#DCB001]" />
@@ -172,7 +172,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
           </button>
 
           <button
-            onClick={() => onNavigateTab('tree')}
+            onClick={() => onNavigateTab('tasks', 'tree')}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#CFD4DD] bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] rounded-xl transition-all shadow-sm"
           >
             <FolderTree size={13} className="text-[#3B82F6]" />
@@ -348,7 +348,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
           <div className="pt-3 border-t border-[#2A2C30]/50 flex items-center justify-between text-[11px] text-[#787C83]">
             <span>Velocity: {(stats.done * 1.5).toFixed(1)} pts</span>
             <button
-              onClick={() => onNavigateTab('board')}
+              onClick={() => onNavigateTab('tasks', 'board')}
               className="text-[#DCB001] hover:underline font-semibold flex items-center gap-0.5"
             >
               View Board <ArrowUpRight size={12} />
@@ -436,7 +436,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
           <div className="pt-3 border-t border-[#2A2C30]/50 flex items-center justify-between text-[11px] text-[#787C83]">
             <span>Active blocker mitigation active</span>
             <button
-              onClick={() => onNavigateTab('list')}
+              onClick={() => onNavigateTab('tasks', 'list')}
               className="text-[#3B82F6] hover:underline font-semibold flex items-center gap-0.5"
             >
               Open List <ArrowUpRight size={12} />
@@ -455,7 +455,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
               Epic & Feature Progress
             </h3>
             <button
-              onClick={() => onNavigateTab('list')}
+              onClick={() => onNavigateTab('tasks', 'list')}
               className="text-xs text-[#A855F7] hover:underline font-semibold flex items-center gap-0.5"
             >
               Open List <ArrowUpRight size={12} />

@@ -7,7 +7,7 @@ Project management platform. Built with Next.js 16 (App Router), React 19, TypeS
 - **Kanban Board** — drag-and-drop task management across Todo / In Progress / Review / Done stages
 - **Hierarchical View** — epic → task → subtask tree grouped by epic, status, or assignee
 - **Tree View** — infinite recursive folder explorer with drag-and-drop parent switching
-- **Dev Stream** — developer workstation view with Git command generators and task checklists
+- **Developer Git Automation** — automatic branch naming and copyable git commands in issue details
 - **Project Management** — create, join, and manage multiple projects with member roles
 - **Inline Editing** — rename anything in-place; full issue editing with description, epic, priority
 - **Real-time Sync** — SSE and WebSocket live sync with project-scoped authorization
@@ -84,8 +84,8 @@ app/
     upload/        # Image upload (auth-gated, magic-byte verified)
     realtime/      # SSE stream (session + project membership verified)
   projects/[id]/
-    page.tsx       # Single project — Board/Hierarchy/Tree/Dev views
-    [view]/        # URL routing: /projects/4/tree, /dev, /hierarchy
+    page.tsx       # Single project — 4-page IA: Overview, Tasks, Docs, Settings
+    [view]/        # URL routing & backwards-compatible redirects
 components/        # All UI components
 lib/
   auth.ts          # JWT signing, bcrypt passwords, requireAuth helper
