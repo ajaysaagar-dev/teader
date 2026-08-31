@@ -455,25 +455,47 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     });
   }, [issues]);
 
-  // Expand all by default initially
+  const storageKey = useMemo(() => `teader_tree_expanded_epics_${projectKey || 'default'}`, [projectKey]);
+  const [isEpicsLoadedFromStorage, setIsEpicsLoadedFromStorage] = useState(false);
+
+  // Read expanded folders from localStorage on mount (Default: all folders are COLLAPSED)
   React.useEffect(() => {
-    const initialEpics: Record<string, boolean> = {};
-    const initialIssues: Record<string, boolean> = {};
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setExpandedEpics(parsed);
+        } else {
+          setExpandedEpics({});
+        }
+      } else {
+        // By default all folders are collapsed!
+        setExpandedEpics({});
+      }
+    } catch {
+      setExpandedEpics({});
+    } finally {
+      setIsEpicsLoadedFromStorage(true);
+    }
+  }, [storageKey]);
 
-    folderContainers.forEach((fc) => {
-      initialEpics[fc.id] = true;
-    });
-
-    issues.forEach((i) => {
-      initialIssues[i.id] = true;
-    });
-
-    setExpandedEpics(initialEpics);
-    setExpandedIssues(initialIssues);
-  }, [folderContainers.length, issues.length]);
+  // Persist expanded folder state to localStorage whenever it changes
+  React.useEffect(() => {
+    if (!isEpicsLoadedFromStorage || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(expandedEpics));
+    } catch (err) {
+      console.error('Failed to persist expanded folders state:', err);
+    }
+  }, [expandedEpics, isEpicsLoadedFromStorage, storageKey]);
 
   const toggleEpic = (folderId: string) => {
-    setExpandedEpics((prev) => ({ ...prev, [folderId]: !prev[folderId] }));
+    setExpandedEpics((prev) => {
+      const isCurrentlyExpanded = Boolean(prev[folderId]);
+      return { ...prev, [folderId]: !isCurrentlyExpanded };
+    });
   };
 
   const toggleIssue = (issueId: string) => {
@@ -709,7 +731,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                 return null;
               }
 
-              const isEpicExpanded = expandedEpics[folder.id] ?? true;
+              const isEpicExpanded = isFiltering && folderIssues.length > 0 ? true : Boolean(expandedEpics[folder.id]);
               const epicTotal = folderIssues.length;
               const epicDone = folderIssues.filter((i) => i.status === 'done').length;
               const epicProgress = epicTotal > 0 ? Math.round((epicDone / epicTotal) * 100) : 0;
