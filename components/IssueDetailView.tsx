@@ -29,7 +29,10 @@ import {
   Trash2,
   Tag,
   Hash,
-  Pencil
+  Pencil,
+  Terminal,
+  GitBranch,
+  Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
@@ -568,11 +571,63 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               </div>
             </div>
 
-            {/* Project */}
+              {/* Project */}
             <div>
               <span className="text-[#787C83] block mb-1">Project Workspace</span>
               <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
                 {issue.project} ({issue.key.split('-')[0]})
+              </div>
+            </div>
+          </div>
+
+          {/* Developer & Git Automation Section */}
+          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-[#2A2C30]">
+              <div className="flex items-center gap-1.5 font-bold text-white">
+                <Terminal size={14} className="text-[#DCB001]" />
+                <span>Dev & Git Automation</span>
+              </div>
+              <span className="text-[10px] font-mono text-[#787C83]">Quick Copy</span>
+            </div>
+
+            {/* Branch name */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono text-[#787C83] block">Checkout Branch</span>
+              <div className="flex items-center justify-between gap-2 p-2 bg-[#131415] rounded-lg border border-[#2A2C30]">
+                <code className="text-[11px] font-mono text-[#DCB001] truncate">
+                  git checkout -b feature/{issue.key.toLowerCase()}-{issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30)}
+                </code>
+                <button
+                  onClick={() => {
+                    const branch = `feature/${issue.key.toLowerCase()}-${issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30)}`;
+                    navigator.clipboard.writeText(`git checkout -b ${branch}`);
+                    toast.success('Copied git checkout command');
+                  }}
+                  className="p-1 text-[#787C83] hover:text-white bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] transition-colors shrink-0"
+                  title="Copy git checkout command"
+                >
+                  <Copy size={12} />
+                </button>
+              </div>
+            </div>
+
+            {/* Commit message */}
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono text-[#787C83] block">Commit Message</span>
+              <div className="flex items-center justify-between gap-2 p-2 bg-[#131415] rounded-lg border border-[#2A2C30]">
+                <code className="text-[11px] font-mono text-[#CFD4DD] truncate">
+                  [{issue.key}] {issue.title}
+                </code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`git commit -m "[${issue.key}] ${issue.title}"`);
+                    toast.success('Copied git commit command');
+                  }}
+                  className="p-1 text-[#787C83] hover:text-white bg-[#1B1C1F] hover:bg-[#2A2C30] rounded border border-[#2A2C30] transition-colors shrink-0"
+                  title="Copy git commit command"
+                >
+                  <Copy size={12} />
+                </button>
               </div>
             </div>
           </div>
