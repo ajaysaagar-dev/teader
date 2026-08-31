@@ -228,6 +228,24 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
             const completedCount = group.issues.filter((i) => i.status === 'done').length;
             const progress = group.issues.length > 0 ? Math.round((completedCount / group.issues.length) * 100) : 0;
 
+            const isNoneDone = group.issues.length > 0 && completedCount === 0;
+            const isPartiallyDone = group.issues.length > 0 && completedCount > 0 && completedCount < group.issues.length;
+            const isAllDone = group.issues.length > 0 && completedCount === group.issues.length;
+
+            let headerBg = 'bg-[#16171A] hover:bg-[#1C1D21] border-[#2A2C30]/70';
+            let iconBox = 'bg-[#DCB001]/10 border-[#DCB001]/30 text-[#DCB001]';
+
+            if (isNoneDone) {
+              headerBg = 'bg-[#16130D] hover:bg-[#1C1810] border-[#F59E0B]/40 shadow-[inset_3px_0_0_#F59E0B]';
+              iconBox = 'bg-[#F59E0B]/15 border-[#F59E0B]/35 text-[#F59E0B]';
+            } else if (isPartiallyDone) {
+              headerBg = 'bg-[#0B141D] hover:bg-[#0E1A26] border-[#0EA5E9]/45 shadow-[inset_3px_0_0_#0EA5E9]';
+              iconBox = 'bg-[#0EA5E9]/15 border-[#0EA5E9]/40 text-[#38BDF8]';
+            } else if (isAllDone) {
+              headerBg = 'bg-[#0A160F] hover:bg-[#0D1E14] border-[#22C55E]/40 shadow-[inset_3px_0_0_#22C55E]';
+              iconBox = 'bg-[#22C55E]/15 border-[#22C55E]/40 text-[#22C55E]';
+            }
+
             return (
               <div
                 key={group.id}
@@ -236,7 +254,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                 {/* Level 1: Folder / Group Header */}
                 <div
                   onClick={() => toggleGroupCollapse(group.id)}
-                  className="px-3.5 py-2.5 bg-[#16171A] hover:bg-[#1C1D21] flex items-center justify-between cursor-pointer border-b border-[#2A2C30]/70 select-none transition-colors"
+                  className={`px-3.5 py-2.5 flex items-center justify-between cursor-pointer border-b select-none transition-colors ${headerBg}`}
                 >
                   {/* Left: Folder Chevron, Icon & Title */}
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -250,7 +268,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                       {isGroupCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                     </button>
 
-                    <div className="w-6 h-6 rounded-md bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001] shrink-0">
+                    <div className={`w-6 h-6 rounded-md border flex items-center justify-center shrink-0 ${iconBox}`}>
                       {isGroupCollapsed ? <Folder size={13} /> : <FolderOpen size={13} />}
                     </div>
 
@@ -264,26 +282,35 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                         </span>
                       )}
                     </div>
-
-                    {/* Task count badge */}
-                    <span className="text-[10px] font-mono bg-[#111214] border border-[#2A2C30] text-[#DCB001] px-1.5 py-0.2 rounded-md shrink-0">
-                      {group.issues.length} {group.issues.length === 1 ? 'task' : 'tasks'}
-                    </span>
                   </div>
 
                   {/* Right: Progress Meter & Stats */}
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[10px] font-mono text-[#787C83]">
-                      {completedCount}/{group.issues.length} Done
-                    </span>
-
-                    {/* Mini Progress Bar */}
-                    <div className="w-20 h-1.5 rounded-full bg-[#111214] overflow-hidden hidden md:block border border-[#2A2C30]">
-                      <div
-                        className="h-full bg-[#22C55E] transition-all duration-300"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
+                    {isNoneDone ? (
+                      <span className="text-[10px] font-mono font-bold text-[#F59E0B] bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/35 flex items-center gap-1">
+                        0/{group.issues.length} Done (Pending)
+                      </span>
+                    ) : isPartiallyDone ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-bold text-[#38BDF8] bg-[#0EA5E9]/15 px-2 py-0.5 rounded-full border border-[#0EA5E9]/40 flex items-center gap-1">
+                          {completedCount}/{group.issues.length} Done ({progress}%)
+                        </span>
+                        <div className="w-16 h-1.5 rounded-full bg-[#142334] overflow-hidden hidden sm:block border border-[#0EA5E9]/30">
+                          <div
+                            className="h-full bg-[#38BDF8] transition-all duration-300 rounded-full"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : isAllDone ? (
+                      <span className="text-[10px] font-mono font-bold text-[#22C55E] bg-[#22C55E]/15 px-2 py-0.5 rounded-full border border-[#22C55E]/40 flex items-center gap-1">
+                        {completedCount}/{group.issues.length} Done (100%)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-[#787C83] bg-[#111214] px-2 py-0.5 rounded-full border border-[#2A2C30]">
+                        0 tasks (Empty)
+                      </span>
+                    )}
                   </div>
                 </div>
 

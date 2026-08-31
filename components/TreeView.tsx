@@ -716,6 +716,30 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               const isEditingThisEpic = editingEpicId === folder.id;
               const isGeneralFolder = folder.isGeneral;
 
+              // Folder completion status for dynamic highlighting
+              const isNoneDone = epicTotal > 0 && epicDone === 0;
+              const isPartiallyDone = epicTotal > 0 && epicDone > 0 && epicDone < epicTotal;
+              const isAllDone = epicTotal > 0 && epicDone === epicTotal;
+
+              let folderCardClasses = 'bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40';
+              let folderIconClasses = 'bg-[#DCB001]/10 text-[#DCB001]';
+
+              if (dragOverEpic === folder.id) {
+                folderCardClasses = 'bg-[#DCB001]/20 border-2 border-dashed border-[#DCB001] scale-[1.01]';
+              } else if (isNoneDone) {
+                // Highlight with Amber / Warm Orange alert when all tasks in folder are not done yet
+                folderCardClasses = 'bg-[#16130D] hover:bg-[#1C1810] border border-[#F59E0B]/40 shadow-[inset_3px_0_0_#F59E0B]';
+                folderIconClasses = 'bg-[#F59E0B]/15 text-[#F59E0B]';
+              } else if (isPartiallyDone) {
+                // Highlight with Electric Cyan / Sky Blue progress when some tasks are completed but not all
+                folderCardClasses = 'bg-[#0B141D] hover:bg-[#0E1A26] border border-[#0EA5E9]/45 shadow-[inset_3px_0_0_#0EA5E9]';
+                folderIconClasses = 'bg-[#0EA5E9]/15 text-[#38BDF8]';
+              } else if (isAllDone) {
+                // Highlight with Emerald Green when all tasks in folder are fully done
+                folderCardClasses = 'bg-[#0A160F] hover:bg-[#0D1E14] border border-[#22C55E]/40 shadow-[inset_3px_0_0_#22C55E]';
+                folderIconClasses = 'bg-[#22C55E]/15 text-[#22C55E]';
+              }
+
               return (
                 <div key={folder.id} className="relative group/epic">
                   {/* Branch Connector Guide */}
@@ -747,11 +771,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                       }
                     }}
-                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all shadow-sm group ${
-                      dragOverEpic === folder.id
-                        ? 'bg-[#DCB001]/20 border-2 border-dashed border-[#DCB001] scale-[1.01]'
-                        : 'bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40'
-                    }`}
+                    className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all shadow-sm group ${folderCardClasses}`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
                       <button
@@ -764,7 +784,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         {isEpicExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
 
-                      <div className="w-5 h-5 rounded bg-[#DCB001]/10 text-[#DCB001] flex items-center justify-center shrink-0">
+                      <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${folderIconClasses}`}>
                         {isEpicExpanded ? <FolderOpen size={12} /> : <Folder size={12} />}
                       </div>
 
@@ -842,9 +862,41 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         </div>
                       )}
 
-                      <span className="text-[10px] font-mono text-[#787C83] bg-[#17181A] px-1.5 py-0.5 rounded border border-[#2A2C30] shrink-0 ml-auto sm:ml-0">
-                        {folderIssues.length} {folderIssues.length === 1 ? 'task' : 'tasks'}
-                      </span>
+                      {/* Folder Tasks Status / Completion Highlight Badge */}
+                      {isNoneDone ? (
+                        <span
+                          className="text-[10px] font-mono font-bold text-[#F59E0B] bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/35 flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0"
+                          title="All tasks in this folder are not done yet (0% completed)"
+                        >
+                          <Circle size={10} className="text-[#F59E0B]" />
+                          <span>0/{epicTotal} Done (Pending)</span>
+                        </span>
+                      ) : isPartiallyDone ? (
+                        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
+                          <span
+                            className="text-[10px] font-mono font-bold text-[#38BDF8] bg-[#0EA5E9]/15 px-2 py-0.5 rounded-full border border-[#0EA5E9]/40 flex items-center gap-1.5"
+                            title={`${epicDone} of ${epicTotal} tasks completed (${epicProgress}%)`}
+                          >
+                            <Clock size={10} className="text-[#38BDF8] animate-pulse" />
+                            <span>{epicDone}/{epicTotal} Done ({epicProgress}%)</span>
+                          </span>
+                          <div className="hidden sm:block w-12 h-1.5 bg-[#142334] rounded-full overflow-hidden border border-[#0EA5E9]/30" title={`${epicProgress}% completed`}>
+                            <div className="h-full bg-[#38BDF8] rounded-full transition-all duration-300" style={{ width: `${epicProgress}%` }} />
+                          </div>
+                        </div>
+                      ) : isAllDone ? (
+                        <span
+                          className="text-[10px] font-mono font-bold text-[#22C55E] bg-[#22C55E]/15 px-2 py-0.5 rounded-full border border-[#22C55E]/40 flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0"
+                          title="All tasks in this folder are 100% completed!"
+                        >
+                          <CheckCircle2 size={10} className="text-[#22C55E]" />
+                          <span>{epicDone}/{epicTotal} Done (100%)</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-[#787C83] bg-[#17181A] px-2 py-0.5 rounded-full border border-[#2A2C30] shrink-0 ml-auto sm:ml-0">
+                          0 tasks (Empty)
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
