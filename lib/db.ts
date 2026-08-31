@@ -1653,7 +1653,7 @@ export async function deleteProjectDocDB(docId: string, projectId?: string | num
 // ─── Project Conversation Messages ──────────────────────────────────────────
 
 export interface ProjectMessage {
-  id: number;
+  id: number | string;
   projectId: number;
   userId: number;
   userName: string;

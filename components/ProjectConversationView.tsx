@@ -147,12 +147,23 @@ export function ProjectConversationView({
         if (msg.channel === activeChannel) {
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
+            const tempIdx = prev.findIndex(
+              (m) =>
+                String(m.id).startsWith('temp_') &&
+                m.content === msg.content &&
+                Number(m.userId) === Number(msg.userId)
+            );
+            if (tempIdx !== -1) {
+              const copy = [...prev];
+              copy[tempIdx] = msg;
+              return copy;
+            }
             return [...prev, msg];
           });
           scrollToBottom();
         }
       } else if (event.type === 'MESSAGE_DELETED' && event.payload?.id) {
-        setMessages((prev) => prev.filter((m) => m.id !== event.payload.id));
+        setMessages((prev) => prev.filter((m) => String(m.id) !== String(event.payload.id)));
       }
     }, [activeChannel]),
   });
@@ -254,8 +265,9 @@ export function ProjectConversationView({
     setInputValue('');
     setIsSending(true);
 
+    const optimisticId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const optimisticMsg: ProjectMessage = {
-      id: Date.now(),
+      id: optimisticId,
       projectId: Number(projectId),
       userId: currentUser?.id || 1,
       userName: currentUser?.name || 'You',
@@ -283,9 +295,12 @@ export function ProjectConversationView({
 
       const data = await res.json();
       if (data.message) {
-        setMessages((prev) =>
-          prev.map((m) => (m.id === optimisticMsg.id ? data.message : m))
-        );
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === data.message.id)) {
+            return prev.filter((m) => m.id !== optimisticId);
+          }
+          return prev.map((m) => (m.id === optimisticId ? data.message : m));
+        });
       }
     } catch {
       toast.error('Failed to deliver message.');
@@ -295,9 +310,9 @@ export function ProjectConversationView({
     }
   };
 
-  const handleDeleteMessage = async (msgId: number) => {
+  const handleDeleteMessage = async (msgId: number | string) => {
     try {
-      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      setMessages((prev) => prev.filter((m) => String(m.id) !== String(msgId)));
       const res = await fetch(`/api/conversations?id=${msgId}&projectId=${projectId}`, {
         method: 'DELETE',
       });
