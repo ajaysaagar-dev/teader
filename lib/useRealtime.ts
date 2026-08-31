@@ -126,7 +126,6 @@ class RealtimeSocketManager {
           if (data.type === 'EVENT' && data.data) {
             const realtimeEvent: RealtimeEvent = data.data;
             this.notifySubscribers(realtimeEvent);
-            dispatchLocalRealtimeEvent(realtimeEvent);
           }
         } catch {}
       };
@@ -195,7 +194,6 @@ class RealtimeSocketManager {
           } else if (data.type === 'EVENT' && data.data) {
             const realtimeEvent: RealtimeEvent = data.data;
             this.notifySubscribers(realtimeEvent);
-            dispatchLocalRealtimeEvent(realtimeEvent);
           }
         } catch {}
       };
