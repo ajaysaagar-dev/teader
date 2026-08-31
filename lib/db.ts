@@ -206,6 +206,7 @@ export async function initDB(): Promise<void> {
             "tags" TEXT DEFAULT '[]',
             "sprint" VARCHAR(64) DEFAULT 'Sprint 24.3',
             "epic" VARCHAR(128) DEFAULT 'General',
+            "folderId" VARCHAR(64) DEFAULT NULL,
             "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
             "project" VARCHAR(128) DEFAULT 'Teader Platform Core',
             "dueDate" VARCHAR(64),
@@ -221,6 +222,7 @@ export async function initDB(): Promise<void> {
         `);
         try {
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "tags" TEXT DEFAULT '[]';`);
+          await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "folderId" VARCHAR(64) DEFAULT NULL;`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "orderIndex" INT DEFAULT 0;`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedByName" VARCHAR(128) DEFAULT NULL;`);
           await p.query(`ALTER TABLE "issues" ADD COLUMN IF NOT EXISTS "completedAt" TIMESTAMP WITH TIME ZONE DEFAULT NULL;`);
@@ -1126,6 +1128,7 @@ export async function createIssueDB(data: {
   labels?: string[];
   tags?: string[];
   epic?: string;
+  folderId?: string;
   sprint?: string;
   dueDate?: string;
   estimatedHours?: number;
@@ -1143,6 +1146,7 @@ export async function createIssueDB(data: {
   const projectId = data.projectId ? Number(data.projectId) : 1;
   const project = data.project || 'Teader Platform Core';
   const epic = data.epic ? data.epic.trim() : 'General';
+  const folderId = data.folderId ? data.folderId.trim() : (data.epic === 'General' ? 'folder_general' : null);
   const sprint = data.sprint || 'Sprint 24.3';
   const labelsStr = JSON.stringify(data.labels || ['General']);
   const tagsStr = JSON.stringify(data.tags || []);
@@ -1152,9 +1156,9 @@ export async function createIssueDB(data: {
   try {
     const p = getPool();
     await p.query(
-      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "tags", "estimatedHours", "dueDate", "epic", "sprint")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, tagsStr, estimatedHours, dueDate, epic, sprint]
+      `INSERT INTO "issues" ("id", "key", "title", "description", "status", "priority", "assigneeName", "reporterName", "projectId", "project", "labels", "tags", "estimatedHours", "dueDate", "epic", "folderId", "sprint")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      [id, key, title, description, status, priority, assigneeName, reporterName, projectId, project, labelsStr, tagsStr, estimatedHours, dueDate, epic, folderId, sprint]
     );
 
     if (data.subtasks && Array.isArray(data.subtasks)) {
@@ -1182,6 +1186,7 @@ export async function createIssueDB(data: {
     projectId,
     project,
     epic,
+    folderId,
     sprint,
     labels: data.labels || ['General'],
     tags: data.tags || [],
@@ -1252,6 +1257,10 @@ export async function updateIssueStatusDB(
     fields.push(`"epic" = $${paramIdx++}`);
     values.push(updates.epic.trim());
   }
+  if (updates.folderId !== undefined) {
+    fields.push(`"folderId" = $${paramIdx++}`);
+    values.push(updates.folderId ? updates.folderId.trim() : null);
+  }
   if (updates.priority !== undefined) {
     fields.push(`"priority" = $${paramIdx++}`);
     values.push(updates.priority);
@@ -1301,6 +1310,7 @@ export async function updateIssueStatusDB(
     if (updates.title !== undefined) target.title = updates.title.trim();
     if (updates.description !== undefined) target.description = updates.description.trim();
     if (updates.epic !== undefined) target.epic = updates.epic.trim();
+    if (updates.folderId !== undefined) target.folderId = updates.folderId;
     if (updates.priority !== undefined) target.priority = updates.priority;
     if (updates.assigneeName !== undefined) {
       target.assigneeName = updates.assigneeName;

@@ -45,6 +45,7 @@ export async function POST(req: Request) {
       project: data.project,
       projectId: data.projectId,
       epic: data.epic,
+      folderId: data.folderId,
       sprint: data.sprint,
       dueDate: data.dueDate,
       estimatedHours: data.estimatedHours,

@@ -71,6 +71,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [projectKey, setProjectKey] = useState(defaultProjectKey);
   const [priority, setPriority] = useState<Priority>('medium');
   const [assigneeName, setAssigneeName] = useState('General (Anyone)');
+  const [targetFolderId, setTargetFolderId] = useState('folder_general');
   const [targetFolder, setTargetFolder] = useState('General');
   const [labels, setLabels] = useState<string>('General, Feature');
   const [dueDate, setDueDate] = useState('');
@@ -108,6 +109,45 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const mentionOptions = useMemo(() => getAvailableTaskMentions(existingIssues), [existingIssues]);
+
+  // Extract available folder options with unique IDs
+  const availableFolderOptions = React.useMemo(() => {
+    const list: Array<{ id: string; name: string; createdAt?: string }> = [
+      { id: 'folder_general', name: 'General' },
+    ];
+    const registeredIds = new Set<string>(['folder_general']);
+
+    existingIssues.forEach((i: any) => {
+      const isFolder = 
+        (i.title && (i.title.startsWith('📁 ') || i.title.startsWith('[Folder]'))) ||
+        (i.labels && Array.isArray(i.labels) && i.labels.some((l: string) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group'));
+
+      if (isFolder) {
+        const cleanName = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim() || 'Untitled Folder';
+        if (!registeredIds.has(i.id)) {
+          registeredIds.add(i.id);
+          list.push({
+            id: i.id,
+            name: cleanName,
+            createdAt: i.createdAt || i.created_at,
+          });
+        }
+      } else if (i.epic && i.epic.trim() && i.epic !== 'General' && i.epic !== 'Platform Core') {
+        const epicName = i.epic.trim();
+        const fakeId = i.folderId || `epic_${epicName}`;
+        if (!registeredIds.has(fakeId) && !list.some((f) => f.name.toLowerCase() === epicName.toLowerCase())) {
+          registeredIds.add(fakeId);
+          list.push({
+            id: fakeId,
+            name: epicName,
+            createdAt: i.createdAt,
+          });
+        }
+      }
+    });
+
+    return list;
+  }, [existingIssues]);
 
   useEffect(() => {
     if (defaultProjectKey) setProjectKey(defaultProjectKey);
@@ -358,6 +398,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     const finalSubtasks = creationMode === 'folder' ? folderTasks : [];
 
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
+    const selectedFolderId = creationMode === 'task' 
+      ? (targetFolderId === 'folder_general' ? undefined : targetFolderId)
+      : undefined;
+    const selectedEpic = creationMode === 'task' 
+      ? (targetFolder || 'General') 
+      : (extractTagsAndCleanText(folderName).cleanText || folderName.trim());
 
     const optimisticIssue: Issue = {
       id: tempId,
@@ -372,7 +418,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
       project: targetProjectName,
       projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
-      epic: creationMode === 'task' ? (targetFolder || 'General') : (extractTagsAndCleanText(folderName).cleanText || folderName.trim()),
+      epic: selectedEpic,
+      folderId: selectedFolderId,
       labels: finalLabels,
       tags: combinedTags,
       subtasks: finalSubtasks as any,
@@ -401,7 +448,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
           project: targetProjectName,
           projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
-          epic: creationMode === 'task' ? (targetFolder || 'General') : (extractTagsAndCleanText(folderName).cleanText || folderName.trim()),
+          epic: selectedEpic,
+          folderId: selectedFolderId,
           labels: finalLabels,
           tags: combinedTags,
           subtasks: finalSubtasks,
@@ -843,14 +891,18 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             Destination Folder
                           </label>
                           <select
-                            value={targetFolder}
-                            onChange={(e) => setTargetFolder(e.target.value)}
-                            className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none cursor-pointer"
+                            value={targetFolderId}
+                            onChange={(e) => {
+                              const selectedId = e.target.value;
+                              setTargetFolderId(selectedId);
+                              const found = availableFolderOptions.find((f) => f.id === selectedId);
+                              setTargetFolder(found ? found.name : selectedId);
+                            }}
+                            className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none cursor-pointer font-sans text-xs"
                           >
-                            <option value="General">📁 General (Default Common Folder)</option>
-                            {availableFolders.filter((f) => f !== 'General').map((f) => (
-                              <option key={f} value={f}>
-                                📁 {f}
+                            {availableFolderOptions.map((f) => (
+                              <option key={f.id} value={f.id}>
+                                📁 {f.name} {f.id !== 'folder_general' && f.createdAt ? `(${new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
                               </option>
                             ))}
                           </select>

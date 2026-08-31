@@ -166,6 +166,7 @@ export interface Issue {
   customFields?: Record<string, string | number | boolean>;
   sprint?: string;
   epic?: string;
+  folderId?: string;
   team?: string;
   projectId?: number | string;
   project: string;

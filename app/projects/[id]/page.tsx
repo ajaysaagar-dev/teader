@@ -1388,26 +1388,27 @@ export default function SingleProjectPage() {
   }, [issues, fetchProjectData]);
 
   // Handle Drag & Drop to Move Task between Folders/Epics
-  const handleMoveTaskToFolder = useCallback(async (issueId: string, targetEpicName: string) => {
+  const handleMoveTaskToFolder = useCallback(async (issueId: string, targetFolderId: string, targetFolderName?: string) => {
     let nextAllIssues: Issue[] = [];
+    const finalEpic = targetFolderName || (targetFolderId === 'folder_general' ? 'General' : targetFolderId);
 
     // 1. Optimistic UI update
     setIssues((prev) => {
       const dragged = prev.find((i) => i.id === issueId);
       if (!dragged) return prev;
-      const updated = { ...dragged, epic: targetEpicName };
+      const updated = { ...dragged, folderId: targetFolderId, epic: finalEpic };
       const remaining = prev.filter((i) => i.id !== issueId);
       nextAllIssues = [...remaining, updated];
       return nextAllIssues;
     });
-    toast.success(`Task moved into "${targetEpicName}" folder!`);
+    toast.success(`Task moved into "${finalEpic}" folder!`);
 
     // 2. Background Sync
     try {
       await fetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ epic: targetEpicName }),
+        body: JSON.stringify({ folderId: targetFolderId, epic: finalEpic }),
       });
 
       const projIssues = nextAllIssues.filter(
@@ -1437,9 +1438,8 @@ export default function SingleProjectPage() {
     }
   }, [project, fetchProjectData]);
 
-  // Handle Adding Task directly to Folder
   // Handle Add Task directly into Folder (from Tree Explorer inline button)
-  const handleAddTaskToFolder = useCallback(async (folderName: string, taskTitle: string) => {
+  const handleAddTaskToFolder = useCallback(async (folderId: string, folderName: string, taskTitle: string) => {
     if (!project || !taskTitle.trim()) return;
 
     const extracted = extractTagsAndCleanText(taskTitle);
@@ -1461,6 +1461,7 @@ export default function SingleProjectPage() {
       reporterName: currentUserName,
       assigneeName: currentUserName,
       epic: folderName || 'General',
+      folderId: folderId || (folderName === 'General' ? 'folder_general' : undefined),
       labels: ['General'],
       tags,
       subtasks: [],
@@ -1484,6 +1485,7 @@ export default function SingleProjectPage() {
           reporterName: currentUserName,
           assigneeName: currentUserName,
           epic: folderName || 'General',
+          folderId: folderId || (folderName === 'General' ? 'folder_general' : undefined),
           labels: ['General'],
           tags,
         }),
@@ -1502,7 +1504,8 @@ export default function SingleProjectPage() {
   const handleReorderTaskInFolder = useCallback(async (
     draggedIssueId: string,
     targetIssueId: string,
-    targetFolder: string,
+    targetFolderId: string,
+    targetFolderName: string,
     position: 'before' | 'after'
   ) => {
     let nextAllIssues: Issue[] = [];
@@ -1511,7 +1514,7 @@ export default function SingleProjectPage() {
       const dragged = prev.find((i) => i.id === draggedIssueId);
       if (!dragged) return prev;
 
-      const updatedDragged = { ...dragged, epic: targetFolder };
+      const updatedDragged = { ...dragged, folderId: targetFolderId, epic: targetFolderName };
       const remaining = prev.filter((i) => i.id !== draggedIssueId);
       const targetIndex = remaining.findIndex((i) => i.id === targetIssueId);
 
@@ -1526,13 +1529,11 @@ export default function SingleProjectPage() {
       return nextAllIssues;
     });
 
-    toast.success(`Task reordered in folder "${targetFolder}"!`);
-
     try {
       await fetch(`/api/issues/${draggedIssueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ epic: targetFolder }),
+        body: JSON.stringify({ folderId: targetFolderId, epic: targetFolderName }),
       });
 
       const projIssues = nextAllIssues.filter(
@@ -1556,10 +1557,11 @@ export default function SingleProjectPage() {
           body: JSON.stringify({ items: payload }),
         });
       }
-    } catch (err) {
-      console.error('Error persisting tree reorder to DB:', err);
+    } catch {
+      toast.error('Failed to sync task reordering');
+      fetchProjectData();
     }
-  }, [project]);
+  }, [project, fetchProjectData]);
 
   return (
     <>

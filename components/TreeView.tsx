@@ -54,9 +54,9 @@ interface TreeViewProps {
   onOpenNewFolder?: () => void;
   onRenameIssue?: (issueId: string, newTitle: string) => void;
   onRenameEpic?: (oldEpicName: string, newEpicName: string) => void;
-  onMoveTaskToFolder?: (issueId: string, targetFolder: string) => void;
-  onAddTaskToFolder?: (folderName: string, title: string) => void;
-  onReorderTaskInFolder?: (draggedIssueId: string, targetIssueId: string, folderName: string, position: 'before' | 'after') => void;
+  onMoveTaskToFolder?: (issueId: string, targetFolderId: string, targetFolderName?: string) => void;
+  onAddTaskToFolder?: (folderId: string, folderName: string, title: string) => void;
+  onReorderTaskInFolder?: (draggedIssueId: string, targetIssueId: string, targetFolderId: string, targetFolderName: string, position: 'before' | 'after') => void;
   canDelete?: boolean;
 }
 
@@ -239,6 +239,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
   const handleInlineTaskKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
+    folderId: string,
     folderName: string
   ) => {
     if (inlineMentionState.active) {
@@ -283,7 +284,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
     if (e.key === 'Enter') {
       if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
-        onAddTaskToFolder(folderName, newTaskInFolderTitle.trim());
+        onAddTaskToFolder(folderId, folderName, newTaskInFolderTitle.trim());
         setNewTaskInFolderTitle('');
         setActiveFolderTaskInput(null);
         setInlineMentionState((prev) => ({ ...prev, active: false }));
@@ -303,7 +304,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   const [editingIssueTitleValue, setEditingIssueTitleValue] = useState('');
   const [dragOverEpic, setDragOverEpic] = useState<string | null>(null);
 
-  // Group issues into distinct Folder Containers (supporting duplicate names seamlessly)
+  // Group issues into distinct Folder Containers (supporting duplicate names seamlessly via unique folder ID)
   const folderContainers: FolderContainer[] = useMemo(() => {
     const list: FolderContainer[] = [];
 
@@ -347,6 +348,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                 status: st.completed ? 'done' : 'todo',
                 priority: 'medium',
                 epic: cleanName,
+                folderId: issue.id,
                 project: issue.project,
                 projectId: issue.projectId,
                 createdAt: issue.createdAt,
@@ -366,11 +368,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     issues.forEach((issue) => {
       if (!isFolderEntity(issue) && issue.epic && issue.epic.trim() && issue.epic !== 'General' && issue.epic !== 'Platform Core') {
         const epicName = issue.epic.trim();
-        const existing = list.find((c) => c.name.toLowerCase() === epicName.toLowerCase());
+        const existing = list.find((c) => c.id === issue.folderId || c.folderEntityId === issue.folderId || c.name.toLowerCase() === epicName.toLowerCase());
         if (!existing) {
           const createdIso = issue.createdAt || (issue as any).created_at;
           const container: FolderContainer = {
-            id: `epic_${epicName}`,
+            id: issue.folderId || `epic_${epicName}`,
             name: epicName,
             createdAt: createdIso,
             timestamp: parseTimestamp(createdIso, issue.id),
@@ -382,17 +384,37 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
       }
     });
 
-    // 4. Route tasks into their appropriate folder container
+    // 4. Route tasks into their appropriate folder container strictly by folderId first!
     issues.forEach((issue) => {
       if (isFolderEntity(issue)) return; // Handled
 
+      // Priority 1: Match by explicit folderId
+      if (issue.folderId) {
+        if (issue.folderId === 'folder_general' || issue.folderId.toLowerCase() === 'general') {
+          generalContainer.issues.push(issue);
+          return;
+        }
+        const matchingById = list.find((c) => c.id === issue.folderId || c.folderEntityId === issue.folderId);
+        if (matchingById) {
+          matchingById.issues.push(issue);
+          return;
+        }
+      }
+
+      // Priority 2: Match by rawEpic matching a container id
       const rawEpic = issue.epic && issue.epic.trim() && issue.epic !== 'Platform Core' ? issue.epic.trim() : 'General';
+      const matchingById = list.find((c) => c.id === rawEpic || c.folderEntityId === rawEpic);
+      if (matchingById) {
+        matchingById.issues.push(issue);
+        return;
+      }
+
       if (rawEpic.toLowerCase() === 'general') {
         generalContainer.issues.push(issue);
         return;
       }
 
-      // Find matching folder container
+      // Priority 3: Fallback matching by name for legacy tasks
       const matchingContainer = list.find((c) => c.name.toLowerCase() === rawEpic.toLowerCase());
       if (matchingContainer) {
         matchingContainer.issues.push(issue);
@@ -716,7 +738,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       setDragOverEpic(null);
                       const droppedId = extractDroppedIssueId(e);
                       if (droppedId && onMoveTaskToFolder) {
-                        onMoveTaskToFolder(droppedId, folder.name);
+                        onMoveTaskToFolder(droppedId, folder.id, folder.name);
                         setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                       }
                     }}
@@ -871,14 +893,14 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           placeholder={`Enter task title inside folder "${folder.name}" (type @ to tag)...`}
                           value={newTaskInFolderTitle}
                           onChange={(e) => handleInlineTaskChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
-                          onKeyDown={(e) => handleInlineTaskKeyDown(e, folder.name)}
+                          onKeyDown={(e) => handleInlineTaskKeyDown(e, folder.id, folder.name)}
                           autoFocus
                           className="flex-1 bg-transparent text-xs text-white placeholder-[#787C83] outline-none"
                         />
                         <button
                           onClick={() => {
                             if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
-                              onAddTaskToFolder(folder.name, newTaskInFolderTitle.trim());
+                              onAddTaskToFolder(folder.id, folder.name, newTaskInFolderTitle.trim());
                               setNewTaskInFolderTitle('');
                               setActiveFolderTaskInput(null);
                               setInlineMentionState((prev) => ({ ...prev, active: false }));
@@ -935,7 +957,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           setDragOverEpic(null);
                           const droppedId = extractDroppedIssueId(e);
                           if (droppedId && onMoveTaskToFolder) {
-                            onMoveTaskToFolder(droppedId, folder.name);
+                            onMoveTaskToFolder(droppedId, folder.id, folder.name);
                             setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                           }
                         }}
@@ -960,7 +982,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               setDragOverEpic(null);
                               const droppedId = extractDroppedIssueId(e);
                               if (droppedId && onMoveTaskToFolder) {
-                                onMoveTaskToFolder(droppedId, folder.name);
+                                onMoveTaskToFolder(droppedId, folder.id, folder.name);
                                 setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                               }
                             }}
@@ -1036,9 +1058,9 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                   const droppedId = extractDroppedIssueId(e);
                                   if (droppedId) {
                                     if (onReorderTaskInFolder) {
-                                      onReorderTaskInFolder(droppedId, issue.id, folder.name, pos);
+                                      onReorderTaskInFolder(droppedId, issue.id, folder.id, folder.name, pos);
                                     } else if (onMoveTaskToFolder) {
-                                      onMoveTaskToFolder(droppedId, folder.name);
+                                      onMoveTaskToFolder(droppedId, folder.id, folder.name);
                                     }
                                     setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                                   }
