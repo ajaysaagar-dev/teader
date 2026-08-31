@@ -49,7 +49,7 @@ interface TreeViewProps {
   onUpdateIssueStatus?: (id: string, status: Status) => void;
   onUpdateIssuePriority?: (id: string, priority: Priority) => void;
   onDeleteIssue?: (issueId: string) => void;
-  onDeleteFolder?: (folderName: string, deleteTasks: boolean) => void;
+  onDeleteFolder?: (folderId: string, folderName: string, deleteTasks: boolean) => void;
   onOpenNewIssue?: () => void;
   onOpenNewFolder?: () => void;
   onRenameIssue?: (issueId: string, newTitle: string) => void;
@@ -414,10 +414,15 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
         return;
       }
 
-      // Priority 3: Fallback matching by name for legacy tasks
-      const matchingContainer = list.find((c) => c.name.toLowerCase() === rawEpic.toLowerCase());
-      if (matchingContainer) {
-        matchingContainer.issues.push(issue);
+      // Priority 3: Fallback matching by name for legacy tasks WITHOUT folderId
+      // Match the oldest/original folder container that existed when or before this task was created,
+      // NEVER a newly created empty duplicate folder created after the task!
+      const matchingContainers = list.filter((c) => c.name.toLowerCase() === rawEpic.toLowerCase());
+      if (matchingContainers.length > 0) {
+        const sortedByAge = [...matchingContainers].sort((a, b) => a.timestamp - b.timestamp);
+        const taskTime = parseTimestamp(issue.createdAt || (issue as any).created_at, issue.id);
+        const bestMatch = sortedByAge.find((c) => c.timestamp <= taskTime) || sortedByAge[0];
+        bestMatch.issues.push(issue);
       } else {
         generalContainer.issues.push(issue);
       }
@@ -1312,10 +1317,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
-                        if (folderToDelete.folderEntityId && onDeleteIssue) {
+                        const targetId = folderToDelete.folderEntityId || folderToDelete.folderName;
+                        if (onDeleteFolder) {
+                          onDeleteFolder(targetId, folderToDelete.folderName, false);
+                        } else if (folderToDelete.folderEntityId && onDeleteIssue) {
                           onDeleteIssue(folderToDelete.folderEntityId);
-                        } else if (onDeleteFolder) {
-                          onDeleteFolder(folderToDelete.folderName, false);
                         }
                         setFolderToDelete(null);
                       }}
@@ -1339,11 +1345,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
-                        if (folderToDelete.folderEntityId && onDeleteIssue) {
-                          onDeleteIssue(folderToDelete.folderEntityId);
-                        }
+                        const targetId = folderToDelete.folderEntityId || folderToDelete.folderName;
                         if (onDeleteFolder) {
-                          onDeleteFolder(folderToDelete.folderName, true);
+                          onDeleteFolder(targetId, folderToDelete.folderName, true);
+                        } else if (folderToDelete.folderEntityId && onDeleteIssue) {
+                          onDeleteIssue(folderToDelete.folderEntityId);
                         }
                         setFolderToDelete(null);
                       }}
@@ -1379,10 +1385,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
-                        if (folderToDelete.folderEntityId && onDeleteIssue) {
+                        const targetId = folderToDelete.folderEntityId || folderToDelete.folderName;
+                        if (onDeleteFolder) {
+                          onDeleteFolder(targetId, folderToDelete.folderName, false);
+                        } else if (folderToDelete.folderEntityId && onDeleteIssue) {
                           onDeleteIssue(folderToDelete.folderEntityId);
-                        } else if (onDeleteFolder) {
-                          onDeleteFolder(folderToDelete.folderName, false);
                         }
                         setFolderToDelete(null);
                       }}

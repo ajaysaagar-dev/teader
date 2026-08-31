@@ -1307,25 +1307,27 @@ export default function SingleProjectPage() {
   }, [issues, fetchProjectData]);
 
   // Handle Delete Folder (Option: Delete folder only -> tasks moved to General, OR delete folder & all tasks)
-  const handleDeleteFolder = useCallback(async (folderName: string, deleteTasks: boolean) => {
+  const handleDeleteFolder = useCallback(async (folderId: string, folderName: string, deleteTasks: boolean) => {
     if (!folderName || folderName.toLowerCase() === 'general' || folderName.toLowerCase() === 'general tasks') {
       toast.info('The "General" folder is the default workspace folder and cannot be deleted.');
       return;
     }
 
     const isThisFolderEntity = (i: Issue) => {
+      if (folderId && i.id === folderId) return true;
       const isFolder =
         (i.labels && i.labels.some((l) => l.toLowerCase() === 'folder' || l.toLowerCase() === 'group')) ||
         i.title.startsWith('📁 ') ||
         i.title.startsWith('[Folder]');
-      const cleanTitle = i.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim();
-      return (isFolder && (cleanTitle === folderName || i.epic === folderName)) ||
-        i.title === `📁 ${folderName}` ||
-        i.title === `[Folder] ${folderName}`;
+      return isFolder && i.id === folderId;
     };
 
     const isTaskInThisFolder = (i: Issue) => {
-      return !isThisFolderEntity(i) && ((i.epic || '').trim() === folderName);
+      if (isThisFolderEntity(i)) return false;
+      if (i.folderId && folderId) {
+        return i.folderId === folderId;
+      }
+      return (i.epic || '').trim() === folderName;
     };
 
     if (deleteTasks) {
@@ -1354,7 +1356,7 @@ export default function SingleProjectPage() {
       setIssues((prev) =>
         prev
           .filter((i) => !isThisFolderEntity(i))
-          .map((i) => (isTaskInThisFolder(i) ? { ...i, epic: 'General' } : i))
+          .map((i) => (isTaskInThisFolder(i) ? { ...i, folderId: 'folder_general', epic: 'General' } : i))
       );
       toast.success(
         childTasks.length > 0
@@ -1376,7 +1378,7 @@ export default function SingleProjectPage() {
             fetch(`/api/issues/${iss.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ epic: 'General' }),
+              body: JSON.stringify({ folderId: 'folder_general', epic: 'General' }),
             })
           )
         );
