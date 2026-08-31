@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Priority, Status, Issue } from '@/lib/types';
 import { 
   X, 
@@ -23,7 +23,14 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
-import { getTaskShortId } from '@/lib/task-id';
+import { 
+  getTaskShortId, 
+  extractTagsAndCleanText, 
+  getAvailableTaskMentions, 
+  getMentionQueryAtCursor, 
+  TaskMentionOption 
+} from '@/lib/task-id';
+import { TaskMentionPopover } from '@/components/ui/TaskMentionPopover';
 
 interface NewIssueModalProps {
   isOpen: boolean;
@@ -72,6 +79,23 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [showTaskPicker, setShowTaskPicker] = useState(false);
   const [taskPickerSearch, setTaskPickerSearch] = useState('');
 
+  // Mention Autocomplete state
+  const [mentionState, setMentionState] = useState<{
+    active: boolean;
+    target: 'title' | 'desc' | 'folder';
+    query: string;
+    startIndex: number;
+    endIndex: number;
+    selectedIndex: number;
+  }>({
+    active: false,
+    target: 'title',
+    query: '',
+    startIndex: 0,
+    endIndex: 0,
+    selectedIndex: 0,
+  });
+
   // Folder Form State
   const [folderName, setFolderName] = useState('');
   const [folderDescription, setFolderDescription] = useState('');
@@ -83,6 +107,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [existingIssues, setExistingIssues] = useState<Issue[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const mentionOptions = useMemo(() => getAvailableTaskMentions(existingIssues), [existingIssues]);
+
   useEffect(() => {
     if (defaultProjectKey) setProjectKey(defaultProjectKey);
   }, [defaultProjectKey]);
@@ -92,8 +118,39 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       setCreationMode(allowFolderCreation ? initialMode : 'task');
       setTaggedTasks([]);
       setShowTaskPicker(false);
+      setMentionState({
+        active: false,
+        target: 'title',
+        query: '',
+        startIndex: 0,
+        endIndex: 0,
+        selectedIndex: 0,
+      });
     }
   }, [isOpen, initialMode, allowFolderCreation]);
+
+  const handleSelectMention = (option: TaskMentionOption) => {
+    const tagToAdd = `@${option.shortId}`;
+    if (!taggedTasks.includes(option.shortId) && !taggedTasks.includes(tagToAdd)) {
+      setTaggedTasks((prev) => [...prev, tagToAdd]);
+    }
+
+    if (mentionState.target === 'title') {
+      const before = title.slice(0, mentionState.startIndex);
+      const after = title.slice(mentionState.endIndex);
+      setTitle(`${before}${tagToAdd} ${after}`);
+    } else if (mentionState.target === 'desc') {
+      const before = description.slice(0, mentionState.startIndex);
+      const after = description.slice(mentionState.endIndex);
+      setDescription(`${before}${tagToAdd} ${after}`);
+    } else if (mentionState.target === 'folder') {
+      const before = folderName.slice(0, mentionState.startIndex);
+      const after = folderName.slice(mentionState.endIndex);
+      setFolderName(`${before}${tagToAdd} ${after}`);
+    }
+
+    setMentionState((prev) => ({ ...prev, active: false }));
+  };
 
   // Fetch Joined Project Members & Existing Issues for Duplication Detection
   useEffect(() => {
@@ -160,17 +217,90 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
   if (!isOpen) return null;
 
+  const handleInputChangeWithMention = (
+    val: string,
+    cursor: number,
+    target: 'title' | 'desc' | 'folder'
+  ) => {
+    if (target === 'title') setTitle(val);
+    else if (target === 'desc') setDescription(val);
+    else if (target === 'folder') setFolderName(val);
+
+    const mention = getMentionQueryAtCursor(val, cursor);
+    if (mention) {
+      setMentionState({
+        active: true,
+        target,
+        query: mention.query,
+        startIndex: mention.startIndex,
+        endIndex: mention.endIndex,
+        selectedIndex: 0,
+      });
+    } else {
+      setMentionState((prev) => (prev.active && prev.target === target ? { ...prev, active: false } : prev));
+    }
+  };
+
+  const handleInputKeyDownWithMention = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    target: 'title' | 'desc' | 'folder'
+  ) => {
+    if (mentionState.active && mentionState.target === target) {
+      const q = mentionState.query.toLowerCase().trim();
+      const filtered = mentionOptions.filter(
+        (opt: TaskMentionOption) =>
+          opt.shortId.toLowerCase().includes(q) ||
+          opt.title.toLowerCase().includes(q) ||
+          opt.key.toLowerCase().includes(q)
+      );
+
+      if (filtered.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setMentionState((prev) => ({
+            ...prev,
+            selectedIndex: (prev.selectedIndex + 1) % filtered.length,
+          }));
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setMentionState((prev) => ({
+            ...prev,
+            selectedIndex: (prev.selectedIndex - 1 + filtered.length) % filtered.length,
+          }));
+          return;
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const selected = filtered[mentionState.selectedIndex] || filtered[0];
+          handleSelectMention(selected);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setMentionState((prev) => ({ ...prev, active: false }));
+          return;
+        }
+      }
+    }
+  };
+
   const handleAddFolderTask = () => {
     if (!newFolderTaskTitle.trim()) return;
+    const extracted = extractTagsAndCleanText(newFolderTaskTitle);
     setFolderTasks((prev) => [
       ...prev,
       {
         id: `ft_new_${Date.now()}_${Math.random()}`,
-        title: newFolderTaskTitle.trim(),
+        title: extracted.cleanText || newFolderTaskTitle.trim(),
         completed: false,
         isFolder: false,
       },
     ]);
+    if (extracted.tags.length > 0) {
+      setTaggedTasks((prev) => Array.from(new Set([...prev, ...extracted.tags])));
+    }
     setNewFolderTaskTitle('');
   };
 
@@ -196,20 +326,38 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${projectKey}-${Date.now().toString().slice(-4)}`;
 
-    const finalTitle = creationMode === 'task' ? title.trim() : `📁 ${folderName.trim()}`;
-    const finalDescription = creationMode === 'task' 
-      ? (description.trim() || 'No description provided.')
-      : (folderDescription.trim() || `Folder workspace group: ${folderName.trim()}`);
+    let finalTitle = '';
+    let finalDescription = '';
+    const autoExtractedTags: string[] = [];
+
+    if (creationMode === 'task') {
+      const extracted = extractTagsAndCleanText(title);
+      finalTitle = extracted.cleanText || title.trim();
+      autoExtractedTags.push(...extracted.tags);
+      finalDescription = description.trim() || 'No description provided.';
+    } else {
+      const extracted = extractTagsAndCleanText(folderName);
+      finalTitle = `📁 ${extracted.cleanText || folderName.trim()}`;
+      autoExtractedTags.push(...extracted.tags);
+      finalDescription = folderDescription.trim() || `Folder workspace group: ${extracted.cleanText || folderName.trim()}`;
+    }
+
+    const descExtracted = extractTagsAndCleanText(finalDescription);
+    autoExtractedTags.push(...descExtracted.tags);
+
+    const combinedTags = Array.from(
+      new Set([
+        ...taggedTasks.map((t) => (t.startsWith('@') ? t : `@${t}`)),
+        ...autoExtractedTags.map((t) => (t.startsWith('@') ? t : `@${t}`)),
+      ])
+    );
+
     const finalLabels = creationMode === 'task' 
       ? (formView === 'advanced' ? labels.split(',').map((l) => l.trim()).filter(Boolean) : ['General'])
       : ['Folder', 'Group', ...(formView === 'advanced' ? labels.split(',').map((l) => l.trim()).filter(Boolean) : [])];
     const finalSubtasks = creationMode === 'folder' ? folderTasks : [];
 
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
-
-    const descMentions = (finalDescription.match(/@T\d+/gi) || []).map((m) => m.replace(/^@/, '').toUpperCase());
-    const titleMentions = (finalTitle.match(/@T\d+/gi) || []).map((m) => m.replace(/^@/, '').toUpperCase());
-    const combinedTags = Array.from(new Set([...taggedTasks, ...descMentions, ...titleMentions]));
 
     const optimisticIssue: Issue = {
       id: tempId,
@@ -224,7 +372,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
       project: targetProjectName,
       projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
-      epic: creationMode === 'task' ? (targetFolder || 'General') : folderName.trim(),
+      epic: creationMode === 'task' ? (targetFolder || 'General') : (extractTagsAndCleanText(folderName).cleanText || folderName.trim()),
       labels: finalLabels,
       tags: combinedTags,
       subtasks: finalSubtasks as any,
@@ -234,7 +382,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
     // 1. Immediately inject into UI and close modal (0ms latency)
     onCreateIssue(optimisticIssue);
-    toast.success(creationMode === 'task' ? `Task ${tempKey} created in "${targetFolder || 'General'}"!` : `Folder "${folderName.trim()}" created!`);
+    toast.success(creationMode === 'task' ? `Task ${tempKey} created in "${targetFolder || 'General'}"!` : `Folder "${finalTitle.replace(/^📁\s*/, '')}" created!`);
     onClose();
 
     // 2. Process in background to database
@@ -253,7 +401,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
           project: targetProjectName,
           projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
-          epic: creationMode === 'task' ? (targetFolder || 'General') : folderName.trim(),
+          epic: creationMode === 'task' ? (targetFolder || 'General') : (extractTagsAndCleanText(folderName).cleanText || folderName.trim()),
           labels: finalLabels,
           tags: combinedTags,
           subtasks: finalSubtasks,
@@ -387,7 +535,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 {creationMode === 'task' ? (
                   <>
                     {/* Task Title */}
-                    <div>
+                    <div className="relative">
                       <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
                         Task Title <span className="text-[#EF4444]">*</span>
                       </label>
@@ -395,11 +543,25 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         type="text"
                         autoFocus
                         required
-                        placeholder="e.g. Implement real-time document synchronization..."
+                        placeholder="e.g. Implement real-time document synchronization (type @ to tag tasks)..."
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'title')}
+                        onKeyDown={(e) => handleInputKeyDownWithMention(e, 'title')}
                         className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
                       />
+
+                      {/* Mention Popover for Title */}
+                      {mentionState.active && mentionState.target === 'title' && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 z-50">
+                          <TaskMentionPopover
+                            query={mentionState.query}
+                            options={mentionOptions}
+                            selectedIndex={mentionState.selectedIndex}
+                            onSelect={handleSelectMention}
+                            onClose={() => setMentionState((prev) => ({ ...prev, active: false }))}
+                          />
+                        </div>
+                      )}
 
                       {/* Duplicate Detection Warning Banner */}
                       {detectedDuplicates.length > 0 && (
@@ -417,7 +579,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                     </div>
 
                     {/* Description & Markdown */}
-                    <div>
+                    <div className="relative">
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
                           Description (Markdown Supported)
@@ -428,9 +590,23 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         rows={formView === 'quick' ? 6 : 4}
                         placeholder="Write detailed task specifications, markdown notes, code snippets, or acceptance criteria (use @T1, @T2 to tag other tasks)..."
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'desc')}
+                        onKeyDown={(e) => handleInputKeyDownWithMention(e, 'desc')}
                         className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
                       />
+
+                      {/* Mention Popover for Description */}
+                      {mentionState.active && mentionState.target === 'desc' && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 z-50">
+                          <TaskMentionPopover
+                            query={mentionState.query}
+                            options={mentionOptions}
+                            selectedIndex={mentionState.selectedIndex}
+                            onSelect={handleSelectMention}
+                            onClose={() => setMentionState((prev) => ({ ...prev, active: false }))}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* @ Tag Related Tasks */}
@@ -700,7 +876,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   /* ─── TAB 2: FOLDER CREATION FORM ─────────────────────────── */
                   <>
                     {/* Folder Name */}
-                    <div>
+                    <div className="relative">
                       <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
                         Folder / Group Name <span className="text-[#EF4444]">*</span>
                       </label>
@@ -710,12 +886,26 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                           type="text"
                           autoFocus
                           required
-                          placeholder="e.g. Authentication & Security, Database Layer, Release v1.0..."
+                          placeholder="e.g. Authentication & Security, Database Layer (type @ to tag)..."
                           value={folderName}
-                          onChange={(e) => setFolderName(e.target.value)}
+                          onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'folder')}
+                          onKeyDown={(e) => handleInputKeyDownWithMention(e, 'folder')}
                           className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg pl-9 pr-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
                         />
                       </div>
+
+                      {/* Mention Popover for Folder Name */}
+                      {mentionState.active && mentionState.target === 'folder' && (
+                        <div className="absolute left-0 right-0 top-full mt-1.5 z-50">
+                          <TaskMentionPopover
+                            query={mentionState.query}
+                            options={mentionOptions}
+                            selectedIndex={mentionState.selectedIndex}
+                            onSelect={handleSelectMention}
+                            onClose={() => setMentionState((prev) => ({ ...prev, active: false }))}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Folder Description */}

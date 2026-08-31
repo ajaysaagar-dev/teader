@@ -72,3 +72,93 @@ export function findIssueByTag(tagOrId: string, allIssues: Issue[]): Issue | und
 
   return undefined;
 }
+
+/**
+ * Extracts @ tags (e.g. "@T12", "@T87") from a string and returns the cleaned text
+ * with tags removed and an array of extracted tags.
+ * Example: "@T12 Setup and controls @T87" -> { cleanText: "Setup and controls", tags: ["@T12", "@T87"] }
+ */
+export function extractTagsAndCleanText(input: string): { cleanText: string; tags: string[] } {
+  if (!input) return { cleanText: '', tags: [] };
+
+  const tagRegex = /@(T\d+|[A-Za-z0-9_-]+)/gi;
+  const tags: string[] = [];
+  let match;
+
+  while ((match = tagRegex.exec(input)) !== null) {
+    const raw = match[0];
+    const normalized = raw.startsWith('@T') ? `@T${raw.slice(2)}` : raw;
+    if (!tags.includes(normalized)) {
+      tags.push(normalized);
+    }
+  }
+
+  const cleanText = input
+    .replace(/@(T\d+|[A-Za-z0-9_-]+)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return {
+    cleanText: cleanText || input.trim(),
+    tags,
+  };
+}
+
+export interface TaskMentionOption {
+  shortId: string;
+  key: string;
+  title: string;
+  id: string;
+}
+
+/**
+ * Returns available task mention options from an issues list
+ */
+export function getAvailableTaskMentions(allIssues: Issue[]): TaskMentionOption[] {
+  if (!allIssues) return [];
+  const tasksOnly = allIssues.filter(
+    (i) =>
+      !i.title.startsWith('📁 ') &&
+      !i.title.startsWith('[Folder]') &&
+      !(i.labels && Array.isArray(i.labels) && i.labels.some((l) => l.toLowerCase() === 'folder'))
+  );
+
+  return tasksOnly.map((task) => ({
+    shortId: getTaskShortId(task, allIssues),
+    key: task.key,
+    title: task.title,
+    id: String(task.id),
+  }));
+}
+
+/**
+ * Detects if the cursor in a text input is inside an active @ mention word.
+ * Returns the query (e.g. "T" or "auth") and the start/end replacement indices, or null.
+ */
+export function getMentionQueryAtCursor(
+  text: string,
+  cursorPos: number
+): { query: string; startIndex: number; endIndex: number } | null {
+  if (cursorPos < 0 || cursorPos > text.length) return null;
+
+  const textBeforeCursor = text.slice(0, cursorPos);
+  const lastAtIdx = textBeforeCursor.lastIndexOf('@');
+  if (lastAtIdx === -1) return null;
+
+  // Make sure @ is at beginning of text or preceded by whitespace
+  if (lastAtIdx > 0 && !/\s/.test(text.charAt(lastAtIdx - 1))) {
+    return null;
+  }
+
+  const queryPart = textBeforeCursor.slice(lastAtIdx + 1);
+  // If there are spaces or newlines between @ and cursor, not a mention
+  if (/[\s\n]/.test(queryPart)) {
+    return null;
+  }
+
+  return {
+    query: queryPart,
+    startIndex: lastAtIdx,
+    endIndex: cursorPos,
+  };
+}

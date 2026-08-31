@@ -540,9 +540,36 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
                 <input
                   type="text"
-                  placeholder="Search tasks by ID or name (e.g. T1, auth)..."
+                  placeholder="Search tasks by ID or name (e.g. T1, auth, or type tag)..."
                   value={tagPickerSearch}
                   onChange={(e) => setTagPickerSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const matching = allIssues
+                        .filter((i) => i.id !== issue.id && !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
+                        .filter((i) => {
+                          const shortId = getTaskShortId(i, allIssues);
+                          const q = tagPickerSearch.toLowerCase().trim();
+                          return (
+                            shortId.toLowerCase() === q ||
+                            `@${shortId.toLowerCase()}` === q ||
+                            shortId.toLowerCase().includes(q) ||
+                            i.title.toLowerCase().includes(q) ||
+                            i.key.toLowerCase().includes(q)
+                          );
+                        });
+                      if (matching.length > 0) {
+                        const targetShortId = getTaskShortId(matching[0], allIssues);
+                        handleToggleTaskTag(targetShortId);
+                        setTagPickerSearch('');
+                      } else if (tagPickerSearch.trim()) {
+                        const manualTag = tagPickerSearch.trim().replace(/^@/, '');
+                        handleToggleTaskTag(manualTag);
+                        setTagPickerSearch('');
+                      }
+                    }
+                  }}
                   className="w-full bg-[#1B1C1F] border border-[#2A2C30] focus:border-[#38BDF8] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none font-mono"
                   autoFocus
                 />

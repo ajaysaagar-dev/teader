@@ -33,7 +33,13 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { getTaskShortId } from '@/lib/task-id';
+import { 
+  getTaskShortId, 
+  getAvailableTaskMentions, 
+  getMentionQueryAtCursor, 
+  TaskMentionOption 
+} from '@/lib/task-id';
+import { TaskMentionPopover } from './ui/TaskMentionPopover';
 
 interface TreeViewProps {
   issues: Issue[];
@@ -189,6 +195,106 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     position: { x: 0, y: 0 },
     issue: null,
   });
+
+  // Mention Autocomplete state for inline folder task input
+  const [inlineMentionState, setInlineMentionState] = useState<{
+    active: boolean;
+    query: string;
+    startIndex: number;
+    endIndex: number;
+    selectedIndex: number;
+  }>({
+    active: false,
+    query: '',
+    startIndex: 0,
+    endIndex: 0,
+    selectedIndex: 0,
+  });
+
+  const mentionOptions = useMemo(() => getAvailableTaskMentions(issues), [issues]);
+
+  const handleInlineTaskChange = (val: string, cursor: number) => {
+    setNewTaskInFolderTitle(val);
+    const mention = getMentionQueryAtCursor(val, cursor);
+    if (mention) {
+      setInlineMentionState({
+        active: true,
+        query: mention.query,
+        startIndex: mention.startIndex,
+        endIndex: mention.endIndex,
+        selectedIndex: 0,
+      });
+    } else {
+      setInlineMentionState((prev) => (prev.active ? { ...prev, active: false } : prev));
+    }
+  };
+
+  const handleInlineSelectMention = (option: TaskMentionOption) => {
+    const tagToAdd = `@${option.shortId}`;
+    const before = newTaskInFolderTitle.slice(0, inlineMentionState.startIndex);
+    const after = newTaskInFolderTitle.slice(inlineMentionState.endIndex);
+    setNewTaskInFolderTitle(`${before}${tagToAdd} ${after}`);
+    setInlineMentionState((prev) => ({ ...prev, active: false }));
+  };
+
+  const handleInlineTaskKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    folderName: string
+  ) => {
+    if (inlineMentionState.active) {
+      const q = inlineMentionState.query.toLowerCase().trim();
+      const filtered = mentionOptions.filter(
+        (opt) =>
+          opt.shortId.toLowerCase().includes(q) ||
+          opt.title.toLowerCase().includes(q) ||
+          opt.key.toLowerCase().includes(q)
+      );
+
+      if (filtered.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setInlineMentionState((prev) => ({
+            ...prev,
+            selectedIndex: (prev.selectedIndex + 1) % filtered.length,
+          }));
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setInlineMentionState((prev) => ({
+            ...prev,
+            selectedIndex: (prev.selectedIndex - 1 + filtered.length) % filtered.length,
+          }));
+          return;
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const selected = filtered[inlineMentionState.selectedIndex] || filtered[0];
+          handleInlineSelectMention(selected);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setInlineMentionState((prev) => ({ ...prev, active: false }));
+          return;
+        }
+      }
+    }
+
+    if (e.key === 'Enter') {
+      if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
+        onAddTaskToFolder(folderName, newTaskInFolderTitle.trim());
+        setNewTaskInFolderTitle('');
+        setActiveFolderTaskInput(null);
+        setInlineMentionState((prev) => ({ ...prev, active: false }));
+      }
+    }
+    if (e.key === 'Escape') {
+      setActiveFolderTaskInput(null);
+      setNewTaskInFolderTitle('');
+      setInlineMentionState((prev) => ({ ...prev, active: false }));
+    }
+  };
 
   // Editing state for Epics & Task titles
   const [editingEpicId, setEditingEpicId] = useState<string | null>(null);
@@ -757,27 +863,15 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
                   {/* Inline + Task Input inside Folder */}
                   {activeFolderTaskInput === folder.id && (
-                    <div className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5">
+                    <div className="relative pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5">
                       <div className="flex items-center gap-2 bg-[#17181A] border border-[#DCB001]/60 rounded-lg p-2 shadow-sm">
                         <FileCode size={13} className="text-[#DCB001] shrink-0" />
                         <input
                           type="text"
-                          placeholder={`Enter task title inside folder "${folder.name}"...`}
+                          placeholder={`Enter task title inside folder "${folder.name}" (type @ to tag)...`}
                           value={newTaskInFolderTitle}
-                          onChange={(e) => setNewTaskInFolderTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
-                                onAddTaskToFolder(folder.name, newTaskInFolderTitle.trim());
-                                setNewTaskInFolderTitle('');
-                                setActiveFolderTaskInput(null);
-                              }
-                            }
-                            if (e.key === 'Escape') {
-                              setActiveFolderTaskInput(null);
-                              setNewTaskInFolderTitle('');
-                            }
-                          }}
+                          onChange={(e) => handleInlineTaskChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+                          onKeyDown={(e) => handleInlineTaskKeyDown(e, folder.name)}
                           autoFocus
                           className="flex-1 bg-transparent text-xs text-white placeholder-[#787C83] outline-none"
                         />
@@ -787,6 +881,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               onAddTaskToFolder(folder.name, newTaskInFolderTitle.trim());
                               setNewTaskInFolderTitle('');
                               setActiveFolderTaskInput(null);
+                              setInlineMentionState((prev) => ({ ...prev, active: false }));
                             }
                           }}
                           className="px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded transition-colors cursor-pointer"
@@ -797,12 +892,26 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           onClick={() => {
                             setActiveFolderTaskInput(null);
                             setNewTaskInFolderTitle('');
+                            setInlineMentionState((prev) => ({ ...prev, active: false }));
                           }}
                           className="px-2 py-1 text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors cursor-pointer"
                         >
                           Cancel
                         </button>
                       </div>
+
+                      {/* Mention Popover for Inline Task Creation */}
+                      {inlineMentionState.active && (
+                        <div className="absolute left-6 right-0 top-full mt-1.5 z-50">
+                          <TaskMentionPopover
+                            query={inlineMentionState.query}
+                            options={mentionOptions}
+                            selectedIndex={inlineMentionState.selectedIndex}
+                            onSelect={handleInlineSelectMention}
+                            onClose={() => setInlineMentionState((prev) => ({ ...prev, active: false }))}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 

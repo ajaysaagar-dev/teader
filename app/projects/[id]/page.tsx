@@ -56,7 +56,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
-import { getTaskShortId } from '@/lib/task-id';
+import { getTaskShortId, extractTagsAndCleanText } from '@/lib/task-id';
 
 // Dynamic lazy-loaded view components for optimal code-splitting and load speed
 const ProjectOverviewView = dynamic(
@@ -901,13 +901,17 @@ export default function SingleProjectPage() {
   const handleAddNewTaskToColumn = useCallback(async (title: string, status: Status) => {
     if (!project) return;
 
+    const extracted = extractTagsAndCleanText(title);
+    const cleanTitle = extracted.cleanText || title.trim();
+    const tags = extracted.tags;
+
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
-      title: title.trim(),
+      title: cleanTitle,
       description: '',
       status,
       priority: 'medium',
@@ -916,6 +920,7 @@ export default function SingleProjectPage() {
       reporterName: currentUserName,
       assigneeName: currentUserName,
       labels: ['Task'],
+      tags,
       subtasks: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -924,7 +929,7 @@ export default function SingleProjectPage() {
 
     // 1. Add in UI directly and immediately (0ms latency)
     setIssues((prev) => reconcileCreatedIssue(prev, optimisticIssue));
-    toast.success(`Task "${title}" created!`);
+    toast.success(`Task "${cleanTitle}" created!`);
 
     // 2. Process in background to PostgreSQL server
     try {
@@ -932,7 +937,7 @@ export default function SingleProjectPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title,
+          title: cleanTitle,
           status,
           priority: 'medium',
           project: project.name,
@@ -940,6 +945,7 @@ export default function SingleProjectPage() {
           reporterName: currentUserName,
           assigneeName: currentUserName,
           labels: ['Task'],
+          tags,
         }),
       });
 
@@ -1432,8 +1438,13 @@ export default function SingleProjectPage() {
   }, [project, fetchProjectData]);
 
   // Handle Adding Task directly to Folder
+  // Handle Add Task directly into Folder (from Tree Explorer inline button)
   const handleAddTaskToFolder = useCallback(async (folderName: string, taskTitle: string) => {
     if (!project || !taskTitle.trim()) return;
+
+    const extracted = extractTagsAndCleanText(taskTitle);
+    const cleanTitle = extracted.cleanText || taskTitle.trim();
+    const tags = extracted.tags;
 
     const tempId = `temp_${Date.now()}`;
     const tempKey = `${project.key}-${Date.now().toString().slice(-4)}`;
@@ -1441,7 +1452,7 @@ export default function SingleProjectPage() {
     const optimisticIssue: Issue = {
       id: tempId,
       key: tempKey,
-      title: taskTitle.trim(),
+      title: cleanTitle,
       description: '',
       status: 'todo',
       priority: 'medium',
@@ -1451,6 +1462,7 @@ export default function SingleProjectPage() {
       assigneeName: currentUserName,
       epic: folderName || 'General',
       labels: ['General'],
+      tags,
       subtasks: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1464,7 +1476,7 @@ export default function SingleProjectPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: taskTitle.trim(),
+          title: cleanTitle,
           status: 'todo',
           priority: 'medium',
           project: project.name,
@@ -1473,6 +1485,7 @@ export default function SingleProjectPage() {
           assigneeName: currentUserName,
           epic: folderName || 'General',
           labels: ['General'],
+          tags,
         }),
       });
       if (res.ok) {
