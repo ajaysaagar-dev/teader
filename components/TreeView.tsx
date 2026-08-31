@@ -28,7 +28,8 @@ import {
   GripVertical,
   Check,
   X,
-  CornerDownRight
+  CornerDownRight,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -116,41 +117,40 @@ function parseTimestamp(val: any, id?: string | number): number {
   return 0;
 }
 
-function getFolderTimestamp(name: string, issues: Issue[], folderIssues: Issue[]): number {
-  let maxTime = 0;
-  const lowerName = name.toLowerCase().trim();
+function formatFolderDateTime(isoString?: string, id?: string | number): string {
+  let timestamp = 0;
+  if (isoString) {
+    const t = new Date(isoString).getTime();
+    if (!isNaN(t) && t > 0) timestamp = t;
+  }
+  if (!timestamp && id !== undefined && id !== null) {
+    timestamp = parseTimestamp(null, id);
+  }
+  if (!timestamp) return '';
+  try {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return '';
+  }
+}
 
-  // 1. Check all issues for matching folder entities or issues belonging to this folder
-  issues.forEach((issue) => {
-    const isThisFolderEntity =
-      isFolderEntity(issue) &&
-      (getFolderCleanName(issue).toLowerCase().trim() === lowerName ||
-        (issue.epic && issue.epic.toLowerCase().trim() === lowerName));
-
-    const isThisFolderTask =
-      issue.epic && issue.epic.toLowerCase().trim() === lowerName;
-
-    if (isThisFolderEntity || isThisFolderTask) {
-      const t = parseTimestamp(issue.createdAt || (issue as any).created_at, issue.id);
-      const u = parseTimestamp(issue.updatedAt || (issue as any).updated_at, issue.id);
-      const best = Math.max(t, u);
-      if (best > maxTime) {
-        maxTime = best;
-      }
-    }
-  });
-
-  // 2. Also check direct folder issues list
-  folderIssues.forEach((issue) => {
-    const t = parseTimestamp(issue.createdAt || (issue as any).created_at, issue.id);
-    const u = parseTimestamp(issue.updatedAt || (issue as any).updated_at, issue.id);
-    const best = Math.max(t, u);
-    if (best > maxTime) {
-      maxTime = best;
-    }
-  });
-
-  return maxTime;
+export interface FolderContainer {
+  id: string;
+  name: string;
+  createdAt?: string;
+  timestamp: number;
+  isGeneral: boolean;
+  folderEntityId?: string;
+  issues: Issue[];
 }
 
 export const TreeView: React.FC<TreeViewProps> = React.memo(({
@@ -178,7 +178,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   const [activeFolderTaskInput, setActiveFolderTaskInput] = useState<string | null>(null);
   const [newTaskInFolderTitle, setNewTaskInFolderTitle] = useState('');
   const [dragOverTask, setDragOverTask] = useState<{ issueId: string; position: 'before' | 'after' } | null>(null);
-  const [folderToDelete, setFolderToDelete] = useState<{ folderName: string; taskCount: number } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<{ folderName: string; taskCount: number; folderEntityId?: string } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
     isOpen: boolean;
@@ -191,48 +191,48 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   });
 
   // Editing state for Epics & Task titles
-  const [editingEpicName, setEditingEpicName] = useState<string | null>(null);
+  const [editingEpicId, setEditingEpicId] = useState<string | null>(null);
   const [editingEpicValue, setEditingEpicValue] = useState('');
   const [editingIssueId, setEditingIssueId] = useState<string | null>(null);
   const [editingIssueTitleValue, setEditingIssueTitleValue] = useState('');
   const [dragOverEpic, setDragOverEpic] = useState<string | null>(null);
 
-  // Group issues into Epics/Domains with "General" as default common folder
-  const epicGroups = useMemo(() => {
-    const groups: Record<string, Issue[]> = {
-      'General': [], // Always common & undeletable default folder
+  // Group issues into distinct Folder Containers (supporting duplicate names seamlessly)
+  const folderContainers: FolderContainer[] = useMemo(() => {
+    const list: FolderContainer[] = [];
+
+    // 1. General Folder container (always present)
+    const generalContainer: FolderContainer = {
+      id: 'folder_general',
+      name: 'General',
+      isGeneral: true,
+      timestamp: 0,
+      issues: [],
     };
 
-    // 1. First register any explicit folder entities as folder containers
+    // 2. Register every explicit folder entity as its own unique container
+    const folderEntityMap = new Map<string, FolderContainer>();
     issues.forEach((issue) => {
       if (isFolderEntity(issue)) {
-        const name = getFolderCleanName(issue);
-        if (name && !groups[name]) {
-          groups[name] = [];
-        }
-      }
-    });
+        const cleanName = getFolderCleanName(issue);
+        const createdIso = issue.createdAt || (issue as any).created_at;
+        const createdTime = parseTimestamp(createdIso, issue.id);
+        const container: FolderContainer = {
+          id: issue.id,
+          name: cleanName,
+          createdAt: createdIso,
+          timestamp: createdTime,
+          isGeneral: false,
+          folderEntityId: issue.id,
+          issues: [],
+        };
 
-    // 2. Also register any custom epics referenced on issues (ignoring default/system epics like 'Platform Core' if not created as a folder)
-    issues.forEach((issue) => {
-      if (!isFolderEntity(issue) && issue.epic && issue.epic.trim() && issue.epic !== 'General' && issue.epic !== 'Platform Core') {
-        const epicName = issue.epic.trim();
-        if (!groups[epicName]) {
-          groups[epicName] = [];
-        }
-      }
-    });
-
-    // 3. Now place actual tasks into their respective folders
-    issues.forEach((issue) => {
-      if (isFolderEntity(issue)) {
-        // If the folder issue itself has subtasks, insert them as child tasks of that folder
+        // If folder entity has subtasks, insert them as child tasks
         if (issue.subtasks && Array.isArray(issue.subtasks)) {
-          const folderName = getFolderCleanName(issue);
           issue.subtasks.forEach((st: any) => {
             if (st.title) {
               const syntheticTask: Issue = {
-                id: st.id || `st_${Date.now()}`,
+                id: st.id || `st_${Date.now()}_${Math.random()}`,
                 key: `${issue.key || 'TASK'}-${st.id?.slice(-3) || '1'}`,
                 title: st.title,
                 description: '',
@@ -240,56 +240,95 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                 subtasks: [],
                 status: st.completed ? 'done' : 'todo',
                 priority: 'medium',
-                epic: folderName,
+                epic: cleanName,
                 project: issue.project,
                 projectId: issue.projectId,
                 createdAt: issue.createdAt,
                 updatedAt: issue.updatedAt,
               };
-              if (groups[folderName] && !groups[folderName].some((t) => t.id === syntheticTask.id)) {
-                groups[folderName].push(syntheticTask);
-              }
+              container.issues.push(syntheticTask);
             }
           });
         }
+
+        folderEntityMap.set(issue.id, container);
+        list.push(container);
+      }
+    });
+
+    // 3. Register any custom epics referenced on tasks without an explicit folder entity
+    issues.forEach((issue) => {
+      if (!isFolderEntity(issue) && issue.epic && issue.epic.trim() && issue.epic !== 'General' && issue.epic !== 'Platform Core') {
+        const epicName = issue.epic.trim();
+        const existing = list.find((c) => c.name.toLowerCase() === epicName.toLowerCase());
+        if (!existing) {
+          const createdIso = issue.createdAt || (issue as any).created_at;
+          const container: FolderContainer = {
+            id: `epic_${epicName}`,
+            name: epicName,
+            createdAt: createdIso,
+            timestamp: parseTimestamp(createdIso, issue.id),
+            isGeneral: false,
+            issues: [],
+          };
+          list.push(container);
+        }
+      }
+    });
+
+    // 4. Route tasks into their appropriate folder container
+    issues.forEach((issue) => {
+      if (isFolderEntity(issue)) return; // Handled
+
+      const rawEpic = issue.epic && issue.epic.trim() && issue.epic !== 'Platform Core' ? issue.epic.trim() : 'General';
+      if (rawEpic.toLowerCase() === 'general') {
+        generalContainer.issues.push(issue);
         return;
       }
-      const rawFolder = issue.epic && issue.epic.trim() && issue.epic !== 'Platform Core' ? issue.epic.trim() : 'General';
-      const targetFolder = groups[rawFolder] ? rawFolder : 'General';
-      groups[targetFolder].push(issue);
-    });
 
-    return groups;
-  }, [issues]);
-
-  // List folders in latest first (newest) and oldest last order
-  const epicNames = useMemo(() => {
-    const names = Object.keys(epicGroups);
-
-    const folderTimestamps: Record<string, number> = {};
-    names.forEach((name) => {
-      folderTimestamps[name] = getFolderTimestamp(name, issues, epicGroups[name] || []);
-    });
-
-    return names.sort((a, b) => {
-      const timeA = folderTimestamps[a] || 0;
-      const timeB = folderTimestamps[b] || 0;
-      if (timeA !== timeB) {
-        return timeB - timeA; // Descending: latest first, oldest last
+      // Find matching folder container
+      const matchingContainer = list.find((c) => c.name.toLowerCase() === rawEpic.toLowerCase());
+      if (matchingContainer) {
+        matchingContainer.issues.push(issue);
+      } else {
+        generalContainer.issues.push(issue);
       }
-      if (a === 'General') return 1;
-      if (b === 'General') return -1;
-      return a.localeCompare(b);
     });
-  }, [epicGroups, issues]);
+
+    // Always include General at end
+    list.push(generalContainer);
+
+    // 5. Sort latest first (newest timestamp first, oldest last, General last)
+    return list.sort((a, b) => {
+      if (a.isGeneral) return 1;
+      if (b.isGeneral) return -1;
+
+      let timeA = a.timestamp;
+      a.issues.forEach((i) => {
+        const t = parseTimestamp(i.createdAt || (i as any).created_at, i.id);
+        if (t > timeA) timeA = t;
+      });
+
+      let timeB = b.timestamp;
+      b.issues.forEach((i) => {
+        const t = parseTimestamp(i.createdAt || (i as any).created_at, i.id);
+        if (t > timeB) timeB = t;
+      });
+
+      if (timeA !== timeB) {
+        return timeB - timeA; // Latest first
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [issues]);
 
   // Expand all by default initially
   React.useEffect(() => {
     const initialEpics: Record<string, boolean> = {};
     const initialIssues: Record<string, boolean> = {};
 
-    epicNames.forEach((name) => {
-      initialEpics[name] = true;
+    folderContainers.forEach((fc) => {
+      initialEpics[fc.id] = true;
     });
 
     issues.forEach((i) => {
@@ -298,10 +337,10 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
     setExpandedEpics(initialEpics);
     setExpandedIssues(initialIssues);
-  }, [epicNames.length, issues.length]);
+  }, [folderContainers.length, issues.length]);
 
-  const toggleEpic = (epic: string) => {
-    setExpandedEpics((prev) => ({ ...prev, [epic]: !prev[epic] }));
+  const toggleEpic = (folderId: string) => {
+    setExpandedEpics((prev) => ({ ...prev, [folderId]: !prev[folderId] }));
   };
 
   const toggleIssue = (issueId: string) => {
@@ -311,7 +350,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   const expandAll = () => {
     const allE: Record<string, boolean> = {};
     const allI: Record<string, boolean> = {};
-    epicNames.forEach((n) => (allE[n] = true));
+    folderContainers.forEach((fc) => (allE[fc.id] = true));
     issues.forEach((i) => (allI[i.id] = true));
     setExpandedEpics(allE);
     setExpandedIssues(allI);
@@ -322,29 +361,23 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
     setExpandedIssues({});
   };
 
-  const handleSaveEpicRename = (oldName: string) => {
-    if (oldName.toLowerCase() === 'general' || oldName.toLowerCase() === 'general tasks') {
+  const handleSaveEpicRename = (folder: FolderContainer) => {
+    if (folder.isGeneral || folder.name.toLowerCase() === 'general' || folder.name.toLowerCase() === 'general tasks') {
       toast.info('The "General" folder is the common default folder and cannot be modified.');
-      setEditingEpicName(null);
+      setEditingEpicId(null);
       return;
     }
     const trimmed = editingEpicValue.trim();
-    if (!trimmed || trimmed === oldName) {
-      setEditingEpicName(null);
+    if (!trimmed || trimmed === folder.name) {
+      setEditingEpicId(null);
       return;
     }
-    const isDuplicate = epicNames.some(
-      (n) => n.toLowerCase() === trimmed.toLowerCase() && n.toLowerCase() !== oldName.toLowerCase()
-    );
-    if (isDuplicate) {
-      toast.error(`A folder named "${trimmed}" already exists. Please choose a unique name.`);
-      setEditingEpicName(null);
-      return;
+    if (folder.folderEntityId && onRenameIssue) {
+      onRenameIssue(folder.folderEntityId, `📁 ${trimmed}`);
+    } else if (onRenameEpic) {
+      onRenameEpic(folder.name, trimmed);
     }
-    if (onRenameEpic) {
-      onRenameEpic(oldName, trimmed);
-    }
-    setEditingEpicName(null);
+    setEditingEpicId(null);
   };
 
   const handleSaveIssueRename = (issueId: string, currentTitle: string) => {
@@ -514,7 +547,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                 </span>
                 <h2 className="text-sm md:text-base font-bold text-white truncate">{projectName}</h2>
                 <span className="text-[11px] font-mono text-[#787C83] px-2 py-0.5 bg-[#131415] rounded-full border border-[#2A2C30]">
-                  {issues.length} Tasks &bull; {epicNames.length} Epics &bull; {totalCounts.total} Sub-items
+                  {issues.length} Tasks &bull; {folderContainers.length} Folders &bull; {totalCounts.total} Sub-items
                 </span>
               </div>
             </div>
@@ -528,43 +561,43 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
 
           {/* TREE LEVEL 1: Epics & Domains */}
           <div className="relative pl-4 sm:pl-6 border-l-2 border-[#2A2C30] ml-4 sm:ml-6 space-y-4">
-            {epicNames.map((epicName) => {
+            {folderContainers.map((folder) => {
               const isFiltering = searchQuery.trim() !== '' || statusFilter !== 'all';
-              const epicIssues = (epicGroups[epicName] || []).filter((i) =>
+              const folderIssues = folder.issues.filter((i) =>
                 !isFiltering ? true : filteredIssues.some((fi) => fi.id === i.id)
               );
 
               // Only hide empty folder if user is actively searching/filtering and neither tasks nor folder name match
               if (
                 isFiltering &&
-                epicIssues.length === 0 &&
-                !epicName.toLowerCase().includes(searchQuery.toLowerCase())
+                folderIssues.length === 0 &&
+                !folder.name.toLowerCase().includes(searchQuery.toLowerCase())
               ) {
                 return null;
               }
 
-              const isEpicExpanded = expandedEpics[epicName] ?? true;
-              const epicTotal = epicIssues.length;
-              const epicDone = epicIssues.filter((i) => i.status === 'done').length;
+              const isEpicExpanded = expandedEpics[folder.id] ?? true;
+              const epicTotal = folderIssues.length;
+              const epicDone = folderIssues.filter((i) => i.status === 'done').length;
               const epicProgress = epicTotal > 0 ? Math.round((epicDone / epicTotal) * 100) : 0;
-              const isEditingThisEpic = editingEpicName === epicName;
-              const isGeneralFolder = epicName.toLowerCase() === 'general' || epicName.toLowerCase() === 'general tasks';
+              const isEditingThisEpic = editingEpicId === folder.id;
+              const isGeneralFolder = folder.isGeneral;
 
               return (
-                <div key={epicName} className="relative group/epic">
+                <div key={folder.id} className="relative group/epic">
                   {/* Branch Connector Guide */}
                   <div className="absolute -left-4 sm:-left-6 top-4 w-4 sm:w-6 h-[2px] bg-[#2A2C30] group-hover/epic:bg-[#DCB001]/60 transition-colors" />
 
                   {/* Epic / Folder Node Banner */}
                   <div
                     onClick={() => {
-                      if (!isEditingThisEpic) toggleEpic(epicName);
+                      if (!isEditingThisEpic) toggleEpic(folder.id);
                     }}
                     onDragOver={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       e.dataTransfer.dropEffect = 'move';
-                      if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                      if (dragOverEpic !== folder.id) setDragOverEpic(folder.id);
                     }}
                     onDragLeave={(e) => {
                       e.preventDefault();
@@ -577,23 +610,23 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       setDragOverEpic(null);
                       const droppedId = extractDroppedIssueId(e);
                       if (droppedId && onMoveTaskToFolder) {
-                        onMoveTaskToFolder(droppedId, epicName);
-                        setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                        onMoveTaskToFolder(droppedId, folder.name);
+                        setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                       }
                     }}
                     className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all shadow-sm group ${
-                      dragOverEpic === epicName
+                      dragOverEpic === folder.id
                         ? 'bg-[#DCB001]/20 border-2 border-dashed border-[#DCB001] scale-[1.01]'
                         : 'bg-[#131415] hover:bg-[#1A1B1E] border border-[#2A2C30] hover:border-[#DCB001]/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleEpic(epicName);
+                          toggleEpic(folder.id);
                         }}
-                        className="text-[#787C83] group-hover:text-[#DCB001] transition-colors p-0.5"
+                        className="text-[#787C83] group-hover:text-[#DCB001] transition-colors p-0.5 cursor-pointer"
                       >
                         {isEpicExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       </button>
@@ -613,22 +646,22 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                             value={editingEpicValue}
                             onChange={(e) => setEditingEpicValue(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleSaveEpicRename(epicName);
-                              if (e.key === 'Escape') setEditingEpicName(null);
+                              if (e.key === 'Enter') handleSaveEpicRename(folder);
+                              if (e.key === 'Escape') setEditingEpicId(null);
                             }}
-                            onBlur={() => handleSaveEpicRename(epicName)}
+                            onBlur={() => handleSaveEpicRename(folder)}
                             autoFocus
                             className="bg-[#17181A] border border-[#DCB001] text-xs font-bold text-white px-2 py-0.5 rounded outline-none w-full"
                           />
                           <button
-                            onClick={() => handleSaveEpicRename(epicName)}
-                            className="p-1 hover:bg-[#2A2C30] text-[#22C55E] rounded"
+                            onClick={() => handleSaveEpicRename(folder)}
+                            className="p-1 hover:bg-[#2A2C30] text-[#22C55E] rounded cursor-pointer"
                           >
                             <Check size={12} />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1.5 truncate">
+                        <div className="flex items-center gap-2 flex-wrap min-w-0">
                           <span
                             onDoubleClick={(e) => {
                               e.stopPropagation();
@@ -636,14 +669,25 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                 toast.info('General is the default common folder and cannot be renamed.');
                                 return;
                               }
-                              setEditingEpicValue(epicName);
-                              setEditingEpicName(epicName);
+                              setEditingEpicValue(folder.name);
+                              setEditingEpicId(folder.id);
                             }}
                             className="font-bold text-xs md:text-sm text-[#CFD4DD] group-hover:text-white truncate"
                             title={isGeneralFolder ? 'General (Default Common Folder)' : 'Double click to rename folder'}
                           >
-                            {epicName}
+                            {folder.name}
                           </span>
+
+                          {/* Created Date and Time Badge */}
+                          {folder.createdAt && (
+                            <span
+                              className="text-[10px] font-mono text-[#9BA1A6] bg-[#17181A] px-2 py-0.5 rounded border border-[#2A2C30] flex items-center gap-1 shrink-0"
+                              title={`Created on ${formatFolderDateTime(folder.createdAt, folder.id)}`}
+                            >
+                              <Calendar size={10} className="text-[#DCB001]" />
+                              <span>{formatFolderDateTime(folder.createdAt, folder.id)}</span>
+                            </span>
+                          )}
 
                           {isGeneralFolder ? (
                             <span className="text-[9px] font-mono text-[#DCB001] bg-[#DCB001]/10 border border-[#DCB001]/30 px-1.5 py-0.2 rounded font-bold shrink-0">
@@ -653,10 +697,10 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingEpicValue(epicName);
-                                setEditingEpicName(epicName);
+                                setEditingEpicValue(folder.name);
+                                setEditingEpicId(folder.id);
                               }}
-                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#787C83] hover:text-[#DCB001] transition-opacity"
+                              className="opacity-0 group-hover:opacity-100 p-0.5 text-[#787C83] hover:text-[#DCB001] transition-opacity cursor-pointer"
                               title="Rename Folder"
                             >
                               <Pencil size={11} />
@@ -665,13 +709,13 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         </div>
                       )}
 
-                      <span className="text-[10px] font-mono text-[#787C83] bg-[#17181A] px-1.5 py-0.5 rounded border border-[#2A2C30] shrink-0">
-                        {epicIssues.length} {epicIssues.length === 1 ? 'task' : 'tasks'}
+                      <span className="text-[10px] font-mono text-[#787C83] bg-[#17181A] px-1.5 py-0.5 rounded border border-[#2A2C30] shrink-0 ml-auto sm:ml-0">
+                        {folderIssues.length} {folderIssues.length === 1 ? 'task' : 'tasks'}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {dragOverEpic === epicName ? (
+                      {dragOverEpic === folder.id ? (
                         <span className="text-[11px] font-bold text-[#DCB001] font-mono animate-pulse">
                           Drop to move here &darr;
                         </span>
@@ -680,11 +724,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
-                              setActiveFolderTaskInput((prev) => (prev === epicName ? null : epicName));
+                              setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
+                              setActiveFolderTaskInput((prev) => (prev === folder.id ? null : folder.id));
                             }}
-                            className="flex items-center gap-1 px-2 py-0.5 bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] text-[11px] font-medium rounded transition-colors"
-                            title={`Create new task inside folder "${epicName}"`}
+                            className="flex items-center gap-1 px-2 py-0.5 bg-[#17181A] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[#CFD4DD] hover:text-[#DCB001] text-[11px] font-medium rounded transition-colors cursor-pointer"
+                            title={`Create new task inside folder "${folder.name}"`}
                           >
                             <Plus size={11} />
                             <span>Task</span>
@@ -695,12 +739,13 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setFolderToDelete({
-                                  folderName: epicName,
-                                  taskCount: epicIssues.length,
+                                  folderName: folder.name,
+                                  taskCount: folderIssues.length,
+                                  folderEntityId: folder.folderEntityId,
                                 });
                               }}
-                              className="p-1 hover:bg-[#EF4444]/15 rounded text-[#787C83] hover:text-[#EF4444] transition-all opacity-0 group-hover/epic:opacity-100"
-                              title={`Delete folder "${epicName}"`}
+                              className="p-1 hover:bg-[#EF4444]/15 rounded text-[#787C83] hover:text-[#EF4444] transition-all opacity-0 group-hover/epic:opacity-100 cursor-pointer"
+                              title={`Delete folder "${folder.name}"`}
                             >
                               <Trash2 size={12} />
                             </button>
@@ -711,19 +756,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                   </div>
 
                   {/* Inline + Task Input inside Folder */}
-                  {activeFolderTaskInput === epicName && (
+                  {activeFolderTaskInput === folder.id && (
                     <div className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5">
                       <div className="flex items-center gap-2 bg-[#17181A] border border-[#DCB001]/60 rounded-lg p-2 shadow-sm">
                         <FileCode size={13} className="text-[#DCB001] shrink-0" />
                         <input
                           type="text"
-                          placeholder={`Enter task title inside folder "${epicName}"...`}
+                          placeholder={`Enter task title inside folder "${folder.name}"...`}
                           value={newTaskInFolderTitle}
                           onChange={(e) => setNewTaskInFolderTitle(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
-                                onAddTaskToFolder(epicName, newTaskInFolderTitle.trim());
+                                onAddTaskToFolder(folder.name, newTaskInFolderTitle.trim());
                                 setNewTaskInFolderTitle('');
                                 setActiveFolderTaskInput(null);
                               }
@@ -739,12 +784,12 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         <button
                           onClick={() => {
                             if (newTaskInFolderTitle.trim() && onAddTaskToFolder) {
-                              onAddTaskToFolder(epicName, newTaskInFolderTitle.trim());
+                              onAddTaskToFolder(folder.name, newTaskInFolderTitle.trim());
                               setNewTaskInFolderTitle('');
                               setActiveFolderTaskInput(null);
                             }
                           }}
-                          className="px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded transition-colors"
+                          className="px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] font-bold text-xs rounded transition-colors cursor-pointer"
                         >
                           Add Task
                         </button>
@@ -753,7 +798,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                             setActiveFolderTaskInput(null);
                             setNewTaskInFolderTitle('');
                           }}
-                          className="px-2 py-1 text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors"
+                          className="px-2 py-1 text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors cursor-pointer"
                         >
                           Cancel
                         </button>
@@ -770,7 +815,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                         exit={{ opacity: 0, height: 0 }}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                          if (dragOverEpic !== folder.id) setDragOverEpic(folder.id);
                         }}
                         onDragLeave={() => {
                           setDragOverEpic(null);
@@ -781,19 +826,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           setDragOverEpic(null);
                           const droppedId = extractDroppedIssueId(e);
                           if (droppedId && onMoveTaskToFolder) {
-                            onMoveTaskToFolder(droppedId, epicName);
-                            setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                            onMoveTaskToFolder(droppedId, folder.name);
+                            setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                           }
                         }}
                         className="pl-5 sm:pl-7 border-l-2 border-[#2A2C30]/70 ml-3 sm:ml-4 mt-2.5 space-y-2.5 min-h-[30px]"
                       >
                         {/* Empty Folder Drop Hint */}
-                        {epicIssues.length === 0 && (
+                        {folderIssues.length === 0 && (
                           <div
                             onDragOver={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              if (dragOverEpic !== epicName) setDragOverEpic(epicName);
+                              if (dragOverEpic !== folder.id) setDragOverEpic(folder.id);
                             }}
                             onDragLeave={(e) => {
                               e.preventDefault();
@@ -806,12 +851,12 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               setDragOverEpic(null);
                               const droppedId = extractDroppedIssueId(e);
                               if (droppedId && onMoveTaskToFolder) {
-                                onMoveTaskToFolder(droppedId, epicName);
-                                setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                                onMoveTaskToFolder(droppedId, folder.name);
+                                setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                               }
                             }}
                             className={`py-3 px-3 border border-dashed rounded-lg text-center text-xs font-mono transition-all ${
-                              dragOverEpic === epicName
+                              dragOverEpic === folder.id
                                 ? 'border-[#DCB001] bg-[#DCB001]/10 text-[#DCB001]'
                                 : 'border-[#2A2C30] text-[#787C83]'
                             }`}
@@ -819,17 +864,17 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                             <span>📁 Folder is empty. Drag and drop tasks here or </span>
                             <button
                               onClick={() => {
-                                setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
-                                setActiveFolderTaskInput(epicName);
+                                setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
+                                setActiveFolderTaskInput(folder.id);
                               }}
-                              className="text-[#DCB001] underline ml-1 font-bold hover:text-white"
+                              className="text-[#DCB001] underline ml-1 font-bold hover:text-white cursor-pointer"
                             >
                               create a new task
                             </button>
                           </div>
                         )}
 
-                        {epicIssues.map((issue) => {
+                        {folderIssues.map((issue) => {
                           const statusCfg = STATUS_CONFIG[issue.status] || STATUS_CONFIG.todo;
                           const priorityCfg = PRIORITY_CONFIG[issue.priority] || PRIORITY_CONFIG.medium;
                           const isEditingThisIssue = editingIssueId === issue.id;
@@ -882,11 +927,11 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                   const droppedId = extractDroppedIssueId(e);
                                   if (droppedId) {
                                     if (onReorderTaskInFolder) {
-                                      onReorderTaskInFolder(droppedId, issue.id, epicName, pos);
+                                      onReorderTaskInFolder(droppedId, issue.id, folder.name, pos);
                                     } else if (onMoveTaskToFolder) {
-                                      onMoveTaskToFolder(droppedId, epicName);
+                                      onMoveTaskToFolder(droppedId, folder.name);
                                     }
-                                    setExpandedEpics((prev) => ({ ...prev, [epicName]: true }));
+                                    setExpandedEpics((prev) => ({ ...prev, [folder.id]: true }));
                                   }
                                 }}
                                 onContextMenu={(e) => {
@@ -1136,12 +1181,14 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
-                        if (onDeleteFolder) {
+                        if (folderToDelete.folderEntityId && onDeleteIssue) {
+                          onDeleteIssue(folderToDelete.folderEntityId);
+                        } else if (onDeleteFolder) {
                           onDeleteFolder(folderToDelete.folderName, false);
                         }
                         setFolderToDelete(null);
                       }}
-                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#222428] border border-[#2A2C30] hover:border-[#DCB001]/60 rounded-xl transition-all text-left group"
+                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#222428] border border-[#2A2C30] hover:border-[#DCB001]/60 rounded-xl transition-all text-left group cursor-pointer"
                     >
                       <div className="w-7 h-7 rounded-lg bg-[#DCB001]/10 text-[#DCB001] flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                         <FolderOpen size={15} />
@@ -1161,12 +1208,15 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                     <button
                       type="button"
                       onClick={() => {
+                        if (folderToDelete.folderEntityId && onDeleteIssue) {
+                          onDeleteIssue(folderToDelete.folderEntityId);
+                        }
                         if (onDeleteFolder) {
                           onDeleteFolder(folderToDelete.folderName, true);
                         }
                         setFolderToDelete(null);
                       }}
-                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#EF4444]/10 border border-[#2A2C30] hover:border-[#EF4444]/60 rounded-xl transition-all text-left group"
+                      className="flex items-start gap-3 p-3 bg-[#17181A] hover:bg-[#EF4444]/10 border border-[#2A2C30] hover:border-[#EF4444]/60 rounded-xl transition-all text-left group cursor-pointer"
                     >
                       <div className="w-7 h-7 rounded-lg bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                         <Trash2 size={15} />
@@ -1185,25 +1235,27 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               ) : (
                 <div className="space-y-4">
                   <p className="text-xs text-[#CFD4DD]">
-                    Are you sure you want to delete the empty folder <strong className="text-white">"{folderToDelete.folderName}"</strong>?
+                    Are you sure you want to delete the empty folder <strong className="text-white">&quot;{folderToDelete.folderName}&quot;</strong>?
                   </p>
                   <div className="flex items-center justify-end gap-2 pt-1">
                     <button
                       type="button"
                       onClick={() => setFolderToDelete(null)}
-                      className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-white bg-[#17181A] border border-[#2A2C30] transition-colors"
+                      className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-white bg-[#17181A] border border-[#2A2C30] transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        if (onDeleteFolder) {
+                        if (folderToDelete.folderEntityId && onDeleteIssue) {
+                          onDeleteIssue(folderToDelete.folderEntityId);
+                        } else if (onDeleteFolder) {
                           onDeleteFolder(folderToDelete.folderName, false);
                         }
                         setFolderToDelete(null);
                       }}
-                      className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-[#EF4444] hover:bg-[#dc2626] transition-colors shadow-sm"
+                      className="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-[#EF4444] hover:bg-[#dc2626] transition-colors shadow-sm cursor-pointer"
                     >
                       Delete Folder
                     </button>
