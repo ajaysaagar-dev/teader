@@ -30,6 +30,7 @@ export interface RealtimeEvent<T = any> {
 const WS_PORT = process.env.WS_PORT || process.env.PORT_WS || '3001';
 const WS_HOST = process.env.WS_HOST || '127.0.0.1';
 const BROADCAST_ENDPOINT = `http://${WS_HOST}:${WS_PORT}/broadcast`;
+const INTERNAL_BROADCAST_SECRET = process.env.INTERNAL_BROADCAST_SECRET || '';
 
 let wsModule: any = null;
 
@@ -82,7 +83,10 @@ export async function broadcastRealtimeEvent(event: RealtimeEvent): Promise<void
 
     fetch(BROADCAST_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Broadcast-Secret': INTERNAL_BROADCAST_SECRET,
+      },
       body: JSON.stringify(payload),
       signal: controller.signal,
     })

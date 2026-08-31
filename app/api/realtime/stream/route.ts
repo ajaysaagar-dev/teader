@@ -1,5 +1,7 @@
-﻿import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { realtimeBus } from '@/lib/realtime-bus';
+import { getSessionFromCookie } from '@/lib/auth';
+import { assertProjectAccess } from '@/lib/authz';
 import type { RealtimeEvent } from '@/lib/realtime';
 
 export const dynamic = 'force-dynamic';
@@ -11,9 +13,24 @@ export const runtime = 'nodejs';
  * bypassing corporate firewalls and SSL WebSocket port proxying restrictions.
  */
 export async function GET(request: NextRequest) {
+  // Authenticate the session
+  const session = await getSessionFromCookie();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get('projectId');
   const room = searchParams.get('room') || (projectId ? `project:${projectId}` : 'global');
+
+  // Verify project membership if subscribing to a specific project room
+  if (projectId) {
+    try {
+      await assertProjectAccess(session.id, projectId);
+    } catch {
+      return NextResponse.json({ error: 'Forbidden: not a member of this project' }, { status: 403 });
+    }
+  }
 
   const encoder = new TextEncoder();
 
