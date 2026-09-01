@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addSubtaskDB, updateSubtaskDB, deleteSubtaskDB } from '@/lib/db';
+import { addSubtaskDB, updateSubtaskDB, deleteSubtaskDB, getIssueByIdDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { assertIssueAccess } from '@/lib/authz';
 import { parseBody, AddSubtaskSchema, UpdateSubtaskSchema } from '@/lib/validation';
@@ -26,9 +26,13 @@ export async function POST(req: Request) {
       data.type || (data.isFolder ? 'folder' : 'subtask')
     );
 
+    const parentIssue = await getIssueByIdDB(data.issueId, session.id);
+    const resolvedProjectId = data.projectId || parentIssue?.projectId;
+
     broadcastRealtimeEvent({
       type: 'SUBTASK_UPDATED',
-      payload: { action: 'create', issueId: data.issueId, subtask },
+      projectId: resolvedProjectId,
+      payload: { action: 'create', issueId: data.issueId, subtask, projectId: resolvedProjectId },
       senderSessionId: session.id,
     });
 
@@ -60,8 +64,12 @@ export async function PATCH(req: Request) {
       issueId: data.issueId,
     });
 
+    const parentIssue = data.issueId ? await getIssueByIdDB(data.issueId, session.id) : null;
+    const resolvedProjectId = data.projectId || parentIssue?.projectId;
+
     broadcastRealtimeEvent({
       type: 'SUBTASK_UPDATED',
+      projectId: resolvedProjectId,
       payload: {
         action: 'update',
         subId: data.subId,
@@ -69,6 +77,7 @@ export async function PATCH(req: Request) {
         title: data.title,
         parentId: data.parentId,
         issueId: data.issueId,
+        projectId: resolvedProjectId,
       },
       senderSessionId: session.id,
     });

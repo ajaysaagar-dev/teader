@@ -50,16 +50,30 @@ class RealtimeSocketManager {
   }
 
   private getWebSocketUrl(): string {
+    let token = '';
+    if (typeof window !== 'undefined') {
+      try {
+        token = localStorage.getItem('teader_token') || '';
+        if (!token && document.cookie) {
+          const match = document.cookie.match(/(?:^|;\s*)teader_session=([^;]+)/);
+          if (match) {
+            token = decodeURIComponent(match[1]);
+          }
+        }
+      } catch {}
+    }
+
     if (process.env.NEXT_PUBLIC_WS_URL) {
-      return process.env.NEXT_PUBLIC_WS_URL;
+      const base = process.env.NEXT_PUBLIC_WS_URL;
+      return token ? `${base}${base.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : base;
     }
     const isHttps = window.location.protocol === 'https:';
     const protocol = isHttps ? 'wss:' : 'ws:';
     const hostname = window.location.hostname || 'localhost';
     const port = process.env.NEXT_PUBLIC_WS_PORT || '3001';
 
-    // If served over HTTPS and no custom port specified, prefer direct port 3001
-    return `${protocol}//${hostname}:${port}`;
+    const baseUrl = `${protocol}//${hostname}:${port}`;
+    return token ? `${baseUrl}?token=${encodeURIComponent(token)}` : baseUrl;
   }
 
   public connect() {

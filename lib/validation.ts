@@ -87,6 +87,7 @@ export const UpdateIssueSchema = z.object({
 }).refine((d) => Object.keys(d).length > 0, { message: 'At least one field must be provided' });
 
 export const ReorderIssuesSchema = z.object({
+  projectId: z.union([z.number(), z.string()]).optional(),
   issueIds: z.array(z.string()).optional(),
   items: z.array(
     z.object({
@@ -118,6 +119,7 @@ export const UpdateProjectSchema = z.object({
 // ─── Subtasks ────────────────────────────────────────────────────────────────
 
 export const AddSubtaskSchema = z.object({
+  projectId: z.union([z.number(), z.string()]).optional(),
   issueId: z.string().min(1, 'issueId is required'),
   title: z.string().min(1, 'Title is required').max(255),
   parentId: z.string().nullable().optional(),
@@ -126,6 +128,7 @@ export const AddSubtaskSchema = z.object({
 });
 
 export const UpdateSubtaskSchema = z.object({
+  projectId: z.union([z.number(), z.string()]).optional(),
   subId: z.string().min(1, 'subId is required'),
   title: z.string().min(1).max(255).optional(),
   completed: z.boolean().optional(),

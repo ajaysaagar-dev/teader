@@ -636,19 +636,28 @@ export default function SingleProjectPage() {
       switch (event.type) {
         case 'TASK_CREATED': {
           const newTask = event.payload;
-          if (
-            newTask &&
-            (String(newTask.projectId) === String(projectIdParam) ||
-              (project && (String(newTask.projectId) === String(project.id) || newTask.project === project.name)))
-          ) {
-            setIssues((prev) => reconcileCreatedIssue(prev, newTask));
+          if (newTask) {
+            const isForThisProj =
+              !newTask.projectId ||
+              String(newTask.projectId) === String(projectIdParam) ||
+              (project &&
+                (String(newTask.projectId) === String(project.id) ||
+                  (newTask.project && newTask.project.toLowerCase() === project.name.toLowerCase())));
+            if (isForThisProj) {
+              setIssues((prev) => reconcileCreatedIssue(prev, newTask));
+            }
           }
           break;
         }
 
         case 'TASK_UPDATED': {
           const updated = event.payload;
-          if (updated && updated.id) {
+          if (Array.isArray(updated)) {
+            const updateMap = new Map(updated.map((u: any) => [u.id, u]));
+            setIssues((prev) =>
+              prev.map((i) => (updateMap.has(i.id) ? { ...i, ...updateMap.get(i.id) } : i))
+            );
+          } else if (updated && updated.id) {
             setIssues((prev) =>
               prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
             );
@@ -657,7 +666,8 @@ export default function SingleProjectPage() {
         }
 
         case 'TASKS_REORDERED': {
-          const items: Array<{ id: string; orderIndex: number; status?: Status }> = event.payload?.items || [];
+          const items: Array<{ id: string; orderIndex: number; status?: Status }> =
+            event.payload?.items || (Array.isArray(event.payload) ? event.payload : []);
           if (items.length > 0) {
             const map = new Map(items.map((it) => [it.id, it]));
             setIssues((prev) => {
@@ -666,7 +676,7 @@ export default function SingleProjectPage() {
                 if (update) {
                   return {
                     ...iss,
-                    orderIndex: update.orderIndex,
+                    orderIndex: update.orderIndex !== undefined ? update.orderIndex : iss.orderIndex,
                     status: update.status || iss.status,
                   };
                 }
@@ -679,7 +689,7 @@ export default function SingleProjectPage() {
         }
 
         case 'TASK_DELETED': {
-          const deletedId = event.payload?.id;
+          const deletedId = event.payload?.id || (typeof event.payload === 'string' ? event.payload : null);
           if (deletedId) {
             setIssues((prev) => prev.filter((i) => i.id !== deletedId));
             setSelectedIssueId((prev) => (prev === deletedId ? null : prev));
@@ -688,6 +698,35 @@ export default function SingleProjectPage() {
         }
 
         case 'SUBTASK_UPDATED': {
+          const payload = event.payload;
+          if (payload) {
+            const { action, issueId, subtask, subId, completed, title, parentId } = payload;
+            setIssues((prev) =>
+              prev.map((iss) => {
+                if (issueId && iss.id !== issueId) return iss;
+                let nextSubtasks = [...(iss.subtasks || [])];
+                if (action === 'create' && subtask) {
+                  if (!nextSubtasks.some((s) => s.id === subtask.id)) {
+                    nextSubtasks.push(subtask);
+                  }
+                } else if (action === 'update' && subId) {
+                  nextSubtasks = nextSubtasks.map((s) =>
+                    s.id === subId
+                      ? {
+                          ...s,
+                          ...(title !== undefined ? { title } : {}),
+                          ...(completed !== undefined ? { completed } : {}),
+                          ...(parentId !== undefined ? { parentId } : {}),
+                        }
+                      : s
+                  );
+                } else if (action === 'delete' && subId) {
+                  nextSubtasks = nextSubtasks.filter((s) => s.id !== subId);
+                }
+                return { ...iss, subtasks: nextSubtasks };
+              })
+            );
+          }
           fetchProjectData();
           break;
         }
@@ -843,7 +882,7 @@ export default function SingleProjectPage() {
       await fetch('/api/issues/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: payload }),
+        body: JSON.stringify({ items: payload, projectId: project?.id }),
       });
     } catch (err) {
       console.error('Error saving reordered tasks to DB:', err);
@@ -996,7 +1035,7 @@ export default function SingleProjectPage() {
       await fetch('/api/subtasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subId, completed: nextCompleted }),
+        body: JSON.stringify({ subId, completed: nextCompleted, issueId, projectId: project?.id }),
       });
       toast.success(`Marked as ${nextCompleted ? 'completed' : 'incomplete'}`);
       const ENABLE_CELEBRATION = false;
@@ -1008,7 +1047,7 @@ export default function SingleProjectPage() {
       toast.error('Failed to update subtask');
       fetchProjectData();
     }
-  }, [fetchProjectData]);
+  }, [fetchProjectData, project]);
 
   // Handle Add Subtask or Nested Folder (Optimistic Update)
   const handleAddSubtask = useCallback(async (
@@ -1022,7 +1061,7 @@ export default function SingleProjectPage() {
       const res = await fetch('/api/subtasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issueId, title, parentId, isFolder, type }),
+        body: JSON.stringify({ issueId, title, parentId, isFolder, type, projectId: project?.id }),
       });
 
       if (res.ok) {
@@ -1431,7 +1470,7 @@ export default function SingleProjectPage() {
         await fetch('/api/issues/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: payload }),
+          body: JSON.stringify({ items: payload, projectId: project?.id }),
         });
       }
     } catch {
@@ -1556,7 +1595,7 @@ export default function SingleProjectPage() {
         await fetch('/api/issues/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: payload }),
+          body: JSON.stringify({ items: payload, projectId: project?.id }),
         });
       }
     } catch {

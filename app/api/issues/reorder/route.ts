@@ -19,7 +19,8 @@ export async function POST(req: Request) {
 
     broadcastRealtimeEvent({
       type: 'TASKS_REORDERED',
-      payload: { items: payload },
+      projectId: data.projectId,
+      payload: { items: payload, projectId: data.projectId },
       senderSessionId: session.id,
     });
 
