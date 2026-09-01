@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
 import { hashPassword, verifyPassword } from './auth';
+import { MemberPermissions, MemberPermissionsWithUser, HistoryEntry } from './types';
 
 // PostgreSQL Connection Configuration
 // Require explicit configuration — no hardcoded fallbacks for security.
@@ -113,6 +114,8 @@ let memoryIssuesStore: any[] = [];
 let memoryImagesStore: any[] = [];
 let memoryProjectDocsStore: any[] = [];
 let memoryJoinRequestsStore: any[] = [];
+let memoryPermissionsStore: any[] = [];
+let memoryProjectHistoryStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -186,6 +189,26 @@ export async function initDB(): Promise<void> {
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "unique_user_project_request" UNIQUE ("projectId", "userId")
+          );
+        `);
+
+        // 3c. Create Project Member Permissions Table
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_member_permissions" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "userId" INT NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+            "can_create_tasks" BOOLEAN NOT NULL DEFAULT TRUE,
+            "can_delete_tasks" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_create_docs" BOOLEAN NOT NULL DEFAULT TRUE,
+            "can_edit_docs" BOOLEAN NOT NULL DEFAULT TRUE,
+            "can_delete_docs" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_edit_history" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_delete_history" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_edit_dates" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_manage_members" BOOLEAN NOT NULL DEFAULT FALSE,
+            "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "unique_member_permissions" UNIQUE ("projectId", "userId")
           );
         `);
 
@@ -332,6 +355,28 @@ export async function initDB(): Promise<void> {
             CONSTRAINT "unique_project_channel_name" UNIQUE ("projectId", "name")
           );
         `);
+
+        // 12. Create Project History Table for Workspace Audit Trail
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_history" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "projectKey" VARCHAR(64) NOT NULL,
+            "userId" INT DEFAULT NULL,
+            "userName" VARCHAR(128) NOT NULL DEFAULT 'system',
+            "userAvatar" VARCHAR(255),
+            "action" VARCHAR(64) NOT NULL,
+            "entityType" VARCHAR(32) NOT NULL,
+            "entityId" VARCHAR(64),
+            "entityTitle" VARCHAR(512),
+            "details" JSONB DEFAULT NULL,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+        try {
+          await p.query(`CREATE INDEX IF NOT EXISTS "idx_project_history_project" ON "project_history" ("projectId");`);
+          await p.query(`CREATE INDEX IF NOT EXISTS "idx_project_history_created" ON "project_history" ("createdAt" DESC);`);
+        } catch {}
 
 
         // Seed all core team users if not present
@@ -1293,6 +1338,10 @@ export async function updateIssueStatusDB(
     fields.push(`"orderIndex" = $${paramIdx++}`);
     values.push(Number(updates.orderIndex) || 0);
   }
+  if (updates.createdAt !== undefined) {
+    fields.push(`"createdAt" = $${paramIdx++}`);
+    values.push(new Date(updates.createdAt).toISOString());
+  }
 
   if (fields.length > 0) {
     try {
@@ -1326,6 +1375,7 @@ export async function updateIssueStatusDB(
     if (updates.timeEntries !== undefined) target.timeEntries = updates.timeEntries;
     if (updates.customFields !== undefined) target.customFields = updates.customFields;
     if (updates.orderIndex !== undefined) target.orderIndex = updates.orderIndex;
+    if (updates.createdAt !== undefined) target.createdAt = new Date(updates.createdAt).toISOString();
   }
 }
 
@@ -1995,6 +2045,463 @@ export async function deleteProjectChannelDB(projectId: number, channelName: str
   memoryProjectMessagesStore = memoryProjectMessagesStore.filter(
     (m) => !(m.projectId === projectId && m.channel === cleanName)
   );
+  return true;
+}
+
+// ─── Project Member Permissions Helpers ──────────────────────────────────────
+
+const DEFAULT_MEMBER_PERMISSIONS: MemberPermissions = {
+  can_create_tasks: true,
+  can_delete_tasks: false,
+  can_create_docs: true,
+  can_edit_docs: true,
+  can_delete_docs: false,
+  can_edit_history: false,
+  can_delete_history: false,
+  can_edit_dates: false,
+  can_manage_members: false,
+};
+
+const OWNER_ADMIN_PERMISSIONS: MemberPermissions = {
+  can_create_tasks: true,
+  can_delete_tasks: true,
+  can_create_docs: true,
+  can_edit_docs: true,
+  can_delete_docs: true,
+  can_edit_history: true,
+  can_delete_history: true,
+  can_edit_dates: true,
+  can_manage_members: true,
+};
+
+export async function getMemberPermissionsDB(
+  projectId: number | string,
+  userId: number | string
+): Promise<MemberPermissions> {
+  await initDB();
+  const numProjId = Number(projectId);
+  const numUserId = Number(userId);
+
+  try {
+    const p = getPool();
+    // Check if user is owner of project
+    const projRes = await p.query(
+      `SELECT "id" FROM "projects" WHERE "id" = $1 AND ("owner_id" = $2 OR "creatorId" = $2) LIMIT 1`,
+      [numProjId, numUserId]
+    );
+    if (projRes.rows?.length > 0) {
+      return { ...OWNER_ADMIN_PERMISSIONS };
+    }
+
+    // Check project member role
+    const memberRes = await p.query(
+      `SELECT "role" FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2 LIMIT 1`,
+      [numProjId, numUserId]
+    );
+    const role = memberRes.rows?.[0]?.role || 'member';
+    if (role === 'owner' || role === 'admin') {
+      return { ...OWNER_ADMIN_PERMISSIONS };
+    }
+
+    // Check custom permissions table
+    const permRes = await p.query(
+      `SELECT "can_create_tasks", "can_delete_tasks", "can_create_docs", "can_edit_docs",
+              "can_delete_docs", "can_edit_history", "can_delete_history", "can_edit_dates",
+              "can_manage_members"
+       FROM "project_member_permissions"
+       WHERE "projectId" = $1 AND "userId" = $2 LIMIT 1`,
+      [numProjId, numUserId]
+    );
+
+    if (permRes.rows?.length > 0) {
+      const row = permRes.rows[0];
+      return {
+        can_create_tasks: Boolean(row.can_create_tasks),
+        can_delete_tasks: Boolean(row.can_delete_tasks),
+        can_create_docs: Boolean(row.can_create_docs),
+        can_edit_docs: Boolean(row.can_edit_docs),
+        can_delete_docs: Boolean(row.can_delete_docs),
+        can_edit_history: Boolean(row.can_edit_history),
+        can_delete_history: Boolean(row.can_delete_history),
+        can_edit_dates: Boolean(row.can_edit_dates),
+        can_manage_members: Boolean(row.can_manage_members),
+      };
+    }
+  } catch {}
+
+  const mem = memoryPermissionsStore.find(
+    (p) => Number(p.projectId) === numProjId && Number(p.userId) === numUserId
+  );
+  if (mem) {
+    return { ...DEFAULT_MEMBER_PERMISSIONS, ...mem };
+  }
+
+  return { ...DEFAULT_MEMBER_PERMISSIONS };
+}
+
+export async function upsertMemberPermissionsDB(
+  projectId: number | string,
+  userId: number | string,
+  permissions: Partial<MemberPermissions>
+): Promise<MemberPermissions> {
+  await initDB();
+  const numProjId = Number(projectId);
+  const numUserId = Number(userId);
+
+  const existing = await getMemberPermissionsDB(numProjId, numUserId);
+  const merged: MemberPermissions = {
+    ...existing,
+    ...permissions,
+  };
+
+  try {
+    const p = getPool();
+    await p.query(
+      `INSERT INTO "project_member_permissions" (
+        "projectId", "userId", "can_create_tasks", "can_delete_tasks",
+        "can_create_docs", "can_edit_docs", "can_delete_docs",
+        "can_edit_history", "can_delete_history", "can_edit_dates",
+        "can_manage_members", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      ON CONFLICT ("projectId", "userId") DO UPDATE SET
+        "can_create_tasks" = EXCLUDED."can_create_tasks",
+        "can_delete_tasks" = EXCLUDED."can_delete_tasks",
+        "can_create_docs" = EXCLUDED."can_create_docs",
+        "can_edit_docs" = EXCLUDED."can_edit_docs",
+        "can_delete_docs" = EXCLUDED."can_delete_docs",
+        "can_edit_history" = EXCLUDED."can_edit_history",
+        "can_delete_history" = EXCLUDED."can_delete_history",
+        "can_edit_dates" = EXCLUDED."can_edit_dates",
+        "can_manage_members" = EXCLUDED."can_manage_members",
+        "updatedAt" = CURRENT_TIMESTAMP`,
+      [
+        numProjId,
+        numUserId,
+        merged.can_create_tasks,
+        merged.can_delete_tasks,
+        merged.can_create_docs,
+        merged.can_edit_docs,
+        merged.can_delete_docs,
+        merged.can_edit_history,
+        merged.can_delete_history,
+        merged.can_edit_dates,
+        merged.can_manage_members,
+      ]
+    );
+  } catch {}
+
+  const idx = memoryPermissionsStore.findIndex(
+    (p) => Number(p.projectId) === numProjId && Number(p.userId) === numUserId
+  );
+  if (idx >= 0) {
+    memoryPermissionsStore[idx] = { projectId: numProjId, userId: numUserId, ...merged };
+  } else {
+    memoryPermissionsStore.push({ projectId: numProjId, userId: numUserId, ...merged });
+  }
+
+  return merged;
+}
+
+export async function getAllMemberPermissionsDB(
+  projectId: number | string
+): Promise<MemberPermissionsWithUser[]> {
+  await initDB();
+  const numProjId = Number(projectId);
+
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT u."id" as "userId", u."name" as "userName", u."email" as "userEmail", u."avatar" as "userAvatar",
+              pm."role",
+              COALESCE(pmp."can_create_tasks", true) as "can_create_tasks",
+              COALESCE(pmp."can_delete_tasks", false) as "can_delete_tasks",
+              COALESCE(pmp."can_create_docs", true) as "can_create_docs",
+              COALESCE(pmp."can_edit_docs", true) as "can_edit_docs",
+              COALESCE(pmp."can_delete_docs", false) as "can_delete_docs",
+              COALESCE(pmp."can_edit_history", false) as "can_edit_history",
+              COALESCE(pmp."can_delete_history", false) as "can_delete_history",
+              COALESCE(pmp."can_edit_dates", false) as "can_edit_dates",
+              COALESCE(pmp."can_manage_members", false) as "can_manage_members"
+       FROM "users" u
+       JOIN "project_members" pm ON u."id" = pm."userId"
+       LEFT JOIN "project_member_permissions" pmp ON pmp."projectId" = pm."projectId" AND pmp."userId" = u."id"
+       WHERE pm."projectId" = $1
+       ORDER BY pm."joinedAt" ASC`,
+      [numProjId]
+    );
+
+    if (result.rows?.length > 0) {
+      return result.rows.map((r: any) => {
+        const isOwnerOrAdmin = r.role === 'owner' || r.role === 'admin';
+        return {
+          userId: Number(r.userId),
+          userName: r.userName,
+          userEmail: r.userEmail,
+          userAvatar: r.userAvatar,
+          role: r.role || 'member',
+          can_create_tasks: isOwnerOrAdmin ? true : Boolean(r.can_create_tasks),
+          can_delete_tasks: isOwnerOrAdmin ? true : Boolean(r.can_delete_tasks),
+          can_create_docs: isOwnerOrAdmin ? true : Boolean(r.can_create_docs),
+          can_edit_docs: isOwnerOrAdmin ? true : Boolean(r.can_edit_docs),
+          can_delete_docs: isOwnerOrAdmin ? true : Boolean(r.can_delete_docs),
+          can_edit_history: isOwnerOrAdmin ? true : Boolean(r.can_edit_history),
+          can_delete_history: isOwnerOrAdmin ? true : Boolean(r.can_delete_history),
+          can_edit_dates: isOwnerOrAdmin ? true : Boolean(r.can_edit_dates),
+          can_manage_members: isOwnerOrAdmin ? true : Boolean(r.can_manage_members),
+        };
+      });
+    }
+  } catch {}
+
+  const members = await getProjectMembersDB(numProjId);
+  return members.map((m: any) => {
+    const isOwnerOrAdmin = m.role === 'owner' || m.role === 'admin';
+    const custom = memoryPermissionsStore.find(
+      (p) => Number(p.projectId) === numProjId && Number(p.userId) === Number(m.id)
+    );
+    return {
+      userId: Number(m.id),
+      userName: m.name,
+      userEmail: m.email,
+      userAvatar: m.avatar,
+      role: m.role || 'member',
+      can_create_tasks: isOwnerOrAdmin ? true : (custom?.can_create_tasks ?? DEFAULT_MEMBER_PERMISSIONS.can_create_tasks),
+      can_delete_tasks: isOwnerOrAdmin ? true : (custom?.can_delete_tasks ?? DEFAULT_MEMBER_PERMISSIONS.can_delete_tasks),
+      can_create_docs: isOwnerOrAdmin ? true : (custom?.can_create_docs ?? DEFAULT_MEMBER_PERMISSIONS.can_create_docs),
+      can_edit_docs: isOwnerOrAdmin ? true : (custom?.can_edit_docs ?? DEFAULT_MEMBER_PERMISSIONS.can_edit_docs),
+      can_delete_docs: isOwnerOrAdmin ? true : (custom?.can_delete_docs ?? DEFAULT_MEMBER_PERMISSIONS.can_delete_docs),
+      can_edit_history: isOwnerOrAdmin ? true : (custom?.can_edit_history ?? DEFAULT_MEMBER_PERMISSIONS.can_edit_history),
+      can_delete_history: isOwnerOrAdmin ? true : (custom?.can_delete_history ?? DEFAULT_MEMBER_PERMISSIONS.can_delete_history),
+      can_edit_dates: isOwnerOrAdmin ? true : (custom?.can_edit_dates ?? DEFAULT_MEMBER_PERMISSIONS.can_edit_dates),
+      can_manage_members: isOwnerOrAdmin ? true : (custom?.can_manage_members ?? DEFAULT_MEMBER_PERMISSIONS.can_manage_members),
+    };
+  });
+}
+
+// ─── Project History / Audit Trail Helpers ────────────────────────────────────
+
+export async function logProjectHistoryDB(entry: {
+  projectId: number | string;
+  projectKey: string;
+  userId?: number | string;
+  userName?: string;
+  userAvatar?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  entityTitle?: string;
+  details?: Record<string, any>;
+}): Promise<HistoryEntry> {
+  await initDB();
+  const numProjId = Number(entry.projectId);
+  const numUserId = entry.userId ? Number(entry.userId) : null;
+  const userName = entry.userName || 'system';
+  const action = entry.action;
+  const entityType = entry.entityType;
+  const entityId = entry.entityId || null;
+  const entityTitle = entry.entityTitle || null;
+  const details = entry.details ? JSON.stringify(entry.details) : null;
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `INSERT INTO "project_history" (
+        "projectId", "projectKey", "userId", "userName", "userAvatar",
+        "action", "entityType", "entityId", "entityTitle", "details"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING "id", "projectId", "projectKey", "userId", "userName", "userAvatar",
+                "action", "entityType", "entityId", "entityTitle", "details", "createdAt"`,
+      [
+        numProjId,
+        entry.projectKey,
+        numUserId,
+        userName,
+        entry.userAvatar || null,
+        action,
+        entityType,
+        entityId,
+        entityTitle,
+        details,
+      ]
+    );
+
+    if (res.rows && res.rows[0]) {
+      const r = res.rows[0];
+      const newEntry: HistoryEntry = {
+        id: r.id,
+        projectId: r.projectId,
+        projectKey: r.projectKey,
+        userId: r.userId ? Number(r.userId) : undefined,
+        userName: r.userName,
+        userAvatar: r.userAvatar,
+        action: r.action,
+        entityType: r.entityType,
+        entityId: r.entityId,
+        entityTitle: r.entityTitle,
+        details: r.details,
+        createdAt: new Date(r.createdAt).toISOString(),
+      };
+      memoryProjectHistoryStore.unshift(newEntry);
+      return newEntry;
+    }
+  } catch {}
+
+  const fallbackEntry: HistoryEntry = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    projectId: numProjId,
+    projectKey: entry.projectKey,
+    userId: numUserId ? Number(numUserId) : undefined,
+    userName,
+    userAvatar: entry.userAvatar,
+    action,
+    entityType,
+    entityId: entityId || undefined,
+    entityTitle: entityTitle || undefined,
+    details: entry.details,
+    createdAt: new Date().toISOString(),
+  };
+  memoryProjectHistoryStore.unshift(fallbackEntry);
+  return fallbackEntry;
+}
+
+export async function getProjectHistoryDB(
+  projectId: number | string,
+  opts?: { limit?: number; offset?: number; entityType?: string; action?: string }
+): Promise<HistoryEntry[]> {
+  await initDB();
+  const numProjId = Number(projectId);
+  const limit = Math.min(Number(opts?.limit) || 50, 200);
+  const offset = Number(opts?.offset) || 0;
+
+  try {
+    const p = getPool();
+    const conditions: string[] = [`"projectId" = $1`];
+    const params: any[] = [numProjId];
+    let paramIdx = 2;
+
+    if (opts?.entityType && opts.entityType !== 'all') {
+      conditions.push(`"entityType" = $${paramIdx++}`);
+      params.push(opts.entityType);
+    }
+    if (opts?.action && opts.action !== 'all') {
+      conditions.push(`"action" = $${paramIdx++}`);
+      params.push(opts.action);
+    }
+
+    params.push(limit);
+    params.push(offset);
+
+    const query = `
+      SELECT "id", "projectId", "projectKey", "userId", "userName", "userAvatar",
+             "action", "entityType", "entityId", "entityTitle", "details", "createdAt"
+      FROM "project_history"
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY "createdAt" DESC, "id" DESC
+      LIMIT $${paramIdx++} OFFSET $${paramIdx}
+    `;
+
+    const result = await p.query(query, params);
+    if (result.rows) {
+      return result.rows.map((r: any) => ({
+        id: r.id,
+        projectId: r.projectId,
+        projectKey: r.projectKey,
+        userId: r.userId ? Number(r.userId) : undefined,
+        userName: r.userName,
+        userAvatar: r.userAvatar,
+        action: r.action,
+        entityType: r.entityType,
+        entityId: r.entityId,
+        entityTitle: r.entityTitle,
+        details: typeof r.details === 'string' ? JSON.parse(r.details) : r.details,
+        createdAt: new Date(r.createdAt).toISOString(),
+      }));
+    }
+  } catch {}
+
+  let list = memoryProjectHistoryStore.filter((h) => Number(h.projectId) === numProjId);
+  if (opts?.entityType && opts.entityType !== 'all') {
+    list = list.filter((h) => h.entityType === opts.entityType);
+  }
+  if (opts?.action && opts.action !== 'all') {
+    list = list.filter((h) => h.action === opts.action);
+  }
+  return list.slice(offset, offset + limit);
+}
+
+export async function deleteProjectHistoryEntryDB(historyId: number | string): Promise<boolean> {
+  await initDB();
+  const numId = Number(historyId);
+
+  try {
+    const p = getPool();
+    const res = await p.query(`DELETE FROM "project_history" WHERE "id" = $1`, [numId]);
+    memoryProjectHistoryStore = memoryProjectHistoryStore.filter((h) => Number(h.id) !== numId);
+    return (res.rowCount || 0) > 0;
+  } catch {}
+
+  memoryProjectHistoryStore = memoryProjectHistoryStore.filter((h) => Number(h.id) !== numId);
+  return true;
+}
+
+export async function updateProjectHistoryEntryDB(
+  historyId: number | string,
+  updates: { details?: any; createdAt?: string; action?: string; entityTitle?: string }
+): Promise<boolean> {
+  await initDB();
+  const numId = Number(historyId);
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramIdx = 1;
+
+  if (updates.details !== undefined) {
+    fields.push(`"details" = $${paramIdx++}`);
+    values.push(JSON.stringify(updates.details));
+  }
+  if (updates.createdAt !== undefined) {
+    fields.push(`"createdAt" = $${paramIdx++}`);
+    values.push(new Date(updates.createdAt).toISOString());
+  }
+  if (updates.action !== undefined) {
+    fields.push(`"action" = $${paramIdx++}`);
+    values.push(updates.action);
+  }
+  if (updates.entityTitle !== undefined) {
+    fields.push(`"entityTitle" = $${paramIdx++}`);
+    values.push(updates.entityTitle);
+  }
+
+  if (fields.length > 0) {
+    try {
+      const p = getPool();
+      values.push(numId);
+      await p.query(`UPDATE "project_history" SET ${fields.join(', ')} WHERE "id" = $${paramIdx}`, values);
+    } catch {}
+  }
+
+  const target = memoryProjectHistoryStore.find((h) => Number(h.id) === numId);
+  if (target) {
+    if (updates.details !== undefined) target.details = updates.details;
+    if (updates.createdAt !== undefined) target.createdAt = new Date(updates.createdAt).toISOString();
+    if (updates.action !== undefined) target.action = updates.action;
+    if (updates.entityTitle !== undefined) target.entityTitle = updates.entityTitle;
+  }
+  return true;
+}
+
+export async function updateIssueCreatedAtDB(issueId: string, newCreatedAt: string): Promise<boolean> {
+  await initDB();
+  const isoDate = new Date(newCreatedAt).toISOString();
+
+  try {
+    const p = getPool();
+    await p.query(`UPDATE "issues" SET "createdAt" = $1 WHERE "id" = $2`, [isoDate, issueId]);
+  } catch {}
+
+  const target = memoryIssuesStore.find((i) => i.id === issueId);
+  if (target) {
+    target.createdAt = isoDate;
+  }
   return true;
 }
 

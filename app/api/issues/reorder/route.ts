@@ -3,6 +3,7 @@ import { reorderIssuesDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 import { parseBody, ReorderIssuesSchema } from '@/lib/validation';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
+import { logHistory } from '@/lib/history';
 
 export async function POST(req: Request) {
   const session = await getSessionFromCookie();
@@ -16,6 +17,20 @@ export async function POST(req: Request) {
   try {
     const payload = data.items && data.items.length > 0 ? data.items : data.issueIds || [];
     const result = await reorderIssuesDB(payload);
+
+    if (data.projectId) {
+      await logHistory({
+        projectId: data.projectId,
+        userId: session.id,
+        userName: session.name || session.email || 'User',
+        userAvatar: session.avatar,
+        action: 'tasks_reordered',
+        entityType: 'task',
+        entityTitle: 'Workspace Tasks Reordered',
+        details: { reorderedCount: Array.isArray(payload) ? payload.length : 0 },
+        senderSessionId: session.id,
+      });
+    }
 
     broadcastRealtimeEvent({
       type: 'TASKS_REORDERED',

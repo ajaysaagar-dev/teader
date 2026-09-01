@@ -1,4 +1,5 @@
-import { getPool, initDB } from './db';
+import { getPool, initDB, getMemberPermissionsDB } from './db';
+import { MemberPermissions } from './types';
 
 /**
  * Authorization helper — verifies a user is a member of the given project.
@@ -43,6 +44,26 @@ export async function assertProjectAccess(
     new Error('Forbidden: you are not a member of this project'),
     { status: 403 }
   );
+}
+
+/**
+ * Check if a user has a specific granular permission in a project.
+ * Returns { role, allowed, permissions }.
+ */
+export async function assertPermission(
+  userId: number | string,
+  projectId: number | string,
+  permission: keyof MemberPermissions
+): Promise<{ role: string; allowed: boolean; permissions: MemberPermissions }> {
+  const role = await assertProjectAccess(userId, projectId);
+  const permissions = await getMemberPermissionsDB(projectId, userId);
+
+  if (role === 'owner' || role === 'admin') {
+    return { role, allowed: true, permissions };
+  }
+
+  const allowed = Boolean(permissions[permission]);
+  return { role, allowed, permissions };
 }
 
 /**

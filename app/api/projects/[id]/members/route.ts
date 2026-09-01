@@ -34,22 +34,44 @@ export async function DELETE(
       return NextResponse.json({ error: 'userId is required' }, { status: 400 });
     }
 
-    const { kickProjectMemberDB, getProjectByIdDB } = await import('@/lib/db');
+    const { kickProjectMemberDB, getProjectByIdDB, getUserByIdDB } = await import('@/lib/db');
     const { broadcastRealtimeEvent } = await import('@/lib/realtime');
+    const { assertPermission } = await import('@/lib/authz');
+    const { logHistory } = await import('@/lib/history');
 
     const project = await getProjectByIdDB(resolvedParams.id);
     if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
 
     const isOwner = Number(project.owner_id) === Number(session.id) || Number(project.creatorId) === Number(session.id);
     if (!isOwner) {
-      return NextResponse.json({ error: 'Forbidden. Owner privileges required to remove members.' }, { status: 403 });
+      const { allowed } = await assertPermission(session.id, project.id, 'can_manage_members');
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden. Member management privileges required to remove members.' }, { status: 403 });
+      }
     }
 
     if (Number(userIdToKick) === Number(project.owner_id) || Number(userIdToKick) === Number(project.creatorId)) {
       return NextResponse.json({ error: 'Cannot remove the project creator/owner.' }, { status: 400 });
     }
 
+    const targetUser = await getUserByIdDB(userIdToKick);
+    const targetName = targetUser?.name || `User ${userIdToKick}`;
+
     await kickProjectMemberDB(project.id, userIdToKick);
+
+    await logHistory({
+      projectId: project.id,
+      projectKey: project.key,
+      userId: session.id,
+      userName: session.name || session.email || 'Admin',
+      userAvatar: session.avatar,
+      action: 'member_removed',
+      entityType: 'member',
+      entityId: String(userIdToKick),
+      entityTitle: targetName,
+      details: { kickedUserId: userIdToKick, kickedUserName: targetName },
+      senderSessionId: session.id,
+    });
 
     broadcastRealtimeEvent({
       type: 'PROJECT_UPDATED',

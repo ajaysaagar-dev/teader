@@ -72,6 +72,7 @@ export const UpdateIssueSchema = z.object({
   blocks: z.array(z.string()).optional(),
   customFields: z.record(z.string(), z.any()).optional(),
   orderIndex: z.number().optional(),
+  createdAt: z.string().optional(),
   timeEntries: z
     .array(
       z.object({
@@ -85,6 +86,35 @@ export const UpdateIssueSchema = z.object({
     )
     .optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'At least one field must be provided' });
+
+// ─── Permissions & History ────────────────────────────────────────────────────
+
+export const UpdateMemberPermissionsSchema = z.object({
+  userId: z.union([z.number(), z.string()]),
+  permissions: z.object({
+    can_create_tasks: z.boolean().optional(),
+    can_delete_tasks: z.boolean().optional(),
+    can_create_docs: z.boolean().optional(),
+    can_edit_docs: z.boolean().optional(),
+    can_delete_docs: z.boolean().optional(),
+    can_edit_history: z.boolean().optional(),
+    can_delete_history: z.boolean().optional(),
+    can_edit_dates: z.boolean().optional(),
+    can_manage_members: z.boolean().optional(),
+  }),
+});
+
+export const UpdateIssueDateSchema = z.object({
+  createdAt: z.string().min(1, 'createdAt timestamp is required'),
+});
+
+export const UpdateHistoryEntrySchema = z.object({
+  entryId: z.union([z.number(), z.string()]),
+  details: z.record(z.string(), z.any()).optional(),
+  createdAt: z.string().optional(),
+  action: z.string().optional(),
+  entityTitle: z.string().optional(),
+});
 
 export const ReorderIssuesSchema = z.object({
   projectId: z.union([z.number(), z.string()]).optional(),

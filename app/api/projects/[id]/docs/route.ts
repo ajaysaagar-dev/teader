@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { assertProjectAccess } from '@/lib/authz';
+import { assertProjectAccess, assertPermission } from '@/lib/authz';
 import { getProjectDocsDB, createProjectDocDB, updateProjectDocDB, getProjectByIdDB } from '@/lib/db';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
+import { logHistory } from '@/lib/history';
 import fs from 'fs';
 import path from 'path';
 
@@ -185,9 +186,12 @@ export async function POST(
     const project = await getProjectByIdDB(rawProjectId);
     const targetProjId = project ? project.id : (Number(rawProjectId) || rawProjectId);
 
-    // Verify the user is a member of this project
+    // Verify the user is a member of this project and has can_create_docs permission
     try {
-      await assertProjectAccess(session.id, targetProjId);
+      const { allowed } = await assertPermission(session.id, targetProjId, 'can_create_docs');
+      if (!allowed) {
+        return NextResponse.json({ error: 'Forbidden: You do not have permission to create documentation in this project.' }, { status: 403 });
+      }
     } catch (err: any) {
       const status = err.status || 403;
       return NextResponse.json({ error: err.message }, { status });
@@ -226,6 +230,20 @@ export async function POST(
     });
 
     const docPayload = { ...createdRecord, folder, content: initialContent };
+
+    await logHistory({
+      projectId: targetProjId,
+      projectKey: project?.key,
+      userId: session.id,
+      userName: session.name || session.email || 'User',
+      userAvatar: session.avatar,
+      action: 'doc_created',
+      entityType: 'doc',
+      entityId: docId,
+      entityTitle: title,
+      details: { folder, fileName },
+      senderSessionId: session.id,
+    });
 
     broadcastRealtimeEvent({
       type: 'DOC_CREATED',

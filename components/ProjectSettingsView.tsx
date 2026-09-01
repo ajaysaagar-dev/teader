@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Settings,
   Trash2,
@@ -18,9 +16,14 @@ import {
   UserCheck,
   UserX,
   Clock,
-  Loader2
+  Loader2,
+  FileEdit,
+  CalendarClock,
+  Layers,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { MemberPermissionsWithUser, MemberPermissions, PERMISSION_LABELS } from '@/lib/types';
 
 interface ProjectSettingsViewProps {
   project: {
@@ -58,6 +61,9 @@ export function ProjectSettingsView({
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [kickingUserId, setKickingUserId] = useState<string | number | null>(null);
   const [processingRequestId, setProcessingRequestId] = useState<string | number | null>(null);
+  const [permissionsList, setPermissionsList] = useState<MemberPermissionsWithUser[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [savingPermUserId, setSavingPermUserId] = useState<number | string | null>(null);
 
   // Fetch pending join requests for project owner
   React.useEffect(() => {
@@ -81,6 +87,85 @@ export function ProjectSettingsView({
       isMounted = false;
     };
   }, [project?.id, isCreator]);
+
+  // Fetch member permissions for project
+  const fetchPermissions = useCallback(async () => {
+    if (!project?.id) return;
+    setLoadingPermissions(true);
+    try {
+      const res = await fetch(`/api/projects/${project.id}/permissions`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setPermissionsList(data);
+        }
+      }
+    } catch {}
+    finally {
+      setLoadingPermissions(false);
+    }
+  }, [project?.id]);
+
+  useEffect(() => {
+    fetchPermissions();
+  }, [fetchPermissions]);
+
+  // Toggle single permission for a member
+  const handleTogglePermission = async (
+    targetUserId: number | string,
+    permKey: keyof MemberPermissions,
+    currentValue: boolean
+  ) => {
+    if (!project?.id) return;
+    const newValue = !currentValue;
+
+    // Optimistic UI update
+    setPermissionsList((prev) =>
+      prev.map((m) => {
+        if (String(m.userId) === String(targetUserId)) {
+          return { ...m, [permKey]: newValue };
+        }
+        return m;
+      })
+    );
+
+    setSavingPermUserId(targetUserId);
+    try {
+      const targetMember = permissionsList.find((m) => String(m.userId) === String(targetUserId));
+      const currentPerms: any = targetMember ? { ...targetMember } : {};
+      delete currentPerms.userId;
+      delete currentPerms.userName;
+      delete currentPerms.userEmail;
+      delete currentPerms.userAvatar;
+      delete currentPerms.role;
+
+      const payload = {
+        userId: targetUserId,
+        permissions: {
+          ...currentPerms,
+          [permKey]: newValue,
+        },
+      };
+
+      const res = await fetch(`/api/projects/${project.id}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update permissions');
+      }
+
+      toast.success(`Updated ${PERMISSION_LABELS[permKey]} for member.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save permission change.');
+      fetchPermissions();
+    } finally {
+      setSavingPermUserId(null);
+    }
+  };
 
   // Accept or Reject Join Request
   const handleJoinRequestAction = async (targetUserId: number | string, action: 'accept' | 'reject') => {
@@ -468,7 +553,142 @@ export function ProjectSettingsView({
           </div>
         </div>
 
-        {/* 4. Danger Zone */}
+        {/* 4. Member Permissions & Access Control (Owner/Admin) */}
+        {isCreator && (
+          <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-[#DCB001]" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Member Permissions & Access Control</h3>
+                  <p className="text-xs text-[#787C83]">
+                    Configure granular permissions for creating, editing, deleting tasks, docs, history, and timestamps.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+                {permissionsList.length} configured
+              </span>
+            </div>
+
+            {loadingPermissions ? (
+              <div className="flex items-center justify-center p-6 text-xs text-[#787C83] gap-2">
+                <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+                <span>Loading member permissions...</span>
+              </div>
+            ) : permissionsList.length === 0 ? (
+              <div className="p-4 rounded-xl bg-[#101114] border border-[#222428] text-center">
+                <p className="text-xs text-[#787C83]">No joined members yet to configure permissions.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {permissionsList.map((mem) => {
+                  const isOwnerUser =
+                    Number(project?.owner_id) === Number(mem.userId) ||
+                    Number(project?.creatorId) === Number(mem.userId) ||
+                    mem.role === 'owner';
+                  const isSaving = savingPermUserId === mem.userId;
+
+                  return (
+                    <div
+                      key={mem.userId}
+                      className="p-4 rounded-xl bg-[#101114] border border-[#222428] hover:border-[#2F3238] transition-all space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={mem.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                            alt={mem.userName}
+                            className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-white truncate">{mem.userName}</p>
+                              <span
+                                className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                                  isOwnerUser
+                                    ? 'bg-[#3B82F6]/15 text-[#60A5FA] border-[#3B82F6]/30'
+                                    : 'bg-[#1C1D21] text-[#9499A0] border-[#2A2C30]'
+                                }`}
+                              >
+                                {isOwnerUser ? 'Owner' : 'Member'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-mono text-[#787C83] truncate">{mem.userEmail}</p>
+                          </div>
+                        </div>
+
+                        {isOwnerUser ? (
+                          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/25">
+                            Full Workspace Access
+                          </span>
+                        ) : (
+                          isSaving && (
+                            <div className="flex items-center gap-1 text-[11px] text-[#DCB001] font-mono">
+                              <Loader2 size={12} className="animate-spin" />
+                              <span>Saving...</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {/* Granular Permission Toggles */}
+                      {!isOwnerUser && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-[#1C1D22]">
+                          {(
+                            [
+                              { key: 'can_create_tasks', label: 'Create Tasks & Folders', icon: <FolderKanban size={12} /> },
+                              { key: 'can_delete_tasks', label: 'Delete Tasks & Folders', icon: <Trash2 size={12} /> },
+                              { key: 'can_create_docs', label: 'Create Docs', icon: <FileText size={12} /> },
+                              { key: 'can_edit_docs', label: 'Edit Docs', icon: <FileEdit size={12} /> },
+                              { key: 'can_delete_docs', label: 'Delete Docs', icon: <Trash2 size={12} /> },
+                              { key: 'can_edit_history', label: 'Edit History', icon: <Clock size={12} /> },
+                              { key: 'can_delete_history', label: 'Delete History', icon: <Trash2 size={12} /> },
+                              { key: 'can_edit_dates', label: 'Edit Created Dates', icon: <CalendarClock size={12} /> },
+                              { key: 'can_manage_members', label: 'Manage Members', icon: <Users size={12} /> },
+                            ] as const
+                          ).map((p) => {
+                            const isEnabled = Boolean(mem[p.key]);
+                            return (
+                              <button
+                                key={p.key}
+                                type="button"
+                                onClick={() => handleTogglePermission(mem.userId, p.key, isEnabled)}
+                                className={`flex items-center justify-between p-2 rounded-lg border text-left text-xs transition-all ${
+                                  isEnabled
+                                    ? 'bg-[#182618] border-emerald-500/35 text-white hover:bg-[#1f331f]'
+                                    : 'bg-[#121316] border-[#222428] text-[#787C83] hover:text-[#CFD4DD] hover:border-[#2E3138]'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                                  <span className={isEnabled ? 'text-emerald-400' : 'text-[#787C83]'}>
+                                    {p.icon}
+                                  </span>
+                                  <span className="text-[11px] font-medium truncate">{p.label}</span>
+                                </div>
+                                <span
+                                  className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                    isEnabled
+                                      ? 'bg-emerald-500/20 text-emerald-400'
+                                      : 'bg-[#1C1D21] text-[#60646C]'
+                                  }`}
+                                >
+                                  {isEnabled ? 'ON' : 'OFF'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 5. Danger Zone */}
         <div className="space-y-4 pt-2">
           {/* Leave Project Option (For Joined Collaborators) */}
           {onOpenLeaveModal && (

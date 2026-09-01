@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { assertProjectAccess } from '@/lib/authz';
+import { assertProjectAccess, assertPermission } from '@/lib/authz';
 import { getProjectDocByIdDB, updateProjectDocDB, deleteProjectDocDB } from '@/lib/db';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
+import { logHistory } from '@/lib/history';
 import fs from 'fs';
 import path from 'path';
 
@@ -99,9 +100,12 @@ export async function PUT(
   const resolvedParams = await params;
   const { id: projectIdParam, docId } = resolvedParams;
 
-  // Verify the user is a member of this project
+  // Verify the user is a member of this project and has can_edit_docs permission
   try {
-    await assertProjectAccess(session.id, projectIdParam);
+    const { allowed } = await assertPermission(session.id, projectIdParam, 'can_edit_docs');
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to edit documentation in this project.' }, { status: 403 });
+    }
   } catch (err: any) {
     const status = err.status || 403;
     return NextResponse.json({ error: err.message }, { status });
@@ -163,6 +167,19 @@ export async function PUT(
       updatedAt: new Date().toISOString(),
     };
 
+    await logHistory({
+      projectId: (doc as any).projectId || resolvedParams.id,
+      userId: session.id,
+      userName: session.name || session.email || 'User',
+      userAvatar: session.avatar,
+      action: 'doc_updated',
+      entityType: 'doc',
+      entityId: docId,
+      entityTitle: docUpdatePayload.title,
+      details: { folder: finalFolder, fileName: currentFileName },
+      senderSessionId: session.id,
+    });
+
     broadcastRealtimeEvent({
       type: 'DOC_UPDATED',
       projectId: (doc as any).projectId || resolvedParams.id,
@@ -197,9 +214,12 @@ export async function DELETE(
   const resolvedParams = await params;
   const { id: projectId, docId } = resolvedParams;
 
-  // Verify the user is a member of this project
+  // Verify the user is a member of this project and has can_delete_docs permission
   try {
-    await assertProjectAccess(session.id, projectId);
+    const { allowed } = await assertPermission(session.id, projectId, 'can_delete_docs');
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to delete documentation in this project.' }, { status: 403 });
+    }
   } catch (err: any) {
     const status = err.status || 403;
     return NextResponse.json({ error: err.message }, { status });
@@ -221,6 +241,19 @@ export async function DELETE(
         } catch {}
       }
       await deleteProjectDocDB(docId, (doc as any).projectId || projectId);
+
+      await logHistory({
+        projectId: (doc as any).projectId || projectId,
+        userId: session.id,
+        userName: session.name || session.email || 'User',
+        userAvatar: session.avatar,
+        action: 'doc_deleted',
+        entityType: 'doc',
+        entityId: docId,
+        entityTitle: doc.title,
+        details: { fileName: doc.fileName },
+        senderSessionId: session.id,
+      });
 
       broadcastRealtimeEvent({
         type: 'DOC_DELETED',

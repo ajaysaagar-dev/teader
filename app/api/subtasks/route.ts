@@ -4,6 +4,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { assertIssueAccess } from '@/lib/authz';
 import { parseBody, AddSubtaskSchema, UpdateSubtaskSchema } from '@/lib/validation';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
+import { logHistory } from '@/lib/history';
 
 export async function POST(req: Request) {
   const session = await getSessionFromCookie();
@@ -28,6 +29,21 @@ export async function POST(req: Request) {
 
     const parentIssue = await getIssueByIdDB(data.issueId, session.id);
     const resolvedProjectId = data.projectId || parentIssue?.projectId;
+
+    if (resolvedProjectId) {
+      await logHistory({
+        projectId: resolvedProjectId,
+        userId: session.id,
+        userName: session.name || session.email || 'User',
+        userAvatar: session.avatar,
+        action: data.isFolder ? 'folder_created' : 'subtask_created',
+        entityType: data.isFolder ? 'folder' : 'subtask',
+        entityId: subtask.id,
+        entityTitle: subtask.title,
+        details: { parentIssueId: data.issueId, parentKey: parentIssue?.key },
+        senderSessionId: session.id,
+      });
+    }
 
     broadcastRealtimeEvent({
       type: 'SUBTASK_UPDATED',
@@ -66,6 +82,21 @@ export async function PATCH(req: Request) {
 
     const parentIssue = data.issueId ? await getIssueByIdDB(data.issueId, session.id) : null;
     const resolvedProjectId = data.projectId || parentIssue?.projectId;
+
+    if (resolvedProjectId) {
+      await logHistory({
+        projectId: resolvedProjectId,
+        userId: session.id,
+        userName: session.name || session.email || 'User',
+        userAvatar: session.avatar,
+        action: 'subtask_updated',
+        entityType: 'subtask',
+        entityId: data.subId,
+        entityTitle: data.title || 'Subtask',
+        details: { completed: data.completed, title: data.title, parentIssueId: data.issueId },
+        senderSessionId: session.id,
+      });
+    }
 
     broadcastRealtimeEvent({
       type: 'SUBTASK_UPDATED',

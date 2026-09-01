@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAllIssuesDB, createIssueDB } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
-import { assertProjectAccess } from '@/lib/authz';
+import { assertProjectAccess, assertPermission } from '@/lib/authz';
 import { parseBody, CreateIssueSchema } from '@/lib/validation';
 import { broadcastRealtimeEvent } from '@/lib/realtime';
+import { logHistory } from '@/lib/history';
 
 export async function GET() {
   const session = await getSessionFromCookie();
@@ -27,10 +28,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Verify the user is a member of the target project before creating
+    // Verify the user is a member of the target project and has create permission
     if (data.projectId) {
       try {
-        await assertProjectAccess(session.id, data.projectId);
+        const { allowed } = await assertPermission(session.id, data.projectId, 'can_create_tasks');
+        if (!allowed) {
+          return NextResponse.json({ error: 'Forbidden: You do not have permission to create tasks or folders in this project.' }, { status: 403 });
+        }
       } catch (err: any) {
         const status = err.status || 403;
         return NextResponse.json({ error: err.message }, { status });
@@ -55,6 +59,28 @@ export async function POST(req: Request) {
       assigneeName: data.assigneeName,
       reporterName: data.reporterName || session.name || session.email || 'Current User',
     });
+
+    const isFolder = created.title.startsWith('📁 ');
+    if (created.projectId) {
+      await logHistory({
+        projectId: created.projectId,
+        userId: session.id,
+        userName: session.name || session.email || 'User',
+        userAvatar: session.avatar,
+        action: isFolder ? 'folder_created' : 'task_created',
+        entityType: isFolder ? 'folder' : 'task',
+        entityId: created.id,
+        entityTitle: created.title,
+        details: {
+          key: created.key,
+          status: created.status,
+          priority: created.priority,
+          epic: created.epic,
+          folderId: created.folderId,
+        },
+        senderSessionId: session.id,
+      });
+    }
 
     broadcastRealtimeEvent({
       type: 'TASK_CREATED',

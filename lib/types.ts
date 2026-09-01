@@ -207,3 +207,50 @@ export interface NavigationItem {
   category: 'main' | 'favorites' | 'recent' | 'workspace';
 }
 
+export interface MemberPermissions {
+  can_create_tasks: boolean;
+  can_delete_tasks: boolean;
+  can_create_docs: boolean;
+  can_edit_docs: boolean;
+  can_delete_docs: boolean;
+  can_edit_history: boolean;
+  can_delete_history: boolean;
+  can_edit_dates: boolean;
+  can_manage_members: boolean;
+}
+
+export interface MemberPermissionsWithUser extends MemberPermissions {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  userAvatar?: string;
+  role?: string;
+}
+
+export interface HistoryEntry {
+  id: number;
+  projectId: number;
+  projectKey: string;
+  userId?: number;
+  userName: string;
+  userAvatar?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  entityTitle?: string;
+  details?: Record<string, any>;
+  createdAt: string;
+}
+
+export const PERMISSION_LABELS: Record<keyof MemberPermissions, string> = {
+  can_create_tasks: 'Create Tasks & Folders',
+  can_delete_tasks: 'Delete Tasks & Folders',
+  can_create_docs: 'Create Docs',
+  can_edit_docs: 'Edit Docs',
+  can_delete_docs: 'Delete Docs',
+  can_edit_history: 'Edit History',
+  can_delete_history: 'Delete History',
+  can_edit_dates: 'Edit Created Dates',
+  can_manage_members: 'Manage Members',
+};
+

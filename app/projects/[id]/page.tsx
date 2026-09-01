@@ -8,7 +8,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { WorkspaceSplashScreen } from '@/components/WorkspaceSplashScreen';
 import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
-import { Issue, Status, Priority } from '@/lib/types';
+import { Issue, Status, Priority, MemberPermissions } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
 import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
@@ -95,6 +95,10 @@ const ProjectSettingsView = dynamic(
   () => import('@/components/ProjectSettingsView').then((m) => ({ default: m.ProjectSettingsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectHistoryView = dynamic(
+  () => import('@/components/ProjectHistoryView').then((m) => ({ default: m.ProjectHistoryView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -128,7 +132,7 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'history' | 'settings';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
@@ -136,6 +140,7 @@ function parseViewTab(view?: string): ProjectTab {
   const v = String(view).toLowerCase();
   if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
+  if (v === 'history' || v === 'audit' || v === 'log' || v === 'changelog') return 'history';
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
   if (
     v === 'tasks' ||
@@ -268,6 +273,7 @@ export default function SingleProjectPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userPermissions, setUserPermissions] = useState<MemberPermissions | null>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(taskQuery || null);
   const [loading, setLoading] = useState(true);
 
@@ -481,10 +487,12 @@ export default function SingleProjectPage() {
       // Step 1: Verify User Session
       setSplashStep(1);
       setSplashMessage('Verifying user authentication...');
+      let sessionUser: any = null;
       const meRes = await fetch('/api/auth/me');
       if (meRes.ok) {
         const meData = await meRes.json();
         if (meData.user) {
+          sessionUser = meData.user;
           setCurrentUser(meData.user);
         } else {
           router.push('/login');
@@ -539,10 +547,22 @@ export default function SingleProjectPage() {
       setSplashStep(3);
       setSplashMessage('Loading workspace issues & architecture...');
       if (foundProj && foundProj.id) {
-        const memRes = await fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store' });
+        const [memRes, permRes] = await Promise.all([
+          fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store' }),
+          fetch(`/api/projects/${foundProj.id}/permissions`, { cache: 'no-store' }).catch(() => null),
+        ]);
+
         if (memRes.ok) {
           const memData = await memRes.json();
           if (Array.isArray(memData)) setJoinedMembers(memData);
+        }
+
+        if (permRes && permRes.ok) {
+          const permData = await permRes.json();
+          if (Array.isArray(permData) && sessionUser) {
+            const myPerm = permData.find((p: any) => String(p.userId) === String(sessionUser.id));
+            if (myPerm) setUserPermissions(myPerm);
+          }
         }
       }
 
@@ -755,6 +775,18 @@ export default function SingleProjectPage() {
     );
   }, [currentUser, project]);
 
+  const canDelete = useMemo(() => {
+    if (isCreator) return true;
+    if (currentUser?.role === 'admin' || currentUser?.role === 'owner') return true;
+    return Boolean(userPermissions?.can_delete_tasks);
+  }, [isCreator, currentUser, userPermissions]);
+
+  const canEditDates = useMemo(() => {
+    if (isCreator) return true;
+    if (currentUser?.role === 'admin' || currentUser?.role === 'owner') return true;
+    return Boolean(userPermissions?.can_edit_dates);
+  }, [isCreator, currentUser, userPermissions]);
+
   const projectIssues = useMemo(() => {
     if (!project) return [];
     return issues.filter(
@@ -894,8 +926,8 @@ export default function SingleProjectPage() {
     const targetIssue = issues.find((i) => i.id === issueId);
     const issueKey = targetIssue?.key || issueId;
 
-    if (!isCreator && currentUser?.role !== 'admin' && currentUser?.role !== 'owner') {
-      toast.error('Permission Denied: Only project admins / owners can delete tasks.');
+    if (!canDelete) {
+      toast.error('Permission Denied: You do not have permission to delete tasks in this project.');
       return;
     }
 
@@ -1819,6 +1851,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('history')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'history'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Activity History & Audit Log"
+            >
+              <Clock size={13} />
+              <span>History</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('settings')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'settings'
@@ -1867,6 +1912,16 @@ export default function SingleProjectPage() {
                 projectId={project?.id || projectIdParam || 1}
                 projectName={project?.name}
                 projectKey={project?.key}
+              />
+            </div>
+          ) : activeTab === 'history' ? (
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+              <ProjectHistoryView
+                projectId={project?.id || projectIdParam || 1}
+                projectKey={project?.key || ''}
+                canEditHistory={isCreator || Boolean(userPermissions?.can_edit_history)}
+                canDeleteHistory={isCreator || Boolean(userPermissions?.can_delete_history)}
+                onNavigateTask={(taskId) => handleSelectIssue(taskId)}
               />
             </div>
           ) : activeTab === 'settings' ? (
@@ -1984,7 +2039,7 @@ export default function SingleProjectPage() {
                     onDeleteIssue={handleDeleteIssue}
                     onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                     onAddNewTaskToColumn={handleAddNewTaskToColumn}
-                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                    canDelete={canDelete}
                   />
                 ) : taskViewMode === 'timeline' ? (
                   <CalendarView
@@ -2001,7 +2056,7 @@ export default function SingleProjectPage() {
                     onUpdateIssuePriority={handleUpdateIssuePriority}
                     onDeleteIssue={handleDeleteIssue}
                     onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                    canDelete={canDelete}
                   />
                 ) : taskViewMode === 'dependencies' ? (
                   <DependencyGraphView
@@ -2032,7 +2087,7 @@ export default function SingleProjectPage() {
                     onMoveTaskToFolder={handleMoveTaskToFolder}
                     onAddTaskToFolder={handleAddTaskToFolder}
                     onReorderTaskInFolder={handleReorderTaskInFolder}
-                    canDelete={isCreator || currentUser?.role === 'admin' || currentUser?.role === 'owner'}
+                    canDelete={canDelete}
                   />
                 )}
               </div>
@@ -2113,7 +2168,8 @@ export default function SingleProjectPage() {
                       setIssues((prev) => prev.map((i) => (i.id === updated.id ? updated : i)))
                     }
                     onOpenDiffModal={() => {}}
-                    currentRole={isCreator ? 'owner' : 'member'}
+                    currentRole={isCreator ? 'owner' : (currentUser?.role || 'member')}
+                    canEditDates={canEditDates}
                   />
                 </div>
               </motion.div>

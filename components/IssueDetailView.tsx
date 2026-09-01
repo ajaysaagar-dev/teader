@@ -33,6 +33,7 @@ interface IssueDetailViewProps {
   onUpdateIssue: (updated: Issue) => void;
   onOpenDiffModal?: () => void;
   currentRole?: string;
+  canEditDates?: boolean;
   onClose?: () => void;
 }
 
@@ -65,9 +66,11 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   onSelectIssue,
   onUpdateIssue,
   currentRole = 'owner',
+  canEditDates = false,
   onClose,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isEditingCreatedAt, setIsEditingCreatedAt] = useState(false);
 
   // Description markdown edit state
   const [isEditingDesc, setIsEditingDesc] = useState(false);
@@ -212,6 +215,29 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       });
       toast.success('Due date updated');
     } catch {}
+  };
+
+  // Created Date handler (Admin / Owner permission)
+  const handleCreatedAtChange = async (dateStr: string) => {
+    if (!dateStr) return;
+    const isoDate = new Date(dateStr).toISOString();
+    const updated = { ...issue, createdAt: isoDate };
+    onUpdateIssue(updated);
+    try {
+      const res = await fetch(`/api/issues/${issue.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ createdAt: isoDate }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to update creation date');
+      }
+      toast.success('Creation timestamp updated');
+      setIsEditingCreatedAt(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update creation date');
+    }
   };
 
   const activeBlockers = parseBlockedBy(issue.blockedBy);
@@ -647,6 +673,74 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
                 {issue.project} ({issue.key.split('-')[0]})
               </div>
+            </div>
+
+            {/* Created Date (Editable by Admin/Owner) */}
+            <div className="pt-2 border-t border-[#2A2C30]">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[#787C83] flex items-center gap-1 font-medium">
+                  <Clock size={12} /> Created Date
+                </span>
+                {(canEditDates || currentRole === 'owner') && !isEditingCreatedAt && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingCreatedAt(true)}
+                    className="flex items-center gap-1 text-[10px] font-mono text-[#DCB001] hover:underline"
+                    title="Edit creation timestamp (Admin privilege)"
+                  >
+                    <Pencil size={10} />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </div>
+
+              {isEditingCreatedAt ? (
+                <div className="space-y-1.5 pt-1">
+                  <input
+                    type="datetime-local"
+                    defaultValue={
+                      issue.createdAt
+                        ? new Date(new Date(issue.createdAt).getTime() - new Date().getTimezoneOffset() * 60000)
+                            .toISOString()
+                            .slice(0, 16)
+                        : ''
+                    }
+                    id="created-at-picker-input"
+                    className="w-full bg-[#131415] border border-[#DCB001]/50 text-white font-mono text-[11px] rounded-lg p-1.5 outline-none"
+                  />
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingCreatedAt(false)}
+                      className="px-2 py-1 rounded bg-[#1F2024] hover:bg-[#2A2C32] text-[10px] font-semibold text-[#9499A0]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('created-at-picker-input') as HTMLInputElement;
+                        if (input && input.value) {
+                          handleCreatedAtChange(input.value);
+                        }
+                      }}
+                      className="px-2.5 py-1 rounded bg-[#DCB001] hover:bg-[#c49d01] text-[10px] font-bold text-black"
+                    >
+                      Save Date
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono text-[11px] text-[#A4A9B3]">
+                  {issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  }) : 'Not recorded'}
+                </div>
+              )}
             </div>
           </div>
         </div>
