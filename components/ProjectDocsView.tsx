@@ -127,6 +127,9 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [activeFolderForCreation, setActiveFolderForCreation] = useState<string>(DEFAULT_FOLDER);
   const [draggingDocId, setDraggingDocId] = useState<string | null>(null);
   const [dragOverFolder, setDragOverFolder] = useState<string | null>(null);
+  const [draggingFolder, setDraggingFolder] = useState<string | null>(null);
+  const [dragOverFolderTarget, setDragOverFolderTarget] = useState<{ folder: string; pos: 'before' | 'after' } | null>(null);
+  const [dragOverDoc, setDragOverDoc] = useState<{ docId: string; pos: 'before' | 'after' } | null>(null);
 
   // Inline rename in sidebar state
   const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
@@ -443,6 +446,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             setCustomFolders((prev) => Array.from(new Set([...prev, ...docFolders])));
           }
 
+          // Fetch persisted folder order from server
+          try {
+            const foldersRes = await fetch(`/api/projects/${projectId}/docs/folders`);
+            if (foldersRes.ok) {
+              const folderData = await foldersRes.json();
+              if (Array.isArray(folderData) && folderData.length > 0) {
+                const folderNames = folderData.map((f: any) => f.name).filter((n: string) => n !== DEFAULT_FOLDER);
+                setCustomFolders(folderNames);
+                setLocalCache(`docs_folders_${projectId}`, folderNames);
+              }
+            }
+          } catch {}
+
           if (normalized.length > 0) {
             const curId = selectedDocIdCurrentRef.current;
             const targetDoc = (selectNewestId && normalized.find((d) => String(d.id) === String(selectNewestId))) ||
@@ -571,6 +587,70 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 return remaining;
               });
             }
+          }
+          break;
+        }
+
+        case 'DOC_FOLDER_CREATED': {
+          const f = event.payload;
+          if (f && f.name && f.name !== DEFAULT_FOLDER) {
+            setCustomFolders((prev) => {
+              if (prev.includes(f.name)) return prev;
+              const next = [...prev, f.name];
+              setLocalCache(`docs_folders_${projectId}`, next);
+              return next;
+            });
+          }
+          break;
+        }
+
+        case 'DOC_FOLDER_DELETED': {
+          const { folderName, moveToFolder = DEFAULT_FOLDER } = event.payload || {};
+          if (folderName) {
+            setCustomFolders((prev) => {
+              const next = prev.filter((f) => f !== folderName);
+              setLocalCache(`docs_folders_${projectId}`, next);
+              return next;
+            });
+            setDocs((prev) => {
+              const next = prev.map((d) =>
+                (d.folder || DEFAULT_FOLDER) === folderName ? { ...d, folder: moveToFolder } : d
+              );
+              setLocalCache(`docs_${projectId}`, next);
+              return next;
+            });
+          }
+          break;
+        }
+
+        case 'DOC_FOLDERS_REORDERED': {
+          const { folders } = event.payload || {};
+          if (Array.isArray(folders) && folders.length > 0) {
+            const reordered = folders.map((f: any) => (typeof f === 'string' ? f : f.name)).filter(Boolean);
+            setCustomFolders(reordered);
+            setLocalCache(`docs_folders_${projectId}`, reordered);
+          }
+          break;
+        }
+
+        case 'DOCS_REORDERED': {
+          const { items } = event.payload || {};
+          if (Array.isArray(items)) {
+            setDocs((prev) => {
+              const map = new Map(items.map((it: any) => [String(it.id), it]));
+              const next = prev.map((d) => {
+                const update = map.get(String(d.id));
+                if (!update) return d;
+                return {
+                  ...d,
+                  orderIndex: update.orderIndex !== undefined ? update.orderIndex : d.orderIndex,
+                  folder: update.folder !== undefined ? update.folder : d.folder,
+                };
+              });
+              next.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+              setLocalCache(`docs_${projectId}`, next);
+              return next;
+            });
           }
           break;
         }
@@ -998,18 +1078,159 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   };
 
   // Handle Create New Custom Folder
-  const handleCreateFolder = (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanName = newFolderName.trim();
     if (!cleanName) return;
 
     if (!customFolders.includes(cleanName) && cleanName !== DEFAULT_FOLDER) {
-      setCustomFolders((prev) => [...prev, cleanName]);
+      const nextFolders = [...customFolders, cleanName];
+      setCustomFolders(nextFolders);
       setOpenFolders((prev) => ({ ...prev, [cleanName]: true }));
-      toast.success(`Folder created: ${cleanName}`);
+      setLocalCache(`docs_folders_${projectId}`, nextFolders);
+
+      try {
+        await fetch(`/api/projects/${projectId}/docs/folders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: cleanName, orderIndex: nextFolders.length - 1 }),
+        });
+        toast.success(`Folder created: ${cleanName}`);
+      } catch {
+        toast.error('Network error creating folder');
+      }
     }
     setNewFolderName('');
     setIsCreatingFolder(false);
+  };
+
+  // Handle Delete Custom Folder (and move files inside to 'Start')
+  const handleDeleteFolder = async (folderToDelete: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (folderToDelete === DEFAULT_FOLDER) {
+      toast.error('Cannot delete the default Start folder');
+      return;
+    }
+
+    const countInFolder = docs.filter((d) => (d.folder || DEFAULT_FOLDER) === folderToDelete).length;
+    const confirmMsg = countInFolder > 0
+      ? `Delete folder "${folderToDelete}"? All ${countInFolder} document${countInFolder > 1 ? 's' : ''} inside will be moved to the "Start" folder.`
+      : `Are you sure you want to delete folder "${folderToDelete}"?`;
+
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    // Optimistic UI updates
+    setCustomFolders((prev) => {
+      const next = prev.filter((f) => f !== folderToDelete);
+      setLocalCache(`docs_folders_${projectId}`, next);
+      return next;
+    });
+
+    setDocs((prev) => {
+      const next = prev.map((d) =>
+        (d.folder || DEFAULT_FOLDER) === folderToDelete ? { ...d, folder: DEFAULT_FOLDER } : d
+      );
+      setLocalCache(`docs_${projectId}`, next);
+      return next;
+    });
+
+    setOpenFolders((prev) => ({ ...prev, [DEFAULT_FOLDER]: true }));
+
+    try {
+      const res = await fetch(`/api/projects/${projectId}/docs/folders`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderName: folderToDelete, moveToFolder: DEFAULT_FOLDER }),
+      });
+
+      if (res.ok) {
+        toast.success(`Deleted folder "${folderToDelete}"`);
+      } else {
+        const errData = await res.json();
+        toast.error(errData.error || 'Failed to delete folder');
+      }
+    } catch {
+      toast.error('Network error deleting folder');
+    }
+  };
+
+  // Handle Drag-and-Drop Reorder of Folders
+  const handleFolderReorder = async (draggedFolderName: string, targetFolderName: string, pos: 'before' | 'after') => {
+    if (draggedFolderName === targetFolderName) return;
+    if (draggedFolderName === DEFAULT_FOLDER || targetFolderName === DEFAULT_FOLDER) return;
+
+    const currentList = [...customFolders];
+    const fromIdx = currentList.indexOf(draggedFolderName);
+    if (fromIdx === -1) return;
+    currentList.splice(fromIdx, 1);
+
+    const toIdx = currentList.indexOf(targetFolderName);
+    const insertIdx = pos === 'before' ? toIdx : toIdx + 1;
+    currentList.splice(insertIdx, 0, draggedFolderName);
+
+    setCustomFolders(currentList);
+    setLocalCache(`docs_folders_${projectId}`, currentList);
+
+    try {
+      await fetch(`/api/projects/${projectId}/docs/folders`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folders: currentList.map((name, idx) => ({ name, orderIndex: idx })),
+        }),
+      });
+      toast.success('Folder order updated');
+    } catch {
+      toast.error('Failed to save folder order');
+    }
+  };
+
+  // Handle Drag-and-Drop Reorder of Documents (both within and across folders)
+  const handleDocReorder = async (
+    draggedId: string,
+    targetDocId: string,
+    pos: 'before' | 'after'
+  ) => {
+    if (draggedId === targetDocId) return;
+
+    const sourceDoc = docs.find((d) => String(d.id) === String(draggedId));
+    const targetDoc = docs.find((d) => String(d.id) === String(targetDocId));
+    if (!sourceDoc || !targetDoc) return;
+
+    const targetFolder = targetDoc.folder || DEFAULT_FOLDER;
+    const nextDocs = docs.filter((d) => String(d.id) !== String(draggedId));
+    const targetIdx = nextDocs.findIndex((d) => String(d.id) === String(targetDocId));
+    const insertIdx = pos === 'before' ? targetIdx : targetIdx + 1;
+
+    const movedDoc = { ...sourceDoc, folder: targetFolder };
+    nextDocs.splice(insertIdx, 0, movedDoc);
+
+    const reorderedItems = nextDocs.map((d, index) => ({
+      ...d,
+      orderIndex: index,
+    }));
+
+    setDocs(reorderedItems);
+    setLocalCache(`docs_${projectId}`, reorderedItems);
+
+    try {
+      await fetch(`/api/projects/${projectId}/docs/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: reorderedItems.map((d, i) => ({
+            id: String(d.id),
+            orderIndex: i,
+            folder: d.folder,
+          })),
+        }),
+      });
+      toast.success(`Reordered ${movedDoc.title || 'document'}`);
+    } catch {
+      toast.error('Failed to save document order');
+    }
   };
 
   // Handle Create New Doc File inside Active Folder
@@ -1285,61 +1506,116 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           <div className="flex-1 overflow-y-auto p-2 space-y-3 custom-scrollbar">
             {groupedFolders.map(({ folder, items }) => {
               const isOpen = openFolders[folder] !== false;
-              const isDragOver = dragOverFolder === folder;
+              const isDragOverFolderBox = dragOverFolder === folder;
+              const isFolderBeingDragged = draggingFolder === folder;
+              const isFolderOverThis = dragOverFolderTarget?.folder === folder;
+              const folderPos = dragOverFolderTarget?.pos;
+              const isDefault = folder === DEFAULT_FOLDER;
 
               return (
                 <div
                   key={folder}
                   onDragOver={(e) => {
                     e.preventDefault();
-                    e.dataTransfer.dropEffect = 'move';
-                    if (dragOverFolder !== folder) setDragOverFolder(folder);
+                    if (draggingFolder && !isDefault) {
+                      e.dataTransfer.dropEffect = 'move';
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                      const pos = isTopHalf ? 'before' : 'after';
+                      if (dragOverFolderTarget?.folder !== folder || dragOverFolderTarget?.pos !== pos) {
+                        setDragOverFolderTarget({ folder, pos });
+                      }
+                    } else if (draggingDocId) {
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverFolder !== folder) setDragOverFolder(folder);
+                    }
                   }}
                   onDragLeave={(e) => {
                     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                      setDragOverFolder(null);
+                      if (dragOverFolder === folder) setDragOverFolder(null);
+                      if (dragOverFolderTarget?.folder === folder) setDragOverFolderTarget(null);
                     }
                   }}
                   onDrop={(e) => {
                     e.preventDefault();
-                    setDragOverFolder(null);
-                    setDraggingDocId(null);
-                    const docId = e.dataTransfer.getData('text/plain') || draggingDocId;
-                    if (docId) {
-                      handleMoveDocToFolder(docId, folder);
+                    if (draggingFolder) {
+                      const droppedFolderName = e.dataTransfer.getData('folderName') || draggingFolder;
+                      if (droppedFolderName && droppedFolderName !== folder && !isDefault) {
+                        handleFolderReorder(droppedFolderName, folder, folderPos || 'before');
+                      }
+                      setDraggingFolder(null);
+                      setDragOverFolderTarget(null);
+                    } else if (draggingDocId) {
+                      setDragOverFolder(null);
+                      const docId = e.dataTransfer.getData('text/plain') || draggingDocId;
+                      if (docId) {
+                        handleMoveDocToFolder(docId, folder);
+                      }
+                      setDraggingDocId(null);
                     }
                   }}
-                  className={`rounded-xl border transition-all ${
-                    isDragOver
+                  className={`relative rounded-xl border transition-all ${
+                    isFolderBeingDragged ? 'opacity-40 border-dashed border-[#DCB001]' : ''
+                  } ${
+                    isDragOverFolderBox
                       ? 'border-[#DCB001] bg-[#DCB001]/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
                       : 'border-[#222428] bg-[#121316]/50'
                   }`}
                 >
+                  {/* Top Drop Indicator for Folder */}
+                  {isFolderOverThis && folderPos === 'before' && (
+                    <div className="absolute -top-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-30" />
+                  )}
+
+                  {/* Bottom Drop Indicator for Folder */}
+                  {isFolderOverThis && folderPos === 'after' && (
+                    <div className="absolute -bottom-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-30" />
+                  )}
+
                   {/* Folder Header */}
                   <div
+                    draggable={!isDefault}
+                    onDragStart={(e) => {
+                      if (isDefault) return;
+                      e.dataTransfer.setData('folderName', folder);
+                      e.dataTransfer.effectAllowed = 'move';
+                      setDraggingFolder(folder);
+                    }}
+                    onDragEnd={() => {
+                      setDraggingFolder(null);
+                      setDragOverFolderTarget(null);
+                    }}
                     onClick={() => setOpenFolders((prev) => ({ ...prev, [folder]: !isOpen }))}
-                    className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#1A1C20] rounded-t-xl transition-colors group"
+                    className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#1A1C20] rounded-t-xl transition-colors group ${
+                      !isDefault ? 'cursor-grab active:cursor-grabbing' : ''
+                    }`}
                   >
-                    <div className="flex items-center gap-2 font-mono text-xs font-bold text-white">
-                      {isOpen ? (
-                        <ChevronDown size={13} className="text-[#DCB001]" />
-                      ) : (
-                        <ChevronRight size={13} className="text-[#787C83]" />
+                    <div className="flex items-center gap-2 font-mono text-xs font-bold text-white min-w-0 flex-1">
+                      {!isDefault && (
+                        <GripVertical
+                          size={12}
+                          className="text-[#787C83] opacity-30 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab"
+                        />
                       )}
                       {isOpen ? (
-                        <FolderOpen size={14} className="text-[#DCB001]" />
+                        <ChevronDown size={13} className="text-[#DCB001] shrink-0" />
                       ) : (
-                        <Folder size={14} className="text-[#787C83]" />
+                        <ChevronRight size={13} className="text-[#787C83] shrink-0" />
+                      )}
+                      {isOpen ? (
+                        <FolderOpen size={14} className="text-[#DCB001] shrink-0" />
+                      ) : (
+                        <Folder size={14} className="text-[#787C83] shrink-0" />
                       )}
                       <span className="truncate">{folder}</span>
-                      {folder === DEFAULT_FOLDER && (
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#1F2126] text-[#DCB001] border border-[#2E3138]">
+                      {isDefault && (
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#1F2126] text-[#DCB001] border border-[#2E3138] shrink-0">
                           Default
                         </span>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                       <span className="text-[10px] font-mono text-[#787C83] px-1.5 py-0.5 rounded bg-[#16181C]">
                         {items.length}
                       </span>
@@ -1350,11 +1626,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           setActiveFolderForCreation(folder);
                           setIsCreatingNew(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#DCB001] rounded transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#DCB001] text-[#787C83] rounded transition-opacity"
                         title={`Add doc inside ${folder}`}
                       >
-                        <Plus size={11} />
+                        <Plus size={12} />
                       </button>
+                      {!isDefault && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteFolder(folder, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#EF4444] text-[#787C83] rounded transition-opacity"
+                          title={`Delete folder "${folder}"`}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1364,16 +1650,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       {items.length === 0 ? (
                         <div
                           className={`p-3 text-center border border-dashed rounded-lg text-[11px] font-mono transition-all ${
-                            isDragOver ? 'border-[#DCB001] text-[#DCB001] bg-[#DCB001]/5' : 'border-[#2A2C30] text-[#787C83]'
+                            isDragOverFolderBox ? 'border-[#DCB001] text-[#DCB001] bg-[#DCB001]/5' : 'border-[#2A2C30] text-[#787C83]'
                           }`}
                         >
-                          {isDragOver ? 'Drop file here to move' : 'Empty folder — drag .md files here'}
+                          {isDragOverFolderBox ? 'Drop file here to move' : 'Empty folder — drag .md files here'}
                         </div>
                       ) : (
                         items.map((doc) => {
                           const isSelected = selectedDocId === String(doc.id);
                           const isRenaming = renamingDocId === doc.id;
                           const cleanTitle = (doc.title || doc.fileName || 'Untitled').replace(/\.md$/i, '');
+                          const isDocDragging = draggingDocId === doc.id;
+                          const isDocOverThis = dragOverDoc?.docId === doc.id;
+                          const docPos = dragOverDoc?.pos;
 
                           return (
                             <div
@@ -1381,10 +1670,43 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                               draggable={!isRenaming}
                               onDragStart={(e) => {
                                 e.dataTransfer.setData('text/plain', doc.id);
+                                e.dataTransfer.effectAllowed = 'move';
                                 setDraggingDocId(doc.id);
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (draggingDocId && draggingDocId !== doc.id) {
+                                  e.dataTransfer.dropEffect = 'move';
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const isTopHalf = (e.clientY - rect.top) < (rect.height / 2);
+                                  const pos = isTopHalf ? 'before' : 'after';
+                                  if (dragOverDoc?.docId !== doc.id || dragOverDoc?.pos !== pos) {
+                                    setDragOverDoc({ docId: doc.id, pos });
+                                  }
+                                }
+                              }}
+                              onDragLeave={(e) => {
+                                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                                  if (dragOverDoc?.docId === doc.id) {
+                                    setDragOverDoc(null);
+                                  }
+                                }
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const droppedId = e.dataTransfer.getData('text/plain') || draggingDocId;
+                                if (droppedId && droppedId !== doc.id) {
+                                  handleDocReorder(droppedId, doc.id, docPos || 'before');
+                                }
+                                setDraggingDocId(null);
+                                setDragOverDoc(null);
+                                setDragOverFolder(null);
                               }}
                               onDragEnd={() => {
                                 setDraggingDocId(null);
+                                setDragOverDoc(null);
                                 setDragOverFolder(null);
                               }}
                               onClick={() => {
@@ -1403,8 +1725,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                 isSelected
                                   ? 'bg-[#1F2126] border-[#DCB001]/50 text-white shadow-sm'
                                   : 'hover:bg-[#16181D] border-transparent text-[#CFD4DD]'
-                              } ${draggingDocId === doc.id ? 'opacity-40 border-dashed border-[#DCB001]' : ''}`}
+                              } ${isDocDragging ? 'opacity-30 bg-[#141518]' : ''}`}
                             >
+                              {/* Top Drop Indicator Line for Doc */}
+                              {isDocOverThis && docPos === 'before' && (
+                                <div className="absolute -top-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                              )}
+
+                              {/* Bottom Drop Indicator Line for Doc */}
+                              {isDocOverThis && docPos === 'after' && (
+                                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                              )}
+
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <GripVertical
                                   size={11}

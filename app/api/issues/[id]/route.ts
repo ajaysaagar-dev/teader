@@ -38,8 +38,12 @@ export async function PATCH(
     }
   }
 
-  // Ensure completedByName defaults to the current session user when marking done
+  // Ensure completedByName defaults to the current session user when marking done, and verify can_complete_tasks permission
   if (data.status === 'done') {
+    const { allowed } = await assertPermission(session.id, projectId, 'can_complete_tasks');
+    if (!allowed) {
+      return NextResponse.json({ error: 'Forbidden: You do not have permission to move tasks to Complete / Done.' }, { status: 403 });
+    }
     if (!data.completedByName) {
       data.completedByName = session.name || session.email || 'Current User';
     }

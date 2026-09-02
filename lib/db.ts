@@ -116,6 +116,7 @@ let memoryProjectDocsStore: any[] = [];
 let memoryJoinRequestsStore: any[] = [];
 let memoryPermissionsStore: any[] = [];
 let memoryProjectHistoryStore: any[] = [];
+let memoryDocFoldersStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -207,10 +208,14 @@ export async function initDB(): Promise<void> {
             "can_delete_history" BOOLEAN NOT NULL DEFAULT FALSE,
             "can_edit_dates" BOOLEAN NOT NULL DEFAULT FALSE,
             "can_manage_members" BOOLEAN NOT NULL DEFAULT FALSE,
+            "can_complete_tasks" BOOLEAN NOT NULL DEFAULT FALSE,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "unique_member_permissions" UNIQUE ("projectId", "userId")
           );
         `);
+        try {
+          await p.query(`ALTER TABLE "project_member_permissions" ADD COLUMN IF NOT EXISTS "can_complete_tasks" BOOLEAN NOT NULL DEFAULT FALSE;`);
+        } catch {}
 
         // 4. Create Issues Table
         await p.query(`
@@ -327,6 +332,21 @@ export async function initDB(): Promise<void> {
         try {
           await p.query(`ALTER TABLE "project_docs" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
         } catch {}
+        try {
+          await p.query(`ALTER TABLE "project_docs" ADD COLUMN IF NOT EXISTS "orderIndex" INT DEFAULT 0;`);
+        } catch {}
+
+        // 9b. Create Project Doc Folders Table
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_doc_folders" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "name" VARCHAR(255) NOT NULL,
+            "orderIndex" INT DEFAULT 0,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "uq_project_doc_folder" UNIQUE ("projectId", "name")
+          );
+        `);
 
         // 10. Create Project Messages Table for Team Conversations
         await p.query(`
@@ -1531,6 +1551,7 @@ export interface ProjectDocRecord {
   filePath: string;
   folder?: string;
   content?: string;
+  orderIndex?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -1545,12 +1566,14 @@ export async function getProjectDocsDB(projectId: string | number) {
   try {
     const p = getPool();
     const result = await p.query(
-      `SELECT * FROM "project_docs" WHERE "projectId" = $1 ORDER BY "updatedAt" DESC`,
+      `SELECT * FROM "project_docs" WHERE "projectId" = $1 ORDER BY "orderIndex" ASC, "updatedAt" DESC`,
       [numId]
     );
     return result.rows || [];
   } catch {
-    return memoryProjectDocsStore.filter((d) => Number(d.projectId) === numId);
+    return memoryProjectDocsStore
+      .filter((d) => Number(d.projectId) === numId)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }
 }
 
@@ -1578,6 +1601,7 @@ export async function createProjectDocDB(data: {
   filePath: string;
   folder?: string;
   content?: string;
+  orderIndex?: number;
 }) {
   await initDB();
   let numProjId = Number(data.projectId);
@@ -1590,6 +1614,7 @@ export async function createProjectDocDB(data: {
   const now = new Date().toISOString();
   const content = data.content || '';
   const folder = data.folder || 'Start';
+  const orderIndex = data.orderIndex !== undefined ? Number(data.orderIndex) : 0;
 
   const record: ProjectDocRecord = {
     id: data.id,
@@ -1601,6 +1626,7 @@ export async function createProjectDocDB(data: {
     filePath: data.filePath,
     folder,
     content,
+    orderIndex,
     createdAt: now,
     updatedAt: now,
   };
@@ -1609,10 +1635,10 @@ export async function createProjectDocDB(data: {
     const p = getPool();
     // 1. Insert/Update document in project_docs with physical filePath, folder & content
     await p.query(
-      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath", "folder", "content")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "fileName" = $6, "filePath" = $7, "folder" = $8, "content" = $9, "updatedAt" = CURRENT_TIMESTAMP`,
-      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath, folder, content]
+      `INSERT INTO "project_docs" ("id", "projectId", "userId", "userName", "title", "fileName", "filePath", "folder", "content", "orderIndex")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "fileName" = $6, "filePath" = $7, "folder" = $8, "content" = $9, "orderIndex" = $10, "updatedAt" = CURRENT_TIMESTAMP`,
+      [data.id, numProjId, numUserId, userName, data.title, data.fileName, data.filePath, folder, content, orderIndex]
     );
 
     // 2. Reference doc id in projects table (docIds array)
@@ -1637,7 +1663,7 @@ export async function createProjectDocDB(data: {
 
 export async function updateProjectDocDB(
   docId: string,
-  updates: { title?: string; fileName?: string; filePath?: string; folder?: string; content?: string }
+  updates: { title?: string; fileName?: string; filePath?: string; folder?: string; content?: string; orderIndex?: number }
 ) {
   await initDB();
   const fields: string[] = [];
@@ -1664,6 +1690,10 @@ export async function updateProjectDocDB(
     fields.push(`"content" = $${paramIdx++}`);
     values.push(updates.content);
   }
+  if (updates.orderIndex !== undefined) {
+    fields.push(`"orderIndex" = $${paramIdx++}`);
+    values.push(Number(updates.orderIndex));
+  }
 
   fields.push(`"updatedAt" = CURRENT_TIMESTAMP`);
 
@@ -1684,6 +1714,7 @@ export async function updateProjectDocDB(
     if (updates.filePath !== undefined) target.filePath = updates.filePath;
     if (updates.folder !== undefined) target.folder = updates.folder.trim();
     if (updates.content !== undefined) target.content = updates.content;
+    if (updates.orderIndex !== undefined) target.orderIndex = Number(updates.orderIndex);
     target.updatedAt = new Date().toISOString();
   }
 }
@@ -1729,6 +1760,219 @@ export async function deleteProjectDocDB(docId: string, projectId?: string | num
   }
 
   memoryProjectDocsStore = memoryProjectDocsStore.filter((d) => d.id !== docId);
+}
+
+export async function reorderProjectDocsDB(
+  projectId: string | number,
+  items: { id: string; orderIndex: number; folder?: string }[]
+): Promise<boolean> {
+  await initDB();
+  const numProjId = Number(projectId);
+
+  try {
+    const p = getPool();
+    for (const item of items) {
+      if (item.folder !== undefined) {
+        await p.query(
+          `UPDATE "project_docs" SET "orderIndex" = $1, "folder" = $2, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $3`,
+          [item.orderIndex, item.folder.trim(), item.id]
+        );
+      } else {
+        await p.query(
+          `UPDATE "project_docs" SET "orderIndex" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = $2`,
+          [item.orderIndex, item.id]
+        );
+      }
+    }
+  } catch (e: any) {
+    console.warn('[reorderProjectDocsDB error]:', e.message);
+  }
+
+  items.forEach((item) => {
+    const doc = memoryProjectDocsStore.find((d) => d.id === item.id);
+    if (doc) {
+      doc.orderIndex = item.orderIndex;
+      if (item.folder !== undefined) doc.folder = item.folder.trim();
+    }
+  });
+
+  return true;
+}
+
+export async function getProjectDocFoldersDB(
+  projectId: string | number
+): Promise<{ id: number; projectId: number; name: string; orderIndex: number; createdAt?: string }[]> {
+  await initDB();
+  const numProjId = Number(projectId);
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `SELECT "id", "projectId", "name", "orderIndex", "createdAt" FROM "project_doc_folders" WHERE "projectId" = $1 ORDER BY "orderIndex" ASC, "id" ASC`,
+      [numProjId]
+    );
+    if (res.rows && res.rows.length > 0) {
+      return res.rows.map((r: any) => ({
+        id: Number(r.id),
+        projectId: Number(r.projectId),
+        name: r.name,
+        orderIndex: Number(r.orderIndex) || 0,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : undefined,
+      }));
+    }
+  } catch {}
+
+  return memoryDocFoldersStore
+    .filter((f) => Number(f.projectId) === numProjId)
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map((f) => ({
+      id: f.id,
+      projectId: numProjId,
+      name: f.name,
+      orderIndex: f.orderIndex,
+      createdAt: f.createdAt,
+    }));
+}
+
+export async function createProjectDocFolderDB(
+  projectId: string | number,
+  name: string,
+  orderIndex?: number
+): Promise<{ id: number; projectId: number; name: string; orderIndex: number; createdAt?: string }> {
+  await initDB();
+  const numProjId = Number(projectId);
+  const cleanName = name.trim();
+  const nextOrder = orderIndex !== undefined ? Number(orderIndex) : 0;
+
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `INSERT INTO "project_doc_folders" ("projectId", "name", "orderIndex")
+       VALUES ($1, $2, $3)
+       ON CONFLICT ("projectId", "name") DO UPDATE SET "orderIndex" = EXCLUDED."orderIndex"
+       RETURNING "id", "projectId", "name", "orderIndex", "createdAt"`,
+      [numProjId, cleanName, nextOrder]
+    );
+    if (res.rows && res.rows[0]) {
+      const r = res.rows[0];
+      return {
+        id: Number(r.id),
+        projectId: Number(r.projectId),
+        name: r.name,
+        orderIndex: Number(r.orderIndex) || 0,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : undefined,
+      };
+    }
+  } catch {}
+
+  const existingIdx = memoryDocFoldersStore.findIndex(
+    (f) => Number(f.projectId) === numProjId && f.name.toLowerCase() === cleanName.toLowerCase()
+  );
+  if (existingIdx >= 0) {
+    memoryDocFoldersStore[existingIdx].orderIndex = nextOrder;
+    return {
+      id: memoryDocFoldersStore[existingIdx].id,
+      projectId: numProjId,
+      name: cleanName,
+      orderIndex: nextOrder,
+      createdAt: memoryDocFoldersStore[existingIdx].createdAt,
+    };
+  }
+
+  const newFolder = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    projectId: numProjId,
+    name: cleanName,
+    orderIndex: nextOrder,
+    createdAt: new Date().toISOString(),
+  };
+  memoryDocFoldersStore.push(newFolder);
+  return {
+    id: newFolder.id,
+    projectId: numProjId,
+    name: newFolder.name,
+    orderIndex: newFolder.orderIndex,
+    createdAt: newFolder.createdAt,
+  };
+}
+
+export async function deleteProjectDocFolderDB(
+  projectId: string | number,
+  folderName: string,
+  moveToFolder: string = 'Start'
+): Promise<{ success: boolean; deleted: boolean; movedDocsCount: number }> {
+  await initDB();
+  const numProjId = Number(projectId);
+  const cleanName = folderName.trim();
+  const targetFolder = moveToFolder.trim() || 'Start';
+  let movedCount = 0;
+
+  try {
+    const p = getPool();
+    // 1. Delete folder record
+    await p.query(`DELETE FROM "project_doc_folders" WHERE "projectId" = $1 AND "name" = $2`, [numProjId, cleanName]);
+    // 2. Move contained docs to target folder
+    const updateRes = await p.query(
+      `UPDATE "project_docs" SET "folder" = $1, "updatedAt" = CURRENT_TIMESTAMP WHERE "projectId" = $2 AND "folder" = $3`,
+      [targetFolder, numProjId, cleanName]
+    );
+    movedCount = updateRes.rowCount || 0;
+  } catch (e: any) {
+    console.warn('[deleteProjectDocFolderDB error]:', e.message);
+  }
+
+  memoryDocFoldersStore = memoryDocFoldersStore.filter(
+    (f) => !(Number(f.projectId) === numProjId && f.name === cleanName)
+  );
+  memoryProjectDocsStore.forEach((d) => {
+    if (Number(d.projectId) === numProjId && d.folder === cleanName) {
+      d.folder = targetFolder;
+      movedCount++;
+    }
+  });
+
+  return { success: true, deleted: true, movedDocsCount: movedCount };
+}
+
+export async function reorderProjectDocFoldersDB(
+  projectId: string | number,
+  folders: { name: string; orderIndex: number }[]
+): Promise<boolean> {
+  await initDB();
+  const numProjId = Number(projectId);
+
+  try {
+    const p = getPool();
+    for (const f of folders) {
+      await p.query(
+        `INSERT INTO "project_doc_folders" ("projectId", "name", "orderIndex")
+         VALUES ($1, $2, $3)
+         ON CONFLICT ("projectId", "name") DO UPDATE SET "orderIndex" = $3`,
+        [numProjId, f.name.trim(), f.orderIndex]
+      );
+    }
+  } catch (e: any) {
+    console.warn('[reorderProjectDocFoldersDB error]:', e.message);
+  }
+
+  folders.forEach((f) => {
+    const found = memoryDocFoldersStore.find(
+      (mf) => Number(mf.projectId) === numProjId && mf.name === f.name.trim()
+    );
+    if (found) {
+      found.orderIndex = f.orderIndex;
+    } else {
+      memoryDocFoldersStore.push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        projectId: numProjId,
+        name: f.name.trim(),
+        orderIndex: f.orderIndex,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  });
+
+  return true;
 }
 
 // ─── Project Conversation Messages ──────────────────────────────────────────
@@ -2060,6 +2304,7 @@ const DEFAULT_MEMBER_PERMISSIONS: MemberPermissions = {
   can_delete_history: false,
   can_edit_dates: false,
   can_manage_members: false,
+  can_complete_tasks: false,
 };
 
 const OWNER_ADMIN_PERMISSIONS: MemberPermissions = {
@@ -2072,6 +2317,7 @@ const OWNER_ADMIN_PERMISSIONS: MemberPermissions = {
   can_delete_history: true,
   can_edit_dates: true,
   can_manage_members: true,
+  can_complete_tasks: true,
 };
 
 export async function getMemberPermissionsDB(
@@ -2107,7 +2353,7 @@ export async function getMemberPermissionsDB(
     const permRes = await p.query(
       `SELECT "can_create_tasks", "can_delete_tasks", "can_create_docs", "can_edit_docs",
               "can_delete_docs", "can_edit_history", "can_delete_history", "can_edit_dates",
-              "can_manage_members"
+              "can_manage_members", "can_complete_tasks"
        FROM "project_member_permissions"
        WHERE "projectId" = $1 AND "userId" = $2 LIMIT 1`,
       [numProjId, numUserId]
@@ -2125,6 +2371,7 @@ export async function getMemberPermissionsDB(
         can_delete_history: Boolean(row.can_delete_history),
         can_edit_dates: Boolean(row.can_edit_dates),
         can_manage_members: Boolean(row.can_manage_members),
+        can_complete_tasks: Boolean(row.can_complete_tasks),
       };
     }
   } catch {}
@@ -2161,8 +2408,8 @@ export async function upsertMemberPermissionsDB(
         "projectId", "userId", "can_create_tasks", "can_delete_tasks",
         "can_create_docs", "can_edit_docs", "can_delete_docs",
         "can_edit_history", "can_delete_history", "can_edit_dates",
-        "can_manage_members", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+        "can_manage_members", "can_complete_tasks", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
       ON CONFLICT ("projectId", "userId") DO UPDATE SET
         "can_create_tasks" = EXCLUDED."can_create_tasks",
         "can_delete_tasks" = EXCLUDED."can_delete_tasks",
@@ -2173,6 +2420,7 @@ export async function upsertMemberPermissionsDB(
         "can_delete_history" = EXCLUDED."can_delete_history",
         "can_edit_dates" = EXCLUDED."can_edit_dates",
         "can_manage_members" = EXCLUDED."can_manage_members",
+        "can_complete_tasks" = EXCLUDED."can_complete_tasks",
         "updatedAt" = CURRENT_TIMESTAMP`,
       [
         numProjId,
@@ -2186,6 +2434,7 @@ export async function upsertMemberPermissionsDB(
         merged.can_delete_history,
         merged.can_edit_dates,
         merged.can_manage_members,
+        merged.can_complete_tasks,
       ]
     );
   } catch {}
@@ -2221,7 +2470,8 @@ export async function getAllMemberPermissionsDB(
               COALESCE(pmp."can_edit_history", false) as "can_edit_history",
               COALESCE(pmp."can_delete_history", false) as "can_delete_history",
               COALESCE(pmp."can_edit_dates", false) as "can_edit_dates",
-              COALESCE(pmp."can_manage_members", false) as "can_manage_members"
+              COALESCE(pmp."can_manage_members", false) as "can_manage_members",
+              COALESCE(pmp."can_complete_tasks", false) as "can_complete_tasks"
        FROM "users" u
        JOIN "project_members" pm ON u."id" = pm."userId"
        LEFT JOIN "project_member_permissions" pmp ON pmp."projectId" = pm."projectId" AND pmp."userId" = u."id"
@@ -2248,6 +2498,7 @@ export async function getAllMemberPermissionsDB(
           can_delete_history: isOwnerOrAdmin ? true : Boolean(r.can_delete_history),
           can_edit_dates: isOwnerOrAdmin ? true : Boolean(r.can_edit_dates),
           can_manage_members: isOwnerOrAdmin ? true : Boolean(r.can_manage_members),
+          can_complete_tasks: isOwnerOrAdmin ? true : Boolean(r.can_complete_tasks),
         };
       });
     }
@@ -2274,6 +2525,7 @@ export async function getAllMemberPermissionsDB(
       can_delete_history: isOwnerOrAdmin ? true : (custom?.can_delete_history ?? DEFAULT_MEMBER_PERMISSIONS.can_delete_history),
       can_edit_dates: isOwnerOrAdmin ? true : (custom?.can_edit_dates ?? DEFAULT_MEMBER_PERMISSIONS.can_edit_dates),
       can_manage_members: isOwnerOrAdmin ? true : (custom?.can_manage_members ?? DEFAULT_MEMBER_PERMISSIONS.can_manage_members),
+      can_complete_tasks: isOwnerOrAdmin ? true : (custom?.can_complete_tasks ?? DEFAULT_MEMBER_PERMISSIONS.can_complete_tasks),
     };
   });
 }

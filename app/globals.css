@@ -1,49 +1,241 @@
 @import "tailwindcss";
 
+@theme {
+  /* ===== Surface / Backgrounds ===== */
+  --color-bg-main: var(--bg-main);
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-header: var(--bg-header);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-card: var(--bg-card);
+  --color-bg-card-subtle: var(--bg-card-subtle);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-hover-subtle: var(--bg-hover-subtle);
+  --color-bg-active: var(--bg-active);
+  --color-bg-input: var(--bg-input);
+  --color-bg-overlay: var(--bg-overlay);
+  --color-bg-dropdown: var(--bg-dropdown);
+  --color-bg-tooltip: var(--bg-tooltip);
+
+  /* ===== Borders & Dividers ===== */
+  --color-border-primary: var(--border-primary);
+  --color-border-secondary: var(--border-secondary);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-accent: var(--border-accent);
+  --color-border-accent-strong: var(--border-accent-strong);
+  --color-border-input: var(--border-input);
+  --color-border-input-focus: var(--border-input-focus);
+
+  /* ===== Typography / Foreground ===== */
+  --color-text-white: var(--text-white);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-accent: var(--text-accent);
+  --color-text-inverse: var(--text-inverse);
+
+  /* ===== Accent / Brand Colors ===== */
+  --color-accent: var(--accent-yellow);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-yellow-hover: var(--accent-yellow-hover);
+  --color-accent-yellow-light: var(--accent-yellow-light);
+  --color-accent-yellow-dark: var(--accent-yellow-dark);
+  --color-accent-yellow-subtle: var(--accent-yellow-subtle);
+  --color-accent-yellow-muted: var(--accent-yellow-muted);
+  --color-accent-yellow-glow: var(--accent-yellow-glow);
+
+  /* ===== Task Statuses ===== */
+  --color-status-todo: var(--status-todo);
+  --color-status-todo-bg: var(--status-todo-bg);
+  --color-status-todo-border: var(--status-todo-border);
+
+  --color-status-inprogress: var(--status-inprogress);
+  --color-status-inprogress-bg: var(--status-inprogress-bg);
+  --color-status-inprogress-border: var(--status-inprogress-border);
+
+  --color-status-review: var(--status-review);
+  --color-status-review-bg: var(--status-review-bg);
+  --color-status-review-border: var(--status-review-border);
+
+  --color-status-done: var(--status-done);
+  --color-status-done-bg: var(--status-done-bg);
+  --color-status-done-border: var(--status-done-border);
+
+  --color-status-blocked: var(--status-blocked);
+  --color-status-blocked-bg: var(--status-blocked-bg);
+  --color-status-blocked-border: var(--status-blocked-border);
+
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-bg: var(--status-cancelled-bg);
+  --color-status-cancelled-border: var(--status-cancelled-border);
+
+  /* ===== Task Priorities ===== */
+  --color-priority-low: var(--priority-low);
+  --color-priority-low-bg: var(--priority-low-bg);
+  --color-priority-low-border: var(--priority-low-border);
+
+  --color-priority-medium: var(--priority-medium);
+  --color-priority-medium-bg: var(--priority-medium-bg);
+  --color-priority-medium-border: var(--priority-medium-border);
+
+  --color-priority-high: var(--priority-high);
+  --color-priority-high-bg: var(--priority-high-bg);
+  --color-priority-high-border: var(--priority-high-border);
+
+  --color-priority-critical: var(--priority-critical);
+  --color-priority-critical-bg: var(--priority-critical-bg);
+  --color-priority-critical-border: var(--priority-critical-border);
+
+  /* ===== System / Feedback ===== */
+  --color-success: var(--success);
+  --color-success-hover: var(--success-hover);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+
+  --color-cyan: var(--cyan);
+  --color-purple: var(--purple);
+  --color-brown-dark: var(--brown-dark);
+  --color-brown: var(--brown);
+  --color-beige: var(--beige);
+}
+
 :root {
-  /* ===== Backgrounds ===== */
+  /* ===== Backgrounds & Surfaces ===== */
   --bg-main: #131415;
+  --bg-canvas: #0F1011;
   --bg-sidebar: #0F1011;
+  --bg-header: #17181A;
   --bg-panel: #17181A;
   --bg-card: #1B1C1F;
+  --bg-card-subtle: #16171A;
   --bg-hover: #222427;
+  --bg-hover-subtle: #1E2023;
+  --bg-active: #2A2C30;
   --bg-input: #1A1B1D;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+  --bg-dropdown: #17181A;
+  --bg-tooltip: #1F2023;
 
-  /* ===== Borders ===== */
+  /* ===== Borders & Dividers ===== */
   --border-primary: #2A2C30;
   --border-secondary: #3B3D41;
+  --border-subtle: #202226;
+  --border-accent: rgba(220, 176, 1, 0.3);
+  --border-accent-strong: #DCB001;
+  --border-input: #2A2C30;
+  --border-input-focus: #DCB001;
 
-  /* ===== Text ===== */
+  /* ===== Typography / Text ===== */
+  --text-white: #FFFFFF;
   --text-primary: #CFD4DD;
   --text-secondary: #9499A0;
   --text-muted: #787C83;
   --text-disabled: #585C60;
+  --text-accent: #DCB001;
+  --text-inverse: #131415;
 
-  /* ===== Accent ===== */
+  /* ===== Teader Brand Accent (Yellow/Gold) ===== */
   --accent-yellow: #DCB001;
+  --accent-yellow-hover: #E5B802;
+  --accent-yellow-light: #FDE047;
   --accent-yellow-dark: #AE8D05;
+  --accent-yellow-subtle: rgba(220, 176, 1, 0.12);
+  --accent-yellow-muted: rgba(220, 176, 1, 0.25);
+  --accent-yellow-glow: rgba(220, 176, 1, 0.4);
 
-  /* ===== Success ===== */
+  /* ===== Status Colors ===== */
+  --status-todo: #787C83;
+  --status-todo-bg: rgba(120, 124, 131, 0.12);
+  --status-todo-border: rgba(120, 124, 131, 0.3);
+
+  --status-inprogress: #DCB001;
+  --status-inprogress-bg: rgba(220, 176, 1, 0.12);
+  --status-inprogress-border: rgba(220, 176, 1, 0.3);
+
+  --status-review: #A855F7;
+  --status-review-bg: rgba(168, 85, 247, 0.12);
+  --status-review-border: rgba(168, 85, 247, 0.3);
+
+  --status-done: #22C55E;
+  --status-done-bg: rgba(34, 197, 94, 0.12);
+  --status-done-border: rgba(34, 197, 94, 0.3);
+
+  --status-blocked: #EF4444;
+  --status-blocked-bg: rgba(239, 68, 68, 0.12);
+  --status-blocked-border: rgba(239, 68, 68, 0.3);
+
+  --status-cancelled: #64748B;
+  --status-cancelled-bg: rgba(100, 116, 139, 0.12);
+  --status-cancelled-border: rgba(100, 116, 139, 0.3);
+
+  /* ===== Priorities ===== */
+  --priority-low: #9499A0;
+  --priority-low-bg: rgba(148, 153, 160, 0.12);
+  --priority-low-border: rgba(148, 153, 160, 0.3);
+
+  --priority-medium: #3B82F6;
+  --priority-medium-bg: rgba(59, 130, 246, 0.12);
+  --priority-medium-border: rgba(59, 130, 246, 0.3);
+
+  --priority-high: #F97316;
+  --priority-high-bg: rgba(249, 115, 22, 0.12);
+  --priority-high-border: rgba(249, 115, 22, 0.3);
+
+  --priority-critical: #EF4444;
+  --priority-critical-bg: rgba(239, 68, 68, 0.12);
+  --priority-critical-border: rgba(239, 68, 68, 0.3);
+
+  /* ===== System / Feedback ===== */
   --success: #22C55E;
+  --success-hover: #16A34A;
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --success-border: rgba(34, 197, 94, 0.3);
 
-  /* ===== Danger ===== */
-  --danger: #C0393B;
+  --warning: #F59E0B;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.3);
 
-  /* ===== Cyan ===== */
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.3);
+
+  --info: #3B82F6;
+  --info-bg: rgba(59, 130, 246, 0.12);
+  --info-border: rgba(59, 130, 246, 0.3);
+
   --cyan: #0391A1;
+  --purple: #A855F7;
 
   /* ===== Warm Browns (avatars/icons) ===== */
   --brown-dark: #523226;
   --brown: #A65952;
   --beige: #CEAF9C;
 
-  /* ===== Neutral Grays ===== */
+  /* ===== Neutral Gray Scale ===== */
   --gray-100: #DCE0E5;
   --gray-200: #B6BBC4;
   --gray-300: #9499A0;
   --gray-400: #7D8188;
   --gray-500: #585C60;
   --gray-600: #3C4145;
+  --gray-700: #2A2C30;
+  --gray-800: #1B1C1F;
+  --gray-900: #131415;
 }
 
 @layer base {
@@ -98,24 +290,22 @@
   font-family: var(--font-space-grotesk), var(--font-sora), sans-serif;
 }
 
-
-
-/* Custom Scrollbars - Extra thick and easy to grab */
+/* ===== Custom Scrollbars ===== */
 ::-webkit-scrollbar {
   width: 10px;
   height: 12px;
 }
 ::-webkit-scrollbar-track {
-  background: #101113;
+  background: var(--bg-canvas);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3B3E45;
+  background: var(--border-secondary);
   border-radius: 6px;
-  border: 2px solid #101113;
+  border: 2px solid var(--bg-canvas);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #DCB001;
+  background: var(--accent-yellow);
 }
 
 /* Dedicated timeline & graph view thick scrollbar handle */
@@ -124,19 +314,19 @@
   width: 12px;
 }
 .graph-scrollbar::-webkit-scrollbar-track {
-  background: #0C0D0F;
-  border-top: 1px solid #222428;
+  background: var(--bg-canvas);
+  border-top: 1px solid var(--border-subtle);
 }
 .graph-scrollbar::-webkit-scrollbar-thumb {
-  background: #4E525C;
+  background: var(--border-secondary);
   border-radius: 8px;
-  border: 3px solid #0C0D0F;
+  border: 3px solid var(--bg-canvas);
 }
 .graph-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #DCB001;
+  background: var(--accent-yellow);
 }
 
-
+/* ===== Reusable Surface & Border Utility Classes ===== */
 .panel-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-primary);
@@ -151,18 +341,42 @@
   border-color: var(--border-secondary);
 }
 
+.bg-surface-main { background-color: var(--bg-main); }
+.bg-surface-sidebar { background-color: var(--bg-sidebar); }
+.bg-surface-header { background-color: var(--bg-header); }
+.bg-surface-panel { background-color: var(--bg-panel); }
+.bg-surface-card { background-color: var(--bg-card); }
+.bg-surface-hover { background-color: var(--bg-hover); }
+.bg-surface-input { background-color: var(--bg-input); }
+.bg-surface-overlay { background-color: var(--bg-overlay); }
+
+.border-theme-primary { border-color: var(--border-primary); }
+.border-theme-secondary { border-color: var(--border-secondary); }
+.border-theme-subtle { border-color: var(--border-subtle); }
+.border-theme-accent { border-color: var(--accent-yellow); }
+
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-muted { color: var(--text-muted); }
+.text-theme-accent { color: var(--accent-yellow); }
+.text-theme-white { color: var(--text-white); }
+.text-theme-disabled { color: var(--text-disabled); }
+
+.bg-theme-accent { background-color: var(--accent-yellow); }
+.bg-theme-accent-subtle { background-color: var(--accent-yellow-subtle); }
+
 /* Letter-by-letter live typing fade highlight */
 @keyframes letterFadeHighlight {
   0% {
     background-color: rgba(220, 176, 1, 0.45);
-    color: #FFFFFF;
+    color: var(--text-white);
     text-shadow: 0 0 8px rgba(220, 176, 1, 0.9), 0 0 16px rgba(220, 176, 1, 0.5);
     border-radius: 3px;
     transform: scale(1.06);
   }
   35% {
     background-color: rgba(220, 176, 1, 0.22);
-    color: #DCB001;
+    color: var(--accent-yellow);
     text-shadow: 0 0 4px rgba(220, 176, 1, 0.6);
     transform: scale(1.02);
   }
@@ -178,4 +392,3 @@
   display: inline-block;
   animation: letterFadeHighlight 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-

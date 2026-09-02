@@ -787,6 +787,12 @@ export default function SingleProjectPage() {
     return Boolean(userPermissions?.can_edit_dates);
   }, [isCreator, currentUser, userPermissions]);
 
+  const canCompleteTasks = useMemo(() => {
+    if (isCreator) return true;
+    if (currentUser?.role === 'admin' || currentUser?.role === 'owner') return true;
+    return Boolean(userPermissions?.can_complete_tasks);
+  }, [isCreator, currentUser, userPermissions]);
+
   const projectIssues = useMemo(() => {
     if (!project) return [];
     return issues.filter(
@@ -847,6 +853,11 @@ export default function SingleProjectPage() {
     const targetIssue = issues.find((i) => i.id === issueId);
     if (!targetIssue) return;
 
+    if (newStatus === 'done' && !canCompleteTasks) {
+      toast.error('Permission Denied: You do not have permission to move tasks to Complete / Done.');
+      return;
+    }
+
     const previousIssues = issues;
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
     const isDone = newStatus === 'done';
@@ -877,17 +888,20 @@ export default function SingleProjectPage() {
         }),
       });
 
-      if (!res.ok) throw new Error('Failed to update DB');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to update DB');
+      }
       toast.success(
         isDone
           ? `Task marked as completed by ${currentUserName}`
           : `Updated status to ${newStatus.replace('_', ' ')}`
       );
-    } catch {
-      toast.error('Error updating status in database');
+    } catch (err: any) {
+      toast.error(err.message || 'Error updating status in database');
       setIssues(previousIssues);
     }
-  }, [issues, currentUser]);
+  }, [issues, currentUser, canCompleteTasks]);
 
   // Reorder Issues Handler for Board / List View Drag & Drop with Database Persistence
   const handleReorderIssues = useCallback(async (reorderedProjectIssues: Issue[]) => {
@@ -2040,6 +2054,7 @@ export default function SingleProjectPage() {
                     onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                     onAddNewTaskToColumn={handleAddNewTaskToColumn}
                     canDelete={canDelete}
+                    canCompleteTasks={canCompleteTasks}
                   />
                 ) : taskViewMode === 'timeline' ? (
                   <CalendarView
@@ -2057,6 +2072,7 @@ export default function SingleProjectPage() {
                     onDeleteIssue={handleDeleteIssue}
                     onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
                     canDelete={canDelete}
+                    canCompleteTasks={canCompleteTasks}
                   />
                 ) : taskViewMode === 'dependencies' ? (
                   <DependencyGraphView
@@ -2088,6 +2104,7 @@ export default function SingleProjectPage() {
                     onAddTaskToFolder={handleAddTaskToFolder}
                     onReorderTaskInFolder={handleReorderTaskInFolder}
                     canDelete={canDelete}
+                    canCompleteTasks={canCompleteTasks}
                   />
                 )}
               </div>
@@ -2140,7 +2157,9 @@ export default function SingleProjectPage() {
                         <option value="todo" className="bg-[#131415] text-white">Todo</option>
                         <option value="in_progress" className="bg-[#131415] text-white">In Progress</option>
                         <option value="needs_review" className="bg-[#131415] text-white">Needs Review</option>
-                        <option value="done" className="bg-[#131415] text-white">Done</option>
+                        <option value="done" disabled={!canCompleteTasks} className="bg-[#131415] text-white">
+                          Done {!canCompleteTasks ? '(No Access)' : ''}
+                        </option>
                         <option value="blocked" className="bg-[#131415] text-white">Blocked</option>
                         <option value="cancelled" className="bg-[#131415] text-white">Cancelled</option>
                       </select>
@@ -2170,6 +2189,7 @@ export default function SingleProjectPage() {
                     onOpenDiffModal={() => {}}
                     currentRole={isCreator ? 'owner' : (currentUser?.role || 'member')}
                     canEditDates={canEditDates}
+                    canCompleteTasks={canCompleteTasks}
                   />
                 </div>
               </motion.div>

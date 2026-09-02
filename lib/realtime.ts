@@ -17,7 +17,11 @@ export type RealtimeEventType =
   | 'DOC_CURSOR_MOVED'
   | 'DOC_CURSOR_LEFT'
   | 'DOC_PRESENCE_UPDATED'
-  | 'DOC_PRESENCE_LEFT';
+  | 'DOC_PRESENCE_LEFT'
+  | 'DOC_FOLDER_CREATED'
+  | 'DOC_FOLDER_DELETED'
+  | 'DOC_FOLDERS_REORDERED'
+  | 'DOCS_REORDERED';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;

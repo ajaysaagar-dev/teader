@@ -84,12 +84,12 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
     <div
       ref={menuRef}
       style={{ left: `${left}px`, top: `${top}px` }}
-      className="fixed z-50 min-w-[190px] bg-[#17181A] border border-[#2A2C30] rounded-xl shadow-2xl p-1.5 font-sans text-xs text-[#CFD4DD] select-none animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 min-w-[190px] bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl shadow-2xl p-1.5 font-sans text-xs text-[var(--text-primary)] select-none animate-in fade-in zoom-in-95 duration-100"
     >
       {/* Header */}
-      <div className="px-2.5 py-1.5 border-b border-[#2A2C30] flex items-center justify-between mb-1 text-[11px]">
+      <div className="px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center justify-between mb-1 text-[11px]">
         <span className="font-bold text-white truncate max-w-[120px]">{project.name}</span>
-        <span className="font-mono text-[#DCB001] font-bold text-[10px]">{project.key}</span>
+        <span className="font-mono text-[var(--accent-yellow)] font-bold text-[10px]">{project.key}</span>
       </div>
 
       {/* 1. Open Board */}
@@ -98,9 +98,9 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
           onOpen?.(project.id);
           onClose();
         }}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#222427] hover:text-white transition-colors text-left font-medium"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left font-medium"
       >
-        <FolderKanban size={13} className="text-[#DCB001]" />
+        <FolderKanban size={13} className="text-[var(--accent-yellow)]" />
         <span>Open Project Board</span>
       </button>
 
@@ -111,43 +111,43 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
             onEdit?.(project);
             onClose();
           }}
-          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#222427] hover:text-white transition-colors text-left"
+          className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left"
         >
-          <Pencil size={13} className="text-[#3B82F6]" />
+          <Pencil size={13} className="text-[var(--cyan)]" />
           <span>Edit Project</span>
         </button>
       )}
 
-      <div className="my-1 border-t border-[#2A2C30]" />
+      <div className="my-1 border-t border-[var(--border-primary)]" />
 
       {/* 3. Copy Key */}
       <button
         onClick={handleCopyKey}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#222427] hover:text-white transition-colors text-left"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left"
       >
-        <Copy size={13} className="text-[#787C83]" />
+        <Copy size={13} className="text-[var(--text-muted)]" />
         <span>Copy Project Key</span>
       </button>
 
       {/* 4. Copy Link */}
       <button
         onClick={handleCopyLink}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#222427] hover:text-white transition-colors text-left"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left"
       >
-        <LinkIcon size={13} className="text-[#787C83]" />
+        <LinkIcon size={13} className="text-[var(--text-muted)]" />
         <span>Copy Link</span>
       </button>
 
       {/* 5. Delete Project */}
       {isOwner && (
         <>
-          <div className="my-1 border-t border-[#2A2C30]" />
+          <div className="my-1 border-t border-[var(--border-primary)]" />
           <button
             onClick={() => {
               onDelete?.(project);
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[#EF4444]/15 text-[#EF4444] transition-colors text-left font-semibold"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--danger-bg)] text-[var(--danger)] transition-colors text-left font-semibold"
           >
             <Trash2 size={13} />
             <span>Delete Project</span>

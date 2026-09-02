@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { ConsoleBranding } from "@/components/ConsoleBranding";
 import { DesktopVersionIndicator } from "@/components/DesktopVersionIndicator";
 import { UIScaleInitializer } from "@/components/UIScaleInitializer";
+import { ThemeInitializer } from "@/components/ThemeInitializer";
 import {
   siteConfig,
   getOrganizationSchema,
@@ -169,6 +170,7 @@ export default function RootLayout({
         />
         <DesktopVersionIndicator />
         <UIScaleInitializer />
+        <ThemeInitializer />
       </body>
     </html>
   );

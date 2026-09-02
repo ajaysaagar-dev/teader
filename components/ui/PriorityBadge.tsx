@@ -12,32 +12,32 @@ interface PriorityBadgeProps {
 export const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   critical: {
     label: 'Critical',
-    color: '#C0393B',
-    bg: '#1F1718',
+    color: 'var(--priority-critical, #EF4444)',
+    bg: 'var(--priority-critical-bg, rgba(239, 68, 68, 0.12))',
     icon: Flame,
   },
   high: {
     label: 'High',
-    color: '#DCB001',
-    bg: '#1F1E19',
+    color: 'var(--priority-high, #F97316)',
+    bg: 'var(--priority-high-bg, rgba(249, 115, 22, 0.12))',
     icon: ShieldAlert,
   },
   medium: {
     label: 'Medium',
-    color: '#0391A1',
-    bg: '#141C1E',
+    color: 'var(--priority-medium, #3B82F6)',
+    bg: 'var(--priority-medium-bg, rgba(59, 130, 246, 0.12))',
     icon: ArrowUpRight,
   },
   low: {
     label: 'Low',
-    color: '#9499A0',
-    bg: '#1A1B1D',
+    color: 'var(--priority-low, #9499A0)',
+    bg: 'var(--priority-low-bg, rgba(148, 153, 160, 0.12))',
     icon: ArrowDownRight,
   },
   none: {
     label: 'No Priority',
-    color: '#585C60',
-    bg: '#131415',
+    color: 'var(--text-disabled, #585C60)',
+    bg: 'var(--bg-main, #131415)',
     icon: Minus,
   },
 };

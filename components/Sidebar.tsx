@@ -98,21 +98,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   return (
     <>
       <aside
-        className={`h-full bg-[#0F1011] text-[#9499A0] flex flex-col justify-between select-none transition-all duration-200 ${
+        className={`h-full bg-[var(--bg-sidebar)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-all duration-200 ${
           collapsed ? 'w-16' : 'w-60'
-        } shrink-0 overflow-hidden text-xs font-sans border-r border-[#2A2C30]`}
+        } shrink-0 overflow-hidden text-xs font-sans border-r border-[var(--border-primary)]`}
       >
         <div className="flex flex-col p-2 space-y-4">
           {/* Top App Header */}
-          <div className="flex items-center justify-between px-2 py-2 border-b border-[#2A2C30]/50">
-            <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[#CFD4DD]">
+          <div className="flex items-center justify-between px-2 py-2 border-b border-[var(--border-primary)]/50">
+            <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)]">
               {!collapsed && (
                 <div className="flex items-center gap-1.5 overflow-hidden">
-                  <span className="font-bold text-sm text-[#CFD4DD] flex items-center gap-1">
-                    Teader <ChevronDown size={12} className="text-[#787C83]" />
+                  <span className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-1">
+                    Teader <ChevronDown size={12} className="text-[var(--text-muted)]" />
                   </span>
                   {desktopInfo.isDesktop && desktopInfo.version && (
-                    <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#1A1B1D] text-[#DCB001] border border-[#2A2C30]">
+                    <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-[var(--accent-yellow)] border border-[var(--border-primary)]">
                       v{desktopInfo.version}
                     </span>
                   )}
@@ -133,11 +133,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
                 href={page.href}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#222427] text-[#CFD4DD] border border-[#2A2C30]'
-                    : 'hover:bg-[#1A1B1D] hover:text-[#CFD4DD]'
+                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-primary)]'
+                    : 'hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
                 }`}
               >
-                <Icon size={16} className={isActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+                <Icon size={16} className={isActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
                 {!collapsed && <span>{page.label}</span>}
               </Link>
             );
@@ -147,20 +147,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
 
       {/* Logged in User Profile Footer */}
       {currentUser && (
-        <div className="p-3 border-t border-[#2A2C30] bg-[#131415] space-y-2">
+        <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--bg-main)] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-7 h-7 rounded-full bg-[#DCB001] text-[#0F1011] font-bold text-xs flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-full bg-[var(--accent-yellow)] text-[var(--bg-sidebar)] font-bold text-xs flex items-center justify-center shrink-0">
                 {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
               </div>
               {!collapsed && (
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-[#CFD4DD] truncate">{currentUser.name}</span>
-                  <span className="text-[10px] text-[#787C83] font-mono capitalize flex items-center gap-1">
+                  <span className="text-xs font-semibold text-[var(--text-primary)] truncate">{currentUser.name}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-mono capitalize flex items-center gap-1">
                     {currentUser.role === 'owner' ? (
-                      <ShieldCheck size={10} className="text-[#22C55E]" />
+                      <ShieldCheck size={10} className="text-[var(--success)]" />
                     ) : (
-                      <User size={10} className="text-[#DCB001]" />
+                      <User size={10} className="text-[var(--accent-yellow)]" />
                     )}
                     {currentUser.role === 'owner' ? 'Project Owner' : 'Team Member'}
                   </span>
@@ -171,7 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
             {!collapsed && (
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-[#787C83] hover:text-[#C0393B] hover:bg-[#1B1C1F] rounded-lg transition-colors"
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
                 title="Log Out"
               >
                 <LogOut size={14} />

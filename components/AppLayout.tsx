@@ -178,23 +178,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-[#0F1011] text-[#CFD4DD] font-sans antialiased select-none">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
       {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
-      <header className="h-12 px-4 bg-[#111215] border-b border-[#24262B] flex items-center justify-between shrink-0 z-40">
+      <header className="h-12 px-4 bg-[var(--bg-header)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-40">
         {/* Top Left: Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
         <div className="flex items-center gap-3">
           {/* Top Tabs: Dashboard, Projects, Account */}
-          <nav className="flex items-center gap-1 bg-[#0B0C0E] p-0.5 rounded-lg border border-[#222428]">
+          <nav className="flex items-center gap-1 bg-[var(--bg-canvas)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
             {/* Tab: Dashboard */}
             <Link
               href="/dashboard"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
                 isDashboardActive
-                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
               }`}
             >
-              <LayoutDashboard size={13} className={isDashboardActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <LayoutDashboard size={13} className={isDashboardActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
               <span>Dashboard</span>
             </Link>
 
@@ -203,11 +203,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               href="/projects"
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
                 isProjectsActive
-                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
               }`}
             >
-              <FolderKanban size={13} className={isProjectsActive ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <FolderKanban size={13} className={isProjectsActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
               <span>Projects</span>
             </Link>
 
@@ -216,11 +216,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               onClick={() => setIsAccountModalOpen(true)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
                 isAccountModalOpen
-                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
               }`}
             >
-              <User size={13} className="text-[#06B6D4]" />
+              <User size={13} className="text-[var(--cyan)]" />
               <span>Account</span>
             </button>
 
@@ -229,11 +229,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               onClick={() => setIsSettingsModalOpen(true)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
                 isSettingsModalOpen
-                  ? 'bg-[#222428] text-white font-semibold shadow-sm border border-[#2E3138]'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#16171A]'
+                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
               }`}
             >
-              <Settings size={13} className={isSettingsModalOpen ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+              <Settings size={13} className={isSettingsModalOpen ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
               <span>Settings</span>
             </button>
           </nav>
@@ -246,12 +246,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Command Palette Button */}
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-[#16171A] hover:bg-[#202226] border border-[#2A2C30] text-[#787C83] hover:text-[#CFD4DD] rounded-lg text-xs transition-all"
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-xs transition-all"
             title="Search workspace (Ctrl + K)"
           >
             <Search size={12} />
             <span className="text-[11px] font-mono">Quick Search...</span>
-            <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-[#0B0C0E] border border-[#2A2C30] rounded text-[#8E939D]">
+            <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
               ⌘K
             </kbd>
           </button>
@@ -259,7 +259,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Keyboard Shortcuts */}
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="p-1.5 text-[#787C83] hover:text-white rounded-lg hover:bg-[#1C1D21] transition-colors"
+            className="p-1.5 text-[var(--text-muted)] hover:text-white rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             title="Keyboard Shortcuts (?)"
           >
             <HelpCircle size={15} />
@@ -268,10 +268,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* User Profile Avatar / Logout Trigger */}
           <button
             onClick={() => setIsAccountModalOpen(true)}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-[#1C1D21] transition-colors"
+            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             title="View Account"
           >
-            <div className="w-6 h-6 rounded-full bg-[#DCB001]/20 border border-[#DCB001]/40 flex items-center justify-center text-[#DCB001] font-mono font-bold text-[11px]">
+            <div className="w-6 h-6 rounded-full bg-[var(--accent-yellow-subtle)] border border-[var(--accent-yellow)]/40 flex items-center justify-center text-[var(--accent-yellow)] font-mono font-bold text-[11px]">
               {(currentUser?.name || 'U').charAt(0).toUpperCase()}
             </div>
           </button>
@@ -341,8 +341,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
-                    <p className="text-xs font-mono text-[#787C83] truncate">{currentUser?.email || 'test@teader.io'}</p>
-                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-medium border border-[#22C55E]/30">
+                    <p className="text-xs font-mono text-[var(--text-muted)] truncate">{currentUser?.email || 'test@teader.io'}</p>
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[var(--success-bg)] text-[var(--success)] text-[10px] font-mono font-medium border border-[var(--success-border)]">
                       <ShieldCheck size={10} /> Authenticated
                     </div>
                   </div>
@@ -350,33 +350,33 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
                 {/* Workspace Role & Status */}
                 <div className="space-y-2 text-xs font-mono">
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
-                    <span className="text-[#787C83]">Workspace Role</span>
-                    <span className="text-[#DCB001] font-bold capitalize">{currentUser?.role || 'Project Lead'}</span>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
+                    <span className="text-[var(--text-muted)]">Workspace Role</span>
+                    <span className="text-[var(--accent-yellow)] font-bold capitalize">{currentUser?.role || 'Project Lead'}</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
-                    <span className="text-[#787C83]">Database Connection</span>
-                    <span className="text-[#22C55E] font-medium">PostgreSQL localhost:5678 (teader_db)</span>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
+                    <span className="text-[var(--text-muted)]">Database Connection</span>
+                    <span className="text-[var(--success)] font-medium">PostgreSQL localhost:5678 (teader_db)</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#111215] border border-[#222428]">
-                    <span className="text-[#787C83]">Client Caching</span>
-                    <span className="text-[#06B6D4] font-medium">0ms Optimistic SWR Active</span>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
+                    <span className="text-[var(--text-muted)]">Client Caching</span>
+                    <span className="text-[var(--cyan)] font-medium">0ms Optimistic SWR Active</span>
                   </div>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="px-6 py-4 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
+              <div className="px-6 py-4 border-t border-[var(--border-primary)] bg-[var(--bg-panel)] flex items-center justify-between">
                 <button
                   onClick={() => setIsAccountModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
+                  className="px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:text-white rounded-xl transition-colors"
                 >
                   Close
                 </button>
 
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#EF4444]/15 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/30 text-xs font-bold transition-all shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--danger-bg)] hover:bg-[var(--danger)]/25 text-[var(--danger)] border border-[var(--danger-border)] text-xs font-bold transition-all shadow-sm"
                 >
                   <LogOut size={13} />
                   <span>Sign Out</span>

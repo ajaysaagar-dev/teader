@@ -37,7 +37,9 @@ import {
   getTaskShortId, 
   getAvailableTaskMentions, 
   getMentionQueryAtCursor, 
-  TaskMentionOption 
+  TaskMentionOption,
+  formatAddedTiming,
+  formatExactDateTime
 } from '@/lib/task-id';
 import { TaskMentionPopover } from './ui/TaskMentionPopover';
 
@@ -58,6 +60,7 @@ interface TreeViewProps {
   onAddTaskToFolder?: (folderId: string, folderName: string, title: string) => void;
   onReorderTaskInFolder?: (draggedIssueId: string, targetIssueId: string, targetFolderId: string, targetFolderName: string, position: 'before' | 'after') => void;
   canDelete?: boolean;
+  canCompleteTasks?: boolean;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
@@ -176,6 +179,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
   onAddTaskToFolder,
   onReorderTaskInFolder,
   canDelete = true,
+  canCompleteTasks = true,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
@@ -1266,8 +1270,19 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                     )}
                                   </div>
 
-                                  {/* Right: Status Pill, Assignee & Actions */}
+                                  {/* Right: Added Timing, Status Pill, Assignee & Actions */}
                                   <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    {/* Added Timing Badge */}
+                                    {issue.createdAt && (
+                                      <span
+                                        className="text-[10px] font-mono text-[#787C83] bg-[#121316] px-1.5 py-0.5 rounded border border-[#25272C] flex items-center gap-1 shrink-0"
+                                        title={formatExactDateTime(issue.createdAt)}
+                                      >
+                                        <Clock size={10} className="text-[#DCB001] shrink-0" />
+                                        <span>{formatAddedTiming(issue.createdAt)}</span>
+                                      </span>
+                                    )}
+
                                     {/* Status Switcher Dropdown */}
                                     <select
                                       value={issue.status}

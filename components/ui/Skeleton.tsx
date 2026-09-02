@@ -6,7 +6,7 @@ import React from 'react';
 export function Shimmer({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-[#2A2C30] rounded ${className}`}
+      className={`animate-pulse bg-[var(--border-primary)] rounded ${className}`}
       aria-hidden="true"
     />
   );
@@ -15,14 +15,14 @@ export function Shimmer({ className = '' }: { className?: string }) {
 /** Skeleton for the project page top bar */
 export function ProjectPageHeaderSkeleton() {
   return (
-    <div className="h-11 px-3.5 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
+    <div className="h-11 px-3.5 bg-[var(--bg-card)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2.5">
         <Shimmer className="w-16 h-3" />
         <Shimmer className="w-1 h-3" />
         <Shimmer className="w-32 h-3" />
         <Shimmer className="w-20 h-5 rounded-full" />
       </div>
-      <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5">
+      <div className="flex items-center gap-1 bg-[var(--bg-main)] border border-[var(--border-primary)] rounded-lg p-0.5">
         {[1,2,3,4].map(i => (
           <Shimmer key={i} className="w-20 h-6 rounded-md" />
         ))}
@@ -38,7 +38,7 @@ export function ProjectPageHeaderSkeleton() {
 /** Skeleton kanban card */
 function KanbanCardSkeleton() {
   return (
-    <div className="bg-[#1B1C1F] border border-[#2A2C30] rounded-lg p-3 space-y-2">
+    <div className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-3 space-y-2">
       <Shimmer className="w-3/4 h-3" />
       <Shimmer className="w-1/2 h-2.5" />
       <div className="flex items-center gap-1.5 pt-1">
@@ -56,7 +56,7 @@ function KanbanCardSkeleton() {
 /** Skeleton kanban column */
 function KanbanColumnSkeleton({ cards = 3 }: { cards?: number }) {
   return (
-    <div className="flex flex-col w-64 shrink-0 bg-[#1B1C1F]/50 border border-[#2A2C30] rounded-xl p-3 gap-3">
+    <div className="flex flex-col w-64 shrink-0 bg-[var(--bg-card)]/50 border border-[var(--border-primary)] rounded-xl p-3 gap-3">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <Shimmer className="w-2 h-2 rounded-full" />
@@ -74,7 +74,7 @@ function KanbanColumnSkeleton({ cards = 3 }: { cards?: number }) {
 /** Full Kanban board skeleton */
 export function KanbanBoardSkeleton() {
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415]">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-main)]">
       <div className="flex-1 flex gap-4 p-4 overflow-x-auto">
         <KanbanColumnSkeleton cards={3} />
         <KanbanColumnSkeleton cards={2} />
@@ -90,7 +90,7 @@ export function ProjectsGridSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-6">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-4 space-y-3">
+        <div key={i} className="bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <Shimmer className="w-16 h-4 rounded-full" />
             <Shimmer className="w-8 h-8 rounded-lg" />
@@ -98,7 +98,7 @@ export function ProjectsGridSkeleton() {
           <Shimmer className="w-3/4 h-4" />
           <Shimmer className="w-full h-3" />
           <Shimmer className="w-2/3 h-3" />
-          <div className="pt-2 border-t border-[#2A2C30] flex items-center justify-between">
+          <div className="pt-2 border-t border-[var(--border-primary)] flex items-center justify-between">
             <Shimmer className="w-20 h-3" />
             <Shimmer className="w-16 h-3" />
           </div>
@@ -114,7 +114,7 @@ import { RandomLoadingText } from './RandomLoadingText';
 export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
     <div
-      className={`rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin ${className}`}
+      className={`rounded-full border-2 border-[var(--accent-yellow)] border-t-transparent animate-spin ${className}`}
       style={{ width: size, height: size }}
       aria-label="Loading…"
     />
@@ -124,7 +124,7 @@ export function Spinner({ size = 16, className = '' }: { size?: number; classNam
 /** View loading fallback used inside dynamic() */
 export function ViewLoadingFallback() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#131415] gap-3 select-none">
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--bg-main)] gap-3 select-none">
       <Spinner size={22} />
       <RandomLoadingText className="mt-1" />
     </div>

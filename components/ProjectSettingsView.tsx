@@ -20,7 +20,8 @@ import {
   FileEdit,
   CalendarClock,
   Layers,
-  FileText
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MemberPermissionsWithUser, MemberPermissions, PERMISSION_LABELS } from '@/lib/types';
@@ -646,6 +647,7 @@ export function ProjectSettingsView({
                               { key: 'can_delete_history', label: 'Delete History', icon: <Trash2 size={12} /> },
                               { key: 'can_edit_dates', label: 'Edit Created Dates', icon: <CalendarClock size={12} /> },
                               { key: 'can_manage_members', label: 'Manage Members', icon: <Users size={12} /> },
+                              { key: 'can_complete_tasks', label: 'Move Tasks to Done / Complete', icon: <CheckCircle2 size={12} /> },
                             ] as const
                           ).map((p) => {
                             const isEnabled = Boolean(mem[p.key]);

@@ -14,6 +14,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
+import { formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 
 interface CalendarViewProps {
   issues: Issue[];
@@ -201,6 +202,7 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
                   <button
                     key={issue.id}
                     onClick={() => onSelectIssue(issue.id)}
+                    title={`${issue.key}: ${issue.title}${issue.createdAt ? ` • ${formatExactDateTime(issue.createdAt)} (${formatAddedTiming(issue.createdAt)})` : ''}`}
                     className="w-full text-left p-1 rounded bg-[#1B1C1F] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[10px] flex items-center justify-between gap-1 group transition-all"
                   >
                     <div className="flex items-center gap-1 truncate">

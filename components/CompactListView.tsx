@@ -17,7 +17,7 @@ import {
   RotateCcw,
   Eye
 } from 'lucide-react';
-import { getTaskShortId } from '@/lib/task-id';
+import { getTaskShortId, formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 
 interface CompactListViewProps {
   issues: Issue[];
@@ -28,6 +28,7 @@ interface CompactListViewProps {
   onDeleteIssue?: (issueId: string) => void;
   onOpenNewIssue: () => void;
   canDelete?: boolean;
+  canCompleteTasks?: boolean;
 }
 
 export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
@@ -39,6 +40,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
   onDeleteIssue,
   onOpenNewIssue,
   canDelete = true,
+  canCompleteTasks = true,
 }) => {
   const [filterQuery, setFilterQuery] = useState('');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
@@ -211,11 +213,12 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
       <div className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-xl overflow-hidden flex flex-col min-h-0 shadow-lg">
         {/* Table Header */}
         <div className="px-4 py-2 bg-[#17181A] border-b border-[#2A2C30] grid grid-cols-12 text-[10px] font-mono text-[#787C83] uppercase tracking-wider items-center">
-          <div className="col-span-2 sm:col-span-2">Key</div>
-          <div className="col-span-5 sm:col-span-5">Title</div>
-          <div className="col-span-2 sm:col-span-2">Status</div>
-          <div className="col-span-1 sm:col-span-1">Priority</div>
-          <div className="col-span-2 sm:col-span-2 text-right">Assignee</div>
+          <div className="col-span-1">Key</div>
+          <div className="col-span-4">Title</div>
+          <div className="col-span-2">Status</div>
+          <div className="col-span-1">Priority</div>
+          <div className="col-span-2">Added</div>
+          <div className="col-span-2 text-right">Assignee</div>
         </div>
 
         {/* Table Rows */}
@@ -309,7 +312,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                   )}
 
                   {/* Key (T1, T2... Tn) */}
-                  <div className="col-span-2 flex items-center gap-2 font-mono font-bold text-[#DCB001] text-[11px]">
+                  <div className="col-span-1 flex items-center gap-1.5 font-mono font-bold text-[#DCB001] text-[11px]">
                     <GripVertical size={12} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
                     <span className="bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/30">
                       {getTaskShortId(issue, issues)}
@@ -317,7 +320,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                   </div>
 
                   {/* Title & Folder Tag & Related Task Pills */}
-                  <div className="col-span-5 flex items-center gap-2 pr-3 truncate">
+                  <div className="col-span-4 flex items-center gap-2 pr-3 truncate">
                     {(issue.epic || issue.title.startsWith('📁 ')) && (
                       <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 shrink-0">
                         <Folder size={10} className="shrink-0" />
@@ -370,6 +373,12 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                     </span>
                   </div>
 
+                  {/* Added Timing */}
+                  <div className="col-span-2 flex items-center gap-1 font-mono text-[11px] text-[#787C83]" title={formatExactDateTime(issue.createdAt)}>
+                    <Clock size={11} className="text-[#DCB001] shrink-0" />
+                    <span>{formatAddedTiming(issue.createdAt)}</span>
+                  </div>
+
                   {/* Assignee */}
                   <div className="col-span-2 flex items-center justify-end gap-2">
                     <Avatar user={assigneeUser} size="xs" />
@@ -396,6 +405,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
         onUpdateStatus={onUpdateIssueStatus}
         onUpdatePriority={onUpdateIssuePriority}
         canDelete={canDelete}
+        canCompleteTasks={canCompleteTasks}
       />
     </div>
   );

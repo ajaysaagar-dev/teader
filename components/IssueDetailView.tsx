@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
-import { getTaskShortId, findIssueByTag, getAvailableTaskMentions, TaskMentionOption } from '@/lib/task-id';
+import { getTaskShortId, findIssueByTag, getAvailableTaskMentions, TaskMentionOption, formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 import { TaskMentionPopover } from '@/components/ui/TaskMentionPopover';
 
 interface IssueDetailViewProps {
@@ -34,6 +34,7 @@ interface IssueDetailViewProps {
   onOpenDiffModal?: () => void;
   currentRole?: string;
   canEditDates?: boolean;
+  canCompleteTasks?: boolean;
   onClose?: () => void;
 }
 
@@ -67,6 +68,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   onUpdateIssue,
   currentRole = 'owner',
   canEditDates = false,
+  canCompleteTasks = true,
   onClose,
 }) => {
   const [copiedLink, setCopiedLink] = useState(false);
@@ -172,18 +174,28 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
       toast.warning(`Notice: This task is currently blocked by: ${blockers.join(', ')}`);
     }
 
+    if (newStatus === 'done' && !canCompleteTasks) {
+      toast.error('Permission Denied: You do not have permission to move tasks to Complete / Done.');
+      return;
+    }
+
     const updated = { ...issue, status: newStatus };
     onUpdateIssue(updated);
     try {
-      await fetch(`/api/issues/${issue.id}`, {
+      const res = await fetch(`/api/issues/${issue.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to update status');
+      }
+
       toast.success(`Status updated to ${newStatus.replace('_', ' ')}`);
-    } catch {
-      toast.error('Failed to update status');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update status');
     }
   };
 
@@ -265,7 +277,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           {/* Header Row */}
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/10 border border-[#DCB001]/30 px-2 py-0.5 rounded">
                   {getTaskShortId(issue, allIssues)}
                 </span>
@@ -275,6 +287,15 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 {issue.epic && (
                   <span className="font-mono text-[11px] text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/30 px-2 py-0.5 rounded flex items-center gap-1">
                     <Layers size={10} /> {issue.epic}
+                  </span>
+                )}
+                {issue.createdAt && (
+                  <span
+                    className="font-mono text-[11px] text-[#787C83] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded flex items-center gap-1"
+                    title={formatExactDateTime(issue.createdAt)}
+                  >
+                    <Clock size={11} className="text-[#DCB001]" />
+                    <span>Added {formatAddedTiming(issue.createdAt)}</span>
                   </span>
                 )}
               </div>
@@ -615,7 +636,9 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <option value="todo">Todo</option>
                 <option value="in_progress">In Progress</option>
                 <option value="needs_review">Needs Review</option>
-                <option value="done">Done (Creator Only)</option>
+                <option value="done" disabled={!canCompleteTasks}>
+                  Done {!canCompleteTasks ? '(No Access)' : ''}
+                </option>
               </select>
             </div>
 

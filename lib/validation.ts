@@ -101,6 +101,7 @@ export const UpdateMemberPermissionsSchema = z.object({
     can_delete_history: z.boolean().optional(),
     can_edit_dates: z.boolean().optional(),
     can_manage_members: z.boolean().optional(),
+    can_complete_tasks: z.boolean().optional(),
   }),
 });
 
@@ -126,6 +127,30 @@ export const ReorderIssuesSchema = z.object({
       status: z.enum(['todo', 'in_progress', 'needs_review', 'done', 'blocked', 'cancelled', 'merged']).optional(),
     })
   ).optional(),
+});
+
+export const ReorderDocsSchema = z.object({
+  items: z.array(
+    z.object({
+      id: z.string(),
+      orderIndex: z.number(),
+      folder: z.string().optional(),
+    })
+  ),
+});
+
+export const ReorderDocFoldersSchema = z.object({
+  folders: z.array(
+    z.object({
+      name: z.string().min(1),
+      orderIndex: z.number(),
+    })
+  ),
+});
+
+export const DeleteDocFolderSchema = z.object({
+  folderName: z.string().min(1),
+  moveToFolder: z.string().optional(),
 });
 
 

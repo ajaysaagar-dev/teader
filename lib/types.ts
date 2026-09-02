@@ -50,9 +50,17 @@ export interface ProjectDoc {
   fileName: string;
   filePath?: string;
   folder?: string;
+  orderIndex?: number;
   createdAt?: string;
   updatedAt?: string;
   content?: string;
+}
+
+export interface DocFolder {
+  id?: number | string;
+  name: string;
+  orderIndex: number;
+  createdAt?: string;
 }
 
 export interface TimelineEvent {
@@ -217,6 +225,7 @@ export interface MemberPermissions {
   can_delete_history: boolean;
   can_edit_dates: boolean;
   can_manage_members: boolean;
+  can_complete_tasks: boolean;
 }
 
 export interface MemberPermissionsWithUser extends MemberPermissions {
@@ -252,5 +261,6 @@ export const PERMISSION_LABELS: Record<keyof MemberPermissions, string> = {
   can_delete_history: 'Delete History',
   can_edit_dates: 'Edit Created Dates',
   can_manage_members: 'Manage Members',
+  can_complete_tasks: 'Move Tasks to Done / Complete',
 };
 

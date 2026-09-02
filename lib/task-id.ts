@@ -162,3 +162,55 @@ export function getMentionQueryAtCursor(
     endIndex: cursorPos,
   };
 }
+
+/**
+ * Formats task creation timestamp into human-readable relative timing
+ * (e.g., "Just now", "5m ago", "2h ago", "Yesterday", "3d ago", "Aug 15", "Jan 12, 2025")
+ */
+export function formatAddedTiming(dateInput?: string | Date | null): string {
+  if (!dateInput) return 'Recently';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return 'Recently';
+
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+
+  if (diffMs < 0) {
+    return 'Just now';
+  }
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 45) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay === 1) return 'Yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+
+  const isCurrentYear = d.getFullYear() === now.getFullYear();
+  if (isCurrentYear) {
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/**
+ * Returns full detailed localized timestamp for tooltips and headers
+ */
+export function formatExactDateTime(dateInput?: string | Date | null): string {
+  if (!dateInput) return '';
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(d.getTime())) return '';
+  return `Added on ${d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })} at ${d.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}

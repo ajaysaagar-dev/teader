@@ -11,13 +11,13 @@ interface AvatarProps {
 
 // GitHub-tier deterministic gradient palettes for avatars
 const PALETTES = [
-  { bg: 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30' },
-  { bg: 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30' },
-  { bg: 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30' },
-  { bg: 'bg-[#A855F7]/15 text-[#A855F7] border-[#A855F7]/30' },
+  { bg: 'bg-[var(--accent-yellow)]/15 text-[var(--accent-yellow)] border-[var(--accent-yellow)]/30' },
+  { bg: 'bg-[var(--info)]/15 text-[var(--info)] border-[var(--info)]/30' },
+  { bg: 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/30' },
+  { bg: 'bg-[var(--purple)]/15 text-[var(--purple)] border-[var(--purple)]/30' },
   { bg: 'bg-[#EC4899]/15 text-[#EC4899] border-[#EC4899]/30' },
-  { bg: 'bg-[#F97316]/15 text-[#F97316] border-[#F97316]/30' },
-  { bg: 'bg-[#06B6D4]/15 text-[#06B6D4] border-[#06B6D4]/30' },
+  { bg: 'bg-[var(--priority-high)]/15 text-[var(--priority-high)] border-[var(--priority-high)]/30' },
+  { bg: 'bg-[var(--cyan)]/15 text-[var(--cyan)] border-[var(--cyan)]/30' },
 ];
 
 function getPalette(name: string = 'User') {
@@ -67,7 +67,7 @@ export const Avatar: React.FC<AvatarProps> = React.memo(({
           src={avatarUrl}
           alt={name}
           onError={() => setImgError(true)}
-          className={`${sizeMap[size].split(' ')[0]} ${sizeMap[size].split(' ')[1]} rounded-full object-cover border border-[#2A2C30]`}
+          className={`${sizeMap[size].split(' ')[0]} ${sizeMap[size].split(' ')[1]} rounded-full object-cover border border-[var(--border-primary)]`}
         />
       ) : (
         <div
