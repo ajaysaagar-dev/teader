@@ -42,7 +42,8 @@ import {
   ChevronRight,
   ChevronDown,
   GripVertical,
-  Users
+  Users,
+  X
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -135,6 +136,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [renamingDocId, setRenamingDocId] = useState<string | null>(null);
   const [inlineRenameTitle, setInlineRenameTitle] = useState('');
 
+  // Multi-document tab management state
+  const [openDocIds, setOpenDocIds] = useState<string[]>(() => {
+    return getLocalCache<string[]>(`docs_open_tabs_${projectId}`, []);
+  });
+  const openDocIdsRef = useRef<string[]>(openDocIds);
+  const docDraftsRef = useRef<Record<string, { content: string; title: string }>>({});
+  const [draggingTabDocId, setDraggingTabDocId] = useState<string | null>(null);
+  const [dragOverTabDocId, setDragOverTabDocId] = useState<string | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState<{
+    docId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+
   // Refs for scrolling and autosave
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -144,6 +160,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const activeContentRef = useRef<string>(activeContent);
   const activeTitleRef = useRef<string>(activeTitle);
   const savedContentRef = useRef<string>(savedContent);
+  const savedTitleRef = useRef<string>(savedTitle);
   const docsRef = useRef<ProjectDoc[]>(docs);
   const selectedDocIdCurrentRef = useRef<string | null>(selectedDocId);
 
@@ -179,8 +196,28 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   }, [savedContent]);
 
   useEffect(() => {
+    savedTitleRef.current = savedTitle;
+  }, [savedTitle]);
+
+  useEffect(() => {
     selectedDocIdCurrentRef.current = selectedDocId;
   }, [selectedDocId]);
+
+  // Sync and persist open tabs
+  useEffect(() => {
+    openDocIdsRef.current = openDocIds;
+    setLocalCache(`docs_open_tabs_${projectId}`, openDocIds);
+  }, [openDocIds, projectId]);
+
+  // Keep draft in sync for currently active document
+  useEffect(() => {
+    if (selectedDocId) {
+      docDraftsRef.current[selectedDocId] = {
+        content: activeContent,
+        title: activeTitle,
+      };
+    }
+  }, [selectedDocId, activeContent, activeTitle]);
 
   // Persist custom folders
   useEffect(() => {
@@ -217,7 +254,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     const cachedDocs = getLocalCache<ProjectDoc[]>(`docs_${projectId}`, []);
     if (cachedDocs && cachedDocs.length > 0) {
       setDocs(cachedDocs);
-      const targetDoc = cachedDocs[0];
+
+      const cachedTabs = getLocalCache<string[]>(`docs_open_tabs_${projectId}`, []);
+      const validTabs = cachedTabs.filter((id) => cachedDocs.some((d) => String(d.id) === String(id)));
+      const initialTabs = validTabs.length > 0 ? validTabs : [String(cachedDocs[0].id)];
+      setOpenDocIds(initialTabs);
+
+      const cachedActiveTab = getLocalCache<string>(`docs_active_tab_${projectId}`, initialTabs[0]);
+      const activeId = initialTabs.includes(cachedActiveTab) ? cachedActiveTab : initialTabs[0];
+      const targetDoc = cachedDocs.find((d) => String(d.id) === String(activeId)) || cachedDocs[0];
+
       if (targetDoc) {
         setSelectedDocId(String(targetDoc.id));
         const cleanTitle = (targetDoc.title || '').replace(/\.md$/i, '');
@@ -460,12 +506,28 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           } catch {}
 
           if (normalized.length > 0) {
+            const cachedTabs = getLocalCache<string[]>(`docs_open_tabs_${projectId}`, []);
+            const validTabs = cachedTabs.filter((id) => normalized.some((d) => String(d.id) === String(id)));
+
+            setOpenDocIds((prevTabs) => {
+              const currentValid = prevTabs.filter((id) => normalized.some((d) => String(d.id) === String(id)));
+              if (currentValid.length > 0) return currentValid;
+              if (validTabs.length > 0) return validTabs;
+              return [String(normalized[0].id)];
+            });
+
             const curId = selectedDocIdCurrentRef.current;
-            const targetDoc = (selectNewestId && normalized.find((d) => String(d.id) === String(selectNewestId))) ||
+            const cachedActiveTab = getLocalCache<string>(`docs_active_tab_${projectId}`, '');
+            const targetDoc =
+              (selectNewestId && normalized.find((d) => String(d.id) === String(selectNewestId))) ||
               (curId && normalized.find((d) => String(d.id) === String(curId))) ||
+              (cachedActiveTab && normalized.find((d) => String(d.id) === String(cachedActiveTab))) ||
+              (validTabs.length > 0 && normalized.find((d) => String(d.id) === String(validTabs[0]))) ||
               normalized[0];
+
             if (targetDoc) {
               setSelectedDocId(String(targetDoc.id));
+              setLocalCache(`docs_active_tab_${projectId}`, String(targetDoc.id));
               const cleanTitle = (targetDoc.title || '').replace(/\.md$/i, '');
               setActiveTitle(cleanTitle);
               setSavedTitle(cleanTitle);
@@ -568,25 +630,39 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         case 'DOC_DELETED': {
           const { id: deletedId } = event.payload || {};
           if (deletedId) {
-            setDocs((prev) => prev.filter((d) => String(d.id) !== String(deletedId)));
-            if (String(selectedDocIdCurrentRef.current) === String(deletedId)) {
-              setDocs((prev) => {
-                const remaining = prev.filter((d) => String(d.id) !== String(deletedId));
-                if (remaining.length > 0) {
-                  setSelectedDocId(String(remaining[0].id));
-                  const cleanTitle = (remaining[0].title || '').replace(/\.md$/i, '');
-                  setActiveTitle(cleanTitle);
-                  setSavedTitle(cleanTitle);
-                  setActiveContent(remaining[0].content || '');
-                  setSavedContent(remaining[0].content || '');
+            const strDelId = String(deletedId);
+            setDocs((prev) => prev.filter((d) => String(d.id) !== strDelId));
+            setOpenDocIds((prevTabs) => {
+              const nextTabs = prevTabs.filter((id) => id !== strDelId);
+              setLocalCache(`docs_open_tabs_${projectId}`, nextTabs);
+              if (String(selectedDocIdCurrentRef.current) === strDelId) {
+                if (nextTabs.length > 0) {
+                  const nextActiveId = nextTabs[0];
+                  setTimeout(() => {
+                    const nextDoc = docsRef.current.find((d) => String(d.id) === String(nextActiveId));
+                    if (nextDoc) {
+                      setSelectedDocId(String(nextDoc.id));
+                      setLocalCache(`docs_active_tab_${projectId}`, String(nextDoc.id));
+                      const cleanTitle = (nextDoc.title || nextDoc.fileName || '').replace(/\.md$/i, '');
+                      setActiveTitle(cleanTitle);
+                      setSavedTitle(cleanTitle);
+                      setActiveContent(nextDoc.content || '');
+                      setSavedContent(nextDoc.content || '');
+                      historyRef.current = [nextDoc.content || ''];
+                      historyIndexRef.current = 0;
+                    }
+                  }, 0);
                 } else {
                   setSelectedDocId(null);
+                  setLocalCache(`docs_active_tab_${projectId}`, null);
                   setActiveTitle('');
                   setActiveContent('');
+                  setSavedTitle('');
+                  setSavedContent('');
                 }
-                return remaining;
-              });
-            }
+              }
+              return nextTabs;
+            });
           }
           break;
         }
@@ -1028,6 +1104,227 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     }
   };
 
+  // Open document as tab and activate it seamlessly
+  const handleOpenDoc = useCallback((docId: string) => {
+    const targetDoc = docsRef.current.find((d) => String(d.id) === String(docId));
+    if (!targetDoc) return;
+
+    const currentId = selectedDocIdCurrentRef.current;
+    if (String(currentId) === String(docId)) return;
+
+    // 1. If current doc has unsaved changes, flush them immediately
+    if (currentId && (activeContentRef.current !== savedContentRef.current || activeTitleRef.current !== savedTitleRef.current)) {
+      const draftContent = activeContentRef.current;
+      const draftTitle = (activeTitleRef.current || '').trim().replace(/\.md$/i, '');
+      docDraftsRef.current[currentId] = {
+        content: draftContent,
+        title: draftTitle,
+      };
+      fetch(`/api/projects/${projectId}/docs/${currentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: draftTitle,
+          content: draftContent,
+        }),
+      }).catch(() => {});
+      broadcastCursorExit(currentId);
+    }
+
+    setRemoteCursors({});
+
+    // 2. Ensure doc is in openDocIds
+    setOpenDocIds((prev) => {
+      const strId = String(docId);
+      if (prev.includes(strId)) return prev;
+      const next = [...prev, strId];
+      setLocalCache(`docs_open_tabs_${projectId}`, next);
+      return next;
+    });
+
+    // 3. Switch active doc
+    setSelectedDocId(String(docId));
+    setLocalCache(`docs_active_tab_${projectId}`, String(docId));
+
+    // 4. Load draft if exists, else load target doc content
+    const draft = docDraftsRef.current[String(docId)];
+    const cleanTitle = draft?.title ?? (targetDoc.title || targetDoc.fileName || '').replace(/\.md$/i, '');
+    const content = draft?.content ?? getLocalCache(`doc_content_${docId}`, targetDoc.content || '');
+
+    setActiveTitle(cleanTitle);
+    setSavedTitle((targetDoc.title || targetDoc.fileName || '').replace(/\.md$/i, ''));
+    setActiveContent(content);
+    setSavedContent(targetDoc.content || '');
+    historyRef.current = [content];
+    historyIndexRef.current = 0;
+
+    // Scroll active tab into view in tab bar
+    requestAnimationFrame(() => {
+      const tabEl = document.getElementById(`doc-tab-${docId}`);
+      if (tabEl) {
+        tabEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    });
+  }, [projectId, broadcastCursorExit]);
+
+  // Close a specific document tab
+  const handleCloseTab = useCallback((tabDocId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+
+    const strDocId = String(tabDocId);
+
+    // If closing currently active doc and has unsaved changes, flush save
+    if (String(selectedDocIdCurrentRef.current) === strDocId) {
+      if (activeContentRef.current !== savedContentRef.current || activeTitleRef.current !== savedTitleRef.current) {
+        const draftContent = activeContentRef.current;
+        const draftTitle = (activeTitleRef.current || '').trim().replace(/\.md$/i, '');
+        fetch(`/api/projects/${projectId}/docs/${strDocId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: draftTitle,
+            content: draftContent,
+          }),
+        }).catch(() => {});
+      }
+      broadcastCursorExit(strDocId);
+    }
+
+    delete docDraftsRef.current[strDocId];
+
+    setOpenDocIds((prev) => {
+      const tabIndex = prev.indexOf(strDocId);
+      const nextTabs = prev.filter((id) => id !== strDocId);
+      setLocalCache(`docs_open_tabs_${projectId}`, nextTabs);
+
+      // If closing currently active tab, switch to neighbor
+      if (String(selectedDocIdCurrentRef.current) === strDocId) {
+        if (nextTabs.length > 0) {
+          const nextIndex = Math.min(Math.max(0, tabIndex - 1), nextTabs.length - 1);
+          const nextActiveId = nextTabs[nextIndex];
+          setTimeout(() => {
+            const nextDoc = docsRef.current.find((d) => String(d.id) === String(nextActiveId));
+            if (nextDoc) {
+              setSelectedDocId(String(nextDoc.id));
+              setLocalCache(`docs_active_tab_${projectId}`, String(nextDoc.id));
+              const draft = docDraftsRef.current[String(nextDoc.id)];
+              const cleanTitle = draft?.title ?? (nextDoc.title || nextDoc.fileName || '').replace(/\.md$/i, '');
+              const content = draft?.content ?? getLocalCache(`doc_content_${nextDoc.id}`, nextDoc.content || '');
+              setActiveTitle(cleanTitle);
+              setSavedTitle((nextDoc.title || nextDoc.fileName || '').replace(/\.md$/i, ''));
+              setActiveContent(content);
+              setSavedContent(nextDoc.content || '');
+              historyRef.current = [content];
+              historyIndexRef.current = 0;
+            }
+          }, 0);
+        } else {
+          // No more tabs open
+          setSelectedDocId(null);
+          setLocalCache(`docs_active_tab_${projectId}`, null);
+          setActiveTitle('');
+          setActiveContent('');
+          setSavedTitle('');
+          setSavedContent('');
+        }
+      }
+
+      return nextTabs;
+    });
+  }, [projectId, broadcastCursorExit]);
+
+  const handleCloseOtherTabs = useCallback((keepDocId: string) => {
+    const strKeepId = String(keepDocId);
+    setOpenDocIds([strKeepId]);
+    setLocalCache(`docs_open_tabs_${projectId}`, [strKeepId]);
+    if (String(selectedDocIdCurrentRef.current) !== strKeepId) {
+      handleOpenDoc(strKeepId);
+    }
+    setTabContextMenu(null);
+  }, [projectId, handleOpenDoc]);
+
+  const handleCloseTabsToRight = useCallback((targetDocId: string) => {
+    const strTargetId = String(targetDocId);
+    setOpenDocIds((prev) => {
+      const idx = prev.indexOf(strTargetId);
+      if (idx === -1) return prev;
+      const nextTabs = prev.slice(0, idx + 1);
+      setLocalCache(`docs_open_tabs_${projectId}`, nextTabs);
+      if (!nextTabs.includes(String(selectedDocIdCurrentRef.current))) {
+        handleOpenDoc(strTargetId);
+      }
+      return nextTabs;
+    });
+    setTabContextMenu(null);
+  }, [projectId, handleOpenDoc]);
+
+  const handleCloseAllTabs = useCallback(() => {
+    const currentId = selectedDocIdCurrentRef.current;
+    if (currentId && (activeContentRef.current !== savedContentRef.current || activeTitleRef.current !== savedTitleRef.current)) {
+      const draftContent = activeContentRef.current;
+      const draftTitle = (activeTitleRef.current || '').trim().replace(/\.md$/i, '');
+      fetch(`/api/projects/${projectId}/docs/${currentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: draftTitle,
+          content: draftContent,
+        }),
+      }).catch(() => {});
+      broadcastCursorExit(currentId);
+    }
+
+    docDraftsRef.current = {};
+    setOpenDocIds([]);
+    setLocalCache(`docs_open_tabs_${projectId}`, []);
+    setSelectedDocId(null);
+    setLocalCache(`docs_active_tab_${projectId}`, null);
+    setActiveTitle('');
+    setActiveContent('');
+    setSavedTitle('');
+    setSavedContent('');
+    setTabContextMenu(null);
+  }, [projectId, broadcastCursorExit]);
+
+  const handleTabDrop = useCallback((targetTabDocId: string) => {
+    if (!draggingTabDocId || draggingTabDocId === targetTabDocId) {
+      setDraggingTabDocId(null);
+      setDragOverTabDocId(null);
+      return;
+    }
+    setOpenDocIds((prev) => {
+      const fromIdx = prev.indexOf(draggingTabDocId);
+      const toIdx = prev.indexOf(targetTabDocId);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      setLocalCache(`docs_open_tabs_${projectId}`, next);
+      return next;
+    });
+    setDraggingTabDocId(null);
+    setDragOverTabDocId(null);
+  }, [draggingTabDocId, projectId]);
+
+  // Dismiss context menu on click or Escape
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      if (tabContextMenu) setTabContextMenu(null);
+    };
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && tabContextMenu) setTabContextMenu(null);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      window.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [tabContextMenu]);
+
   // Handle Move Document to Folder (Drag and Drop in Realtime)
   const handleMoveDocToFolder = async (docId: string, targetFolder: string) => {
     const cleanFolder = targetFolder.trim() || DEFAULT_FOLDER;
@@ -1268,7 +1565,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         });
 
         setOpenFolders((prev) => ({ ...prev, [targetFolder]: true }));
+        setOpenDocIds((prev) => {
+          const strId = String(created.id);
+          const next = prev.includes(strId) ? prev : [...prev, strId];
+          setLocalCache(`docs_open_tabs_${projectId}`, next);
+          return next;
+        });
         setSelectedDocId(String(created.id));
+        setLocalCache(`docs_active_tab_${projectId}`, String(created.id));
         setActiveTitle(docTitle);
         setSavedTitle(docTitle);
         setActiveContent(docContent);
@@ -1307,11 +1611,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         handleRedo();
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        if (selectedDocIdCurrentRef.current) {
+          handleCloseTab(selectedDocIdCurrentRef.current);
+        }
+        return;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performManualSave, handleUndo, handleRedo]);
+  }, [performManualSave, handleUndo, handleRedo, handleCloseTab]);
 
   // Handle Delete Doc
   const handleDeleteDoc = async (docId: string, docFileName: string, e: React.MouseEvent) => {
@@ -1328,21 +1639,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       if (res.ok) {
         setDocs((prev) => prev.filter((d) => String(d.id) !== String(docId)));
         toast.success(`Deleted: ${cleanDocName}`);
-        if (selectedDocId === docId) {
-          const remaining = docs.filter((d) => String(d.id) !== String(docId));
-          if (remaining.length > 0) {
-            setSelectedDocId(String(remaining[0].id));
-            const cleanTitle = (remaining[0].title || '').replace(/\.md$/i, '');
-            setActiveTitle(cleanTitle);
-            setSavedTitle(cleanTitle);
-            setActiveContent(remaining[0].content || '');
-            setSavedContent(remaining[0].content || '');
-          } else {
-            setSelectedDocId(null);
-            setActiveTitle('');
-            setActiveContent('');
-          }
-        }
+        handleCloseTab(docId);
       }
     } catch {
       toast.error('Failed to delete document');
@@ -1710,16 +2007,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                 setDragOverFolder(null);
                               }}
                               onClick={() => {
-                                if (isSelected) return;
-                                setSelectedDocId(String(doc.id));
-                                setActiveTitle(cleanTitle);
-                                setSavedTitle(cleanTitle);
-                                if (doc.content !== undefined) {
-                                  setActiveContent(doc.content);
-                                  setSavedContent(doc.content);
-                                  historyRef.current = [doc.content];
-                                  historyIndexRef.current = 0;
-                                }
+                                if (isRenaming) return;
+                                handleOpenDoc(String(doc.id));
                               }}
                               className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all border ${
                                 isSelected
@@ -1805,6 +2094,169 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
         {/* ─── Right Area: Document Editor & Live Preview ─────────────────── */}
         <div className="flex-1 min-w-0 flex flex-col h-full bg-[#0A0B0D] relative">
+          {/* ─── Document Tabs Bar ────────────────────────────────────────── */}
+          <div
+            ref={tabsContainerRef}
+            onWheel={(e) => {
+              if (e.deltaY !== 0 && tabsContainerRef.current) {
+                tabsContainerRef.current.scrollLeft += e.deltaY;
+              }
+            }}
+            className="bg-[#0B0C0E] border-b border-[#222428] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
+          >
+            {openDocIds.length === 0 ? (
+              <div className="flex items-center gap-2 px-2 text-xs text-[#787C83] font-mono">
+                <span>No open tabs</span>
+                <button
+                  onClick={() => {
+                    setActiveFolderForCreation(DEFAULT_FOLDER);
+                    setIsCreatingNew(true);
+                  }}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#16181D] hover:bg-[#20232A] text-[#DCB001] border border-[#2A2C30] text-[11px] transition-colors"
+                >
+                  <Plus size={11} />
+                  <span>New Tab</span>
+                </button>
+              </div>
+            ) : (
+              openDocIds.map((tabId) => {
+                const doc = docs.find((d) => String(d.id) === String(tabId));
+                const isActive = String(selectedDocId) === String(tabId);
+                const cleanTitle = (doc?.title || doc?.fileName || 'Document').replace(/\.md$/i, '');
+                const isDraggingThis = draggingTabDocId === tabId;
+                const isDragOverThis = dragOverTabDocId === tabId;
+
+                // Check unsaved changes for this tab
+                const draft = docDraftsRef.current[tabId];
+                const tabIsDirty = isActive
+                  ? hasUnsavedChanges
+                  : Boolean(
+                      draft &&
+                        (draft.content !== (doc?.content || '') ||
+                          draft.title !== (doc?.title || '').replace(/\.md$/i, ''))
+                    );
+
+                return (
+                  <div
+                    key={tabId}
+                    id={`doc-tab-${tabId}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('tabDocId', tabId);
+                      setDraggingTabDocId(tabId);
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (draggingTabDocId && draggingTabDocId !== tabId) {
+                        setDragOverTabDocId(tabId);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverTabDocId === tabId) setDragOverTabDocId(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleTabDrop(tabId);
+                    }}
+                    onDragEnd={() => {
+                      setDraggingTabDocId(null);
+                      setDragOverTabDocId(null);
+                    }}
+                    onClick={() => handleOpenDoc(tabId)}
+                    onAuxClick={(e) => {
+                      if (e.button === 1) {
+                        e.preventDefault();
+                        handleCloseTab(tabId, e);
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setTabContextMenu({ docId: tabId, x: e.clientX, y: e.clientY });
+                    }}
+                    className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[190px] sm:max-w-[240px] ${
+                      isDraggingThis ? 'opacity-40' : ''
+                    } ${
+                      isDragOverThis ? 'border-r-2 border-r-[#DCB001]' : ''
+                    } ${
+                      isActive
+                        ? 'bg-[#15171C] text-white border-t-[#DCB001] border-x border-x-[#252830] border-b border-b-[#15171C] shadow-sm font-medium'
+                        : 'bg-[#0E0F12] text-[#8E939D] hover:text-[#CFD4DD] hover:bg-[#131519] border-t-transparent border-x border-x-[#181A1F] border-b border-b-[#222428]'
+                    }`}
+                    title={`${doc?.folder ? `[${doc.folder}] ` : ''}${cleanTitle}.md\nClick to switch • Middle-click to close • Right-click for options`}
+                  >
+                    <FileText
+                      size={13}
+                      className={`shrink-0 ${isActive ? 'text-[#DCB001]' : 'text-[#787C83] group-hover:text-[#A0A5B0]'}`}
+                    />
+
+                    <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
+                      {cleanTitle}
+                    </span>
+
+                    {/* Folder badge for context */}
+                    {doc?.folder && doc.folder !== DEFAULT_FOLDER && (
+                      <span className="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-[#1A1C20] text-[#787C83] truncate max-w-[55px]">
+                        {doc.folder}
+                      </span>
+                    )}
+
+                    {/* Close Tab / Dirty Indicator */}
+                    <div className="flex items-center shrink-0 ml-0.5">
+                      {tabIsDirty ? (
+                        <div className="relative flex items-center justify-center w-4 h-4">
+                          <span className="w-2 h-2 rounded-full bg-[#DCB001] group-hover:hidden transition-opacity shadow-[0_0_6px_#DCB001]" />
+                          <button
+                            type="button"
+                            onClick={(e) => handleCloseTab(tabId, e)}
+                            className="hidden group-hover:flex items-center justify-center w-4 h-4 rounded hover:bg-[#2A2C30] text-[#787C83] hover:text-white transition-colors"
+                            title="Close tab (changes will be auto-saved)"
+                          >
+                            <X size={11} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => handleCloseTab(tabId, e)}
+                          className="flex items-center justify-center w-4 h-4 rounded opacity-40 group-hover:opacity-100 hover:bg-[#2A2C30] text-[#787C83] hover:text-white transition-all"
+                          title="Close tab"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {/* Quick New Doc Tab Button */}
+            <button
+              onClick={() => {
+                setActiveFolderForCreation(DEFAULT_FOLDER);
+                setIsCreatingNew(true);
+              }}
+              className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-[#181A1F] text-[#787C83] hover:text-[#DCB001] transition-colors shrink-0 ml-1"
+              title="Create new document"
+            >
+              <Plus size={14} />
+            </button>
+
+            {/* Right actions on Tab Bar */}
+            {openDocIds.length > 1 && (
+              <div className="ml-auto flex items-center gap-1 pl-2">
+                <button
+                  onClick={handleCloseAllTabs}
+                  className="p-1 px-2 rounded-md hover:bg-[#1A1C22] text-[#787C83] hover:text-[#EF4444] transition-colors text-[10px] flex items-center gap-1 font-mono border border-transparent hover:border-[#2A2C30]"
+                  title="Close all tabs"
+                >
+                  <X size={11} />
+                  <span className="hidden sm:inline">Close All</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {selectedDoc ? (
             <>
               {/* Document Header & Mode Controls */}
@@ -1971,7 +2423,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
                       <div className="p-6 sm:p-8 bg-[#141518] border border-[#222428] rounded-2xl shadow-xl">
                         {activeContent || savedContent ? (
-                          renderGithubMarkdown(activeContent || savedContent, null, allActiveCursors)
+                          renderGithubMarkdown(activeContent || savedContent)
                         ) : (
                           <p className="text-xs text-[#787C83] italic">Start typing in the editor to see real-time preview...</p>
                         )}
@@ -2020,6 +2472,45 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Tab Context Menu */}
+      {tabContextMenu && (
+        <div
+          style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
+          className="fixed z-50 min-w-[170px] bg-[#16181D] border border-[#2A2C30] rounded-xl shadow-2xl py-1 text-xs font-sans select-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              handleCloseTab(tabContextMenu.docId);
+              setTabContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] flex items-center justify-between transition-colors"
+          >
+            <span>Close Tab</span>
+            <span className="text-[10px] text-[#787C83] font-mono">Ctrl+Alt+W</span>
+          </button>
+          <button
+            onClick={() => handleCloseOtherTabs(tabContextMenu.docId)}
+            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] transition-colors"
+          >
+            Close Other Tabs
+          </button>
+          <button
+            onClick={() => handleCloseTabsToRight(tabContextMenu.docId)}
+            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] transition-colors"
+          >
+            Close Tabs to the Right
+          </button>
+          <div className="border-t border-[#24262B] my-1" />
+          <button
+            onClick={() => handleCloseAllTabs()}
+            className="w-full text-left px-3 py-1.5 text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors"
+          >
+            Close All Tabs
+          </button>
         </div>
       )}
     </div>
