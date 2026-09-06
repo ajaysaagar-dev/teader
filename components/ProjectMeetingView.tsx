@@ -36,10 +36,38 @@ import {
   ScreenShareOff,
   Maximize2,
   Minimize2,
+  Monitor,
+  Check,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// ─── Interfaces ──────────────────────────────────────────────────────────────
+// ─── Interfaces & Quality Types ──────────────────────────────────────────────
+
+export type ScreenResolution = '720' | '1080' | '1440';
+export type ScreenFps = 24 | 30 | 48 | 60;
+
+export const RESOLUTION_CONFIG: Record<
+  ScreenResolution,
+  { width: number; height: number; bitrates: Record<ScreenFps, number> }
+> = {
+  '720': {
+    width: 1280,
+    height: 720,
+    bitrates: { 24: 1_800_000, 30: 2_200_000, 48: 2_600_000, 60: 2_800_000 },
+  },
+  '1080': {
+    width: 1920,
+    height: 1080,
+    bitrates: { 24: 3_500_000, 30: 4_000_000, 48: 4_800_000, 60: 5_000_000 },
+  },
+  '1440': {
+    width: 2560,
+    height: 1440,
+    bitrates: { 24: 6_000_000, 30: 7_000_000, 48: 8_500_000, 60: 9_000_000 },
+  },
+};
 
 export interface ParticipantInfo {
   identity: string;
@@ -55,6 +83,8 @@ export interface ParticipantInfo {
   joinedAt: number;
   isScreenSharing?: boolean;
   screenShareTrack?: Track;
+  screenShareResolution?: string;
+  screenShareFps?: number;
 }
 
 // ─── Screen Share Video Player Component ─────────────────────────────────────
@@ -101,23 +131,33 @@ export interface MeetingParticipant {
 }
 
 // ─── Electron & Browser Desktop Media Capture Polyfill ───────────────────────
-async function captureDesktopMediaStream(): Promise<MediaStream> {
+async function captureDesktopMediaStream(config?: {
+  width?: number;
+  height?: number;
+  fps?: number;
+  includeAudio?: boolean;
+}): Promise<MediaStream> {
   const isElectron =
     typeof window !== 'undefined' &&
     (Boolean((window as any).teaderDesktop?.isDesktop) ||
       /electron/i.test(navigator.userAgent) ||
       /teaderdesktop/i.test(navigator.userAgent));
 
+  const targetWidth = config?.width || 1920;
+  const targetHeight = config?.height || 1080;
+  const targetFps = config?.fps || 60;
+  const targetAudio = config?.includeAudio ?? true;
+
   // 1. In standard browser, attempt getDisplayMedia first
   if (!isElectron && typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
     try {
       return await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 60, max: 60 },
+          width: { ideal: targetWidth, max: targetWidth },
+          height: { ideal: targetHeight, max: targetHeight },
+          frameRate: { ideal: targetFps, max: targetFps },
         },
-        audio: true,
+        audio: targetAudio,
       });
     } catch (err: any) {
       if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
@@ -131,13 +171,19 @@ async function captureDesktopMediaStream(): Promise<MediaStream> {
   if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
+        audio: targetAudio
+          ? ({
+              mandatory: {
+                chromeMediaSource: 'desktop',
+              },
+            } as any)
+          : false,
         video: {
           mandatory: {
             chromeMediaSource: 'screen',
-            maxWidth: 1920,
-            maxHeight: 1080,
-            maxFrameRate: 60,
+            maxWidth: targetWidth,
+            maxHeight: targetHeight,
+            maxFrameRate: targetFps,
           },
         } as any,
       });
@@ -149,13 +195,19 @@ async function captureDesktopMediaStream(): Promise<MediaStream> {
     // 3. Electron / Fallback 2: chromeMediaSource: 'desktop'
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
+        audio: targetAudio
+          ? ({
+              mandatory: {
+                chromeMediaSource: 'desktop',
+              },
+            } as any)
+          : false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
-            maxWidth: 1920,
-            maxHeight: 1080,
-            maxFrameRate: 60,
+            maxWidth: targetWidth,
+            maxHeight: targetHeight,
+            maxFrameRate: targetFps,
           },
         } as any,
       });
@@ -169,7 +221,7 @@ async function captureDesktopMediaStream(): Promise<MediaStream> {
   if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
     return await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: true,
+      audio: targetAudio,
     });
   }
 
@@ -202,7 +254,12 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigat
       }
     }
 
-    return await captureDesktopMediaStream();
+    const width = constraints?.video?.width?.ideal || constraints?.video?.width?.max || 1920;
+    const height = constraints?.video?.height?.ideal || constraints?.video?.height?.max || 1080;
+    const fps = constraints?.video?.frameRate?.ideal || constraints?.video?.frameRate?.max || 60;
+    const includeAudio = Boolean(constraints?.audio);
+
+    return await captureDesktopMediaStream({ width, height, fps, includeAudio });
   };
 }
 
@@ -239,10 +296,21 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
-  // Screen Share State (1080p 60fps, default: disabled)
+  // Screen Share State & Quality Settings
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [fullscreenParticipant, setFullscreenParticipant] = useState<ParticipantInfo | null>(null);
+  const [showScreenShareModal, setShowScreenShareModal] = useState(false);
+  const [selectedResolution, setSelectedResolution] = useState<ScreenResolution>('1080');
+  const [selectedFps, setSelectedFps] = useState<ScreenFps>(60);
+  const [includeScreenAudio, setIncludeScreenAudio] = useState(true);
+  const [activeStreamQuality, setActiveStreamQuality] = useState<{ res: string; fps: number } | null>(null);
+  const activeStreamQualityRef = useRef<{ res: string; fps: number } | null>(null);
+  activeStreamQualityRef.current = activeStreamQuality;
+  const [participantQualities, setParticipantQualities] = useState<Map<string, { res: string; fps: number }>>(new Map());
+  const participantQualitiesRef = useRef<Map<string, { res: string; fps: number }>>(new Map());
+  participantQualitiesRef.current = participantQualities;
   const customScreenTrackRef = useRef<LocalVideoTrack | null>(null);
+  const customScreenAudioTrackRef = useRef<LocalAudioTrack | null>(null);
 
   // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
   const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
@@ -373,6 +441,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     const isScreenSharing = Boolean(screenPub && !screenPub.isMuted && screenPub.track);
     const screenShareTrack = screenPub?.track;
 
+    const quality = participantQualitiesRef.current.get(p.identity) || (isLocal ? activeStreamQualityRef.current : null);
+    const screenShareResolution = quality ? `${quality.res}p` : '1080p';
+    const screenShareFps = quality ? quality.fps : 60;
+
     return {
       identity: p.identity,
       name: p.name || p.identity,
@@ -387,6 +459,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       joinedAt: p.joinedAt ? p.joinedAt.getTime() : Date.now(),
       isScreenSharing,
       screenShareTrack,
+      screenShareResolution,
+      screenShareFps,
     };
   }, []);
 
@@ -587,6 +661,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           toast.info(`${participant.name || 'A user'} left the call`);
           attachedAudioElementsRef.current.delete(participant.identity);
           normalizerNodesRef.current.delete(participant.identity);
+          setParticipantQualities((prev) => {
+            const next = new Map(prev);
+            next.delete(participant.identity);
+            return next;
+          });
           syncParticipants();
         })
         .on(RoomEvent.ActiveSpeakersChanged, () => {
@@ -629,6 +708,24 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 toast.warning('Your microphone was muted by a project admin');
               } else {
                 toast.success('Your microphone was unmuted by a project admin');
+              }
+              syncParticipants();
+            }
+
+            // Remote screen stream quality metadata
+            if (msg.type === 'STREAM_QUALITY' && participant) {
+              if (msg.isSharing) {
+                setParticipantQualities((prev) => {
+                  const next = new Map(prev);
+                  next.set(participant.identity, { res: msg.res, fps: msg.fps });
+                  return next;
+                });
+              } else {
+                setParticipantQualities((prev) => {
+                  const next = new Map(prev);
+                  next.delete(participant.identity);
+                  return next;
+                });
               }
               syncParticipants();
             }
@@ -747,6 +844,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         } catch {}
         customScreenTrackRef.current = null;
       }
+      if (customScreenAudioTrackRef.current) {
+        try {
+          customScreenAudioTrackRef.current.stop();
+        } catch {}
+        customScreenAudioTrackRef.current = null;
+      }
       if (roomRef.current) {
         if (roomRef.current.localParticipant?.isScreenShareEnabled) {
           roomRef.current.localParticipant.setScreenShareEnabled(false).catch(() => {});
@@ -782,93 +885,167 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   };
 
-  // ── Toggle Screen Sharing (1080p 60fps - Compatible with Browser & Electron Forge) ──
-  const handleToggleScreenShare = async () => {
+  // ── Stop Screen Sharing (Ensures Mic audio is untouched) ──
+  const handleStopScreenShare = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room || !room.localParticipant) return;
+
+    try {
+      if (customScreenTrackRef.current) {
+        await room.localParticipant.unpublishTrack(customScreenTrackRef.current, true).catch(() => {});
+        customScreenTrackRef.current.stop();
+        customScreenTrackRef.current = null;
+      }
+
+      if (customScreenAudioTrackRef.current) {
+        await room.localParticipant.unpublishTrack(customScreenAudioTrackRef.current, true).catch(() => {});
+        customScreenAudioTrackRef.current.stop();
+        customScreenAudioTrackRef.current = null;
+      }
+
+      await room.localParticipant.setScreenShareEnabled(false).catch(() => {});
+
+      // Broadcast stop stream info
+      try {
+        const payload = new TextEncoder().encode(
+          JSON.stringify({
+            type: 'STREAM_QUALITY',
+            isSharing: false,
+          })
+        );
+        await room.localParticipant.publishData(payload, { reliable: true });
+      } catch (e) {
+        console.warn('[publishData STREAM_QUALITY stop note]:', e);
+      }
+
+      setActiveStreamQuality(null);
+      setIsSharingScreen(false);
+      toast.info('Screen stream stopped');
+      syncParticipants();
+    } catch (err) {
+      console.warn('[Stop Screen Share Error]:', err);
+    }
+  }, [syncParticipants]);
+
+  // ── Start Screen Sharing (with Custom Resolution 720/1080/1440, FPS 24/30/48/60, Audio) ──
+  const handleStartScreenShare = async (config?: {
+    resolution?: ScreenResolution;
+    fps?: ScreenFps;
+    includeAudio?: boolean;
+  }) => {
     const room = roomRef.current;
     if (!room || !room.localParticipant) {
       toast.error('Not connected to meeting room');
       return;
     }
 
+    const targetRes = config?.resolution ?? selectedResolution;
+    const targetFps = config?.fps ?? selectedFps;
+    const targetAudio = config?.includeAudio ?? includeScreenAudio;
+
+    const resConfig = RESOLUTION_CONFIG[targetRes];
+    const maxBitrate = resConfig.bitrates[targetFps] || 5_000_000;
+
+    setShowScreenShareModal(false);
+    toast.info(`Starting ${targetRes}p ${targetFps}fps screen stream…`);
+
     try {
-      const nextState = !isSharingScreen;
-      if (nextState) {
-        toast.info('Starting 1080p 60fps screen stream…');
+      let sharedSuccessfully = false;
 
-        let sharedSuccessfully = false;
-
-        // Attempt 1: Try LiveKit native setScreenShareEnabled
-        try {
-          await room.localParticipant.setScreenShareEnabled(
-            true,
-            {
-              audio: true,
-              resolution: {
-                width: 1920,
-                height: 1080,
-                frameRate: 60,
-              },
+      // Attempt 1: Standard LiveKit setScreenShareEnabled
+      try {
+        await room.localParticipant.setScreenShareEnabled(
+          true,
+          {
+            audio: targetAudio,
+            resolution: {
+              width: resConfig.width,
+              height: resConfig.height,
+              frameRate: targetFps,
             },
-            {
-              videoEncoding: {
-                maxBitrate: 4_500_000,
-                maxFramerate: 60,
-              },
-            }
-          );
-          sharedSuccessfully = true;
-        } catch (lkErr: any) {
-          if (lkErr?.name === 'NotAllowedError' || lkErr?.message?.includes('Permission denied')) {
-            throw lkErr;
-          }
-          console.warn('[LiveKit setScreenShareEnabled note, attempting direct desktop capture]:', lkErr);
-        }
-
-        // Attempt 2: If native setScreenShareEnabled failed (e.g. Electron Forge), capture desktop stream and publish track directly
-        if (!sharedSuccessfully) {
-          const stream = await captureDesktopMediaStream();
-          const videoTrack = stream.getVideoTracks()[0];
-          if (!videoTrack) {
-            throw new Error('No screen video track was acquired');
-          }
-
-          const localVideoTrack = new LocalVideoTrack(videoTrack, undefined, false);
-          localVideoTrack.source = Track.Source.ScreenShare;
-
-          videoTrack.onended = () => {
-            if (customScreenTrackRef.current) {
-              room.localParticipant.unpublishTrack(customScreenTrackRef.current, true).catch(() => {});
-              customScreenTrackRef.current.stop();
-              customScreenTrackRef.current = null;
-            }
-            setIsSharingScreen(false);
-            syncParticipants();
-          };
-
-          await room.localParticipant.publishTrack(localVideoTrack, {
-            source: Track.Source.ScreenShare,
+          },
+          {
             videoEncoding: {
-              maxBitrate: 4_500_000,
-              maxFramerate: 60,
+              maxBitrate,
+              maxFramerate: targetFps,
             },
-          });
-
-          customScreenTrackRef.current = localVideoTrack;
+          }
+        );
+        sharedSuccessfully = true;
+      } catch (lkErr: any) {
+        if (lkErr?.name === 'NotAllowedError' || lkErr?.message?.includes('Permission denied')) {
+          throw lkErr;
         }
-
-        setIsSharingScreen(true);
-        toast.success('Screen stream active (1080p 60fps)');
-      } else {
-        // Stop screen share
-        if (customScreenTrackRef.current) {
-          await room.localParticipant.unpublishTrack(customScreenTrackRef.current, true).catch(() => {});
-          customScreenTrackRef.current.stop();
-          customScreenTrackRef.current = null;
-        }
-        await room.localParticipant.setScreenShareEnabled(false).catch(() => {});
-        setIsSharingScreen(false);
-        toast.info('Screen stream stopped');
+        console.warn('[LiveKit setScreenShareEnabled note, attempting direct desktop capture]:', lkErr);
       }
+
+      // Attempt 2: Electron Forge or direct capture fallback
+      if (!sharedSuccessfully) {
+        const stream = await captureDesktopMediaStream({
+          width: resConfig.width,
+          height: resConfig.height,
+          fps: targetFps,
+          includeAudio: targetAudio,
+        });
+
+        const videoTrack = stream.getVideoTracks()[0];
+        if (!videoTrack) {
+          throw new Error('No screen video track was acquired');
+        }
+
+        const localVideoTrack = new LocalVideoTrack(videoTrack, undefined, false);
+        localVideoTrack.source = Track.Source.ScreenShare;
+
+        videoTrack.onended = () => {
+          handleStopScreenShare();
+        };
+
+        await room.localParticipant.publishTrack(localVideoTrack, {
+          source: Track.Source.ScreenShare,
+          videoEncoding: {
+            maxBitrate,
+            maxFramerate: targetFps,
+          },
+        });
+
+        customScreenTrackRef.current = localVideoTrack;
+
+        // Publish audio track from desktop stream if present and requested
+        const audioTrack = stream.getAudioTracks()[0];
+        if (targetAudio && audioTrack) {
+          try {
+            const localAudioTrack = new LocalAudioTrack(audioTrack, undefined, false);
+            localAudioTrack.source = Track.Source.ScreenShareAudio;
+            await room.localParticipant.publishTrack(localAudioTrack, {
+              source: Track.Source.ScreenShareAudio,
+            });
+            customScreenAudioTrackRef.current = localAudioTrack;
+          } catch (audioErr) {
+            console.warn('[Screen audio publish note]:', audioErr);
+          }
+        }
+      }
+
+      // Broadcast quality info to all participants
+      const qualityInfo = { res: targetRes, fps: targetFps };
+      setActiveStreamQuality(qualityInfo);
+      setIsSharingScreen(true);
+
+      try {
+        const payload = new TextEncoder().encode(
+          JSON.stringify({
+            type: 'STREAM_QUALITY',
+            res: targetRes,
+            fps: targetFps,
+            isSharing: true,
+          })
+        );
+        await room.localParticipant.publishData(payload, { reliable: true });
+      } catch (e) {
+        console.warn('[publishData STREAM_QUALITY note]:', e);
+      }
+
+      toast.success(`Screen stream active (${targetRes}p ${targetFps}fps)`);
       syncParticipants();
     } catch (err: any) {
       console.warn('[Screen Share Error]:', err);
@@ -1370,11 +1547,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                               )}
                             </div>
 
-                            {/* 1080p 60fps LIVE badge + Fullscreen button */}
+                            {/* Dynamic Resolution & FPS LIVE badge + Fullscreen button */}
                             <div className="flex items-center gap-1.5 pointer-events-auto">
                               <span className="px-2 py-0.5 rounded-lg bg-[#22C55E]/20 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/40 flex items-center gap-1 backdrop-blur-md shadow-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
-                                1080p 60fps
+                                {p.screenShareResolution || '1080p'} {p.screenShareFps || 60}fps LIVE
                               </span>
                               <button
                                 onClick={(e) => {
@@ -1609,9 +1786,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <span>{isDeafened ? 'Undeafen' : 'Deafen'}</span>
           </button>
 
-          {/* Screen Share Button (1080p 60fps, default: disabled) */}
+          {/* Screen Share Button */}
           <button
-            onClick={handleToggleScreenShare}
+            onClick={() => {
+              if (isSharingScreen) {
+                handleStopScreenShare();
+              } else {
+                setShowScreenShareModal(true);
+              }
+            }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
               isSharingScreen
                 ? 'bg-[#22C55E]/20 text-[#22C55E] border-[#22C55E]/50 hover:bg-[#22C55E]/30 shadow-[0_0_20px_rgba(34,197,94,0.25)] animate-pulse'
@@ -1620,7 +1803,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             title={
               isSharingScreen
                 ? 'Stop Screen Stream'
-                : 'Stream Screen in 1080p 60fps (LiveKit)'
+                : 'Choose Quality & Share Screen (LiveKit)'
             }
           >
             {isSharingScreen ? (
@@ -1629,9 +1812,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <ScreenShare size={16} className="text-[#A0A5B0]" />
             )}
             <span>{isSharingScreen ? 'Stop Sharing' : 'Share Screen'}</span>
-            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-[#A0A5B0] border border-white/10">
-              1080p60
-            </span>
+            {isSharingScreen && activeStreamQuality ? (
+              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-[#22C55E] border border-[#22C55E]/30">
+                {activeStreamQuality.res}p{activeStreamQuality.fps}
+              </span>
+            ) : (
+              <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-[#A0A5B0] border border-white/10">
+                {selectedResolution}p{selectedFps}
+              </span>
+            )}
           </button>
 
           {/* LiveKit Noise Reduction Button (Default: Enabled) */}
@@ -1714,6 +1903,155 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         </div>
       </div>
 
+      {/* ── Screen Share Settings Modal ── */}
+      {showScreenShareModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[#121318] border border-[#282A34] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-5">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#20222B]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
+                  <ScreenShare size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">Stream Quality & Audio</h3>
+                  <p className="text-[11px] text-[#787C83]">Configure resolution and frame rate</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowScreenShareModal(false)}
+                className="p-1 rounded-lg hover:bg-[#1E2027] text-[#787C83] hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Resolution Options */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-white/90 flex items-center justify-between">
+                <span>Resolution</span>
+                <span className="text-[10px] text-[#A0A5B0] font-normal">720p HD • 1080p FHD • 1440p 2K</span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: '720', label: '720p', desc: '1280x720' },
+                  { value: '1080', label: '1080p', desc: '1920x1080', badge: 'Recommended' },
+                  { value: '1440', label: '1440p', desc: '2560x1440' },
+                ].map((item) => {
+                  const isSelected = selectedResolution === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSelectedResolution(item.value as ScreenResolution)}
+                      className={`relative flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#DCB001]/15 border-[#DCB001] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
+                          : 'bg-[#181920] border-[#2B2D37] text-[#9BA1A6] hover:bg-[#1E2028] hover:text-white'
+                      }`}
+                    >
+                      {item.badge && (
+                        <span className="absolute -top-2 px-1.5 py-0.5 rounded-full bg-[#DCB001] text-black text-[8px] font-bold uppercase tracking-wider">
+                          {item.badge}
+                        </span>
+                      )}
+                      <span className="text-sm font-bold">{item.label}</span>
+                      <span className="text-[10px] text-[#787C83] mt-0.5">{item.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* FPS Options */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-white/90 flex items-center justify-between">
+                <span>Frame Rate</span>
+                <span className="text-[10px] text-[#A0A5B0] font-normal">Higher FPS = Smoother Motion</span>
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { value: 24, label: '24 FPS', desc: 'Cinema' },
+                  { value: 30, label: '30 FPS', desc: 'Standard' },
+                  { value: 48, label: '48 FPS', desc: 'High' },
+                  { value: 60, label: '60 FPS', desc: 'Smooth', badge: 'Fast' },
+                ].map((item) => {
+                  const isSelected = selectedFps === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSelectedFps(item.value as ScreenFps)}
+                      className={`relative flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#22C55E]/15 border-[#22C55E] text-[#22C55E] shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                          : 'bg-[#181920] border-[#2B2D37] text-[#9BA1A6] hover:bg-[#1E2028] hover:text-white'
+                      }`}
+                    >
+                      {item.badge && (
+                        <span className="absolute -top-2 px-1.5 py-0.5 rounded-full bg-[#22C55E] text-black text-[8px] font-bold uppercase tracking-wider">
+                          {item.badge}
+                        </span>
+                      )}
+                      <span className="text-xs font-bold">{item.label}</span>
+                      <span className="text-[9px] text-[#787C83] mt-0.5">{item.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Screen Audio Toggle */}
+            <div className="pt-2 border-t border-[#20222B]">
+              <div
+                onClick={() => setIncludeScreenAudio((prev) => !prev)}
+                className="flex items-center justify-between p-3 rounded-xl bg-[#181920] border border-[#2B2D37] hover:border-[#383B47] transition-all cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-1.5 rounded-lg ${includeScreenAudio ? 'bg-[#22C55E]/15 text-[#22C55E]' : 'bg-[#22242B] text-[#787C83]'}`}>
+                    {includeScreenAudio ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">Share System Audio</p>
+                    <p className="text-[10px] text-[#787C83]">Stream tab/desktop sound alongside your microphone</p>
+                  </div>
+                </div>
+                <div
+                  className={`w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${
+                    includeScreenAudio ? 'bg-[#22C55E]' : 'bg-[#2B2D37]'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      includeScreenAudio ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#20222B]">
+              <button
+                type="button"
+                onClick={() => setShowScreenShareModal(false)}
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-[#181920] hover:bg-[#20222B] text-[#9BA1A6] hover:text-white border border-[#2B2D37] transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleStartScreenShare()}
+                className="flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#DCB001] to-[#E6BA0A] hover:brightness-110 text-black shadow-lg shadow-[#DCB001]/20 transition-all cursor-pointer"
+              >
+                <ScreenShare size={15} />
+                <span>Start Stream ({selectedResolution}p {selectedFps}fps)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Fullscreen Stream Modal ── */}
       {fullscreenParticipant && fullscreenParticipant.screenShareTrack && (
         <div className="fixed inset-0 z-50 bg-[#050608]/98 backdrop-blur-2xl flex flex-col animate-in fade-in duration-200">
@@ -1743,7 +2081,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                   )}
                   <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/30 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
-                    1080p 60fps LIVE
+                    {fullscreenParticipant.screenShareResolution || '1080p'} {fullscreenParticipant.screenShareFps || 60}fps LIVE
                   </span>
                 </div>
                 <p className="text-[11px] text-[#787C83]">

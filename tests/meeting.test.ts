@@ -162,5 +162,25 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     expect(typeof jwt).toBe('string');
     expect(jwt.split('.')).toHaveLength(3); // Standard 3-part JWT
   });
+
+  it('validates screen sharing resolution, fps, and bitrate matrix', async () => {
+    const { RESOLUTION_CONFIG } = await import('@/components/ProjectMeetingView');
+    expect(RESOLUTION_CONFIG).toBeDefined();
+
+    // Check resolutions
+    expect(RESOLUTION_CONFIG['720']).toEqual(expect.objectContaining({ width: 1280, height: 720 }));
+    expect(RESOLUTION_CONFIG['1080']).toEqual(expect.objectContaining({ width: 1920, height: 1080 }));
+    expect(RESOLUTION_CONFIG['1440']).toEqual(expect.objectContaining({ width: 2560, height: 1440 }));
+
+    // Check FPS options for each resolution: 24, 30, 48, 60
+    const fpsList = [24, 30, 48, 60] as const;
+    (['720', '1080', '1440'] as const).forEach((res) => {
+      fpsList.forEach((fps) => {
+        expect(RESOLUTION_CONFIG[res].bitrates[fps]).toBeGreaterThan(0);
+      });
+      // Ensure higher FPS gets equal or greater bitrate
+      expect(RESOLUTION_CONFIG[res].bitrates[60]).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[24]);
+    });
+  });
 });
 
