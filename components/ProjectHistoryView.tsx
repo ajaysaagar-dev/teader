@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { HistoryEntry } from '@/lib/types';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface ProjectHistoryViewProps {
   projectId: number | string;
@@ -347,10 +348,10 @@ export function ProjectHistoryView({
                   <div className="flex items-start justify-between gap-3">
                     {/* Left: Avatar + Details */}
                     <div className="flex items-start gap-3 min-w-0">
-                      <img
-                        src={entry.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                        alt={entry.userName}
-                        className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0 mt-0.5"
+                      <Avatar
+                        user={{ id: entry.userId, name: entry.userName, avatar: entry.userAvatar }}
+                        size="md"
+                        className="rounded-lg shrink-0 mt-0.5"
                       />
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center flex-wrap gap-2">

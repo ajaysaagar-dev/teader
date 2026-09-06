@@ -3,7 +3,6 @@ import { Issue, User, Project, FileDiff } from './types';
 export const CURRENT_USER: User = {
   id: 'usr_1',
   name: 'jori',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
   email: 'jori@teader.io',
   role: 'Lead Systems Engineer',
 };
@@ -11,7 +10,6 @@ export const CURRENT_USER: User = {
 export const KARRI_USER: User = {
   id: 'usr_2',
   name: 'karri',
-  avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
   email: 'karri@teader.io',
   role: 'Staff Product Manager',
 };
@@ -19,7 +17,6 @@ export const KARRI_USER: User = {
 export const AJAY_USER: User = {
   id: 'usr_3',
   name: 'ajaysaagar',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
   email: 'ajaysaagar@teader.io',
   role: 'Principal Frontend Architect',
 };
@@ -27,7 +24,6 @@ export const AJAY_USER: User = {
 export const ELENA_USER: User = {
   id: 'usr_4',
   name: 'elena',
-  avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
   email: 'elena@teader.io',
   role: 'Security & QA Specialist',
 };
@@ -35,7 +31,6 @@ export const ELENA_USER: User = {
 export const DAVID_USER: User = {
   id: 'usr_5',
   name: 'david',
-  avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
   email: 'david@teader.io',
   role: 'Database & Infrastructure Lead',
 };

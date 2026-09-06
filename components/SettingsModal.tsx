@@ -29,6 +29,7 @@ import { applyUIScale, resetUIScale, getSavedUIScale, DEFAULT_UI_SCALE } from '.
 import { getDesktopInfo } from '@/lib/desktop';
 import { ThemeColorSettings } from './ThemeColorSettings';
 import { CustomDropdown } from './ui/CustomDropdown';
+import { Avatar } from './ui/Avatar';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -389,9 +390,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {activeTab === 'account' && (
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-[var(--accent-yellow)] text-[var(--bg-canvas)] font-bold text-lg flex items-center justify-center font-mono shadow-md">
-                        {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar user={currentUser} size="xl" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
                         <p className="text-xs font-mono text-[var(--text-muted)] truncate">{currentUser?.email || 'test@teader.io'}</p>

@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
+import { Avatar } from '@/components/ui/Avatar';
 
 // ─── Interfaces & Quality Types ──────────────────────────────────────────────
 
@@ -1511,21 +1512,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="relative shrink-0">
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden font-bold text-xs uppercase ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden font-mono font-bold text-xs uppercase ${
                     activeSpeaker?.isSpeaking
                       ? 'ring-2 ring-[#22C55E] ring-offset-2 ring-offset-[#0B0C10] bg-[#22C55E]/20 text-[#22C55E]'
                       : 'bg-[#1A1C24] text-white border border-[#2B2D38]'
                   }`}
                 >
-                  {activeSpeaker?.avatar ? (
-                    <img
-                      src={activeSpeaker.avatar}
-                      alt={activeSpeaker.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span>{(activeSpeaker?.name || 'User').slice(0, 2)}</span>
-                  )}
+                  <Avatar user={{ name: activeSpeaker?.name, avatar: activeSpeaker?.avatar }} size="sm" />
                 </div>
                 {activeSpeaker?.isMuted && (
                   <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-red-500/90 flex items-center justify-center text-white text-[8px]">
@@ -1911,13 +1904,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                           <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
                             {/* Streamer details pill */}
                             <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-black/80 backdrop-blur-md border border-white/15 text-xs font-medium text-white shadow-md pointer-events-auto">
-                              <div className="w-5 h-5 rounded-full overflow-hidden bg-[#222] shrink-0 font-bold text-[10px] flex items-center justify-center">
-                                {p.avatar ? (
-                                  <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  <span>{p.name.slice(0, 1).toUpperCase()}</span>
-                                )}
-                              </div>
+                              <Avatar user={{ name: p.name, avatar: p.avatar }} size="xs" />
                               <span className="truncate max-w-[120px] font-semibold text-xs">{p.name}</span>
                               {p.isLocal && (
                                 <span className="px-1.5 rounded bg-[#DCB001]/20 text-[#DCB001] font-mono text-[9px] font-bold">
@@ -2003,21 +1990,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                                 speaking
                                   ? 'ring-4 ring-[#22C55E] ring-offset-4 ring-offset-[#121317] scale-105'
                                   : 'ring-2 ring-[#2B2D35]'
-                              } ${
-                                p.avatar
-                                  ? 'bg-[#1E2026]'
-                                  : 'bg-gradient-to-br from-[#2B2E38] to-[#17181F] text-white'
                               }`}
                             >
-                              {p.avatar ? (
-                                <img
-                                  src={p.avatar}
-                                  alt={p.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span>{p.name.slice(0, 2)}</span>
-                              )}
+                              <Avatar user={{ name: p.name, avatar: p.avatar }} className="w-20 h-20 text-2xl font-bold font-mono" />
                             </div>
 
                             {/* Mic badge */}
@@ -2466,17 +2441,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {/* Header */}
           <div className="h-14 px-6 border-b border-[#1E2026] bg-[#0E0F13]/90 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-[#1E2026] ring-1 ring-white/20 flex items-center justify-center font-bold text-xs uppercase">
-                {fullscreenParticipant.avatar ? (
-                  <img
-                    src={fullscreenParticipant.avatar}
-                    alt={fullscreenParticipant.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span>{fullscreenParticipant.name.slice(0, 2)}</span>
-                )}
-              </div>
+              <Avatar user={{ name: fullscreenParticipant.name, avatar: fullscreenParticipant.avatar }} size="md" />
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-white tracking-tight">

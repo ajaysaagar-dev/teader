@@ -20,6 +20,8 @@ import {
 import { toast } from 'sonner';
 import { ProjectMessage } from '@/lib/db';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { Avatar } from '@/components/ui/Avatar';
+import { resolveUserAvatar } from '@/lib/avatar';
 
 interface Channel {
   id?: number | string;
@@ -291,7 +293,7 @@ export function ProjectConversationView({
       projectId: Number(projectId),
       userId: currentUser?.id || 1,
       userName: currentUser?.name || 'You',
-      userAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      userAvatar: resolveUserAvatar(currentUser),
       userRole: isUserAdmin ? 'owner' : 'member',
       content,
       channel: activeChannel,
@@ -499,10 +501,10 @@ export function ProjectConversationView({
                   className="flex items-center gap-2.5 p-2 rounded-xl bg-[#16171B] border border-[#222428] hover:border-[#2C2E35] transition-colors"
                 >
                   <div className="relative shrink-0">
-                    <img
-                      src={m.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                      alt={m.userName}
-                      className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#2E3138]"
+                    <Avatar
+                      user={{ id: m.userId, name: m.userName, email: m.userEmail, avatar: m.userAvatar }}
+                      size="sm"
+                      className="rounded-lg"
                     />
                     <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 border-2 border-[#16171B] rounded-full" />
                   </div>
@@ -641,10 +643,10 @@ export function ProjectConversationView({
                   >
                     {/* Teammate Avatar (Left Side Only) */}
                     {!isMe && (
-                      <img
-                        src={msg.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                        alt={msg.userName}
-                        className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#26282E] shrink-0 mb-0.5"
+                      <Avatar
+                        user={{ id: msg.userId, name: msg.userName, avatar: msg.userAvatar }}
+                        size="sm"
+                        className="rounded-lg mb-0.5 shrink-0"
                       />
                     )}
 
@@ -724,10 +726,10 @@ export function ProjectConversationView({
 
                     {/* Current User Avatar (Right Side) */}
                     {isMe && (
-                      <img
-                        src={msg.userAvatar || currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                        alt="You"
-                        className="w-7 h-7 rounded-lg object-cover ring-1 ring-[#DCB001]/40 shrink-0 mb-0.5"
+                      <Avatar
+                        user={{ id: msg.userId || currentUser?.id, name: currentUser?.name || msg.userName, avatar: msg.userAvatar || currentUser?.avatar }}
+                        size="sm"
+                        className="rounded-lg mb-0.5 shrink-0 ring-1 ring-[#DCB001]/40"
                       />
                     )}
                   </div>

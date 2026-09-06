@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BUILD_NUMBER } from '@/lib/build-info';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface AuthUser {
   name?: string;
@@ -113,9 +114,7 @@ export default function LandingPageClient() {
             {isLoggedIn ? (
               <>
                 <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#181A20] border border-[#2D3139] text-xs font-medium text-[#E5E7EB]">
-                  <div className="w-4 h-4 rounded-full bg-[#DCB001] text-[#0B0C0E] flex items-center justify-center text-[10px] font-bold">
-                    {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar user={currentUser} size="xs" />
                   <span>{currentUser?.name}</span>
                 </div>
 

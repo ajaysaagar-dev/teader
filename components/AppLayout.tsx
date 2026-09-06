@@ -28,6 +28,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { Issue, FileDiff } from '@/lib/types';
+import { Avatar } from '@/components/ui/Avatar';
 import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -268,12 +269,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* User Profile Avatar / Logout Trigger */}
           <button
             onClick={() => setIsAccountModalOpen(true)}
-            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+            className="flex items-center gap-1.5 p-0.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             title="View Account"
           >
-            <div className="w-6 h-6 rounded-full bg-[var(--accent-yellow-subtle)] border border-[var(--accent-yellow)]/40 flex items-center justify-center text-[var(--accent-yellow)] font-mono font-bold text-[11px]">
-              {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-            </div>
+            <Avatar user={currentUser} size="sm" />
           </button>
         </div>
       </header>
@@ -336,9 +335,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <div className="p-6 space-y-4">
                 {/* User Info Card */}
                 <div className="p-4 rounded-xl bg-[#101114] border border-[#24262B] flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-[#DCB001] text-[#0A0B0D] font-bold text-lg flex items-center justify-center font-mono shadow-md">
-                    {(currentUser?.name || 'U').charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar user={currentUser} size="xl" />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
                     <p className="text-xs font-mono text-[var(--text-muted)] truncate">{currentUser?.email || 'test@teader.io'}</p>

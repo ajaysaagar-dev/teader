@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MemberPermissionsWithUser, MemberPermissions, PERMISSION_LABELS } from '@/lib/types';
+import { Avatar } from './ui/Avatar';
 
 interface ProjectSettingsViewProps {
   project: {
@@ -432,10 +433,10 @@ export function ProjectSettingsView({
                       className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#2A2C30] hover:border-[#DCB001]/40 transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={req.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                          alt={req.userName}
-                          className="w-9 h-9 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                        <Avatar
+                          user={{ id: req.id || req.userId, name: req.userName, email: req.userEmail, avatar: req.userAvatar }}
+                          size="md"
+                          className="rounded-lg"
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{req.userName}</p>
@@ -501,10 +502,10 @@ export function ProjectSettingsView({
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={m.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                      alt={m.name}
-                      className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                    <Avatar
+                      user={{ id: m.id || m.userId, name: m.name, email: m.email, avatar: m.avatar }}
+                      size="md"
+                      className="rounded-lg"
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -597,10 +598,10 @@ export function ProjectSettingsView({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <img
-                            src={mem.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
-                            alt={mem.userName}
-                            className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#282A30] shrink-0"
+                          <Avatar
+                            user={{ id: mem.userId, name: mem.userName, avatar: mem.userAvatar }}
+                            size="md"
+                            className="rounded-lg"
                           />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">

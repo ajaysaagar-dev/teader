@@ -89,21 +89,21 @@ let memoryUsersStore: any[] = [
     name: 'karri',
     email: 'karri@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
   },
   {
     id: 2,
     name: 'jori',
     email: 'jori@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
   },
   {
     id: 3,
     name: 'ajaysaagar',
     email: 'ajaysaagar@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    avatar: '',
   },
 ];
 let memoryProjectsStore: any[] = [];
@@ -417,14 +417,14 @@ export async function initDB(): Promise<void> {
 
         // Seed all core team users if not present
         const defaultUsers = [
-          { id: 1, name: 'karri', email: 'karri@teader.io', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
-          { id: 2, name: 'jori', email: 'jori@teader.io', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
-          { id: 3, name: 'ajaysaagar', email: 'ajaysaagar@teader.io', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
-          { id: 4, name: 'sarah', email: 'sarah@teader.io', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' },
-          { id: 5, name: 'alex', email: 'alex@teader.io', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
-          { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
-          { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80' },
-          { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+          { id: 1, name: 'karri', email: 'karri@teader.io', avatar: '' },
+          { id: 2, name: 'jori', email: 'jori@teader.io', avatar: '' },
+          { id: 3, name: 'ajaysaagar', email: 'ajaysaagar@teader.io', avatar: '' },
+          { id: 4, name: 'sarah', email: 'sarah@teader.io', avatar: '' },
+          { id: 5, name: 'alex', email: 'alex@teader.io', avatar: '' },
+          { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: '' },
+          { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: '' },
+          { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: '' },
         ];
 
         for (const u of defaultUsers) {
@@ -879,7 +879,7 @@ export async function createJoinRequestDB(
 
   const name = userName || 'Team Member';
   const email = userEmail || '';
-  const avatar = userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+  const avatar = userAvatar || '';
 
   try {
     const p = getPool();
@@ -2011,7 +2011,7 @@ let memoryProjectMessagesStore: ProjectMessage[] = [
     projectId: 1,
     userId: 1,
     userName: 'karri',
-    userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    userAvatar: '',
     userRole: 'owner',
     content: 'Welcome to the project conversation channel! You can coordinate tasks, share snippets, and discuss architecture here.',
     channel: 'general',
@@ -2022,7 +2022,7 @@ let memoryProjectMessagesStore: ProjectMessage[] = [
     projectId: 1,
     userId: 2,
     userName: 'jori',
-    userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    userAvatar: '',
     userRole: 'member',
     content: 'Just reviewed the latest branch commits. DAG timeline view looks super smooth!',
     channel: 'general',
@@ -2047,7 +2047,7 @@ export async function getProjectMessagesDB(projectId: number, channel: string = 
         projectId: r.projectId,
         userId: r.userId,
         userName: r.userName,
-        userAvatar: r.userAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        userAvatar: r.userAvatar || '',
         userRole: r.userRole || 'member',
         content: r.content,
         channel: r.channel,

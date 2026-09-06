@@ -2,59 +2,47 @@
 
 import React, { useState } from 'react';
 import { User } from '@/lib/types';
+import {
+  getUserInitial,
+  getUserColorPalette,
+  resolveUserAvatar,
+  UserColorPalette,
+  USER_PALETTES,
+} from '@/lib/avatar';
 
-interface AvatarProps {
-  user?: User | { id?: string | number; name?: string; avatar?: string; email?: string };
+export { getUserInitial, getUserColorPalette, resolveUserAvatar, USER_PALETTES };
+export type { UserColorPalette };
+
+export interface AvatarProps {
+  user?: User | { id?: string | number; name?: string; avatar?: string; email?: string; role?: string } | null;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
-}
-
-// GitHub-tier deterministic gradient palettes for avatars
-const PALETTES = [
-  { bg: 'bg-[var(--accent-yellow)]/15 text-[var(--accent-yellow)] border-[var(--accent-yellow)]/30' },
-  { bg: 'bg-[var(--info)]/15 text-[var(--info)] border-[var(--info)]/30' },
-  { bg: 'bg-[var(--success)]/15 text-[var(--success)] border-[var(--success)]/30' },
-  { bg: 'bg-[var(--purple)]/15 text-[var(--purple)] border-[var(--purple)]/30' },
-  { bg: 'bg-[#EC4899]/15 text-[#EC4899] border-[#EC4899]/30' },
-  { bg: 'bg-[var(--priority-high)]/15 text-[var(--priority-high)] border-[var(--priority-high)]/30' },
-  { bg: 'bg-[var(--cyan)]/15 text-[var(--cyan)] border-[var(--cyan)]/30' },
-];
-
-function getPalette(name: string = 'User') {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % PALETTES.length;
-  return PALETTES[index];
+  showLetterOnly?: boolean;
+  solidLetter?: boolean;
 }
 
 export const Avatar: React.FC<AvatarProps> = React.memo(({
   user,
   size = 'md',
   className = '',
+  showLetterOnly = false,
+  solidLetter = false,
 }) => {
   const [imgError, setImgError] = useState(false);
   const name = user?.name || 'User';
-  const palette = getPalette(name);
+  const initial = getUserInitial(user);
+  const palette = getUserColorPalette(user);
 
   const sizeMap = {
     xs: 'w-4 h-4 text-[9px]',
     sm: 'w-6 h-6 text-[10px]',
     md: 'w-8 h-8 text-xs',
     lg: 'w-10 h-10 text-sm',
-    xl: 'w-12 h-12 text-base',
+    xl: 'w-12 h-12 text-base font-semibold',
   };
 
-  const initials = name
-    .trim()
-    .split(/\s+/)
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'U';
-
-  const avatarUrl = !imgError ? user?.avatar : undefined;
+  const roundedClass = className.includes('rounded-') ? '' : 'rounded-full';
+  const resolvedUrl = !showLetterOnly && !imgError ? resolveUserAvatar(user) : undefined;
 
   return (
     <div
@@ -62,18 +50,22 @@ export const Avatar: React.FC<AvatarProps> = React.memo(({
       aria-label={`${name}'s avatar`}
       className={`relative inline-flex items-center justify-center shrink-0 select-none ${className}`}
     >
-      {avatarUrl ? (
+      {resolvedUrl ? (
         <img
-          src={avatarUrl}
+          src={resolvedUrl}
           alt={name}
           onError={() => setImgError(true)}
-          className={`${sizeMap[size].split(' ')[0]} ${sizeMap[size].split(' ')[1]} rounded-full object-cover border border-[var(--border-primary)]`}
+          className={`${sizeMap[size].split(' ')[0]} ${sizeMap[size].split(' ')[1]} ${roundedClass} object-cover border border-[var(--border-primary)] shadow-sm`}
         />
       ) : (
         <div
-          className={`${sizeMap[size]} rounded-full flex items-center justify-center font-bold font-mono border ${palette.bg}`}
+          className={`${sizeMap[size]} ${roundedClass} flex items-center justify-center font-bold font-mono border ${
+            solidLetter
+              ? `${palette.solidBg} ${palette.solidText} border-transparent shadow-sm`
+              : `${palette.bg} ${palette.text} ${palette.border}`
+          }`}
         >
-          {initials}
+          {initial}
         </div>
       )}
     </div>
