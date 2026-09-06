@@ -1,147 +1,58 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  AppWindow,
   Search,
   ExternalLink,
   RotateCw,
   Maximize2,
   Minimize2,
   Globe,
-  Sparkles,
   Tv,
   ArrowLeft,
   Plus,
   X,
-  Compass,
   Play,
-  Share2
+  Share2,
+  Loader2
 } from 'lucide-react';
 
 export interface AppDefinition {
   id: string;
   name: string;
-  category: 'search' | 'media' | 'dev' | 'reference' | 'design' | 'custom';
-  tagline: string;
-  description: string;
   defaultUrl: string;
   iconBg: string;
   iconColor: string;
-  badge?: string;
-  supportsEmbed: boolean;
-  searchUrlTemplate?: string;
-  quickActions?: { label: string; query: string }[];
 }
 
 const DEFAULT_APPS: AppDefinition[] = [
   {
     id: 'google',
     name: 'Google',
-    category: 'search',
-    tagline: 'Search the web, articles, documentation & tools',
-    description: 'Fast web search and answers powered by Google inside your workspace.',
     defaultUrl: 'https://www.google.com/webhp?igu=1',
     iconBg: 'bg-[#4285F4]/10 border-[#4285F4]/30',
-    iconColor: 'text-[#4285F4]',
-    badge: 'Web Search',
-    supportsEmbed: true,
-    searchUrlTemplate: 'https://www.google.com/search?q={query}&igu=1',
-    quickActions: [
-      { label: 'Next.js Docs', query: 'next.js app router documentation' },
-      { label: 'React Docs', query: 'react 19 official documentation' },
-      { label: 'TypeScript', query: 'typescript handbook cheatsheet' },
-      { label: 'Tailwind CSS', query: 'tailwindcss utilities documentation' }
-    ]
+    iconColor: 'text-[#4285F4]'
   },
   {
     id: 'youtube',
     name: 'YouTube',
-    category: 'media',
-    tagline: 'Coding tutorials, music streams, tech keynotes & podcasts',
-    description: 'Watch video tutorials, developer keynotes, and ambient background music without leaving your project.',
-    defaultUrl: 'https://www.youtube-nocookie.com/embed?listType=search&list=lofi+coding+beats',
+    defaultUrl: 'https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1',
     iconBg: 'bg-[#FF0000]/10 border-[#FF0000]/30',
-    iconColor: 'text-[#FF0000]',
-    badge: 'Video & Audio',
-    supportsEmbed: true,
-    searchUrlTemplate: 'https://www.youtube-nocookie.com/embed?listType=search&list={query}',
-    quickActions: [
-      { label: '🎵 Lo-Fi Coding Beats', query: 'lofi hip hop radio beats to relax study to' },
-      { label: '💻 Web Dev Tutorials', query: 'nextjs full stack tutorial 2026' },
-      { label: '⚡ Synthwave Radio', query: 'synthwave lofi beats stream' },
-      { label: '🎧 Deep Focus Noise', query: 'brown noise focus study 4k' }
-    ]
+    iconColor: 'text-[#FF0000]'
   },
   {
     id: 'wikipedia',
     name: 'Wikipedia',
-    category: 'reference',
-    tagline: 'The free encyclopedia — research concepts, science & history',
-    description: 'Instant access to millions of reference articles, technical definitions, and research material.',
     defaultUrl: 'https://en.m.wikipedia.org',
     iconBg: 'bg-white/10 border-white/20',
-    iconColor: 'text-white',
-    badge: 'Encyclopedia',
-    supportsEmbed: true,
-    searchUrlTemplate: 'https://en.m.wikipedia.org/wiki/Special:Search?search={query}',
-    quickActions: [
-      { label: 'Computer Science', query: 'Computer science' },
-      { label: 'Software Architecture', query: 'Software architecture' },
-      { label: 'Database Normalization', query: 'Database normalization' },
-      { label: 'WebRTC Protocol', query: 'WebRTC' }
-    ]
+    iconColor: 'text-white'
   },
   {
     id: 'excalidraw',
     name: 'Excalidraw',
-    category: 'design',
-    tagline: 'Virtual whiteboard for hand-drawn sketches & architecture diagrams',
-    description: 'Sketch out system architecture, workflows, user journeys, and wireframes directly inside your workspace.',
     defaultUrl: 'https://excalidraw.com',
     iconBg: 'bg-[#6965DB]/10 border-[#6965DB]/30',
-    iconColor: 'text-[#6965DB]',
-    badge: 'Whiteboard',
-    supportsEmbed: true
-  },
-  {
-    id: 'duckduckgo',
-    name: 'DuckDuckGo',
-    category: 'search',
-    tagline: 'Private web search with zero tracking and embedded support',
-    description: 'Search the web privately without tracking cookies or targeted advertising.',
-    defaultUrl: 'https://duckduckgo.com',
-    iconBg: 'bg-[#DE5833]/10 border-[#DE5833]/30',
-    iconColor: 'text-[#DE5833]',
-    badge: 'Private Search',
-    supportsEmbed: true,
-    searchUrlTemplate: 'https://duckduckgo.com/?q={query}'
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    category: 'dev',
-    tagline: 'Code repositories, developer community, issues & PRs',
-    description: 'Quickly look up open source repositories, issue trackers, and technical documentation.',
-    defaultUrl: 'https://github.com',
-    iconBg: 'bg-[#8B949E]/10 border-[#8B949E]/30',
-    iconColor: 'text-[#E6EDF3]',
-    badge: 'Code & Repos',
-    supportsEmbed: false,
-    searchUrlTemplate: 'https://github.com/search?q={query}'
-  },
-  {
-    id: 'stackoverflow',
-    name: 'Stack Overflow',
-    category: 'dev',
-    tagline: 'Find solutions to coding errors, bugs & framework questions',
-    description: 'Look up solutions, debugging patterns, and best practices for every programming language.',
-    defaultUrl: 'https://stackoverflow.com',
-    iconBg: 'bg-[#F48024]/10 border-[#F48024]/30',
-    iconColor: 'text-[#F48024]',
-    badge: 'Developer Q&A',
-    supportsEmbed: false,
-    searchUrlTemplate: 'https://stackoverflow.com/search?q={query}'
+    iconColor: 'text-[#6965DB]'
   }
 ];
 
@@ -170,11 +81,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [addressInput, setAddressInput] = useState<string>('');
-  const [searchFilter, setSearchFilter] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [iframeKey, setIframeKey] = useState<number>(0);
   const [isLoadingIframe, setIsLoadingIframe] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isSearchingYT, setIsSearchingYT] = useState<boolean>(false);
+
   const [customApps, setCustomApps] = useState<AppDefinition[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -190,18 +101,12 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
   const [isAddCustomModalOpen, setIsAddCustomModalOpen] = useState<boolean>(false);
   const [customName, setCustomName] = useState<string>('');
   const [customUrl, setCustomUrl] = useState<string>('');
-  const [customTagline, setCustomTagline] = useState<string>('');
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const allApps = useMemo(() => {
-    return [...DEFAULT_APPS, ...customApps];
-  }, [customApps]);
-
-  const activeApp = useMemo(() => {
-    return allApps.find((a) => a.id === selectedAppId) || null;
-  }, [allApps, selectedAppId]);
+  const allApps = [...DEFAULT_APPS, ...customApps];
+  const activeApp = allApps.find((a) => a.id === selectedAppId) || null;
 
   // Open an app
   const handleOpenApp = (app: AppDefinition, initialUrl?: string) => {
@@ -228,20 +133,41 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
   };
 
   // Navigate or search from address bar
-  const handleAddressSubmit = (e: React.FormEvent) => {
+  const handleAddressSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addressInput.trim()) return;
 
     let target = addressInput.trim();
 
-    // YouTube specific query / video ID detection
     if (activeApp?.id === 'youtube') {
       const ytId = extractYouTubeVideoId(target);
       if (ytId) {
         target = `https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`;
-      } else if (!target.startsWith('http://') && !target.startsWith('https://')) {
-        target = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(target)}`;
+        setCurrentUrl(target);
+        setIsLoadingIframe(true);
+        setIframeKey((prev) => prev + 1);
+        return;
       }
+
+      // Query YouTube API to find the top video and play it
+      try {
+        setIsSearchingYT(true);
+        const res = await fetch(`/api/apps/youtube?q=${encodeURIComponent(target)}`);
+        const data = await res.json();
+        if (data?.embedUrl) {
+          setCurrentUrl(data.embedUrl);
+          setIsLoadingIframe(true);
+          setIframeKey((prev) => prev + 1);
+          return;
+        }
+      } catch (err) {
+        console.error('YouTube search error:', err);
+      } finally {
+        setIsSearchingYT(false);
+      }
+
+      // Fallback direct embed
+      target = `https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1`;
     } else if (activeApp?.id === 'google') {
       if (!target.startsWith('http://') && !target.startsWith('https://')) {
         target = `https://www.google.com/search?q=${encodeURIComponent(target)}&igu=1`;
@@ -256,7 +182,6 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
       if (target.includes('.') && !target.includes(' ')) {
         target = `https://${target}`;
       } else {
-        // Fallback search query
         target = `https://www.google.com/search?q=${encodeURIComponent(target)}&igu=1`;
       }
     }
@@ -275,7 +200,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 
   // Open external window
   const handleOpenExternal = (urlToOpen?: string) => {
-    const u = urlToOpen || currentUrl || activeApp?.defaultUrl;
+    let u = urlToOpen || currentUrl || activeApp?.defaultUrl;
+    if (activeApp?.id === 'youtube' && !urlToOpen) {
+      const vidId = extractYouTubeVideoId(currentUrl);
+      u = vidId ? `https://www.youtube.com/watch?v=${vidId}` : 'https://www.youtube.com';
+    }
     if (u) {
       window.open(u, '_blank', 'noopener,noreferrer');
     }
@@ -283,7 +212,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 
   // Pop out auxiliary window
   const handlePopOutWindow = () => {
-    const u = currentUrl || activeApp?.defaultUrl;
+    let u = currentUrl || activeApp?.defaultUrl;
+    if (activeApp?.id === 'youtube') {
+      const vidId = extractYouTubeVideoId(currentUrl);
+      u = vidId ? `https://www.youtube.com/watch?v=${vidId}` : 'https://www.youtube.com';
+    }
     if (u) {
       window.open(u, '_blank', 'width=1180,height=800,menubar=no,status=no,toolbar=no');
     }
@@ -302,14 +235,9 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
     const newApp: AppDefinition = {
       id: `custom_${Date.now()}`,
       name: customName.trim(),
-      category: 'custom',
-      tagline: customTagline.trim() || 'Custom workspace web application',
-      description: `Custom app pointing to ${formattedUrl}`,
       defaultUrl: formattedUrl,
       iconBg: 'bg-[#DCB001]/10 border-[#DCB001]/30',
-      iconColor: 'text-[#DCB001]',
-      badge: 'Custom',
-      supportsEmbed: true
+      iconColor: 'text-[#DCB001]'
     };
 
     const updated = [...customApps, newApp];
@@ -321,7 +249,6 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
     setIsAddCustomModalOpen(false);
     setCustomName('');
     setCustomUrl('');
-    setCustomTagline('');
     handleOpenApp(newApp);
   };
 
@@ -338,23 +265,6 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
     }
   };
 
-  // Filtered apps catalog
-  const filteredApps = useMemo(() => {
-    return allApps.filter((app) => {
-      const matchesCategory =
-        categoryFilter === 'all' ||
-        (categoryFilter === 'custom' ? app.category === 'custom' : app.category === categoryFilter);
-
-      const matchesSearch =
-        !searchFilter.trim() ||
-        app.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        app.tagline.toLowerCase().includes(searchFilter.toLowerCase()) ||
-        app.description.toLowerCase().includes(searchFilter.toLowerCase());
-
-      return matchesCategory && matchesSearch;
-    });
-  }, [allApps, categoryFilter, searchFilter]);
-
   return (
     <div
       ref={containerRef}
@@ -369,15 +279,15 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
           {/* Top Browser Bar */}
           <div className="h-12 border-b border-[#2A2C30] bg-[#1B1C20] px-3 flex items-center justify-between gap-3 shrink-0">
-            {/* Left Controls: Back button & App Badge */}
+            {/* Left: Back button & App Logo/Name */}
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleBackToCatalog}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] transition-colors"
-                title="Back to All Apps Catalog"
+                title="Back to Apps"
               >
                 <ArrowLeft size={14} />
-                <span className="hidden sm:inline">Apps</span>
+                <span>Apps</span>
               </button>
 
               <div className="h-4 w-px bg-[#2A2C30]" />
@@ -386,16 +296,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                 <div
                   className={`w-6 h-6 rounded-md flex items-center justify-center border ${activeApp.iconBg}`}
                 >
-                  <AppIcon app={activeApp} size={13} />
+                  <AppIcon app={activeApp} size={14} />
                 </div>
                 <span className="text-xs font-semibold text-white tracking-tight">
                   {activeApp.name}
                 </span>
-                {activeApp.badge && (
-                  <span className="hidden md:inline-block px-1.5 py-0.5 text-[10px] font-semibold bg-[#2A2C30] text-[#DCB001] rounded">
-                    {activeApp.badge}
-                  </span>
-                )}
               </div>
             </div>
 
@@ -403,7 +308,9 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             <form onSubmit={handleAddressSubmit} className="flex-1 max-w-2xl min-w-0">
               <div className="relative flex items-center">
                 <div className="absolute left-3 text-[#787C83] pointer-events-none">
-                  {activeApp.id === 'google' || activeApp.id === 'duckduckgo' ? (
+                  {isSearchingYT ? (
+                    <Loader2 size={13} className="animate-spin text-[#DCB001]" />
+                  ) : activeApp.id === 'google' ? (
                     <Search size={13} />
                   ) : activeApp.id === 'youtube' ? (
                     <Tv size={13} />
@@ -433,31 +340,32 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
               </div>
             </form>
 
-            {/* Right Controls: Quick Switcher, Reload, External Link, Fullscreen */}
+            {/* Right: Actions */}
             <div className="flex items-center gap-1.5 shrink-0">
-              {/* Quick Switcher Pills for Popular Apps */}
-              <div className="hidden lg:flex items-center gap-1 bg-[#141518] p-0.5 rounded-lg border border-[#2A2C30]">
-                {DEFAULT_APPS.slice(0, 4).map((app) => (
+              {/* Quick Switcher Icons */}
+              <div className="hidden md:flex items-center gap-1 bg-[#141518] p-0.5 rounded-lg border border-[#2A2C30]">
+                {DEFAULT_APPS.map((app) => (
                   <button
                     key={app.id}
                     onClick={() => handleOpenApp(app)}
-                    className={`px-2 py-1 text-[11px] font-medium rounded transition-colors ${
+                    className={`px-2 py-1 text-[11px] font-medium rounded transition-colors flex items-center gap-1.5 ${
                       activeApp.id === app.id
                         ? 'bg-[#2A2C30] text-[#DCB001] font-semibold'
                         : 'text-[#787C83] hover:text-[#CFD4DD]'
                     }`}
                   >
-                    {app.name}
+                    <AppIcon app={app} size={12} />
+                    <span>{app.name}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="h-4 w-px bg-[#2A2C30] hidden lg:block" />
+              <div className="h-4 w-px bg-[#2A2C30] hidden md:block" />
 
               <button
                 onClick={handleReload}
                 className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors"
-                title="Reload Page"
+                title="Reload"
               >
                 <RotateCw size={14} className={isLoadingIframe ? 'animate-spin text-[#DCB001]' : ''} />
               </button>
@@ -473,7 +381,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
               <button
                 onClick={() => handleOpenExternal()}
                 className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors"
-                title="Open in New Browser Tab"
+                title="Open in New Tab"
               >
                 <ExternalLink size={14} />
               </button>
@@ -488,40 +396,29 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             </div>
           </div>
 
-          {/* Quick Action Chips (Presets for Google, YouTube, etc.) */}
-          {activeApp.quickActions && activeApp.quickActions.length > 0 && (
+          {/* YouTube Quick Channel Presets */}
+          {activeApp.id === 'youtube' && (
             <div className="bg-[#18191D] border-b border-[#2A2C30] px-3 py-1.5 flex items-center gap-2 overflow-x-auto text-xs shrink-0 scrollbar-none">
-              <span className="text-[11px] font-semibold text-[#787C83] uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <Sparkles size={11} className="text-[#DCB001]" />
-                Presets:
-              </span>
-              {activeApp.quickActions.map((qa, idx) => (
+              <span className="text-[11px] font-semibold text-[#787C83] shrink-0">Featured:</span>
+              {[
+                { label: '🎵 Lo-Fi Beats', vid: 'jfKfPfyJRdk' },
+                { label: '⚡ Synthwave', vid: '4xDzrJKXOOY' },
+                { label: '☕ Relaxing Chill', vid: 'MVPTGNGiI-4' },
+                { label: '💻 Web Dev & Next.js', vid: '843nec-IvW0' }
+              ].map((preset, idx) => (
                 <button
                   key={idx}
                   onClick={() => {
-                    if (activeApp.id === 'youtube') {
-                      const ytUrl = `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(
-                        qa.query
-                      )}`;
-                      setCurrentUrl(ytUrl);
-                      setAddressInput(qa.query);
-                      setIsLoadingIframe(true);
-                      setIframeKey((k) => k + 1);
-                    } else if (activeApp.searchUrlTemplate) {
-                      const target = activeApp.searchUrlTemplate.replace(
-                        '{query}',
-                        encodeURIComponent(qa.query)
-                      );
-                      setCurrentUrl(target);
-                      setAddressInput(qa.query);
-                      setIsLoadingIframe(true);
-                      setIframeKey((k) => k + 1);
-                    }
+                    const url = `https://www.youtube-nocookie.com/embed/${preset.vid}?autoplay=1`;
+                    setCurrentUrl(url);
+                    setAddressInput(preset.label);
+                    setIsLoadingIframe(true);
+                    setIframeKey((k) => k + 1);
                   }}
                   className="px-2.5 py-0.5 rounded-full bg-[#2A2C30] hover:bg-[#DCB001]/20 hover:text-[#DCB001] text-[#CFD4DD] text-[11px] transition-colors shrink-0 flex items-center gap-1"
                 >
-                  {activeApp.id === 'youtube' && <Play size={10} className="text-[#DCB001]" />}
-                  {qa.label}
+                  <Play size={10} className="text-[#DCB001]" />
+                  {preset.label}
                 </button>
               ))}
             </div>
@@ -549,9 +446,9 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
               title={activeApp.name}
             />
 
-            {/* Frame Helper / Security Notice Ribbon (bottom overlay) */}
+            {/* Bottom Overlay Info */}
             <div className="absolute bottom-2 right-3 z-10 flex items-center gap-2 bg-[#1B1C20]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#2A2C30] text-[11px] text-[#787C83] shadow-lg">
-              <span>Viewing {activeApp.name} inside Teader</span>
+              <span>{activeApp.name}</span>
               <button
                 onClick={() => handleOpenExternal()}
                 className="text-[#DCB001] hover:underline flex items-center gap-1 font-medium"
@@ -564,181 +461,56 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
         </div>
       ) : (
         /* ------------------------------------------------------------- */
-        /* APPS DIRECTORY / CATALOG (When no app is opened)              */
+        /* APPS DIRECTORY / CATALOG: ONLY SHOW LOGO AND ONLY NAME        */
         /* ------------------------------------------------------------- */
-        <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto">
-          {/* Header Banner */}
-          <div className="border-b border-[#2A2C30] bg-gradient-to-b from-[#1B1C20] to-[#141518] px-6 py-6 shrink-0">
-            <div className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2.5 mb-1.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
-                    <AppWindow size={18} />
-                  </div>
-                  <h1 className="text-xl font-bold text-white tracking-tight">Apps & Tools</h1>
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#2A2C30] text-[#DCB001]">
-                    {allApps.length} Apps
-                  </span>
-                </div>
-                <p className="text-xs text-[#787C83] max-w-xl">
-                  Launch external applications, web search, video tutorials, and interactive tools directly
-                  within {projectName || 'this project'}. Click any app below to open it in this view.
-                </p>
-              </div>
-
-              {/* Action Buttons: Add Custom App */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsAddCustomModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#DCB001] hover:bg-[#c49d01] text-black text-xs font-bold transition-colors shadow-sm"
-                >
-                  <Plus size={14} />
-                  <span>Add Custom App</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Filter and Search Bar */}
-            <div className="max-w-6xl mx-auto mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Search Box */}
-              <div className="relative flex-1">
-                <Search size={14} className="absolute left-3 top-2.5 text-[#787C83]" />
-                <input
-                  type="text"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Search apps or enter any web address..."
-                  className="w-full bg-[#1B1C20] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-[#CFD4DD] placeholder-[#787C83] rounded-lg pl-9 pr-4 py-2 focus:outline-none transition-colors"
-                />
-                {searchFilter && (
-                  <button
-                    onClick={() => setSearchFilter('')}
-                    className="absolute right-3 top-2.5 text-[#787C83] hover:text-[#CFD4DD]"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-
-              {/* Category Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                {[
-                  { id: 'all', label: 'All Apps' },
-                  { id: 'search', label: 'Search' },
-                  { id: 'media', label: 'Media' },
-                  { id: 'reference', label: 'Reference' },
-                  { id: 'design', label: 'Design' },
-                  { id: 'dev', label: 'Developer' },
-                  { id: 'custom', label: 'Custom' }
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setCategoryFilter(cat.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 ${
-                      categoryFilter === cat.id
-                        ? 'bg-[#2A2C30] text-[#DCB001] font-semibold border border-[#DCB001]/30'
-                        : 'text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#1B1C20]'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Apps Cards Grid */}
-          <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredApps.map((app) => (
+        <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto p-6 md:p-12">
+          <div className="max-w-4xl mx-auto w-full">
+            {/* Clean, minimalist apps grid with only logo and name */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
+              {allApps.map((app) => (
                 <div
                   key={app.id}
-                  onClick={() => handleOpenApp(app)}
-                  className="group relative bg-[#1B1C20] border border-[#2A2C30] hover:border-[#DCB001]/50 rounded-xl p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-black/40 flex flex-col justify-between"
+                  className="relative group flex flex-col items-center justify-center"
                 >
-                  <div>
-                    {/* Card Header: Icon, Name & Badge */}
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-11 h-11 rounded-xl flex items-center justify-center border ${app.iconBg} transition-transform group-hover:scale-105`}
-                        >
-                          <AppIcon app={app} size={22} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-white group-hover:text-[#DCB001] transition-colors">
-                              {app.name}
-                            </h3>
-                            {app.badge && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-[#2A2C30] text-[#DCB001] rounded">
-                                {app.badge}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-[11px] text-[#787C83] uppercase tracking-wider font-medium">
-                            {app.category}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Custom App Delete Button */}
-                      {app.category === 'custom' && (
-                        <button
-                          onClick={(e) => handleDeleteCustomApp(app.id, e)}
-                          className="text-[#787C83] hover:text-red-400 p-1 rounded transition-colors"
-                          title="Remove custom app"
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Tagline & Description */}
-                    <p className="text-xs font-medium text-[#CFD4DD] mb-1.5 leading-snug">
-                      {app.tagline}
-                    </p>
-                    <p className="text-[11px] text-[#787C83] line-clamp-2 leading-relaxed">
-                      {app.description}
-                    </p>
-                  </div>
-
-                  {/* Card Footer: Quick Actions / Open Button */}
-                  <div className="mt-4 pt-3 border-t border-[#2A2C30]/60 flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-[#DCB001] group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                      <span>Open in View</span>
-                      <ArrowLeft size={11} className="rotate-180" />
-                    </span>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenExternal(app.defaultUrl);
-                      }}
-                      className="text-[#787C83] hover:text-white p-1 rounded hover:bg-[#2A2C30] transition-colors"
-                      title="Open in new browser tab"
+                  <button
+                    onClick={() => handleOpenApp(app)}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl bg-[#1B1C20] hover:bg-[#2A2C30] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 group-hover:scale-105 group-hover:shadow-xl w-full aspect-square cursor-pointer"
+                  >
+                    <div
+                      className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center border ${app.iconBg} mb-3 transition-transform group-hover:scale-110 shadow-sm`}
                     >
-                      <ExternalLink size={13} />
+                      <AppIcon app={app} size={32} />
+                    </div>
+                    <span className="text-sm font-semibold text-white group-hover:text-[#DCB001] transition-colors text-center truncate max-w-[120px]">
+                      {app.name}
+                    </span>
+                  </button>
+
+                  {/* Delete button for custom apps */}
+                  {app.id.startsWith('custom_') && (
+                    <button
+                      onClick={(e) => handleDeleteCustomApp(app.id, e)}
+                      className="absolute top-2 right-2 text-[#787C83] hover:text-red-400 p-1 rounded-full bg-[#141518]/80 hover:bg-[#141518] transition-colors"
+                      title="Remove"
+                    >
+                      <X size={12} />
                     </button>
-                  </div>
+                  )}
                 </div>
               ))}
 
-              {/* Add Custom App Card */}
-              <div
+              {/* Add Custom App Card: Only Icon + Name */}
+              <button
                 onClick={() => setIsAddCustomModalOpen(true)}
-                className="border border-dashed border-[#2A2C30] hover:border-[#DCB001]/60 bg-[#1B1C20]/40 hover:bg-[#1B1C20] rounded-xl p-5 cursor-pointer transition-all flex flex-col items-center justify-center text-center group min-h-[160px]"
+                className="flex flex-col items-center justify-center p-4 rounded-2xl border border-dashed border-[#2A2C30] hover:border-[#DCB001]/60 bg-[#1B1C20]/40 hover:bg-[#1B1C20] transition-all duration-200 hover:scale-105 group w-full aspect-square cursor-pointer"
               >
-                <div className="w-10 h-10 rounded-full bg-[#2A2C30] group-hover:bg-[#DCB001] group-hover:text-black text-[#787C83] flex items-center justify-center mb-2.5 transition-colors">
-                  <Plus size={18} />
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#2A2C30] group-hover:bg-[#DCB001] group-hover:text-black text-[#787C83] flex items-center justify-center mb-3 transition-colors shadow-sm">
+                  <Plus size={26} />
                 </div>
-                <h4 className="text-xs font-bold text-white group-hover:text-[#DCB001] mb-1">
-                  Add Any Web App or URL
-                </h4>
-                <p className="text-[11px] text-[#787C83] max-w-[200px]">
-                  Integrate your favorite documentation, dashboard, or internal tool.
-                </p>
-              </div>
+                <span className="text-sm font-semibold text-[#787C83] group-hover:text-[#DCB001] transition-colors text-center">
+                  Add App
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -755,7 +527,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                 <div className="w-7 h-7 rounded-lg bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
                   <Plus size={16} />
                 </div>
-                <h3 className="text-base font-bold text-white">Add Custom Web App</h3>
+                <h3 className="text-base font-bold text-white">Add App</h3>
               </div>
               <button
                 onClick={() => setIsAddCustomModalOpen(false)}
@@ -772,7 +544,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="e.g. Staging Server, Linear, Notion, Figma"
+                  placeholder="e.g. Figma, Notion, Staging"
                   required
                   className="w-full bg-[#141518] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-lg px-3 py-2 focus:outline-none"
                 />
@@ -784,21 +556,8 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                   type="text"
                   value={customUrl}
                   onChange={(e) => setCustomUrl(e.target.value)}
-                  placeholder="https://example.com or localhost:3000"
+                  placeholder="https://example.com"
                   required
-                  className="w-full bg-[#141518] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-lg px-3 py-2 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
-                  Tagline / Description (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={customTagline}
-                  onChange={(e) => setCustomTagline(e.target.value)}
-                  placeholder="Short description of this tool"
                   className="w-full bg-[#141518] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-lg px-3 py-2 focus:outline-none"
                 />
               </div>
@@ -829,7 +588,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 /**
  * Dedicated Brand Icon Renderer
  */
-function AppIcon({ app, size = 18 }: { app: AppDefinition; size?: number }) {
+function AppIcon({ app, size = 24 }: { app: AppDefinition; size?: number }) {
   if (app.id === 'google') {
     return (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -867,59 +626,35 @@ function AppIcon({ app, size = 18 }: { app: AppDefinition; size?: number }) {
 
   if (app.id === 'wikipedia') {
     return (
-      <div className="font-serif font-black text-white text-xs leading-none">W</div>
+      <div
+        className="font-serif font-black text-white flex items-center justify-center leading-none"
+        style={{ fontSize: size * 0.7 }}
+      >
+        W
+      </div>
     );
   }
 
   if (app.id === 'excalidraw') {
-    return <PenTool size={size} className={app.iconColor} />;
-  }
-
-  if (app.id === 'github') {
     return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="text-white">
-        <path
-          fillRule="evenodd"
-          clipRule="evenodd"
-          d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-        />
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={app.iconColor}
+      >
+        <path d="m12 19 7-7 3 3-7 7-3-3z" />
+        <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+        <path d="m2 2 7.586 7.586" />
+        <circle cx="11" cy="11" r="2" />
       </svg>
     );
-  }
-
-  if (app.id === 'stackoverflow') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="text-[#F48024]">
-        <path d="M18.986 21.865v-6.404h2.134V24H1.844v-8.539h2.13v6.404h15.012zM6.111 19.731H16.85v-2.137H6.111v2.137zm.259-4.852l10.48 2.189.451-2.07-10.478-2.187-.453 2.068zm1.5-4.887l9.656 4.826.955-1.89-9.657-4.828-.954 1.892zm3.22-4.61l8.206 6.964 1.38-1.61-8.206-6.965-1.38 1.611zm6.564-5.382l-1.624 1.39 6.513 8.601 1.625-1.39-6.514-8.601z" />
-      </svg>
-    );
-  }
-
-  if (app.id === 'duckduckgo') {
-    return <Compass size={size} className={app.iconColor} />;
   }
 
   return <Globe size={size} className={app.iconColor} />;
-}
-
-// Inline PenTool component if not imported
-function PenTool({ size = 18, className = '' }: { size?: number; className?: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m12 19 7-7 3 3-7 7-3-3z" />
-      <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-      <path d="m2 2 7.586 7.586" />
-      <circle cx="11" cy="11" r="2" />
-    </svg>
-  );
 }
