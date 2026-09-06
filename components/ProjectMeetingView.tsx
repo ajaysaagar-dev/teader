@@ -31,6 +31,10 @@ import {
   Shield,
   Activity,
   PowerOff,
+  ScreenShare,
+  ScreenShareOff,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -48,7 +52,39 @@ export interface ParticipantInfo {
   audioTrackSid?: string;
   connectionQuality: ConnectionQuality;
   joinedAt: number;
+  isScreenSharing?: boolean;
+  screenShareTrack?: Track;
 }
+
+// ─── Screen Share Video Player Component ─────────────────────────────────────
+const ScreenShareVideo: React.FC<{
+  track: Track;
+  isLocal?: boolean;
+  className?: string;
+  onClick?: () => void;
+}> = ({ track, isLocal, className, onClick }) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !track) return;
+    track.attach(el);
+    return () => {
+      track.detach(el);
+    };
+  }, [track]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={isLocal}
+      onClick={onClick}
+      className={className || 'w-full h-full object-contain bg-black'}
+    />
+  );
+};
 
 export interface MeetingParticipant {
   peerId: string;
@@ -95,6 +131,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  // Screen Share State (1080p 60fps, default: disabled)
+  const [isSharingScreen, setIsSharingScreen] = useState(false);
+  const [fullscreenParticipant, setFullscreenParticipant] = useState<ParticipantInfo | null>(null);
 
   // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
   const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
@@ -182,6 +222,28 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   }, [selectedInputId, selectedOutputId]);
 
+  // ── Sync and Cleanup Fullscreen Participant ──
+  useEffect(() => {
+    if (fullscreenParticipant) {
+      const updated = participants.find((p) => p.identity === fullscreenParticipant.identity);
+      if (!updated || !updated.isScreenSharing || !updated.screenShareTrack) {
+        setFullscreenParticipant(null);
+      } else if (updated.screenShareTrack !== fullscreenParticipant.screenShareTrack) {
+        setFullscreenParticipant(updated);
+      }
+    }
+  }, [participants, fullscreenParticipant]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && fullscreenParticipant) {
+        setFullscreenParticipant(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [fullscreenParticipant]);
+
   // ── Transform LiveKit Participant into ParticipantInfo ──
   const mapParticipant = useCallback((p: Participant): ParticipantInfo => {
     let avatar: string | undefined = undefined;
@@ -198,7 +260,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
 
     const micPub = p.getTrackPublication(Track.Source.Microphone);
+    const screenPub = p.getTrackPublication(Track.Source.ScreenShare);
     const isLocal = p instanceof LocalParticipant;
+    const isScreenSharing = Boolean(screenPub && !screenPub.isMuted && screenPub.track);
+    const screenShareTrack = screenPub?.track;
 
     return {
       identity: p.identity,
@@ -212,6 +277,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       audioTrackSid: micPub?.trackSid,
       connectionQuality: p.connectionQuality,
       joinedAt: p.joinedAt ? p.joinedAt.getTime() : Date.now(),
+      isScreenSharing,
+      screenShareTrack,
     };
   }, []);
 
@@ -225,6 +292,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     // Local participant
     if (room.localParticipant) {
       list.push(mapParticipant(room.localParticipant));
+      setIsSharingScreen(Boolean(room.localParticipant.isScreenShareEnabled));
     }
 
     // Remote participants
@@ -340,7 +408,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         await roomRef.current.disconnect();
       }
 
-      // 3. Initialize LiveKit Room instance with audio-only optimizations
+      // 3. Initialize LiveKit Room instance with audio and 1080p 60fps video capabilities
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
@@ -349,6 +417,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           noiseSuppression: true,
           autoGainControl: true, // Hardware/browser mic normalization enabled by default
           sampleRate: 48000,
+        },
+        videoCaptureDefaults: {
+          resolution: {
+            width: 1920,
+            height: 1080,
+            frameRate: 60,
+          },
         },
       });
       roomRef.current = room;
@@ -369,6 +444,18 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         })
         .on(RoomEvent.Reconnected, () => {
           toast.success('Reconnected to voice room');
+          syncParticipants();
+        })
+        .on(RoomEvent.LocalTrackPublished, (pub) => {
+          if (pub.source === Track.Source.ScreenShare) {
+            setIsSharingScreen(true);
+          }
+          syncParticipants();
+        })
+        .on(RoomEvent.LocalTrackUnpublished, (pub) => {
+          if (pub.source === Track.Source.ScreenShare) {
+            setIsSharingScreen(false);
+          }
           syncParticipants();
         })
         .on(RoomEvent.Disconnected, (reason) => {
@@ -545,6 +632,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
     return () => {
       if (roomRef.current) {
+        if (roomRef.current.localParticipant?.isScreenShareEnabled) {
+          roomRef.current.localParticipant.setScreenShareEnabled(false).catch(() => {});
+        }
         roomRef.current.disconnect();
         roomRef.current = null;
       }
@@ -573,6 +663,55 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       toast.info(nextMuted ? 'Microphone muted' : 'Microphone unmuted');
     } catch (err: any) {
       console.warn('[Toggle Mute Error]:', err);
+    }
+  };
+
+  // ── Toggle Screen Sharing (1080p 60fps) ──
+  const handleToggleScreenShare = async () => {
+    const room = roomRef.current;
+    if (!room || !room.localParticipant) {
+      toast.error('Not connected to meeting room');
+      return;
+    }
+
+    try {
+      const nextState = !isSharingScreen;
+      if (nextState) {
+        toast.info('Starting 1080p 60fps screen stream…');
+        await room.localParticipant.setScreenShareEnabled(
+          true,
+          {
+            audio: true,
+            resolution: {
+              width: 1920,
+              height: 1080,
+              frameRate: 60,
+            },
+          },
+          {
+            videoEncoding: {
+              maxBitrate: 4_500_000,
+              maxFramerate: 60,
+            },
+          }
+        );
+        setIsSharingScreen(true);
+        toast.success('Screen stream active (1080p 60fps)');
+      } else {
+        await room.localParticipant.setScreenShareEnabled(false);
+        setIsSharingScreen(false);
+        toast.info('Screen stream stopped');
+      }
+      syncParticipants();
+    } catch (err: any) {
+      console.warn('[Screen Share Error]:', err);
+      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
+        toast.info('Screen stream cancelled');
+      } else {
+        toast.error(err?.message || 'Failed to start screen stream');
+      }
+      setIsSharingScreen(Boolean(room.localParticipant?.isScreenShareEnabled));
+      syncParticipants();
     }
   };
 
@@ -970,164 +1109,297 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             </div>
           )}
 
-          <div
-            className={`grid gap-4 w-full h-full auto-rows-fr ${
-              participants.length === 1
-                ? 'grid-cols-1 max-w-lg mx-auto'
-                : participants.length === 2
-                ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
-                : participants.length <= 4
-                ? 'grid-cols-2 max-w-4xl mx-auto'
-                : 'grid-cols-2 md:grid-cols-3 max-w-6xl mx-auto'
-            }`}
-          >
-            {participants.map((p) => {
-              const speaking = p.isSpeaking;
+          {(() => {
+            const hasAnyScreenShare = participants.some((p) => p.isScreenSharing && p.screenShareTrack);
 
-              return (
-                <div
-                  key={p.identity}
-                  className={`relative rounded-2xl bg-[#121317] border transition-all duration-200 flex flex-col items-center justify-center p-6 shadow-xl overflow-hidden ${
-                    speaking
-                      ? 'border-[#22C55E] ring-4 ring-[#22C55E]/20 shadow-[0_0_24px_rgba(34,197,94,0.2)]'
-                      : 'border-[#22242A] hover:border-[#333640]'
-                  }`}
-                >
-                  {/* Speaking background glow */}
-                  {speaking && (
-                    <div className="absolute inset-0 bg-radial from-[#22C55E]/10 to-transparent pointer-events-none animate-pulse" />
-                  )}
+            return (
+              <div
+                className={`grid gap-4 w-full h-full auto-rows-fr ${
+                  hasAnyScreenShare
+                    ? participants.length === 1
+                      ? 'grid-cols-1 max-w-5xl mx-auto'
+                      : participants.length === 2
+                      ? 'grid-cols-1 lg:grid-cols-2 max-w-6xl mx-auto'
+                      : participants.length <= 4
+                      ? 'grid-cols-1 sm:grid-cols-2 max-w-6xl mx-auto'
+                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto'
+                    : participants.length === 1
+                    ? 'grid-cols-1 max-w-lg mx-auto'
+                    : participants.length === 2
+                    ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
+                    : participants.length <= 4
+                    ? 'grid-cols-2 max-w-4xl mx-auto'
+                    : 'grid-cols-2 md:grid-cols-3 max-w-6xl mx-auto'
+                }`}
+              >
+                {participants.map((p) => {
+                  const speaking = p.isSpeaking;
+                  const isSharingThisScreen = Boolean(p.isScreenSharing && p.screenShareTrack);
 
-                  {/* Avatar */}
-                  <div className="relative mb-3.5">
+                  return (
                     <div
-                      className={`w-20 h-20 rounded-full flex items-center justify-center overflow-hidden font-bold text-xl uppercase transition-all duration-200 ${
-                        speaking
-                          ? 'ring-4 ring-[#22C55E] ring-offset-4 ring-offset-[#121317] scale-105'
-                          : 'ring-2 ring-[#2B2D35]'
+                      key={p.identity}
+                      onClick={() => {
+                        if (isSharingThisScreen) {
+                          setFullscreenParticipant(p);
+                        }
+                      }}
+                      className={`relative rounded-2xl bg-[#121317] border transition-all duration-200 flex flex-col shadow-xl overflow-hidden ${
+                        isSharingThisScreen
+                          ? 'cursor-pointer hover:border-[#DCB001]/50 min-h-[260px] aspect-video'
+                          : 'items-center justify-center p-6 min-h-[220px]'
                       } ${
-                        p.avatar
-                          ? 'bg-[#1E2026]'
-                          : 'bg-gradient-to-br from-[#2B2E38] to-[#17181F] text-white'
+                        speaking
+                          ? 'border-[#22C55E] ring-4 ring-[#22C55E]/20 shadow-[0_0_24px_rgba(34,197,94,0.2)]'
+                          : 'border-[#22242A] hover:border-[#333640]'
                       }`}
                     >
-                      {p.avatar ? (
-                        <img
-                          src={p.avatar}
-                          alt={p.name}
-                          className="w-full h-full object-cover"
-                        />
+                      {/* Speaking background glow */}
+                      {speaking && !isSharingThisScreen && (
+                        <div className="absolute inset-0 bg-radial from-[#22C55E]/10 to-transparent pointer-events-none animate-pulse" />
+                      )}
+
+                      {isSharingThisScreen ? (
+                        <div className="relative w-full h-full flex flex-col bg-black overflow-hidden group">
+                          {/* 1080p 60fps Video Stream */}
+                          <div className="relative flex-1 w-full h-full min-h-[200px] bg-black flex items-center justify-center overflow-hidden">
+                            <ScreenShareVideo
+                              track={p.screenShareTrack!}
+                              isLocal={p.isLocal}
+                              className="w-full h-full object-contain"
+                            />
+
+                            {/* Hover fullscreen prompt overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                              <span className="px-3.5 py-1.5 rounded-xl bg-black/80 text-white border border-white/20 backdrop-blur-md text-xs font-semibold flex items-center gap-1.5 shadow-2xl">
+                                <Maximize2 size={14} className="text-[#DCB001]" /> Click to View Fullscreen
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Top Overlay Bar */}
+                          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-10">
+                            {/* Streamer details pill */}
+                            <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-black/80 backdrop-blur-md border border-white/15 text-xs font-medium text-white shadow-md pointer-events-auto">
+                              <div className="w-5 h-5 rounded-full overflow-hidden bg-[#222] shrink-0 font-bold text-[10px] flex items-center justify-center">
+                                {p.avatar ? (
+                                  <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{p.name.slice(0, 1).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <span className="truncate max-w-[120px] font-semibold text-xs">{p.name}</span>
+                              {p.isLocal && (
+                                <span className="px-1.5 rounded bg-[#DCB001]/20 text-[#DCB001] font-mono text-[9px] font-bold">
+                                  YOU
+                                </span>
+                              )}
+                              {p.isAdmin && (
+                                <span className="px-1.5 rounded bg-blue-500/20 text-blue-400 font-mono text-[9px] font-bold">
+                                  ADMIN
+                                </span>
+                              )}
+                            </div>
+
+                            {/* 1080p 60fps LIVE badge + Fullscreen button */}
+                            <div className="flex items-center gap-1.5 pointer-events-auto">
+                              <span className="px-2 py-0.5 rounded-lg bg-[#22C55E]/20 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/40 flex items-center gap-1 backdrop-blur-md shadow-sm">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
+                                1080p 60fps
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFullscreenParticipant(p);
+                                }}
+                                className="p-1.5 rounded-lg bg-black/80 hover:bg-[#1E2026] text-white border border-white/15 backdrop-blur-md transition-all shadow-md cursor-pointer"
+                                title="View stream in fullscreen"
+                              >
+                                <Maximize2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Bottom Status / Admin Remote Mute Bar */}
+                          <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between z-10 pointer-events-none">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-white/15 text-[11px] font-mono text-white/90 pointer-events-auto">
+                              {p.isMuted ? (
+                                <span className="flex items-center gap-1 text-red-400">
+                                  <MicOff size={12} /> Mic Muted
+                                </span>
+                              ) : p.isSpeaking ? (
+                                <span className="flex items-center gap-1 text-[#22C55E]">
+                                  <Mic size={12} /> Speaking…
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-[#A0A5B0]">
+                                  <Mic size={12} /> Idle
+                                </span>
+                              )}
+                            </div>
+
+                            {currentUserIsAdmin && !p.isLocal && (
+                              <div className="pointer-events-auto">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAdminToggleMute(
+                                      p.identity,
+                                      p.audioTrackSid,
+                                      !p.isMuted,
+                                      p.name
+                                    );
+                                  }}
+                                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border backdrop-blur-md transition-all cursor-pointer shadow-md ${
+                                    p.isMuted
+                                      ? 'bg-[#22C55E]/25 hover:bg-[#22C55E]/35 text-[#22C55E] border-[#22C55E]/40'
+                                      : 'bg-red-500/25 hover:bg-red-500/35 text-red-300 border-red-500/40'
+                                  }`}
+                                  title={p.isMuted ? 'Admin: Unmute participant' : 'Admin: Mute participant'}
+                                >
+                                  {p.isMuted ? <Mic size={11} /> : <MicOff size={11} />}
+                                  <span>{p.isMuted ? 'Unmute' : 'Mute'}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       ) : (
-                        <span>{p.name.slice(0, 2)}</span>
+                        <>
+                          {/* Avatar */}
+                          <div className="relative mb-3.5">
+                            <div
+                              className={`w-20 h-20 rounded-full flex items-center justify-center overflow-hidden font-bold text-xl uppercase transition-all duration-200 ${
+                                speaking
+                                  ? 'ring-4 ring-[#22C55E] ring-offset-4 ring-offset-[#121317] scale-105'
+                                  : 'ring-2 ring-[#2B2D35]'
+                              } ${
+                                p.avatar
+                                  ? 'bg-[#1E2026]'
+                                  : 'bg-gradient-to-br from-[#2B2E38] to-[#17181F] text-white'
+                              }`}
+                            >
+                              {p.avatar ? (
+                                <img
+                                  src={p.avatar}
+                                  alt={p.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span>{p.name.slice(0, 2)}</span>
+                              )}
+                            </div>
+
+                            {/* Mic badge */}
+                            <div
+                              className={`absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#121317] shadow-md ${
+                                p.isMuted
+                                  ? 'bg-red-500 text-white'
+                                  : speaking
+                                  ? 'bg-[#22C55E] text-black animate-bounce'
+                                  : 'bg-[#1F2128] text-[#8E939D]'
+                              }`}
+                            >
+                              {p.isMuted ? <MicOff size={11} /> : <Mic size={11} />}
+                            </div>
+                          </div>
+
+                          {/* Name & Role Badges */}
+                          <div className="flex items-center gap-1.5 mb-1 z-10">
+                            <span className="font-semibold text-sm text-white tracking-tight">
+                              {p.name}
+                            </span>
+                            {p.isLocal && (
+                              <span className="px-1.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
+                                YOU
+                              </span>
+                            )}
+                            {p.isAdmin && (
+                              <span
+                                className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5"
+                                title="Project Admin"
+                              >
+                                <Shield size={9} />
+                                ADMIN
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Speaking Waveform / Status */}
+                          <div className="h-4 flex items-center gap-1 mt-1 z-10">
+                            {speaking ? (
+                              <>
+                                <span className="w-1 h-3.5 bg-[#22C55E] rounded-full animate-pulse" />
+                                <span className="w-1 h-5 bg-[#22C55E] rounded-full animate-pulse delay-75" />
+                                <span className="w-1 h-2 bg-[#22C55E] rounded-full animate-pulse delay-150" />
+                                <span className="w-1 h-4 bg-[#22C55E] rounded-full animate-pulse delay-100" />
+                                <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">
+                                  Speaking...
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-[#6B707B] font-mono">
+                                {p.isMuted ? 'Muted' : 'Idle'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* ── Admin Remote Mute / Unmute Action ── */}
+                          {currentUserIsAdmin && !p.isLocal && (
+                            <div className="mt-3 z-10 flex items-center gap-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAdminToggleMute(
+                                    p.identity,
+                                    p.audioTrackSid,
+                                    !p.isMuted,
+                                    p.name
+                                  );
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer shadow-sm ${
+                                  p.isMuted
+                                    ? 'bg-[#22C55E]/15 hover:bg-[#22C55E]/25 text-[#22C55E] border-[#22C55E]/30'
+                                    : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
+                                }`}
+                                title={p.isMuted ? 'Admin: Unmute this participant' : 'Admin: Mute this participant'}
+                              >
+                                {p.isMuted ? (
+                                  <>
+                                    <Mic size={12} />
+                                    <span>Unmute</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <MicOff size={12} />
+                                    <span>Mute</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Connection Quality Indicator */}
+                          <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-mono">
+                            {p.connectionQuality === ConnectionQuality.Excellent ||
+                            p.connectionQuality === ConnectionQuality.Good ? (
+                              <span title="Excellent Connection"><Signal size={12} className="text-[#22C55E]" /></span>
+                            ) : p.connectionQuality === ConnectionQuality.Poor ? (
+                              <span title="Poor Connection"><Wifi size={12} className="text-[#DCB001]" /></span>
+                            ) : p.connectionQuality === ConnectionQuality.Lost ? (
+                              <span title="Lost Connection"><WifiOff size={12} className="text-red-400" /></span>
+                            ) : (
+                              <Signal size={12} className="text-[#6B707B]" />
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
-
-                    {/* Mic badge */}
-                    <div
-                      className={`absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#121317] shadow-md ${
-                        p.isMuted
-                          ? 'bg-red-500 text-white'
-                          : speaking
-                          ? 'bg-[#22C55E] text-black animate-bounce'
-                          : 'bg-[#1F2128] text-[#8E939D]'
-                      }`}
-                    >
-                      {p.isMuted ? <MicOff size={11} /> : <Mic size={11} />}
-                    </div>
-                  </div>
-
-                  {/* Name & Role Badges */}
-                  <div className="flex items-center gap-1.5 mb-1 z-10">
-                    <span className="font-semibold text-sm text-white tracking-tight">
-                      {p.name}
-                    </span>
-                    {p.isLocal && (
-                      <span className="px-1.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
-                        YOU
-                      </span>
-                    )}
-                    {p.isAdmin && (
-                      <span
-                        className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5"
-                        title="Project Admin"
-                      >
-                        <Shield size={9} />
-                        ADMIN
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Speaking Waveform / Status */}
-                  <div className="h-4 flex items-center gap-1 mt-1 z-10">
-                    {speaking ? (
-                      <>
-                        <span className="w-1 h-3.5 bg-[#22C55E] rounded-full animate-pulse" />
-                        <span className="w-1 h-5 bg-[#22C55E] rounded-full animate-pulse delay-75" />
-                        <span className="w-1 h-2 bg-[#22C55E] rounded-full animate-pulse delay-150" />
-                        <span className="w-1 h-4 bg-[#22C55E] rounded-full animate-pulse delay-100" />
-                        <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">
-                          Speaking...
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-[10px] text-[#6B707B] font-mono">
-                        {p.isMuted ? 'Muted' : 'Idle'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* ── Admin Remote Mute / Unmute Action ── */}
-                  {currentUserIsAdmin && !p.isLocal && (
-                    <div className="mt-3 z-10 flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAdminToggleMute(
-                            p.identity,
-                            p.audioTrackSid,
-                            !p.isMuted,
-                            p.name
-                          );
-                        }}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer shadow-sm ${
-                          p.isMuted
-                            ? 'bg-[#22C55E]/15 hover:bg-[#22C55E]/25 text-[#22C55E] border-[#22C55E]/30'
-                            : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
-                        }`}
-                        title={p.isMuted ? 'Admin: Unmute this participant' : 'Admin: Mute this participant'}
-                      >
-                        {p.isMuted ? (
-                          <>
-                            <Mic size={12} />
-                            <span>Unmute</span>
-                          </>
-                        ) : (
-                          <>
-                            <MicOff size={12} />
-                            <span>Mute</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Connection Quality Indicator */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-mono">
-                    {p.connectionQuality === ConnectionQuality.Excellent ||
-                    p.connectionQuality === ConnectionQuality.Good ? (
-                      <span title="Excellent Connection"><Signal size={12} className="text-[#22C55E]" /></span>
-                    ) : p.connectionQuality === ConnectionQuality.Poor ? (
-                      <span title="Poor Connection"><Wifi size={12} className="text-[#DCB001]" /></span>
-                    ) : p.connectionQuality === ConnectionQuality.Lost ? (
-                      <span title="Lost Connection"><WifiOff size={12} className="text-red-400" /></span>
-                    ) : (
-                      <Signal size={12} className="text-[#6B707B]" />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── Bottom Controls Dock ── */}
@@ -1166,6 +1438,31 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <Volume2 size={16} className="text-[#DCB001]" />
             )}
             <span>{isDeafened ? 'Undeafen' : 'Deafen'}</span>
+          </button>
+
+          {/* Screen Share Button (1080p 60fps, default: disabled) */}
+          <button
+            onClick={handleToggleScreenShare}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
+              isSharingScreen
+                ? 'bg-[#22C55E]/20 text-[#22C55E] border-[#22C55E]/50 hover:bg-[#22C55E]/30 shadow-[0_0_20px_rgba(34,197,94,0.25)] animate-pulse'
+                : 'bg-[#1E2027] hover:bg-[#282B34] text-white border border-[#343742]'
+            }`}
+            title={
+              isSharingScreen
+                ? 'Stop Screen Stream'
+                : 'Stream Screen in 1080p 60fps (LiveKit)'
+            }
+          >
+            {isSharingScreen ? (
+              <ScreenShareOff size={16} className="text-[#22C55E]" />
+            ) : (
+              <ScreenShare size={16} className="text-[#A0A5B0]" />
+            )}
+            <span>{isSharingScreen ? 'Stop Sharing' : 'Share Screen'}</span>
+            <span className="hidden sm:inline-block px-1.5 py-0.5 rounded bg-black/40 text-[9px] font-mono text-[#A0A5B0] border border-white/10">
+              1080p60
+            </span>
           </button>
 
           {/* LiveKit Noise Reduction Button (Default: Enabled) */}
@@ -1247,6 +1544,67 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* ── Fullscreen Stream Modal ── */}
+      {fullscreenParticipant && fullscreenParticipant.screenShareTrack && (
+        <div className="fixed inset-0 z-50 bg-[#050608]/98 backdrop-blur-2xl flex flex-col animate-in fade-in duration-200">
+          {/* Header */}
+          <div className="h-14 px-6 border-b border-[#1E2026] bg-[#0E0F13]/90 backdrop-blur-md flex items-center justify-between shrink-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-[#1E2026] ring-1 ring-white/20 flex items-center justify-center font-bold text-xs uppercase">
+                {fullscreenParticipant.avatar ? (
+                  <img
+                    src={fullscreenParticipant.avatar}
+                    alt={fullscreenParticipant.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{fullscreenParticipant.name.slice(0, 2)}</span>
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    {fullscreenParticipant.name}'s Stream
+                  </h3>
+                  {fullscreenParticipant.isLocal && (
+                    <span className="px-1.5 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
+                      YOU
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/30 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
+                    1080p 60fps LIVE
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#787C83]">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-[#1C1E24] text-white border border-[#2D3039] font-mono text-[10px]">Esc</kbd> or click Exit Fullscreen to return
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setFullscreenParticipant(null)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-[#1C1E24] hover:bg-[#282B34] text-white border border-[#323642] transition-all cursor-pointer shadow-md"
+                title="Exit Fullscreen (Esc)"
+              >
+                <Minimize2 size={14} />
+                <span>Exit Fullscreen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Video Container */}
+          <div className="flex-1 min-h-0 flex items-center justify-center p-4 relative bg-black select-none">
+            <ScreenShareVideo
+              track={fullscreenParticipant.screenShareTrack}
+              isLocal={fullscreenParticipant.isLocal}
+              className="w-full h-full object-contain max-h-full"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
