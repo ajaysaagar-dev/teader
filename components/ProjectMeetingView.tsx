@@ -29,7 +29,7 @@ import {
   RefreshCw,
   Sparkles,
   Shield,
-  ShieldAlert,
+  Activity,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -85,6 +85,14 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
   const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
   const krispProcessorRef = useRef<any>(null);
+
+  // Voice Normalization State (Dynamic Range Compressor + Makeup Gain, default: enabled for all users)
+  const [voiceNormalizationEnabled, setVoiceNormalizationEnabled] = useState(true);
+  const voiceNormalizationRef = useRef(true);
+  voiceNormalizationRef.current = voiceNormalizationEnabled;
+  const normalizerNodesRef = useRef<
+    Map<string, { compressor: DynamicsCompressorNode; makeupGain: GainNode }>
+  >(new Map());
 
   // Meeting duration timer
   const [meetingDuration, setMeetingDuration] = useState(0);
@@ -257,6 +265,42 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     toast.info(next ? 'LiveKit Noise Reduction enabled' : 'LiveKit Noise Reduction disabled');
   };
 
+  // ── Voice Normalization Update Handler (Equalizes low and high volumes) ──
+  const updateNormalizationState = useCallback((enabled: boolean) => {
+    normalizerNodesRef.current.forEach(({ compressor, makeupGain }) => {
+      try {
+        const audioCtx = compressor.context;
+        if (enabled) {
+          // Boost quiet whispers & compress loud spikes down
+          compressor.threshold.setValueAtTime(-24, audioCtx.currentTime);
+          compressor.knee.setValueAtTime(30, audioCtx.currentTime);
+          compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+          compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+          compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+          makeupGain.gain.setValueAtTime(isDeafenedRef.current ? 0 : 1.5, audioCtx.currentTime);
+        } else {
+          // Bypass compression
+          compressor.ratio.setValueAtTime(1, audioCtx.currentTime);
+          makeupGain.gain.setValueAtTime(isDeafenedRef.current ? 0 : 1.0, audioCtx.currentTime);
+        }
+      } catch (err) {
+        console.warn('[updateNormalizationState error]:', err);
+      }
+    });
+  }, []);
+
+  const handleToggleVoiceNormalization = () => {
+    const next = !voiceNormalizationEnabled;
+    setVoiceNormalizationEnabled(next);
+    voiceNormalizationRef.current = next;
+    updateNormalizationState(next);
+    toast.info(
+      next
+        ? 'Voice Normalization enabled (low & high volumes equalized)'
+        : 'Voice Normalization disabled'
+    );
+  };
+
   // ── Connect to LiveKit Room ──
   const connectToVoiceRoom = useCallback(async () => {
     setErrorMessage(null);
@@ -289,7 +333,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         audioCaptureDefaults: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
+          autoGainControl: true, // Hardware/browser mic normalization enabled by default
           sampleRate: 48000,
         },
       });
@@ -323,6 +367,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         .on(RoomEvent.ParticipantDisconnected, (participant) => {
           toast.info(`${participant.name || 'A user'} left the call`);
           attachedAudioElementsRef.current.delete(participant.identity);
+          normalizerNodesRef.current.delete(participant.identity);
           syncParticipants();
         })
         .on(RoomEvent.ActiveSpeakersChanged, () => {
@@ -371,6 +416,36 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             attachedAudioElementsRef.current.set(participant.identity, audioEl);
             document.body.appendChild(audioEl);
 
+            // Voice Normalization Web Audio Node Setup (Dynamic Range Compressor + Boost)
+            try {
+              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+              if (AudioContextClass) {
+                const audioCtx = new AudioContextClass();
+                const source = audioCtx.createMediaElementSource(audioEl);
+                const compressor = audioCtx.createDynamicsCompressor();
+                const makeupGain = audioCtx.createGain();
+
+                const isNorm = voiceNormalizationRef.current;
+                compressor.threshold.setValueAtTime(isNorm ? -24 : 0, audioCtx.currentTime);
+                compressor.knee.setValueAtTime(30, audioCtx.currentTime);
+                compressor.ratio.setValueAtTime(isNorm ? 12 : 1, audioCtx.currentTime);
+                compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+                compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+                makeupGain.gain.setValueAtTime(
+                  isDeafenedRef.current ? 0 : (isNorm ? 1.5 : 1.0),
+                  audioCtx.currentTime
+                );
+
+                source.connect(compressor);
+                compressor.connect(makeupGain);
+                makeupGain.connect(audioCtx.destination);
+
+                normalizerNodesRef.current.set(participant.identity, { compressor, makeupGain });
+              }
+            } catch (err) {
+              console.warn('[Voice Normalizer initialization note]:', err);
+            }
+
             audioEl.play().catch(() => {
               setAutoplayBlocked(true);
             });
@@ -385,6 +460,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               el.remove();
               attachedAudioElementsRef.current.delete(participant.identity);
             }
+            normalizerNodesRef.current.delete(participant.identity);
           }
           syncParticipants();
         });
@@ -436,6 +512,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       }
       attachedAudioElementsRef.current.forEach((el) => el.remove());
       attachedAudioElementsRef.current.clear();
+      normalizerNodesRef.current.clear();
       if (krispProcessorRef.current) {
         try {
           krispProcessorRef.current.destroy?.();
@@ -524,6 +601,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
     attachedAudioElementsRef.current.forEach((audioEl) => {
       audioEl.muted = nextDeafened;
+    });
+
+    normalizerNodesRef.current.forEach(({ makeupGain }) => {
+      try {
+        makeupGain.gain.setValueAtTime(
+          nextDeafened ? 0 : (voiceNormalizationRef.current ? 1.5 : 1.0),
+          makeupGain.context.currentTime
+        );
+      } catch {}
     });
 
     toast.info(nextDeafened ? 'Sound deafened' : 'Sound undeafened');
@@ -854,7 +940,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                       </span>
                     )}
                     {p.isAdmin && (
-                      <span className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5" title="Project Admin">
+                      <span
+                        className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5"
+                        title="Project Admin"
+                      >
                         <Shield size={9} />
                         ADMIN
                       </span>
@@ -982,8 +1071,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             }`}
             title={
               noiseReductionEnabled
-                ? 'LiveKit Noise Reduction: Enabled (Click to disable)'
-                : 'LiveKit Noise Reduction: Disabled (Click to enable)'
+                ? 'LiveKit AI Noise Reduction: Enabled (Click to disable)'
+                : 'LiveKit AI Noise Reduction: Disabled (Click to enable)'
             }
           >
             <Sparkles
@@ -991,6 +1080,27 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               className={noiseReductionEnabled ? 'text-[#22C55E]' : 'text-[#787C83]'}
             />
             <span>Noise Reduction {noiseReductionEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Voice Normalization Button (Default: Enabled) */}
+          <button
+            onClick={handleToggleVoiceNormalization}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
+              voiceNormalizationEnabled
+                ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 hover:bg-[#DCB001]/25 shadow-sm'
+                : 'bg-[#16171C] hover:bg-[#22242B] text-[#9BA1A6] border-[#292B33]'
+            }`}
+            title={
+              voiceNormalizationEnabled
+                ? 'Voice Normalization: Enabled (Low & high sounds dynamically equalized - Click to disable)'
+                : 'Voice Normalization: Disabled (Click to enable)'
+            }
+          >
+            <Activity
+              size={15}
+              className={voiceNormalizationEnabled ? 'text-[#DCB001]' : 'text-[#787C83]'}
+            />
+            <span>Normalizer {voiceNormalizationEnabled ? 'ON' : 'OFF'}</span>
           </button>
 
           {/* Devices Button */}
