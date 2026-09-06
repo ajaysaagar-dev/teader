@@ -232,8 +232,8 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     expect(isInMeeting).toBe(true);
     expect(isMini).toBe(true);
 
-    // Navigate to tasks, docs, charts: still mini PiP mode
-    ['tasks', 'docs', 'charts', 'history', 'settings'].forEach((tab) => {
+    // Navigate to tasks, docs, charts, chats: still mini PiP mode
+    ['tasks', 'docs', 'charts', 'chats', 'history', 'settings'].forEach((tab) => {
       activeTab = tab;
       isMini = activeTab !== 'meeting';
       expect(isInMeeting).toBe(true);

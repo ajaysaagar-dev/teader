@@ -102,6 +102,10 @@ const ConversationDrawer = dynamic(
   () => import('@/components/ConversationDrawer').then((m) => ({ default: m.ConversationDrawer })),
   { ssr: false }
 );
+const ProjectConversationView = dynamic(
+  () => import('@/components/ProjectConversationView').then((m) => ({ default: m.ProjectConversationView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const ProjectSettingsView = dynamic(
   () => import('@/components/ProjectSettingsView').then((m) => ({ default: m.ProjectSettingsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -143,13 +147,14 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'history' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'history' | 'settings';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
   if (v === 'meeting' || v === 'call' || v === 'audio' || v === 'voice' || v === 'conference' || v === 'huddle') return 'meeting';
+  if (v === 'chats' || v === 'chat' || v === 'conversation' || v === 'conversations' || v === 'messages' || v === 'discuss') return 'chats';
   if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow' || v === 'whiteboard') return 'charts';
   if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
@@ -233,7 +238,7 @@ export default function SingleProjectPage() {
 
   useEffect(() => {
     if (searchParams?.get('chat') === 'open') {
-      setIsChatOpen(true);
+      setActiveTab('chats');
     }
   }, [searchParams]);
 
@@ -1925,6 +1930,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('chats')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'chats'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Team Conversations & Chat Channels"
+            >
+              <MessageSquare size={13} />
+              <span>Chats</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('history')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'history'
@@ -1999,6 +2017,15 @@ export default function SingleProjectPage() {
               </div>
             ) : activeTab === 'meeting' ? (
               null
+            ) : activeTab === 'chats' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectConversationView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
+                  projectKey={project?.key}
+                  currentUser={currentUser}
+                />
+              </div>
             ) : activeTab === 'history' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectHistoryView

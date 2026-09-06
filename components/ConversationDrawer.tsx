@@ -50,24 +50,6 @@ export function ConversationDrawer({
 
   return (
     <>
-      {/* Floating Toggle Button (Always visible on all project views when drawer is closed) */}
-      {!isOpen && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.94 }}
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#DCB001] hover:bg-[#c49c00] text-[#0A0B0D] font-bold text-xs shadow-[0_4px_20px_rgba(220,176,1,0.35)] transition-all cursor-pointer border border-[#DCB001]/50 group"
-          title="Open Team Conversation"
-        >
-          <MessageSquare size={16} className="text-[#0A0B0D]" />
-          <span>Chat</span>
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-        </motion.button>
-      )}
-
       {/* Slide-Over Conversation Panel */}
       <AnimatePresence>
         {isOpen && (
