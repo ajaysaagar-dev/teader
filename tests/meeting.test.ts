@@ -133,4 +133,34 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     currentOutput = mockAudioOutputs[1].deviceId;
     expect(currentOutput).toBe('headphones-456');
   });
+
+  it('generates valid LiveKit AccessToken with project scope and voice grants', async () => {
+    const { AccessToken } = await import('livekit-server-sdk');
+    const apiKey = 'test_key';
+    const apiSecret = 'test_secret_32_characters_minimum_len';
+    const projectId = 999;
+    const roomName = `teader-project-${projectId}`;
+    const identity = 'user_42';
+
+    const token = new AccessToken(apiKey, apiSecret, {
+      identity,
+      name: 'Tester User',
+      ttl: '1h',
+      metadata: JSON.stringify({ userId: 42, avatar: 'https://example.com/avatar.png' }),
+    });
+
+    token.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: false,
+    });
+
+    const jwt = await token.toJwt();
+    expect(jwt).toBeTruthy();
+    expect(typeof jwt).toBe('string');
+    expect(jwt.split('.')).toHaveLength(3); // Standard 3-part JWT
+  });
 });
+
