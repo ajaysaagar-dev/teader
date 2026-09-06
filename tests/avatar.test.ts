@@ -101,4 +101,35 @@ describe('Avatar & User Appearance Logic Tests', () => {
     const oldFiles = files.filter((f) => f.startsWith('728px-Funniest-Cartoon-Characters'));
     expect(oldFiles.length).toBe(0);
   });
+
+  it('enforces strict whitelist for the 55 profile portraits via isAllowedProfileImage', async () => {
+    const { isAllowedProfileImage, ALL_PROFILE_IMAGES } = await import('@/lib/avatar');
+
+    expect(ALL_PROFILE_IMAGES.length).toBe(55);
+
+    // All 55 profile portraits must be strictly allowed
+    for (const img of ALL_PROFILE_IMAGES) {
+      expect(isAllowedProfileImage(img)).toBe(true);
+    }
+
+    // Arbitrary external URLs or invalid filenames must be strictly rejected
+    expect(isAllowedProfileImage('https://evil.com/hack.png')).toBe(false);
+    expect(isAllowedProfileImage('/profiles/profile-56.webp')).toBe(false);
+    expect(isAllowedProfileImage('/profiles/profile-0.webp')).toBe(false);
+    expect(isAllowedProfileImage('/uploads/avatar.png')).toBe(false);
+    expect(isAllowedProfileImage('')).toBe(false);
+    expect(isAllowedProfileImage(null)).toBe(false);
+    expect(isAllowedProfileImage(undefined)).toBe(false);
+  });
+
+  it('ensures avatars do not change randomly on reload for the same user', () => {
+    const user = { id: 42, name: 'persistentUser' };
+    const firstCall = resolveUserAvatar(user);
+    const secondCall = resolveUserAvatar(user);
+    const thirdCall = resolveUserAvatar(user);
+
+    expect(firstCall).toBe(secondCall);
+    expect(secondCall).toBe(thirdCall);
+    expect(firstCall).toMatch(/^\/profiles\/profile-\d+\.webp$/);
+  });
 });

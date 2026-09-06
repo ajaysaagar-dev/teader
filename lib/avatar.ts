@@ -1,10 +1,21 @@
 // Centralized Avatar & User Appearance Utility for Teader
 // Handles:
-// 1. Session-based random profile image assignment from /profiles/profile-[1-55].webp
-// 2. User-specific distinctive color palette hashing
-// 3. User first-letter initials extraction
+// 1. Loading user's persistent profile image from database
+// 2. Strict whitelist of available profile images (/profiles/profile-1.webp .. profile-55.webp)
+// 3. User-specific distinctive color palette hashing
+// 4. User first-letter initials extraction
 
 export const TOTAL_PROFILE_IMAGES = 55;
+
+export const ALL_PROFILE_IMAGES: string[] = Array.from(
+  { length: TOTAL_PROFILE_IMAGES },
+  (_, i) => `/profiles/profile-${i + 1}.webp`
+);
+
+export function isAllowedProfileImage(url?: string | null): boolean {
+  if (!url) return false;
+  return ALL_PROFILE_IMAGES.includes(url.trim());
+}
 
 export interface UserColorPalette {
   name: string;
@@ -156,7 +167,7 @@ export function hashString(str: string): number {
 }
 
 /**
- * Extracts strictly the first letter of the user's name (e.g. "J" for "jori").
+ * Extracts strictly the first letter of the user's name in uppercase (e.g. "J" for "jori").
  */
 export function getUserInitial(
   user?: { name?: string; email?: string } | string | null
@@ -186,68 +197,39 @@ export function getUserColorPalette(
   return USER_PALETTES[index];
 }
 
-// Memory fallback seed when sessionStorage is unavailable (e.g. SSR)
-let memorySeed: number | null = null;
-
 /**
- * Gets or initializes a random session seed so profile images change randomly
- * when users open the app in a new session.
+ * Returns a stable fallback profile image (/profiles/profile-1.webp .. profile-55.webp)
+ * for the given user, based on user identifier. Does NOT change across sessions.
  */
-export function getAvatarSessionSeed(): number {
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = window.sessionStorage.getItem('teader_avatar_seed');
-      if (stored) {
-        const parsed = parseInt(stored, 10);
-        if (!isNaN(parsed) && parsed > 0) return parsed;
-      }
-      const newSeed = Math.floor(Math.random() * 1000000) + 1;
-      window.sessionStorage.setItem('teader_avatar_seed', String(newSeed));
-      return newSeed;
-    } catch {
-      // Ignore sessionStorage errors (e.g. private mode)
-    }
-  }
-
-  if (memorySeed === null) {
-    memorySeed = Math.floor(Math.random() * 1000000) + 1;
-  }
-  return memorySeed;
-}
-
-/**
- * Returns a randomized profile image path from /profiles/profile-1.webp .. profile-55.webp
- * for the given user, based on the current app session.
- */
-export function getRandomProfileImage(userIdentifier?: string | number | null): string {
-  const seed = getAvatarSessionSeed();
+export function getFallbackProfileImage(userIdentifier?: string | number | null): string {
   const idStr = String(userIdentifier || 'user');
   const userHash = hashString(idStr);
-  const combined = Math.abs((userHash ^ (seed * 2654435761)) | 0);
-  const profileIndex = (combined % TOTAL_PROFILE_IMAGES) + 1;
+  const profileIndex = (userHash % TOTAL_PROFILE_IMAGES) + 1;
   return `/profiles/profile-${profileIndex}.webp`;
 }
 
+export const getRandomProfileImage = getFallbackProfileImage;
+
 /**
  * Resolves the profile avatar image URL for a user.
- * If user has an explicit local profile image or custom avatar (not Unsplash/Dicebear default),
- * uses it. Otherwise, assigns a session-randomized profile image from /profiles/.
+ * 1. If user has their respective set profile image (e.g. /profiles/profile-X.webp or uploaded URL), uses it.
+ * 2. If not set, returns a deterministic profile image from /profiles/ so it stays stable.
  */
 export function resolveUserAvatar(
   user?: { id?: string | number; name?: string; email?: string; avatar?: string } | null
 ): string {
-  if (!user) return getRandomProfileImage('anonymous');
+  if (!user) return '/profiles/profile-1.webp';
 
-  // If user has a valid custom non-placeholder avatar
+  // If user has a valid set avatar that is not an obsolete placeholder
   if (
     user.avatar &&
+    user.avatar.trim() !== '' &&
     !user.avatar.includes('images.unsplash.com') &&
-    !user.avatar.includes('api.dicebear.com') &&
-    user.avatar.trim() !== ''
+    !user.avatar.includes('api.dicebear.com')
   ) {
     return user.avatar;
   }
 
   const idKey = user.id != null ? String(user.id) : (user.name || user.email || 'user');
-  return getRandomProfileImage(idKey);
+  return getFallbackProfileImage(idKey);
 }

@@ -30,6 +30,7 @@ import { getDesktopInfo } from '@/lib/desktop';
 import { ThemeColorSettings } from './ThemeColorSettings';
 import { CustomDropdown } from './ui/CustomDropdown';
 import { Avatar } from './ui/Avatar';
+import { ProfileAvatarPickerModal } from './ProfileAvatarPickerModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -57,6 +58,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     version: null,
     platform: null,
   });
+  const [user, setUser] = useState<any>(currentUser);
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+
+  useEffect(() => {
+    setUser(currentUser);
+  }, [currentUser]);
+
+  useEffect(() => {
+    const handleUserUpdate = (e: any) => {
+      if (e.detail) {
+        setUser(e.detail);
+      }
+    };
+    window.addEventListener('teader_user_updated', handleUserUpdate);
+    return () => window.removeEventListener('teader_user_updated', handleUserUpdate);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -121,8 +138,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   ];
 
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <>
+      <AnimatePresence>
+        {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm select-none">
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -389,15 +407,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {/* ─── Tab: Account ───────────────────────────────────────── */}
                 {activeTab === 'account' && (
                   <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex items-center gap-4">
-                      <Avatar user={currentUser} size="xl" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
-                        <p className="text-xs font-mono text-[var(--text-muted)] truncate">{currentUser?.email || 'test@teader.io'}</p>
-                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[var(--success-bg)] text-[var(--success)] text-[10px] font-mono font-medium border border-[var(--success-border)]">
-                          <ShieldCheck size={10} /> Authenticated Active Session
+                    <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div
+                          className="relative group cursor-pointer"
+                          onClick={() => setIsAvatarPickerOpen(true)}
+                          title="Click to choose avatar portrait"
+                        >
+                          <Avatar user={user || currentUser} size="xl" />
+                          <div className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                            Change
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-white truncate">{(user || currentUser)?.name || 'Developer User'}</p>
+                          <p className="text-xs font-mono text-[var(--text-muted)] truncate">{(user || currentUser)?.email || 'test@teader.io'}</p>
+                          <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[var(--success-bg)] text-[var(--success)] text-[10px] font-mono font-medium border border-[var(--success-border)]">
+                            <ShieldCheck size={10} /> Authenticated Active Session
+                          </div>
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsAvatarPickerOpen(true)}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--purple)]/15 hover:bg-[var(--purple)]/25 text-[var(--purple)] border border-[var(--purple)]/30 text-xs font-medium transition-colors"
+                      >
+                        <Sparkles size={13} />
+                        <span>Change Avatar</span>
+                      </button>
                     </div>
 
                     <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2 font-mono text-xs">
@@ -505,5 +542,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
       )}
     </AnimatePresence>
+
+    {/* Profile Avatar Selection Modal */}
+    <ProfileAvatarPickerModal
+      isOpen={isAvatarPickerOpen}
+      onClose={() => setIsAvatarPickerOpen(false)}
+      currentAvatar={(user || currentUser)?.avatar}
+      onAvatarUpdated={(newAvatar, updatedUser) => {
+        setUser(updatedUser);
+      }}
+    />
+    </>
   );
 };

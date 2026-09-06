@@ -89,21 +89,21 @@ let memoryUsersStore: any[] = [
     name: 'karri',
     email: 'karri@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: '',
+    avatar: '/profiles/profile-1.webp',
   },
   {
     id: 2,
     name: 'jori',
     email: 'jori@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: '',
+    avatar: '/profiles/profile-2.webp',
   },
   {
     id: 3,
     name: 'ajaysaagar',
     email: 'ajaysaagar@teader.io',
     password: DEFAULT_PASSWORD_HASH,
-    avatar: '',
+    avatar: '/profiles/profile-3.webp',
   },
 ];
 let memoryProjectsStore: any[] = [];
@@ -415,16 +415,16 @@ export async function initDB(): Promise<void> {
         } catch {}
 
 
-        // Seed all core team users if not present
+        // Seed all core team users if not present with persistent profile images
         const defaultUsers = [
-          { id: 1, name: 'karri', email: 'karri@teader.io', avatar: '' },
-          { id: 2, name: 'jori', email: 'jori@teader.io', avatar: '' },
-          { id: 3, name: 'ajaysaagar', email: 'ajaysaagar@teader.io', avatar: '' },
-          { id: 4, name: 'sarah', email: 'sarah@teader.io', avatar: '' },
-          { id: 5, name: 'alex', email: 'alex@teader.io', avatar: '' },
-          { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: '' },
-          { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: '' },
-          { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: '' },
+          { id: 1, name: 'karri', email: 'karri@teader.io', avatar: '/profiles/profile-1.webp' },
+          { id: 2, name: 'jori', email: 'jori@teader.io', avatar: '/profiles/profile-2.webp' },
+          { id: 3, name: 'ajaysaagar', email: 'ajaysaagar@teader.io', avatar: '/profiles/profile-3.webp' },
+          { id: 4, name: 'sarah', email: 'sarah@teader.io', avatar: '/profiles/profile-4.webp' },
+          { id: 5, name: 'alex', email: 'alex@teader.io', avatar: '/profiles/profile-5.webp' },
+          { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: '/profiles/profile-13.webp' },
+          { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: '/profiles/profile-14.webp' },
+          { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: '/profiles/profile-15.webp' },
         ];
 
         for (const u of defaultUsers) {
@@ -432,10 +432,19 @@ export async function initDB(): Promise<void> {
           await p.query(
             `INSERT INTO "users" ("id", "name", "email", "password", "avatar")
              VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT ("id") DO UPDATE SET "name" = $2, "avatar" = $5`,
+             ON CONFLICT ("id") DO UPDATE SET "name" = $2, "avatar" = CASE 
+               WHEN "users"."avatar" IS NULL OR "users"."avatar" = '' OR "users"."avatar" LIKE '%unsplash%' OR "users"."avatar" LIKE '%dicebear%' THEN $5 
+               ELSE "users"."avatar" 
+             END`,
             [u.id, u.name, u.email, pass, u.avatar]
           );
         }
+
+        // Ensure any user in database without a set profile image is randomly assigned one and saved
+        await p.query(
+          `UPDATE "users" SET "avatar" = '/profiles/profile-' || ((("id" - 1) % 55) + 1) || '.webp' 
+           WHERE "avatar" IS NULL OR "avatar" = '' OR "avatar" LIKE '%unsplash%' OR "avatar" LIKE '%dicebear%'`
+        );
 
         // Seed or Ensure "Huge" and "Huge update/seed" Projects
         const projHugeCheck = await p.query(`SELECT "id", "key", "name" FROM "projects" WHERE "name" ILIKE '%huge%' OR "key" IN ('HUGE', 'HUG')`);
@@ -514,6 +523,15 @@ export async function loginUserDB(emailOrUsername: string, plainTextPassword?: s
           throw new Error('Invalid email or password');
         }
       }
+      // If user profile image is missing, randomly set one to user database and load it
+      if (!user.avatar || user.avatar.trim() === '' || user.avatar.includes('unsplash') || user.avatar.includes('dicebear')) {
+        const randomProfile = `/profiles/profile-${((Math.abs((user.id || 1) - 1) % 55) + 1)}.webp`;
+        user.avatar = randomProfile;
+        try {
+          const p = getPool();
+          await p.query(`UPDATE "users" SET "avatar" = $1 WHERE "id" = $2`, [randomProfile, user.id]);
+        } catch {}
+      }
       return user;
     }
   } catch (err: any) {
@@ -530,6 +548,9 @@ export async function loginUserDB(emailOrUsername: string, plainTextPassword?: s
         throw new Error('Invalid email or password');
       }
     }
+    if (!memUser.avatar || memUser.avatar.trim() === '' || memUser.avatar.includes('unsplash') || memUser.avatar.includes('dicebear')) {
+      memUser.avatar = `/profiles/profile-${((Math.abs((memUser.id || 1) - 1) % 55) + 1)}.webp`;
+    }
     return memUser;
   }
 
@@ -540,16 +561,60 @@ export async function getUserByIdDB(id: string | number) {
   await initDB();
   const numericId = Number(id);
 
+  let user: any = null;
   try {
     const p = getPool();
     const result = await p.query(`SELECT "id", "name", "email", "avatar", "createdAt" FROM "users" WHERE "id" = $1 LIMIT 1`, [numericId]);
-    if (result.rows?.[0]) return result.rows[0];
+    if (result.rows?.[0]) user = result.rows[0];
   } catch {}
 
-  const memUser = memoryUsersStore.find((u) => u.id === numericId);
+  if (!user) {
+    const memUser = memoryUsersStore.find((u) => u.id === numericId);
+    if (memUser) {
+      const { password: _, ...safeUser } = memUser;
+      user = safeUser;
+    }
+  }
+
+  if (!user) return null;
+
+  // If not set, randomly set a profile image to the user's database and load it
+  if (!user.avatar || user.avatar.trim() === '' || user.avatar.includes('unsplash') || user.avatar.includes('dicebear')) {
+    const randomProfile = `/profiles/profile-${((Math.abs(numericId - 1) % 55) + 1)}.webp`;
+    user.avatar = randomProfile;
+    try {
+      const p = getPool();
+      await p.query(`UPDATE "users" SET "avatar" = $1 WHERE "id" = $2`, [randomProfile, numericId]);
+    } catch {}
+    const mem = memoryUsersStore.find((u) => u.id === numericId);
+    if (mem) mem.avatar = randomProfile;
+  }
+
+  return user;
+}
+
+export async function updateUserAvatarDB(userId: number, avatarUrl: string) {
+  await initDB();
+  const cleanAvatar = avatarUrl.trim();
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `UPDATE "users" SET "avatar" = $1 WHERE "id" = $2 RETURNING "id", "name", "email", "avatar", "createdAt"`,
+      [cleanAvatar, userId]
+    );
+    if (res.rows?.[0]) {
+      const updated = res.rows[0];
+      const memUser = memoryUsersStore.find((u) => u.id === userId);
+      if (memUser) memUser.avatar = cleanAvatar;
+      return updated;
+    }
+  } catch {}
+
+  const memUser = memoryUsersStore.find((u) => u.id === userId);
   if (memUser) {
-    const { password: _, ...safeUser } = memUser;
-    return safeUser;
+    memUser.avatar = cleanAvatar;
+    const { password: _, ...safe } = memUser;
+    return safe;
   }
   return null;
 }
@@ -592,7 +657,10 @@ export async function registerUserDB(
   const normalizedEmail = email.toLowerCase().trim();
   const trimmedName = name.trim();
   const hashedPassword = plainPassword ? await hashPassword(plainPassword) : DEFAULT_PASSWORD_HASH;
-  const defaultAvatar = avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(trimmedName)}`;
+  const defaultAvatar =
+    avatar && avatar.trim() !== '' && !avatar.includes('unsplash') && !avatar.includes('dicebear')
+      ? avatar
+      : `/profiles/profile-${Math.floor(Math.random() * 55) + 1}.webp`;
 
   try {
     const p = getPool();
