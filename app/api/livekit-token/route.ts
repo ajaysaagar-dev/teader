@@ -78,7 +78,7 @@ export async function GET(request: Request) {
   });
 }
 
-// POST handler for Admin remote mute / unmute
+// POST handler for Admin actions (mute/unmute, close call)
 export async function POST(request: Request) {
   const session = await getSessionFromCookie();
   if (!session) {
@@ -86,13 +86,13 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { projectId, targetIdentity, trackSid, muted } = body;
+  const { action, projectId, targetIdentity, trackSid, muted } = body;
 
-  if (!projectId || !targetIdentity) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+  if (!projectId) {
+    return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
   }
 
-  // Verify that ONLY an admin or owner can mute/unmute someone
+  // Verify that ONLY an admin or owner can execute admin actions
   let role = 'member';
   try {
     role = await assertProjectAccess(session.id, projectId);
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 
   if (role !== 'owner' && role !== 'admin') {
     return NextResponse.json(
-      { error: 'Only project owners and admins can mute or unmute participants' },
+      { error: 'Only project owners and admins can perform this action' },
       { status: 403 }
     );
   }
@@ -122,7 +122,16 @@ export async function POST(request: Request) {
     const { RoomServiceClient } = await import('livekit-server-sdk');
     const roomService = new RoomServiceClient(httpUrl, apiKey, apiSecret);
 
-    if (trackSid) {
+    if (action === 'close-call' || action === 'close-room') {
+      try {
+        await roomService.deleteRoom(roomName);
+      } catch (err: any) {
+        console.warn('[close-room server note]:', err.message);
+      }
+      return NextResponse.json({ success: true, closed: true, roomName });
+    }
+
+    if (trackSid && targetIdentity) {
       await roomService.mutePublishedTrack(roomName, targetIdentity, trackSid, Boolean(muted));
     }
 
@@ -132,11 +141,10 @@ export async function POST(request: Request) {
       muted: Boolean(muted),
     });
   } catch (err: any) {
-    console.warn('[admin-mute server note]:', err.message);
+    console.warn('[admin-action server note]:', err.message);
     return NextResponse.json({
       success: true,
-      targetIdentity,
-      muted: Boolean(muted),
+      action,
       note: err.message,
     });
   }

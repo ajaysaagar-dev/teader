@@ -30,6 +30,7 @@ import {
   Sparkles,
   Shield,
   Activity,
+  PowerOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -370,8 +371,16 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           toast.success('Reconnected to voice room');
           syncParticipants();
         })
-        .on(RoomEvent.Disconnected, () => {
+        .on(RoomEvent.Disconnected, (reason) => {
           syncParticipants();
+          if (reason && reason.toString().toLowerCase().includes('room')) {
+            toast.warning('The meeting was closed');
+            if (onLeaveMeeting) {
+              onLeaveMeeting();
+            } else {
+              window.history.back();
+            }
+          }
         })
         .on(RoomEvent.ParticipantConnected, (participant) => {
           toast.info(`${participant.name || 'A user'} joined the call`);
@@ -399,6 +408,22 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           try {
             const decoded = new TextDecoder().decode(payload);
             const msg = JSON.parse(decoded);
+
+            // Handle Admin closing the call for everyone
+            if (msg.type === 'CALL_ENDED_BY_ADMIN') {
+              toast.warning('The meeting was closed by a project admin');
+              if (roomRef.current) {
+                await roomRef.current.disconnect();
+                roomRef.current = null;
+              }
+              if (onLeaveMeeting) {
+                onLeaveMeeting();
+              } else {
+                window.history.back();
+              }
+              return;
+            }
+
             if (msg.type === 'ADMIN_MUTE' && msg.targetIdentity === room.localParticipant.identity) {
               const shouldMute = Boolean(msg.muted);
               await room.localParticipant.setMicrophoneEnabled(!shouldMute);
@@ -606,6 +631,60 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   };
 
+  // ── Admin Close Call For Everyone ──
+  const handleAdminCloseCall = async () => {
+    if (!currentUserIsAdmin) {
+      toast.error('Only project admins can close the call for everyone');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Close call for everyone? All participants will be returned to the project overview page.'
+    );
+    if (!confirmed) return;
+
+    const room = roomRef.current;
+    try {
+      // 1. Broadcast immediate real-time data message to all clients
+      if (room && room.localParticipant) {
+        const payload = new TextEncoder().encode(
+          JSON.stringify({
+            type: 'CALL_ENDED_BY_ADMIN',
+            reason: 'The meeting was closed by a project admin',
+          })
+        );
+        await room.localParticipant.publishData(payload, { reliable: true });
+      }
+
+      // 2. Call server API to close the room on the LiveKit server
+      await fetch('/api/livekit-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'close-call',
+          projectId,
+        }),
+      });
+
+      toast.info('Meeting closed for all participants');
+
+      // 3. Disconnect locally and leave to overview page
+      if (room) {
+        await room.disconnect();
+        roomRef.current = null;
+      }
+
+      if (onLeaveMeeting) {
+        onLeaveMeeting();
+      } else {
+        window.history.back();
+      }
+    } catch (err: any) {
+      console.warn('[Admin Close Call Error]:', err);
+      toast.error(err.message || 'Failed to close call');
+    }
+  };
+
   // ── Toggle Deafen (Mute Incoming Remote Audio) ──
   const handleToggleDeafen = () => {
     const nextDeafened = !isDeafened;
@@ -767,6 +846,21 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <Settings size={14} />
             <span>Audio Devices</span>
           </button>
+
+          {/* Admin Close Call Button (Ends meeting for everyone) */}
+          {currentUserIsAdmin && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAdminCloseCall();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white border border-red-500/50 transition-all shadow-md cursor-pointer"
+              title="Close meeting for all participants and return to overview"
+            >
+              <PowerOff size={14} />
+              <span>Close Call</span>
+            </button>
+          )}
 
           <button
             onClick={(e) => {
@@ -1130,15 +1224,27 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <span>Devices</span>
           </button>
 
-          {/* Leave Button */}
+          {/* Leave Button (Personal Exit) */}
           <button
             onClick={handleLeaveCall}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs bg-[#1E2027] hover:bg-[#282B34] text-white border border-[#343742] transition-all shadow-lg cursor-pointer"
             title="Disconnect & Exit Call"
           >
             <PhoneOff size={16} />
             <span>Leave Call</span>
           </button>
+
+          {/* Admin Close Call Button (Ends meeting for all participants) */}
+          {currentUserIsAdmin && (
+            <button
+              onClick={handleAdminCloseCall}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer border border-red-500/50"
+              title="Close meeting for everyone and return to overview"
+            >
+              <PowerOff size={16} />
+              <span>Close Call</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
