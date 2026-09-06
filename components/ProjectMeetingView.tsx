@@ -40,6 +40,8 @@ import {
   Check,
   CheckCircle2,
   X,
+  GripHorizontal,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -263,7 +265,7 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigat
   };
 }
 
-interface ProjectMeetingViewProps {
+export interface ProjectMeetingViewProps {
   projectId: string | number;
   projectName: string;
   currentUser: {
@@ -273,6 +275,9 @@ interface ProjectMeetingViewProps {
     avatar?: string;
     email?: string;
   } | null;
+  isMini?: boolean;
+  onMinimizeMeeting?: () => void;
+  onExpandMeeting?: () => void;
   onLeaveMeeting?: () => void;
 }
 
@@ -280,6 +285,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   projectId,
   projectName,
   currentUser,
+  isMini = false,
+  onMinimizeMeeting,
+  onExpandMeeting,
   onLeaveMeeting,
 }) => {
   // LiveKit Room instance reference
@@ -340,6 +348,75 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const selectedOutputIdRef = useRef(selectedOutputId);
   selectedOutputIdRef.current = selectedOutputId;
   const attachedAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+
+  // Miniscreen Drag Position & State
+  const [miniPosition, setMiniPosition] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; elemX: number; elemY: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    elemX: 0,
+    elemY: 0,
+  });
+  const miniScreenRef = useRef<HTMLDivElement | null>(null);
+
+  // Initialize Miniscreen to bottom-right corner when in mini mode
+  useEffect(() => {
+    if (typeof window !== 'undefined' && miniPosition === null) {
+      const defaultWidth = 360;
+      const defaultHeight = 230;
+      setMiniPosition({
+        x: Math.max(16, window.innerWidth - defaultWidth - 24),
+        y: Math.max(16, window.innerHeight - defaultHeight - 24),
+      });
+    }
+  }, [miniPosition, isMini]);
+
+  // Pointer drag event handlers with bounds clamping
+  const handleDragPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    isDraggingRef.current = true;
+    const currentX = miniPosition?.x ?? Math.max(16, window.innerWidth - 360 - 24);
+    const currentY = miniPosition?.y ?? Math.max(16, window.innerHeight - 230 - 24);
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      elemX: currentX,
+      elemY: currentY,
+    };
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+  };
+
+  const handleDragPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    const deltaX = e.clientX - dragStartRef.current.mouseX;
+    const deltaY = e.clientY - dragStartRef.current.mouseY;
+
+    const el = miniScreenRef.current;
+    const width = el?.offsetWidth || 360;
+    const height = el?.offsetHeight || 230;
+
+    const rawX = dragStartRef.current.elemX + deltaX;
+    const rawY = dragStartRef.current.elemY + deltaY;
+
+    const maxX = Math.max(0, window.innerWidth - width - 8);
+    const maxY = Math.max(0, window.innerHeight - height - 8);
+    const clampedX = Math.min(maxX, Math.max(8, rawX));
+    const clampedY = Math.min(maxY, Math.max(8, rawY));
+
+    setMiniPosition({ x: clampedX, y: clampedY });
+  };
+
+  const handleDragPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
 
   // ── Meeting Duration Timer ──
   useEffect(() => {
@@ -1254,6 +1331,229 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     connectionState === ConnectionState.Connecting ||
     connectionState === ConnectionState.Reconnecting;
 
+  // ── Floating Draggable Miniscreen (Picture-in-Picture) Rendering ──
+  if (isMini) {
+    const screenSharingParticipant = participants.find(
+      (p) => p.isScreenSharing && p.screenShareTrack
+    );
+    const activeSpeaker =
+      participants.find((p) => p.isSpeaking && !p.isMuted) || participants[0];
+
+    const posX =
+      miniPosition?.x ??
+      (typeof window !== 'undefined'
+        ? Math.max(16, window.innerWidth - 360 - 24)
+        : 20);
+    const posY =
+      miniPosition?.y ??
+      (typeof window !== 'undefined'
+        ? Math.max(16, window.innerHeight - 230 - 24)
+        : 20);
+
+    return (
+      <div
+        ref={miniScreenRef}
+        style={{
+          position: 'fixed',
+          left: `${posX}px`,
+          top: `${posY}px`,
+          zIndex: 50,
+        }}
+        onClick={unlockAudio}
+        className="w-80 sm:w-96 rounded-2xl bg-[#0F1015]/95 border border-[#2B2D38] shadow-2xl shadow-black/80 backdrop-blur-xl overflow-hidden flex flex-col select-none animate-in fade-in zoom-in-95 duration-150 transition-shadow hover:border-[#3D4150]"
+      >
+        {/* Miniscreen Draggable Header Bar */}
+        <div
+          onPointerDown={handleDragPointerDown}
+          onPointerMove={handleDragPointerMove}
+          onPointerUp={handleDragPointerUp}
+          className="h-10 px-3 bg-[#15161E] border-b border-[#222430] flex items-center justify-between cursor-grab active:cursor-grabbing touch-none select-none"
+          title="Drag to move miniscreen anywhere"
+        >
+          <div className="flex items-center gap-2 overflow-hidden pointer-events-none">
+            <GripHorizontal size={15} className="text-[#787C83] shrink-0" />
+            <span className="text-xs font-bold text-white truncate max-w-[140px] sm:max-w-[190px]">
+              {screenSharingParticipant
+                ? `${screenSharingParticipant.name}'s Screen`
+                : `${projectName} Meeting`}
+            </span>
+            {screenSharingParticipant ? (
+              <span className="px-1.5 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] text-[9px] font-mono font-bold border border-[#22C55E]/30 shrink-0 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
+                {screenSharingParticipant.screenShareResolution || '1080p'}
+                {screenSharingParticipant.screenShareFps || 60}
+              </span>
+            ) : isConnected ? (
+              <span className="px-1.5 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] text-[9px] font-mono font-semibold border border-[#22C55E]/30 shrink-0">
+                LIVE
+              </span>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Expand to full meeting */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpandMeeting?.();
+              }}
+              className="p-1 rounded-lg hover:bg-[#252836] text-[#A0A5B0] hover:text-white transition-colors cursor-pointer"
+              title="Expand to Full Meeting View"
+            >
+              <Maximize2 size={13} />
+            </button>
+
+            {/* Leave call */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLeaveCall();
+              }}
+              className="p-1 rounded-lg hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+              title="Leave Call"
+            >
+              <PhoneOff size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Miniscreen Body: Live Video or Voice Audio Tile */}
+        {screenSharingParticipant && screenSharingParticipant.screenShareTrack ? (
+          <div
+            onClick={() => onExpandMeeting?.()}
+            className="relative w-full aspect-video bg-black cursor-pointer group flex items-center justify-center overflow-hidden"
+            title="Click to expand meeting"
+          >
+            <ScreenShareVideo
+              track={screenSharingParticipant.screenShareTrack}
+              isLocal={screenSharingParticipant.isLocal}
+              className="w-full h-full object-contain"
+            />
+            {/* Hover overlay hint */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+              <span className="px-2.5 py-1 rounded-lg bg-black/80 text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/15 backdrop-blur-md shadow-lg">
+                <Maximize2 size={12} className="text-[#DCB001]" /> Click to Expand
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* Voice-only audio indicator tile */
+          <div
+            onClick={() => onExpandMeeting?.()}
+            className="p-3.5 flex items-center justify-between gap-3 bg-[#0B0C10] cursor-pointer hover:bg-[#111319] transition-colors"
+            title="Click to expand meeting"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="relative shrink-0">
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden font-bold text-xs uppercase ${
+                    activeSpeaker?.isSpeaking
+                      ? 'ring-2 ring-[#22C55E] ring-offset-2 ring-offset-[#0B0C10] bg-[#22C55E]/20 text-[#22C55E]'
+                      : 'bg-[#1A1C24] text-white border border-[#2B2D38]'
+                  }`}
+                >
+                  {activeSpeaker?.avatar ? (
+                    <img
+                      src={activeSpeaker.avatar}
+                      alt={activeSpeaker.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{(activeSpeaker?.name || 'User').slice(0, 2)}</span>
+                  )}
+                </div>
+                {activeSpeaker?.isMuted && (
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-red-500/90 flex items-center justify-center text-white text-[8px]">
+                    <MicOff size={8} />
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">
+                  {activeSpeaker ? activeSpeaker.name : projectName}
+                </p>
+                <p className="text-[10px] text-[#787C83] flex items-center gap-1.5">
+                  <span className="flex items-center gap-1">
+                    <Users size={10} /> {participants.length} in call
+                  </span>
+                  {activeSpeaker?.isSpeaking && (
+                    <span className="text-[#22C55E] font-medium">• Speaking</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="px-2 py-1 rounded-lg bg-[#151720] border border-[#262834] text-[10px] text-[#DCB001] font-semibold flex items-center gap-1 shrink-0">
+              <Radio size={10} className="text-[#22C55E] animate-pulse" />
+              <span>Voice</span>
+            </div>
+          </div>
+        )}
+
+        {/* Miniscreen Footer Controls */}
+        <div className="px-3 py-2 bg-[#101218] border-t border-[#1F212C] flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            {/* Mic Toggle */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleMute();
+              }}
+              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                isMuted
+                  ? 'bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25'
+                  : 'bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]'
+              }`}
+              title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
+            >
+              {isMuted ? <MicOff size={13} /> : <Mic size={13} />}
+            </button>
+
+            {/* Deafen Toggle */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggleDeafen();
+              }}
+              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                isDeafened
+                  ? 'bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25'
+                  : 'bg-[#181A22] text-[#A0A5B0] border-[#2B2D38] hover:text-white hover:bg-[#222430]'
+              }`}
+              title={isDeafened ? 'Undeafen' : 'Deafen'}
+            >
+              {isDeafened ? <VolumeX size={13} /> : <Volume2 size={13} />}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-[#787C83]">
+              {formattedTimer}
+            </span>
+
+            {/* Expand button */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpandMeeting?.();
+              }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#DCB001]/15 hover:bg-[#DCB001]/25 text-[#DCB001] border border-[#DCB001]/35 text-[11px] font-semibold transition-all cursor-pointer"
+              title="Expand to Full Meeting View"
+            >
+              <Maximize2 size={11} />
+              <span>Expand</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={unlockAudio}
@@ -1331,6 +1631,21 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <Settings size={14} />
             <span>Audio Devices</span>
           </button>
+
+          {/* Minimize to Floating Miniscreen */}
+          {onMinimizeMeeting && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMinimizeMeeting();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-[#18191E] text-[#8E939D] hover:text-white border border-[#2A2C30] transition-all cursor-pointer"
+              title="Minimize Meeting to Floating Miniscreen"
+            >
+              <Minimize2 size={14} />
+              <span>Minimize</span>
+            </button>
+          )}
 
           {/* Admin Close Call Button (Ends meeting for everyone) */}
           {currentUserIsAdmin && (

@@ -206,6 +206,15 @@ export default function SingleProjectPage() {
       viewParam === 'chat' ||
       viewParam === 'messages'
   );
+  const [isInMeeting, setIsInMeeting] = useState<boolean>(
+    () => parseViewTab(viewParam) === 'meeting'
+  );
+
+  useEffect(() => {
+    if (activeTab === 'meeting') {
+      setIsInMeeting(true);
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (viewParam) {
@@ -1894,12 +1903,24 @@ export default function SingleProjectPage() {
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'meeting'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : isInMeeting
+                  ? 'text-[#22C55E] bg-[#22C55E]/10 hover:bg-[#22C55E]/20'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
               }`}
               title="Project Group Audio Meeting & Voice Call"
             >
-              <Radio size={13} className={activeTab === 'meeting' ? 'text-[#22C55E] animate-pulse' : ''} />
+              <Radio
+                size={13}
+                className={
+                  activeTab === 'meeting' || isInMeeting
+                    ? 'text-[#22C55E] animate-pulse'
+                    : ''
+                }
+              />
               <span>Meeting</span>
+              {isInMeeting && (
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
+              )}
             </button>
 
             <button
@@ -1944,46 +1965,40 @@ export default function SingleProjectPage() {
           </button>
         </div>
 
-        {/* 4-Page Workspace Content Area */}
-        <ErrorBoundary>
-          {activeTab === 'overview' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectOverviewView
-                issues={projectIssues}
-                project={project}
-                members={joinedMembers}
-                onNavigateTab={(tab, mode) =>
-                  handleTabSwitch(tab, mode === 'tree' ? 'structure' : (mode as TaskViewMode))
-                }
-                onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-              />
-            </div>
-          ) : activeTab === 'docs' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectDocsView
-                projectId={project?.id || projectIdParam || 1}
-                projectName={project?.name}
-                projectKey={project?.key}
-              />
-            </div>
-          ) : activeTab === 'charts' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
-              <ProjectChartsView
-                projectId={project?.id || projectIdParam || 1}
-                projectName={project?.name}
-                projectKey={project?.key}
-              />
-            </div>
-          ) : activeTab === 'meeting' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
-              <ProjectMeetingView
-                projectId={project?.id || projectIdParam || 1}
-                projectName={project?.name || 'Project'}
-                currentUser={currentUser}
-                onLeaveMeeting={() => handleTabSwitch('overview')}
-              />
-            </div>
-          ) : activeTab === 'history' ? (
+        {/* Workspace Content Area */}
+        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden relative">
+          <ErrorBoundary>
+            {activeTab === 'overview' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectOverviewView
+                  issues={projectIssues}
+                  project={project}
+                  members={joinedMembers}
+                  onNavigateTab={(tab, mode) =>
+                    handleTabSwitch(tab, mode === 'tree' ? 'structure' : (mode as TaskViewMode))
+                  }
+                  onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                />
+              </div>
+            ) : activeTab === 'docs' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectDocsView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
+                  projectKey={project?.key}
+                />
+              </div>
+            ) : activeTab === 'charts' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
+                <ProjectChartsView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
+                  projectKey={project?.key}
+                />
+              </div>
+            ) : activeTab === 'meeting' ? (
+              null
+            ) : activeTab === 'history' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectHistoryView
                 projectId={project?.id || projectIdParam || 1}
@@ -2166,6 +2181,23 @@ export default function SingleProjectPage() {
             </div>
           )}
         </ErrorBoundary>
+
+        {/* Persistent Meeting View: Full view when activeTab === 'meeting', Draggable Miniscreen PiP when on other tabs */}
+        {isInMeeting && (
+          <ProjectMeetingView
+            projectId={project?.id || projectIdParam || 1}
+            projectName={project?.name || 'Project'}
+            currentUser={currentUser}
+            isMini={activeTab !== 'meeting'}
+            onMinimizeMeeting={() => handleTabSwitch('overview')}
+            onExpandMeeting={() => handleTabSwitch('meeting')}
+            onLeaveMeeting={() => {
+              setIsInMeeting(false);
+              if (activeTab === 'meeting') handleTabSwitch('overview');
+            }}
+          />
+        )}
+      </div>
 
         {/* Task Details Modal View Overlay with Close Icon */}
         <AnimatePresence>

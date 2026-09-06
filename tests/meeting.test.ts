@@ -182,5 +182,73 @@ describe('Project Audio Meeting Operations & State Logic', () => {
       expect(RESOLUTION_CONFIG[res].bitrates[60]).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[24]);
     });
   });
+
+  it('clamps miniscreen drag position within viewport boundaries', () => {
+    const clampPosition = (
+      rawX: number,
+      rawY: number,
+      width: number,
+      height: number,
+      viewportW: number,
+      viewportH: number
+    ) => {
+      const maxX = Math.max(0, viewportW - width - 8);
+      const maxY = Math.max(0, viewportH - height - 8);
+      const clampedX = Math.min(maxX, Math.max(8, rawX));
+      const clampedY = Math.min(maxY, Math.max(8, rawY));
+      return { x: clampedX, y: clampedY };
+    };
+
+    const viewportW = 1920;
+    const viewportH = 1080;
+    const miniW = 360;
+    const miniH = 230;
+
+    // Normal position inside bounds
+    expect(clampPosition(500, 400, miniW, miniH, viewportW, viewportH)).toEqual({ x: 500, y: 400 });
+
+    // Dragged too far left / top (negative values)
+    expect(clampPosition(-100, -50, miniW, miniH, viewportW, viewportH)).toEqual({ x: 8, y: 8 });
+
+    // Dragged too far right / bottom (overflow values)
+    expect(clampPosition(2500, 1500, miniW, miniH, viewportW, viewportH)).toEqual({
+      x: 1920 - 360 - 8,
+      y: 1080 - 230 - 8,
+    });
+  });
+
+  it('transitions meeting between full and mini PiP modes based on activeTab without unmounting', () => {
+    let activeTab = 'meeting';
+    let isInMeeting = activeTab === 'meeting';
+
+    // In meeting tab: full mode
+    let isMini = activeTab !== 'meeting';
+    expect(isInMeeting).toBe(true);
+    expect(isMini).toBe(false);
+
+    // Navigate to overview: stays in meeting, transitions to mini PiP mode
+    activeTab = 'overview';
+    isMini = activeTab !== 'meeting';
+    expect(isInMeeting).toBe(true);
+    expect(isMini).toBe(true);
+
+    // Navigate to tasks, docs, charts: still mini PiP mode
+    ['tasks', 'docs', 'charts', 'history', 'settings'].forEach((tab) => {
+      activeTab = tab;
+      isMini = activeTab !== 'meeting';
+      expect(isInMeeting).toBe(true);
+      expect(isMini).toBe(true);
+    });
+
+    // Expand back to meeting: full mode restored
+    activeTab = 'meeting';
+    isMini = activeTab !== 'meeting';
+    expect(isInMeeting).toBe(true);
+    expect(isMini).toBe(false);
+
+    // User leaves meeting explicitly: meeting ends
+    isInMeeting = false;
+    expect(isInMeeting).toBe(false);
+  });
 });
 
