@@ -178,6 +178,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const isDraggingElementRef = useRef(false);
   const isPanningRef = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
   const panStartRef = useRef({ x: 0, y: 0 });
   const isTouchPanningRef = useRef(false);
   const touchPanStartRef = useRef({ x: 0, y: 0 });
@@ -1076,9 +1077,13 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     [pushHistory, syncLocalChanges]
   );
 
-  // Global mouseup listener to ensure connection snapping completes reliably
+  // Global mouseup listener to ensure connection snapping and pan release complete reliably
   useEffect(() => {
     const handleGlobalMouseUp = () => {
+      if (isPanningRef.current) {
+        isPanningRef.current = false;
+        setIsPanning(false);
+      }
       if (linkingStateRef.current) {
         if (linkingStateRef.current.snappedTarget) {
           completeLink(
@@ -1096,19 +1101,19 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [completeLink]);
 
-  // ── Canvas Mouse Down (Selection, Pan, Deselect) ──
+  // ── Canvas Mouse Down (Selection, Pan on Empty Canvas, Deselect) ──
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || activeTool === 'pan') {
-      isPanningRef.current = true;
-      panStartRef.current = { x: e.clientX - viewport.x, y: e.clientY - viewport.y };
-      return;
-    }
+    // Left-click (0) or middle-click (1) on empty canvas area initiates drag-to-pan
+    if (e.button !== 0 && e.button !== 1) return;
 
-    if (e.target === canvasRef.current || (e.target as HTMLElement).tagName === 'svg') {
-      setSelectedElementIds([]);
-      setSelectedConnectionId(null);
-      setEditingElementId(null);
-    }
+    setSelectedElementIds([]);
+    setSelectedConnectionId(null);
+    setEditingElementId(null);
+
+    // Click & hold on any empty area of the canvas allows drag to pan
+    isPanningRef.current = true;
+    setIsPanning(true);
+    panStartRef.current = { x: e.clientX - viewport.x, y: e.clientY - viewport.y };
   };
 
   // ── Canvas Mouse Move (Dragging elements, panning, linking preview, resizing) ──
@@ -1119,7 +1124,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       const nextY = e.clientY - panStartRef.current.y;
       setViewport((prev) => {
         const next = { ...prev, x: nextX, y: nextY };
-        syncLocalChanges(elements, connections, next);
+        syncLocalChanges(elementsRef.current, connectionsRef.current, next);
         return next;
       });
       return;
@@ -1242,6 +1247,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   const handleCanvasMouseUp = () => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
+      setIsPanning(false);
     }
 
     if (resizingInfo) {
@@ -1937,7 +1943,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleCanvasDrop}
             className={`flex-1 w-full h-full relative overflow-hidden bg-[#1e1e1e] touch-none overscroll-none select-none ${
-              activeTool === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+              isPanning ? 'cursor-grabbing' : 'cursor-grab'
             }`}
             style={{
               touchAction: 'none',
@@ -2034,7 +2040,11 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   const midY = (start.y + end.y) / 2;
 
                   return (
-                    <g key={conn.id} className="pointer-events-auto cursor-pointer">
+                    <g
+                      key={conn.id}
+                      className="pointer-events-auto cursor-pointer"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
                       <path
                         d={pathD}
                         fill="none"

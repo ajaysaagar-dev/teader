@@ -307,4 +307,27 @@ describe('Charts Database & Management Operations', () => {
     const nextZoomOut = Math.min(3.0, Math.max(0.15, Number((initialViewport.zoom * factorOut).toFixed(2))));
     expect(nextZoomOut).toBeLessThan(1);
   });
+
+  it('calculates viewport pan offset when dragging empty canvas', () => {
+    const initialViewport = { x: 50, y: 100, zoom: 1 };
+    const mouseDownClient = { x: 300, y: 400 };
+
+    // Start pan: panStart = client - viewport
+    const panStart = {
+      x: mouseDownClient.x - initialViewport.x,
+      y: mouseDownClient.y - initialViewport.y,
+    };
+    expect(panStart).toEqual({ x: 250, y: 300 });
+
+    // Drag move to new client position: clientX = 420, clientY = 480 (dragged right 120px, down 80px)
+    const mouseMoveClient = { x: 420, y: 480 };
+    const nextViewport = {
+      x: mouseMoveClient.x - panStart.x,
+      y: mouseMoveClient.y - panStart.y,
+      zoom: initialViewport.zoom,
+    };
+
+    expect(nextViewport.x).toBe(170); // 50 + 120
+    expect(nextViewport.y).toBe(180); // 100 + 80
+  });
 });
