@@ -9,14 +9,12 @@ import {
   PhoneOff,
   Settings,
   Radio,
-  Users,
-  Shield,
-  RefreshCw,
   Sliders,
-  Check,
   AlertCircle,
   Headphones,
   Signal,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRealtimeSubscription, publishClientRealtimeEvent, RealtimeEvent } from '@/lib/useRealtime';
@@ -47,16 +45,22 @@ interface ProjectMeetingViewProps {
   onLeaveMeeting?: () => void;
 }
 
+// ICE servers — Google STUN + Cloudflare STUN for resilience
 const ICE_SERVERS: RTCConfiguration = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
   ],
   iceCandidatePoolSize: 10,
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require',
 };
+
+// VAD threshold — anything above -42 dBFS is considered speaking
+const SPEAKING_RMS_THRESHOLD = 0.008;
 
 export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   projectId,
@@ -64,69 +68,64 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   currentUser,
   onLeaveMeeting,
 }) => {
-  // Session / Peer Identity
+  // ─── Stable peer identity (persists across re-renders) ───────────────────
   const localPeerIdRef = useRef<string>(
-    `peer_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    `peer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   );
   const localPeerId = localPeerIdRef.current;
 
-  // Connection and Room States
+  // ─── UI State ────────────────────────────────────────────────────────────
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [meetingDuration, setMeetingDuration] = useState(0);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
-
-  // Audio Controls
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
   const [localSpeaking, setLocalSpeaking] = useState(false);
-  const [localVolumeLevel, setLocalVolumeLevel] = useState(0); // 0 to 100
-
-  // Devices
+  const [localVolumeLevel, setLocalVolumeLevel] = useState(0);
   const [audioInputDevices, setAudioInputDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioOutputDevices, setAudioOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedInputId, setSelectedInputId] = useState<string>('');
   const [selectedOutputId, setSelectedOutputId] = useState<string>('');
   const [showDeviceSettings, setShowDeviceSettings] = useState(false);
-
-  // Participants & Remote Streams Map
   const [participants, setParticipants] = useState<MeetingParticipant[]>([]);
   const [remoteSpeaking, setRemoteSpeaking] = useState<Record<string, boolean>>({});
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+  const [pcStates, setPcStates] = useState<Record<string, RTCPeerConnectionState>>({});
 
-  // Synchronized Ref values to avoid stale closures in listeners/heartbeats
-  const isMutedRef = useRef(isMuted);
+  // ─── Refs (avoid stale closures inside callbacks/effects) ────────────────
+  const isMutedRef = useRef(false);
+  const isDeafenedRef = useRef(false);
+  const localSpeakingRef = useRef(false);
+  const selectedOutputIdRef = useRef('');
+
+  // Keep refs in sync every render
   isMutedRef.current = isMuted;
-  const isDeafenedRef = useRef(isDeafened);
   isDeafenedRef.current = isDeafened;
-  const localSpeakingRef = useRef(localSpeaking);
   localSpeakingRef.current = localSpeaking;
-  const selectedOutputIdRef = useRef(selectedOutputId);
   selectedOutputIdRef.current = selectedOutputId;
 
-  // Audio References
+  // ─── Audio refs ──────────────────────────────────────────────────────────
   const localStreamRef = useRef<MediaStream | null>(null);
-  const localAudioContextRef = useRef<AudioContext | null>(null);
+  const localAudioCtxRef = useRef<AudioContext | null>(null);
   const localAnalyserRef = useRef<AnalyserNode | null>(null);
-  const localVolumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const localVadIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // WebRTC Peer Connections & Queues
-  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
-  const remoteAudioElementsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
-  const remoteAnalysersRef = useRef<Map<string, { ctx: AudioContext; analyser: AnalyserNode }>>(new Map());
-  const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  // ─── WebRTC refs ─────────────────────────────────────────────────────────
+  const pcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const audioElemsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const analysersRef = useRef<Map<string, { ctx: AudioContext; analyser: AnalyserNode; src: MediaStreamAudioSourceNode }>>(new Map());
+  const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const seenCandidatesRef = useRef<Map<string, Set<string>>>(new Map());
-  const isMakingOfferRef = useRef<Map<string, boolean>>(new Map());
-  const lastProcessedOfferRef = useRef<Map<string, string>>(new Map());
-  const lastProcessedAnswerRef = useRef<Map<string, string>>(new Map());
+  // Perfect-negotiation per-peer state
+  const makingOfferRef = useRef<Map<string, boolean>>(new Map());
+  const ignoreOfferRef = useRef<Map<string, boolean>>(new Map());
 
-  // Meeting timer
+  // ─── Meeting Timer ───────────────────────────────────────────────────────
   useEffect(() => {
-    const timer = setInterval(() => {
-      setMeetingDuration((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setMeetingDuration(d => d + 1), 1000);
+    return () => clearInterval(t);
   }, []);
 
   const formattedTimer = useMemo(() => {
@@ -139,620 +138,485 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }, [meetingDuration]);
 
-  // ── Unlock Audio Playback on User Interaction ──
+  // ─── Unlock AudioContext on first user gesture ────────────────────────────
   const unlockAudio = useCallback(() => {
     setAutoplayBlocked(false);
-    remoteAudioElementsRef.current.forEach((audio) => {
-      audio.play().catch(() => {});
-    });
-    if (localAudioContextRef.current && localAudioContextRef.current.state === 'suspended') {
-      localAudioContextRef.current.resume().catch(() => {});
+    audioElemsRef.current.forEach(el => el.play().catch(() => {}));
+    if (localAudioCtxRef.current?.state === 'suspended') {
+      localAudioCtxRef.current.resume().catch(() => {});
     }
-    remoteAnalysersRef.current.forEach(({ ctx }) => {
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
+    analysersRef.current.forEach(({ ctx }) => {
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     });
   }, []);
 
   useEffect(() => {
-    const handleFirstClick = () => {
-      unlockAudio();
-    };
-    window.addEventListener('click', handleFirstClick, { once: true });
-    window.addEventListener('keydown', handleFirstClick, { once: true });
+    const fn = () => unlockAudio();
+    window.addEventListener('click', fn, { once: true });
+    window.addEventListener('keydown', fn, { once: true });
     return () => {
-      window.removeEventListener('click', handleFirstClick);
-      window.removeEventListener('keydown', handleFirstClick);
+      window.removeEventListener('click', fn);
+      window.removeEventListener('keydown', fn);
     };
   }, [unlockAudio]);
 
-  // ── 1. Device Enumeration ──
+  // ─── Device Enumeration ──────────────────────────────────────────────────
   const refreshDevices = useCallback(async () => {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
+    if (!navigator.mediaDevices?.enumerateDevices) return;
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const inputs = devices.filter((d) => d.kind === 'audioinput');
-      const outputs = devices.filter((d) => d.kind === 'audiooutput');
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const ins = all.filter(d => d.kind === 'audioinput');
+      const outs = all.filter(d => d.kind === 'audiooutput');
+      setAudioInputDevices(ins);
+      setAudioOutputDevices(outs);
+      if (ins.length > 0) setSelectedInputId(p => p || ins[0].deviceId);
+      if (outs.length > 0) setSelectedOutputId(p => p || outs[0].deviceId);
+    } catch {}
+  }, []);
 
-      setAudioInputDevices(inputs);
-      setAudioOutputDevices(outputs);
-
-      if (inputs.length > 0 && !selectedInputId) {
-        setSelectedInputId(inputs[0].deviceId);
-      }
-      if (outputs.length > 0 && !selectedOutputId) {
-        setSelectedOutputId(outputs[0].deviceId);
-      }
-    } catch (e) {
-      console.warn('[Device Enumeration Error]:', e);
-    }
-  }, [selectedInputId, selectedOutputId]);
-
-  // ── 2. Send WebRTC Signal via Next.js API & Multi-Tab Broadcast ──
-  const sendSignal = useCallback(
-    async (
-      targetPeerId: string,
-      signalType: 'offer' | 'answer' | 'candidate' | 'request-offer',
-      data: any
-    ) => {
-      const payload = {
-        fromPeerId: localPeerId,
-        targetPeerId,
-        signalType,
-        data,
-      };
-
-      // 1. Instant multi-tab broadcast in the same browser (sub-millisecond)
-      publishClientRealtimeEvent({
-        type: 'MEETING_SIGNAL',
-        projectId,
-        payload,
-        senderSessionId: localPeerId,
+  // ─── Signal Relay (BroadcastChannel + Server) ────────────────────────────
+  const sendSignal = useCallback(async (
+    targetPeerId: string,
+    signalType: 'offer' | 'answer' | 'candidate',
+    data: any
+  ) => {
+    const payload = { fromPeerId: localPeerId, targetPeerId, signalType, data };
+    // 1. Same-browser instant relay
+    publishClientRealtimeEvent({ type: 'MEETING_SIGNAL', projectId, payload, senderSessionId: localPeerId });
+    // 2. Cross-browser relay via server WebSocket
+    try {
+      await fetch(`/api/projects/${projectId}/meeting/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+    } catch (e) {
+      console.warn('[sendSignal]:', e);
+    }
+  }, [localPeerId, projectId]);
 
-      // 2. Server broadcast for remote peers / other browsers
-      try {
-        await fetch(`/api/projects/${projectId}/meeting/signal`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      } catch (e) {
-        console.warn('[Signal send error]:', e);
-      }
-    },
-    [localPeerId, projectId]
-  );
-
-  // ── Drain Queued ICE Candidates Helper ──
-  const drainIceCandidates = useCallback(async (remotePeerId: string, pc: RTCPeerConnection) => {
-    const queue = pendingIceCandidatesRef.current.get(remotePeerId);
-    if (queue && queue.length > 0) {
-      for (const cand of queue) {
-        try {
-          await pc.addIceCandidate(new RTCIceCandidate(cand));
-        } catch (e) {
-          console.warn('[Drain candidate error]:', e);
-        }
-      }
-      pendingIceCandidatesRef.current.delete(remotePeerId);
+  // ─── Drain buffered ICE candidates ──────────────────────────────────────
+  const drainCandidates = useCallback(async (peerId: string, pc: RTCPeerConnection) => {
+    const q = pendingCandidatesRef.current.get(peerId) || [];
+    pendingCandidatesRef.current.delete(peerId);
+    for (const c of q) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); }
+      catch (e) { console.warn('[drainCandidates]:', e); }
     }
   }, []);
 
-  // ── Ensure Remote Audio Element is Audible & Playing ──
-  const ensureRemoteAudioPlaying = useCallback(
-    (remotePeerId: string, remoteStream: MediaStream) => {
-      setRemoteStreams((prev) => ({ ...prev, [remotePeerId]: remoteStream }));
+  // ─── Attach remote stream to audio element + analyser ────────────────────
+  const attachRemoteAudio = useCallback((peerId: string, stream: MediaStream) => {
+    // Enable all incoming audio tracks
+    stream.getAudioTracks().forEach(t => { t.enabled = true; });
 
-      remoteStream.getAudioTracks().forEach((track) => {
-        track.enabled = true;
-      });
+    // Update React state (drives hidden <audio> elements)
+    setRemoteStreams(prev => ({ ...prev, [peerId]: stream }));
 
-      let audioElem = remoteAudioElementsRef.current.get(remotePeerId);
-      if (!audioElem) {
-        audioElem = document.createElement('audio');
-        audioElem.id = `remote_audio_${remotePeerId}`;
-        audioElem.autoplay = true;
-        (audioElem as any).playsInline = true;
-        audioElem.volume = 1.0;
-        document.body.appendChild(audioElem);
-        remoteAudioElementsRef.current.set(remotePeerId, audioElem);
-      }
+    // Imperative audio element (for guaranteed playback)
+    let el = audioElemsRef.current.get(peerId);
+    if (!el) {
+      el = document.createElement('audio');
+      el.id = `rm_audio_${peerId}`;
+      el.autoplay = true;
+      (el as any).playsInline = true;
+      el.volume = 1.0;
+      document.body.appendChild(el);
+      audioElemsRef.current.set(peerId, el);
+    }
+    if (el.srcObject !== stream) el.srcObject = stream;
+    el.muted = isDeafenedRef.current;
+    if (selectedOutputIdRef.current && typeof (el as any).setSinkId === 'function') {
+      (el as any).setSinkId(selectedOutputIdRef.current).catch(() => {});
+    }
+    const play = () => el!.play().catch(() => setAutoplayBlocked(true));
+    play();
+    stream.getAudioTracks().forEach(t => { t.onunmute = play; });
 
-      if (audioElem.srcObject !== remoteStream) {
-        audioElem.srcObject = remoteStream;
-      }
-      audioElem.muted = isDeafenedRef.current;
-
-      if (selectedOutputIdRef.current && typeof (audioElem as any).setSinkId === 'function') {
-        (audioElem as any).setSinkId(selectedOutputIdRef.current).catch(() => {});
-      }
-
-      const attemptPlay = () => {
-        if (!audioElem) return;
-        audioElem.play().catch((err: any) => {
-          console.warn(`[Autoplay restricted for ${remotePeerId}]:`, err.message);
-          setAutoplayBlocked(true);
-        });
-      };
-
-      attemptPlay();
-
-      remoteStream.getAudioTracks().forEach((track) => {
-        track.onunmute = () => attemptPlay();
-      });
-
-      // Attach Web Audio Analyser to monitor remote speaker volume
+    // Per-peer Web Audio analyser for speaking detection
+    const existing = analysersRef.current.get(peerId);
+    if (existing) {
+      try { existing.src.disconnect(); } catch {}
       try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        let existing = remoteAnalysersRef.current.get(remotePeerId);
-        if (!existing) {
-          const remoteCtx = new AudioContextClass();
-          if (remoteCtx.state === 'suspended') {
-            remoteCtx.resume().catch(() => {});
-          }
-          const remoteSource = remoteCtx.createMediaStreamSource(remoteStream);
-          const remoteAnalyser = remoteCtx.createAnalyser();
-          remoteAnalyser.fftSize = 128;
-          remoteSource.connect(remoteAnalyser);
-          remoteAnalysersRef.current.set(remotePeerId, { ctx: remoteCtx, analyser: remoteAnalyser });
-        }
+        const newSrc = existing.ctx.createMediaStreamSource(stream);
+        newSrc.connect(existing.analyser);
+        analysersRef.current.set(peerId, { ...existing, src: newSrc });
       } catch {}
-    },
-    []
-  );
+    } else {
+      try {
+        const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.85;
+        src.connect(analyser);
+        analysersRef.current.set(peerId, { ctx, analyser, src });
+      } catch {}
+    }
+  }, []);
 
-  // ── 3. Create or Get Peer Connection ──
-  const getOrCreatePeerConnection = useCallback(
-    (remotePeerId: string) => {
-      if (peerConnectionsRef.current.has(remotePeerId)) {
-        return peerConnectionsRef.current.get(remotePeerId)!;
+  // ─── Full peer cleanup ───────────────────────────────────────────────────
+  const cleanupPeer = useCallback((peerId: string) => {
+    const pc = pcsRef.current.get(peerId);
+    if (pc) { try { pc.close(); } catch {} pcsRef.current.delete(peerId); }
+    const el = audioElemsRef.current.get(peerId);
+    if (el) { el.srcObject = null; try { el.remove(); } catch {} audioElemsRef.current.delete(peerId); }
+    const a = analysersRef.current.get(peerId);
+    if (a) {
+      try { a.src.disconnect(); } catch {}
+      try { a.ctx.close(); } catch {}
+      analysersRef.current.delete(peerId);
+    }
+    pendingCandidatesRef.current.delete(peerId);
+    seenCandidatesRef.current.delete(peerId);
+    makingOfferRef.current.delete(peerId);
+    ignoreOfferRef.current.delete(peerId);
+    setRemoteStreams(prev => { const n = { ...prev }; delete n[peerId]; return n; });
+    setPcStates(prev => { const n = { ...prev }; delete n[peerId]; return n; });
+  }, []);
+
+  // ─── Create or get RTCPeerConnection (Perfect Negotiation) ───────────────
+  //
+  // Perfect negotiation: https://www.w3.org/TR/webrtc/#perfect-negotiation-example
+  //  - Lower peerId (lexicographic) = polite peer (yields on collision)
+  //  - Higher peerId = impolite peer (ignores colliding incoming offers)
+  //
+  const getOrCreatePC = useCallback((remotePeerId: string) => {
+    if (pcsRef.current.has(remotePeerId)) return pcsRef.current.get(remotePeerId)!;
+
+    const isPolite = localPeerId < remotePeerId;
+    const pc = new RTCPeerConnection(ICE_SERVERS);
+    pcsRef.current.set(remotePeerId, pc);
+    makingOfferRef.current.set(remotePeerId, false);
+    ignoreOfferRef.current.set(remotePeerId, false);
+
+    // Add local audio tracks immediately so onnegotiationneeded fires
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current!);
+      });
+    } else {
+      // No mic yet — add recvonly transceiver so we can receive their audio
+      try { pc.addTransceiver('audio', { direction: 'recvonly' }); } catch {}
+    }
+
+    // ── Perfect negotiation: onnegotiationneeded ──
+    pc.onnegotiationneeded = async () => {
+      try {
+        makingOfferRef.current.set(remotePeerId, true);
+        // Modern API: setLocalDescription() auto-creates offer
+        await pc.setLocalDescription();
+        await sendSignal(remotePeerId, 'offer', pc.localDescription);
+      } catch (e) {
+        console.warn('[onnegotiationneeded]:', e);
+      } finally {
+        makingOfferRef.current.set(remotePeerId, false);
       }
+    };
 
-      const pc = new RTCPeerConnection(ICE_SERVERS);
-      peerConnectionsRef.current.set(remotePeerId, pc);
+    pc.onicecandidate = ({ candidate }) => {
+      if (candidate) {
+        sendSignal(remotePeerId, 'candidate', candidate.toJSON());
+      }
+    };
 
-      // Add local audio tracks if available, or add receive-only transceiver
-      if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
-        localStreamRef.current.getTracks().forEach((track) => {
+    // Triggered when remote audio tracks arrive
+    pc.ontrack = ({ streams, track }) => {
+      const stream = (streams && streams[0]) ? streams[0] : new MediaStream([track]);
+      attachRemoteAudio(remotePeerId, stream);
+    };
+
+    pc.onconnectionstatechange = () => {
+      setPcStates(prev => ({ ...prev, [remotePeerId]: pc.connectionState }));
+      if (pc.connectionState === 'failed') {
+        // ICE restart — recreate the offer path
+        try { pc.restartIce(); } catch {}
+      }
+      if (pc.connectionState === 'closed') {
+        cleanupPeer(remotePeerId);
+      }
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      if (pc.iceConnectionState === 'failed') {
+        try { pc.restartIce(); } catch {}
+      }
+    };
+
+    return pc;
+  }, [attachRemoteAudio, cleanupPeer, localPeerId, sendSignal]);
+
+  // ─── Handle incoming WebRTC signal ──────────────────────────────────────
+  const handleSignal = useCallback(async (
+    fromPeerId: string,
+    signalType: string,
+    data: any
+  ) => {
+    const isPolite = localPeerId < fromPeerId;
+    const pc = getOrCreatePC(fromPeerId);
+
+    if (signalType === 'offer') {
+      if (!data?.sdp) return;
+      const offerCollision = makingOfferRef.current.get(fromPeerId) || pc.signalingState !== 'stable';
+      const shouldIgnore = !isPolite && offerCollision;
+      ignoreOfferRef.current.set(fromPeerId, shouldIgnore);
+      if (shouldIgnore) return;
+
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription(data));
+
+        // Ensure our local audio is attached before answering
+        if (localStreamRef.current) {
           const senders = pc.getSenders();
-          if (!senders.some((s) => s.track === track)) {
-            pc.addTrack(track, localStreamRef.current!);
-          }
-        });
-      } else {
-        try {
-          pc.addTransceiver('audio', { direction: 'sendrecv' });
-        } catch {}
-      }
-
-      // Handle ICE Candidates generated locally
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendSignal(remotePeerId, 'candidate', event.candidate.toJSON ? event.candidate.toJSON() : event.candidate);
-        }
-      };
-
-      // Handle Remote Audio Tracks
-      pc.ontrack = (event) => {
-        const remoteStream = event.streams[0] || new MediaStream([event.track]);
-        ensureRemoteAudioPlaying(remotePeerId, remoteStream);
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-          peerConnectionsRef.current.delete(remotePeerId);
-          const audioElem = remoteAudioElementsRef.current.get(remotePeerId);
-          if (audioElem) {
-            audioElem.remove();
-            remoteAudioElementsRef.current.delete(remotePeerId);
-          }
-          remoteAnalysersRef.current.delete(remotePeerId);
-          pendingIceCandidatesRef.current.delete(remotePeerId);
-          seenCandidatesRef.current.delete(remotePeerId);
-          lastProcessedOfferRef.current.delete(remotePeerId);
-          lastProcessedAnswerRef.current.delete(remotePeerId);
-          setRemoteStreams((prev) => {
-            const next = { ...prev };
-            delete next[remotePeerId];
-            return next;
+          localStreamRef.current.getAudioTracks().forEach(track => {
+            const existing = senders.find(s => s.track?.kind === 'audio');
+            if (existing) {
+              existing.replaceTrack(track).catch(() => {});
+            } else {
+              pc.addTrack(track, localStreamRef.current!);
+            }
           });
         }
-      };
 
-      return pc;
-    },
-    [ensureRemoteAudioPlaying, sendSignal]
-  );
-
-  // ── 4. Initiate Offer to Peer ──
-  const initiateOfferToPeer = useCallback(
-    async (remotePeerId: string) => {
-      const pc = getOrCreatePeerConnection(remotePeerId);
-      try {
-        isMakingOfferRef.current.set(remotePeerId, true);
-        const offer = await pc.createOffer({
-          offerToReceiveAudio: true,
-        });
-
-        if (pc.signalingState !== 'stable') {
-          return;
-        }
-
-        await pc.setLocalDescription(offer);
-        await sendSignal(remotePeerId, 'offer', offer);
-      } catch (err) {
-        console.warn('[Initiate offer error]:', err);
-      } finally {
-        isMakingOfferRef.current.set(remotePeerId, false);
+        // Modern API: setLocalDescription() auto-creates answer
+        await pc.setLocalDescription();
+        await sendSignal(fromPeerId, 'answer', pc.localDescription);
+        await drainCandidates(fromPeerId, pc);
+      } catch (e) {
+        console.warn('[offer handler]:', e);
       }
-    },
-    [getOrCreatePeerConnection, sendSignal]
-  );
-
-  // ── 5. Local Audio Track Initialization ──
-  const initLocalAudio = useCallback(
-    async (deviceId?: string): Promise<MediaStream | null> => {
+    } else if (signalType === 'answer') {
+      if (!data?.sdp) return;
+      if (ignoreOfferRef.current.get(fromPeerId)) return;
       try {
-        setIsConnecting(true);
-        setPermissionError(null);
-
-        // Clean up previous tracks if switching
-        if (localStreamRef.current) {
-          localStreamRef.current.getTracks().forEach((t) => t.stop());
+        if (pc.signalingState === 'have-local-offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+          await drainCandidates(fromPeerId, pc);
         }
-
-        const constraints: MediaStreamConstraints = {
-          audio: {
-            deviceId: deviceId ? { ideal: deviceId } : undefined,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-          video: false,
-        };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        localStreamRef.current = stream;
-
-        // Apply initial mute state
-        stream.getAudioTracks().forEach((track) => {
-          track.enabled = !isMuted;
-        });
-
-        // Setup Web Audio Analyser for local voice detection
-        try {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-          const audioCtx = new AudioContextClass();
-          if (audioCtx.state === 'suspended') {
-            audioCtx.resume().catch(() => {});
-          }
-          const source = audioCtx.createMediaStreamSource(stream);
-          const analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 256;
-          source.connect(analyser);
-
-          localAudioContextRef.current = audioCtx;
-          localAnalyserRef.current = analyser;
-
-          if (localVolumeIntervalRef.current) clearInterval(localVolumeIntervalRef.current);
-          localVolumeIntervalRef.current = setInterval(() => {
-            if (!localAnalyserRef.current || isMuted) {
-              setLocalSpeaking(false);
-              setLocalVolumeLevel(0);
-              return;
-            }
-            const dataArray = new Uint8Array(localAnalyserRef.current.frequencyBinCount);
-            localAnalyserRef.current.getByteFrequencyData(dataArray);
-
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-              sum += dataArray[i];
-            }
-            const average = sum / dataArray.length;
-            const normalized = Math.min(100, Math.round((average / 128) * 100));
-            setLocalVolumeLevel(normalized);
-
-            const isCurrentlySpeaking = average > 12;
-            setLocalSpeaking(isCurrentlySpeaking);
-          }, 120);
-        } catch (audioCtxErr) {
-          console.warn('[AudioContext Init Note]:', audioCtxErr);
-        }
-
-        // Attach audio track to any existing peer connections
-        const audioTrack = stream.getAudioTracks()[0];
-        if (audioTrack) {
-          for (const [remotePeerId, pc] of peerConnectionsRef.current.entries()) {
-            const senders = pc.getSenders();
-            const sender = senders.find((s) => s.track && s.track.kind === 'audio');
-            if (sender) {
-              await sender.replaceTrack(audioTrack);
-            } else {
-              pc.addTrack(audioTrack, stream);
-              initiateOfferToPeer(remotePeerId);
-            }
-          }
-        }
-
-        setIsConnected(true);
-        setIsConnecting(false);
-        await refreshDevices();
-        return stream;
-      } catch (err: any) {
-        setIsConnecting(false);
-        const errMsg =
-          err.name === 'NotAllowedError'
-            ? 'Microphone access was denied. Please allow microphone permissions in your browser to talk in this meeting.'
-            : `Could not access microphone: ${err.message || 'Unknown device error'}`;
-        setPermissionError(errMsg);
-        toast.error('Microphone access required');
-        return null;
+      } catch (e) {
+        console.warn('[answer handler]:', e);
       }
-    },
-    [initiateOfferToPeer, isMuted, refreshDevices]
-  );
+    } else if (signalType === 'candidate') {
+      if (!data?.candidate) return;
 
-  // Monitor remote audio analyzers to detect speaking participants
+      // Deduplicate candidates (BroadcastChannel + WS may deliver same one twice)
+      let seen = seenCandidatesRef.current.get(fromPeerId);
+      if (!seen) { seen = new Set(); seenCandidatesRef.current.set(fromPeerId, seen); }
+      const key = `${data.candidate}|${data.sdpMid}|${data.sdpMLineIndex}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      if (!pc.remoteDescription?.type) {
+        // Buffer until remote description is set
+        const q = pendingCandidatesRef.current.get(fromPeerId) || [];
+        q.push(data);
+        pendingCandidatesRef.current.set(fromPeerId, q);
+      } else {
+        try { await pc.addIceCandidate(new RTCIceCandidate(data)); }
+        catch (e) { console.warn('[candidate]:', e); }
+      }
+    }
+  }, [drainCandidates, getOrCreatePC, localPeerId, sendSignal]);
+
+  // ─── Remote speaking detection (RMS-based, 80ms poll) ───────────────────
   useEffect(() => {
+    const buf = new Float32Array(512);
     const interval = setInterval(() => {
-      const speakingMap: Record<string, boolean> = {};
-      remoteAnalysersRef.current.forEach(({ analyser }, peerId) => {
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) {
-          sum += dataArray[i];
-        }
-        const avg = sum / dataArray.length;
-        speakingMap[peerId] = avg > 14;
+      const map: Record<string, boolean> = {};
+      analysersRef.current.forEach(({ analyser, ctx }, peerId) => {
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        analyser.getFloatTimeDomainData(buf);
+        let rms = 0;
+        for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+        rms = Math.sqrt(rms / buf.length);
+        map[peerId] = rms > SPEAKING_RMS_THRESHOLD;
       });
-      setRemoteSpeaking(speakingMap);
-    }, 150);
-
+      setRemoteSpeaking(map);
+    }, 80);
     return () => clearInterval(interval);
   }, []);
 
-  // ── 6. Real-time Signaling & Meeting Events Subscription ──
-  const handleRealtimeMeetingEvent = useCallback(
-    async (event: RealtimeEvent) => {
-      if (String(event.projectId) !== String(projectId)) return;
+  // ─── Local Audio Initialization ──────────────────────────────────────────
+  const initLocalAudio = useCallback(async (deviceId?: string): Promise<MediaStream | null> => {
+    setIsConnecting(true);
+    setPermissionError(null);
 
-      const { type, payload, senderSessionId } = event;
-      if (senderSessionId === localPeerId) return; // Ignore own echoes
+    // Stop previous tracks
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (localVadIntervalRef.current) { clearInterval(localVadIntervalRef.current); localVadIntervalRef.current = null; }
+    if (localAudioCtxRef.current) {
+      try { await localAudioCtxRef.current.close(); } catch {}
+      localAudioCtxRef.current = null;
+      localAnalyserRef.current = null;
+    }
 
-      // ── Handle WebRTC Signaling ──
-      if (type === 'MEETING_SIGNAL') {
-        const { fromPeerId, targetPeerId, signalType, data } = payload;
-        if (targetPeerId && targetPeerId !== localPeerId) return; // Not meant for this peer
-
-        const pc = getOrCreatePeerConnection(fromPeerId);
-
-        // ── Offer Handling with Perfect Negotiation (Resolves Glare) ──
-        if (signalType === 'offer') {
-          try {
-            if (!data || !data.sdp) return;
-            // Prevent duplicate offers from triggering renegotiation
-            if (lastProcessedOfferRef.current.get(fromPeerId) === data.sdp) {
-              return;
-            }
-            lastProcessedOfferRef.current.set(fromPeerId, data.sdp);
-
-            const isPolite = localPeerId.localeCompare(fromPeerId) > 0;
-            const isMakingOffer = isMakingOfferRef.current.get(fromPeerId) || false;
-            const offerCollision = isMakingOffer || pc.signalingState !== 'stable';
-
-            if (offerCollision && !isPolite) {
-              // Impolite peer rejects incoming colliding offer
-              return;
-            }
-
-            if (offerCollision && isPolite) {
-              // Polite peer rolls back local offer
-              try {
-                await pc.setLocalDescription({ type: 'rollback' });
-              } catch {}
-            }
-
-            await pc.setRemoteDescription(new RTCSessionDescription(data));
-            await drainIceCandidates(fromPeerId, pc);
-
-            // Ensure our local audio tracks are attached
-            if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
-              const audioTrack = localStreamRef.current.getAudioTracks()[0];
-              const senders = pc.getSenders();
-              const sender = senders.find((s) => s.track && s.track.kind === 'audio');
-              if (sender) {
-                await sender.replaceTrack(audioTrack);
-              } else {
-                pc.addTrack(audioTrack, localStreamRef.current);
-              }
-            }
-
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            await sendSignal(fromPeerId, 'answer', answer);
-          } catch (offerErr) {
-            console.warn('[Handle offer error]:', offerErr);
-          }
-        }
-
-        // ── Answer Handling ──
-        else if (signalType === 'answer') {
-          try {
-            if (!data || !data.sdp) return;
-            // Prevent duplicate answers
-            if (lastProcessedAnswerRef.current.get(fromPeerId) === data.sdp) {
-              return;
-            }
-            lastProcessedAnswerRef.current.set(fromPeerId, data.sdp);
-
-            if (pc.signalingState === 'have-local-offer') {
-              await pc.setRemoteDescription(new RTCSessionDescription(data));
-              await drainIceCandidates(fromPeerId, pc);
-            }
-          } catch (answerErr) {
-            console.warn('[Handle answer error]:', answerErr);
-          }
-        }
-
-        // ── Candidate Handling with Queuing & Deduplication ──
-        else if (signalType === 'candidate') {
-          if (!data || !data.candidate) return;
-
-          // Deduplicate candidate
-          let seen = seenCandidatesRef.current.get(fromPeerId);
-          if (!seen) {
-            seen = new Set<string>();
-            seenCandidatesRef.current.set(fromPeerId, seen);
-          }
-          const candKey = `${data.candidate}_${data.sdpMid}_${data.sdpMLineIndex}`;
-          if (seen.has(candKey)) return;
-          seen.add(candKey);
-
-          if (!pc.remoteDescription || !pc.remoteDescription.type) {
-            // Buffer candidate until remoteDescription is set
-            const queue = pendingIceCandidatesRef.current.get(fromPeerId) || [];
-            queue.push(data);
-            pendingIceCandidatesRef.current.set(fromPeerId, queue);
-          } else {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(data));
-            } catch (err) {
-              console.warn('[Add ICE candidate error]:', err);
-            }
-          }
-        }
-
-        // ── Request-Offer Handling ──
-        else if (signalType === 'request-offer') {
-          initiateOfferToPeer(fromPeerId);
-        }
-      }
-
-      // ── Handle Peer Joined ──
-      if (type === 'MEETING_JOINED') {
-        const { participant, participants: updatedList } = payload;
-        if (participant && participant.peerId !== localPeerId) {
-          toast.info(`${participant.userName} joined the meeting`);
-          getOrCreatePeerConnection(participant.peerId);
-        }
-        if (Array.isArray(updatedList)) {
-          setParticipants(updatedList);
-        } else if (participant && participant.peerId !== localPeerId) {
-          setParticipants((prev) => {
-            if (prev.some((p) => p.peerId === participant.peerId)) return prev;
-            return [...prev, participant];
-          });
-        }
-      }
-
-      // ── Handle Peer Left ──
-      if (type === 'MEETING_LEFT') {
-        const { peerId: leftPeerId, participants: updatedList } = payload;
-        if (leftPeerId) {
-          const pc = peerConnectionsRef.current.get(leftPeerId);
-          if (pc) {
-            pc.close();
-            peerConnectionsRef.current.delete(leftPeerId);
-          }
-          const audioElem = remoteAudioElementsRef.current.get(leftPeerId);
-          if (audioElem) {
-            audioElem.remove();
-            remoteAudioElementsRef.current.delete(leftPeerId);
-          }
-          remoteAnalysersRef.current.delete(leftPeerId);
-          pendingIceCandidatesRef.current.delete(leftPeerId);
-          seenCandidatesRef.current.delete(leftPeerId);
-          lastProcessedOfferRef.current.delete(leftPeerId);
-          lastProcessedAnswerRef.current.delete(leftPeerId);
-          setRemoteStreams((prev) => {
-            const next = { ...prev };
-            delete next[leftPeerId];
-            return next;
-          });
-        }
-        if (Array.isArray(updatedList)) {
-          setParticipants(updatedList);
-        } else if (leftPeerId) {
-          setParticipants((prev) => prev.filter((p) => p.peerId !== leftPeerId));
-        }
-      }
-
-      // ── Handle Peer State (Mute/Speaking/Deafen) ──
-      if (type === 'MEETING_STATE') {
-        const { peerId: statePeerId, isMuted: mutedState, isSpeaking: spkState, isDeafened: deafState } = payload;
-        setParticipants((prev) =>
-          prev.map((p) =>
-            p.peerId === statePeerId
-              ? {
-                  ...p,
-                  isMuted: mutedState ?? p.isMuted,
-                  isSpeaking: spkState ?? p.isSpeaking,
-                  isDeafened: deafState ?? p.isDeafened,
-                }
-              : p
-          )
-        );
-      }
-    },
-    [drainIceCandidates, getOrCreatePeerConnection, initiateOfferToPeer, localPeerId, projectId, sendSignal]
-  );
-
-  useRealtimeSubscription({
-    projectId,
-    onEvent: handleRealtimeMeetingEvent,
-  });
-
-  // ── Instant Leave Broadcast & Server Notification ──
-  const performLeave = useCallback(
-    (isUnloading = false) => {
-      // 1. Instantly broadcast left event across all browser tabs
-      publishClientRealtimeEvent({
-        type: 'MEETING_LEFT',
-        projectId,
-        payload: {
-          peerId: localPeerId,
-          userId: currentUser?.id,
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: deviceId ? { ideal: deviceId } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: { ideal: 48000 },
         },
-        senderSessionId: localPeerId,
+        video: false,
       });
 
-      // 2. Inform server via beacon (if unloading) or fetch with keepalive
-      const leaveBody = JSON.stringify({
-        action: 'leave',
-        peerId: localPeerId,
-      });
+      localStreamRef.current = stream;
+      // Apply current mute state immediately
+      stream.getAudioTracks().forEach(t => { t.enabled = !isMutedRef.current; });
 
-      if (isUnloading && typeof navigator !== 'undefined' && navigator.sendBeacon) {
-        try {
-          const blob = new Blob([leaveBody], { type: 'application/json' });
-          navigator.sendBeacon(`/api/projects/${projectId}/meeting`, blob);
-          return;
-        } catch {}
+      // ── Local VAD using float RMS (works correctly even when muted) ──────
+      try {
+        const AudioCtx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+        const ctx = new AudioCtx({ sampleRate: 48000 });
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        const src = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.85;
+        src.connect(analyser);
+        localAudioCtxRef.current = ctx;
+        localAnalyserRef.current = analyser;
+
+        const buf = new Float32Array(analyser.fftSize);
+        localVadIntervalRef.current = setInterval(() => {
+          if (!localAnalyserRef.current) return;
+          localAnalyserRef.current.getFloatTimeDomainData(buf);
+          let rms = 0;
+          for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+          rms = Math.sqrt(rms / buf.length);
+          // Volume meter: map rms→0..100
+          const db = 20 * Math.log10(rms + 1e-9);
+          const vol = Math.max(0, Math.min(100, Math.round((db + 70) / 70 * 100)));
+          setLocalVolumeLevel(vol);
+          // Speaking: only when NOT muted
+          const spk = !isMutedRef.current && rms > SPEAKING_RMS_THRESHOLD;
+          setLocalSpeaking(spk);
+          localSpeakingRef.current = spk;
+        }, 80);
+      } catch (e) {
+        console.warn('[local VAD]:', e);
       }
 
-      fetch(`/api/projects/${projectId}/meeting`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: leaveBody,
-        keepalive: true,
-      }).catch(() => {});
-    },
-    [currentUser?.id, localPeerId, projectId]
-  );
+      // ── Add/replace tracks in all existing peer connections ───────────────
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        for (const [pid, pc] of pcsRef.current.entries()) {
+          const senders = pc.getSenders();
+          const existing = senders.find(s => s.track?.kind === 'audio');
+          if (existing) {
+            await existing.replaceTrack(audioTrack).catch(() => {});
+          } else {
+            pc.addTrack(audioTrack, stream);
+            // addTrack triggers onnegotiationneeded automatically
+          }
+        }
+      }
 
-  // ── 7. Join Room on Mount & Start Heartbeat ──
+      setIsConnected(true);
+      setIsConnecting(false);
+      await refreshDevices();
+      return stream;
+    } catch (err: any) {
+      setIsConnecting(false);
+      setPermissionError(
+        err.name === 'NotAllowedError'
+          ? 'Microphone access denied. Allow microphone permissions and retry.'
+          : `Microphone error: ${err.message}`
+      );
+      toast.error('Microphone access required');
+      return null;
+    }
+  }, [refreshDevices]);
+
+  // ─── Realtime Meeting Event Handler ─────────────────────────────────────
+  const handleRealtimeEvent = useCallback(async (event: RealtimeEvent) => {
+    if (String(event.projectId) !== String(projectId)) return;
+    const { type, payload, senderSessionId } = event;
+    if (senderSessionId === localPeerId) return; // ignore own echoes
+
+    if (type === 'MEETING_SIGNAL') {
+      const { fromPeerId, targetPeerId, signalType, data } = payload;
+      if (targetPeerId && targetPeerId !== localPeerId) return; // not for us
+      await handleSignal(fromPeerId, signalType, data);
+    }
+
+    if (type === 'MEETING_JOINED') {
+      const { participant, participants: list } = payload;
+      if (participant && participant.peerId !== localPeerId) {
+        toast.info(`${participant.userName} joined the meeting`);
+        // Create PC — onnegotiationneeded will fire and initiate offer
+        getOrCreatePC(participant.peerId);
+      }
+      if (Array.isArray(list)) setParticipants(list);
+    }
+
+    if (type === 'MEETING_LEFT') {
+      const { peerId: leftId, participants: list } = payload;
+      if (leftId && leftId !== localPeerId) {
+        cleanupPeer(leftId);
+      }
+      if (Array.isArray(list)) {
+        setParticipants(list);
+      } else if (leftId) {
+        setParticipants(prev => prev.filter(p => p.peerId !== leftId));
+      }
+    }
+
+    if (type === 'MEETING_STATE') {
+      const { peerId: pid, isMuted: mutedV, isSpeaking: spkV, isDeafened: defV } = payload;
+      setParticipants(prev => prev.map(p =>
+        p.peerId === pid
+          ? { ...p, isMuted: mutedV ?? p.isMuted, isSpeaking: spkV ?? p.isSpeaking, isDeafened: defV ?? p.isDeafened }
+          : p
+      ));
+    }
+  }, [cleanupPeer, getOrCreatePC, handleSignal, localPeerId, projectId]);
+
+  useRealtimeSubscription({ projectId, onEvent: handleRealtimeEvent });
+
+  // ─── Leave: instant local broadcast + server keepalive ───────────────────
+  const performLeave = useCallback((unloading = false) => {
+    // Broadcast to all browser tabs immediately
+    publishClientRealtimeEvent({
+      type: 'MEETING_LEFT',
+      projectId,
+      payload: { peerId: localPeerId, userId: currentUser?.id },
+      senderSessionId: localPeerId,
+    });
+
+    const body = JSON.stringify({ action: 'leave', peerId: localPeerId });
+    if (unloading && navigator.sendBeacon) {
+      try {
+        navigator.sendBeacon(
+          `/api/projects/${projectId}/meeting`,
+          new Blob([body], { type: 'application/json' })
+        );
+        return;
+      } catch {}
+    }
+    fetch(`/api/projects/${projectId}/meeting`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  }, [currentUser?.id, localPeerId, projectId]);
+
+  // ─── Join & Heartbeat lifecycle ─────────────────────────────────────────
   useEffect(() => {
-    let isCancelled = false;
+    let cancelled = false;
 
-    async function startMeetingSession() {
-      // 1. FIRST acquire local audio stream so microphone track is attached before any offer/answer
+    const join = async () => {
       await initLocalAudio();
-      if (isCancelled) return;
+      if (cancelled) return;
 
-      // 2. NOW register participant presence on server
       try {
         const res = await fetch(`/api/projects/${projectId}/meeting`, {
           method: 'POST',
@@ -765,28 +629,27 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           }),
         });
 
-        if (res.ok && !isCancelled) {
+        if (res.ok && !cancelled) {
           const json = await res.json();
           if (Array.isArray(json.participants)) {
             setParticipants(json.participants);
-
-            // Connect to any other already-existing peers:
-            // The newly joined peer initiates the WebRTC offer to each existing peer
+            // Create peer connections for existing participants
+            // onnegotiationneeded fires automatically → sends offer
             for (const p of json.participants) {
               if (p.peerId !== localPeerId) {
-                initiateOfferToPeer(p.peerId);
+                getOrCreatePC(p.peerId);
               }
             }
           }
         }
       } catch (e) {
-        console.warn('[Join meeting error]:', e);
+        console.warn('[join]:', e);
       }
-    }
+    };
 
-    startMeetingSession();
+    join();
 
-    // Periodic Heartbeat every 8s to keep presence active and reconcile state
+    // Heartbeat every 8s — also reconciles participant list
     const heartbeat = setInterval(async () => {
       try {
         const res = await fetch(`/api/projects/${projectId}/meeting`, {
@@ -802,119 +665,106 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         });
         if (res.ok) {
           const json = await res.json();
-          if (Array.isArray(json.participants)) {
-            setParticipants(json.participants);
-          }
+          if (Array.isArray(json.participants)) setParticipants(json.participants);
         }
       } catch {}
     }, 8000);
 
-    const handleUnload = () => {
-      performLeave(true);
-    };
-
-    window.addEventListener('beforeunload', handleUnload);
-    window.addEventListener('pagehide', handleUnload);
+    const onUnload = () => performLeave(true);
+    window.addEventListener('beforeunload', onUnload);
+    window.addEventListener('pagehide', onUnload);
 
     return () => {
-      isCancelled = true;
+      cancelled = true;
       clearInterval(heartbeat);
-      window.removeEventListener('beforeunload', handleUnload);
-      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('pagehide', onUnload);
 
       performLeave(false);
 
-      // Close all peer connections
-      peerConnectionsRef.current.forEach((pc) => pc.close());
-      peerConnectionsRef.current.clear();
+      pcsRef.current.forEach(pc => { try { pc.close(); } catch {} });
+      pcsRef.current.clear();
 
-      // Remove audio elements
-      remoteAudioElementsRef.current.forEach((el) => el.remove());
-      remoteAudioElementsRef.current.clear();
-      remoteAnalysersRef.current.clear();
+      audioElemsRef.current.forEach(el => { el.srcObject = null; try { el.remove(); } catch {} });
+      audioElemsRef.current.clear();
 
-      // Stop local microphone tracks
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-      }
-      if (localVolumeIntervalRef.current) clearInterval(localVolumeIntervalRef.current);
+      analysersRef.current.forEach(({ ctx }) => { try { ctx.close(); } catch {} });
+      analysersRef.current.clear();
+
+      if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+      if (localVadIntervalRef.current) clearInterval(localVadIntervalRef.current);
+      if (localAudioCtxRef.current) { try { localAudioCtxRef.current.close(); } catch {} }
     };
-  }, [initLocalAudio, initiateOfferToPeer, localPeerId, performLeave, projectId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);  // run only on mount/unmount — refs keep everything fresh
 
-  // ── 7. Microphone Device Switching ──
+  // ─── Microphone Device Switch ────────────────────────────────────────────
   const handleSwitchMic = async (deviceId: string) => {
     setSelectedInputId(deviceId);
     await initLocalAudio(deviceId);
     toast.success('Microphone switched');
   };
 
-  // ── 8. Speaker / Output Device Switching ──
+  // ─── Speaker Output Switch ───────────────────────────────────────────────
   const handleSwitchSpeaker = async (deviceId: string) => {
     setSelectedOutputId(deviceId);
     selectedOutputIdRef.current = deviceId;
-    remoteAudioElementsRef.current.forEach((audio) => {
-      if (typeof (audio as any).setSinkId === 'function') {
-        (audio as any).setSinkId(deviceId).catch((err: any) => {
-          console.warn('[setSinkId Error]:', err);
-        });
+    audioElemsRef.current.forEach(el => {
+      if (typeof (el as any).setSinkId === 'function') {
+        (el as any).setSinkId(deviceId).catch(() => {});
       }
     });
     toast.success('Speaker output switched');
   };
 
-  // ── 9. Toggle Mic Mute ──
+  // ─── Mute / Deafen Toggle ────────────────────────────────────────────────
   const handleToggleMute = () => {
-    const nextMuted = !isMuted;
-    setIsMuted(nextMuted);
-    isMutedRef.current = nextMuted;
-
-    if (localStreamRef.current) {
-      localStreamRef.current.getAudioTracks().forEach((t) => {
-        t.enabled = !nextMuted;
-      });
-    }
-
-    // Inform server and peers
+    const next = !isMuted;
+    setIsMuted(next);
+    isMutedRef.current = next;
+    localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !next; });
+    if (next) { setLocalSpeaking(false); localSpeakingRef.current = false; }
     fetch(`/api/projects/${projectId}/meeting`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'state',
-        peerId: localPeerId,
-        isMuted: nextMuted,
-      }),
+      body: JSON.stringify({ action: 'state', peerId: localPeerId, isMuted: next }),
     }).catch(() => {});
-
-    toast.info(nextMuted ? 'Microphone muted' : 'Microphone unmuted');
+    toast.info(next ? 'Muted' : 'Unmuted');
   };
 
-  // ── 10. Toggle Deafen (Mute Incoming Audio) ──
   const handleToggleDeafen = () => {
-    const nextDeafen = !isDeafened;
-    setIsDeafened(nextDeafen);
-    isDeafenedRef.current = nextDeafen;
-
-    remoteAudioElementsRef.current.forEach((audio) => {
-      audio.muted = nextDeafen;
-    });
-
-    toast.info(nextDeafen ? 'Sound deafened' : 'Sound undeafened');
+    const next = !isDeafened;
+    setIsDeafened(next);
+    isDeafenedRef.current = next;
+    audioElemsRef.current.forEach(el => { el.muted = next; });
+    toast.info(next ? 'Sound deafened' : 'Sound enabled');
   };
 
-  // ── 11. Leave Meeting ──
   const handleLeaveCall = () => {
     performLeave(false);
-    if (onLeaveMeeting) {
-      onLeaveMeeting();
-    } else {
-      window.history.back();
-    }
+    onLeaveMeeting ? onLeaveMeeting() : window.history.back();
   };
 
-  // List of participants to render (including Local user)
+  // ─── Rendered participants: deduplicated by userId ────────────────────────
+  //
+  // The server may briefly return two entries for the same userId (e.g. during
+  // a page refresh before the old peerId is pruned). We deduplicate here by
+  // keeping the most-recently-joined entry per userId.
+  //
   const renderedParticipants = useMemo(() => {
-    const others = participants.filter((p) => p.peerId !== localPeerId);
-    const localUserParticipant: MeetingParticipant = {
+    const byUserId = new Map<string, MeetingParticipant>();
+    for (const p of participants) {
+      const uid = String(p.userId);
+      const existing = byUserId.get(uid);
+      if (!existing || p.joinedAt > existing.joinedAt) {
+        byUserId.set(uid, p);
+      }
+    }
+    // Remote participants only
+    const others = Array.from(byUserId.values()).filter(p => p.peerId !== localPeerId);
+
+    // Local user entry — always use live state
+    const me: MeetingParticipant = {
       peerId: localPeerId,
       userId: currentUser?.id || 'you',
       userName: currentUser?.name || currentUser?.username || 'You',
@@ -926,15 +776,16 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       lastSeen: Date.now(),
     };
 
-    return [localUserParticipant, ...others];
+    return [me, ...others];
   }, [currentUser, isDeafened, isMuted, localPeerId, localSpeaking, participants]);
 
+  // ─── JSX ─────────────────────────────────────────────────────────────────
   return (
     <div
       onClick={unlockAudio}
       className="flex-1 w-full h-full flex flex-col bg-[#0A0B0D] text-[#CFD4DD] overflow-hidden select-none font-sans"
     >
-      {/* ── Top Meeting Room Header ── */}
+      {/* ── Header ── */}
       <div className="h-14 px-6 border-b border-[#1E2024] bg-[#111215]/95 flex items-center justify-between shrink-0 z-20 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/25">
@@ -959,41 +810,32 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           </div>
         </div>
 
-        {/* Action Header Buttons */}
         <div className="flex items-center gap-2.5">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeviceSettings((prev) => !prev);
-            }}
+            onClick={e => { e.stopPropagation(); setShowDeviceSettings(p => !p); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
               showDeviceSettings
                 ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 shadow-sm'
                 : 'bg-[#18191E] text-[#8E939D] hover:text-white border-[#2A2C30]'
             }`}
-            title="Configure Audio Input & Output Devices"
+            title="Configure Audio Devices"
           >
-            <Settings size={14} />
-            <span>Audio Devices</span>
+            <Settings size={14} /><span>Audio Devices</span>
           </button>
-
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleLeaveCall();
-            }}
+            onClick={e => { e.stopPropagation(); handleLeaveCall(); }}
             className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 transition-all shadow-md cursor-pointer"
             title="Leave Meeting Room"
           >
-            <PhoneOff size={14} />
-            <span>Leave</span>
+            <PhoneOff size={14} /><span>Leave</span>
           </button>
         </div>
       </div>
 
-      {/* ── Main Meeting Body ── */}
+      {/* ── Body ── */}
       <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden bg-[#0A0B0D]">
-        {/* Autoplay Blocked Alert Banner */}
+
+        {/* Autoplay blocked banner */}
         {autoplayBlocked && (
           <div
             onClick={unlockAudio}
@@ -1001,15 +843,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           >
             <div className="flex items-center gap-2.5">
               <Volume2 size={16} className="text-amber-400 shrink-0" />
-              <span>Browser autoplay policy blocked audio. Click anywhere on this screen to enable audio playback.</span>
+              <span>Browser blocked audio autoplay. Click anywhere to enable audio.</span>
             </div>
-            <button className="px-3 py-1 bg-amber-500 text-black rounded-lg font-bold transition-colors text-[11px] shrink-0">
-              Enable Audio
-            </button>
+            <button className="px-3 py-1 bg-amber-500 text-black rounded-lg font-bold text-[11px] shrink-0">Enable Audio</button>
           </div>
         )}
 
-        {/* Permission / Connection Warning Bar */}
+        {/* Mic permission error */}
         {permissionError && (
           <div className="mx-6 mt-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-2.5">
@@ -1017,10 +857,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <span>{permissionError}</span>
             </div>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                initLocalAudio();
-              }}
+              onClick={e => { e.stopPropagation(); initLocalAudio(); }}
               className="px-2.5 py-1 bg-red-500/20 hover:bg-red-500/30 text-white rounded-lg font-medium transition-colors text-[11px] cursor-pointer"
             >
               Retry Microphone
@@ -1028,31 +865,25 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           </div>
         )}
 
-        {/* ── Slide-Down Device Switcher Settings Drawer ── */}
+        {/* Device settings drawer */}
         {showDeviceSettings && (
           <div className="mx-6 mt-4 p-4 rounded-2xl bg-[#141519] border border-[#2B2D33] shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            {/* Input Mic Selector */}
+            {/* Mic input */}
             <div className="flex-1 w-full">
               <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Mic size={12} className="text-[#DCB001]" />
-                Microphone (Input Device)
+                <Mic size={12} className="text-[#DCB001]" /> Microphone (Input)
               </label>
               <select
                 value={selectedInputId}
-                onChange={(e) => handleSwitchMic(e.target.value)}
+                onChange={e => handleSwitchMic(e.target.value)}
                 className="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#DCB001] transition-colors cursor-pointer"
               >
                 {audioInputDevices.length === 0 && <option value="">Default Microphone</option>}
-                {audioInputDevices.map((device, idx) => (
-                  <option key={device.deviceId || idx} value={device.deviceId}>
-                    {device.label || `Microphone ${idx + 1}`}
-                  </option>
-                ))}
+                {audioInputDevices.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</option>)}
               </select>
-
-              {/* Real-time Local Mic Meter */}
+              {/* Mic level meter */}
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-[10px] text-[#787C83] font-mono">Mic Input Level:</span>
+                <span className="text-[10px] text-[#787C83] font-mono">Mic Level:</span>
                 <div className="flex-1 h-1.5 rounded-full bg-[#202228] overflow-hidden">
                   <div
                     className="h-full bg-[#22C55E] transition-all duration-75"
@@ -1062,27 +893,20 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               </div>
             </div>
 
-            {/* Output Speaker Selector */}
+            {/* Speaker output */}
             <div className="flex-1 w-full">
               <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Headphones size={12} className="text-[#DCB001]" />
-                Speaker / Output Device
+                <Headphones size={12} className="text-[#DCB001]" /> Speaker (Output)
               </label>
               <select
                 value={selectedOutputId}
-                onChange={(e) => handleSwitchSpeaker(e.target.value)}
+                onChange={e => handleSwitchSpeaker(e.target.value)}
                 className="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#DCB001] transition-colors cursor-pointer"
               >
                 {audioOutputDevices.length === 0 && <option value="">Default System Speaker</option>}
-                {audioOutputDevices.map((device, idx) => (
-                  <option key={device.deviceId || idx} value={device.deviceId}>
-                    {device.label || `Speaker / Headphones ${idx + 1}`}
-                  </option>
-                ))}
+                {audioOutputDevices.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Speaker ${i + 1}`}</option>)}
               </select>
-              <p className="mt-1.5 text-[10px] text-[#787C83]">
-                Output sink switching supported in modern Chromium/Edge browsers.
-              </p>
+              <p className="mt-1.5 text-[10px] text-[#787C83]">Output switching supported in Chrome/Edge.</p>
             </div>
           </div>
         )}
@@ -1100,54 +924,45 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 : 'grid-cols-2 md:grid-cols-3 max-w-6xl mx-auto'
             }`}
           >
-            {renderedParticipants.map((p) => {
+            {renderedParticipants.map(p => {
               const isMe = p.peerId === localPeerId;
-              const isCurrentlySpeaking = isMe ? localSpeaking : remoteSpeaking[p.peerId];
+              const speaking = isMe ? localSpeaking : (remoteSpeaking[p.peerId] ?? false);
+              const pcState = isMe ? null : pcStates[p.peerId];
 
               return (
                 <div
                   key={p.peerId}
                   className={`relative rounded-2xl bg-[#121317] border transition-all duration-200 flex flex-col items-center justify-center p-6 shadow-xl overflow-hidden ${
-                    isCurrentlySpeaking
+                    speaking
                       ? 'border-[#22C55E] ring-4 ring-[#22C55E]/20 shadow-[0_0_24px_rgba(34,197,94,0.2)]'
                       : 'border-[#22242A] hover:border-[#333640]'
                   }`}
                 >
-                  {/* Speaking Waves Animation in Background */}
-                  {isCurrentlySpeaking && (
+                  {/* Speaking background glow */}
+                  {speaking && (
                     <div className="absolute inset-0 bg-radial from-[#22C55E]/10 to-transparent pointer-events-none animate-pulse" />
                   )}
 
-                  {/* Avatar with Halo */}
+                  {/* Avatar */}
                   <div className="relative mb-3.5">
                     <div
                       className={`w-20 h-20 rounded-full flex items-center justify-center overflow-hidden font-bold text-xl uppercase transition-all duration-200 ${
-                        isCurrentlySpeaking
+                        speaking
                           ? 'ring-4 ring-[#22C55E] ring-offset-4 ring-offset-[#121317] scale-105'
                           : 'ring-2 ring-[#2B2D35]'
-                      } ${
-                        p.userAvatar
-                          ? 'bg-[#1E2026]'
-                          : 'bg-gradient-to-br from-[#2B2E38] to-[#17181F] text-white'
-                      }`}
+                      } ${p.userAvatar ? 'bg-[#1E2026]' : 'bg-gradient-to-br from-[#2B2E38] to-[#17181F] text-white'}`}
                     >
-                      {p.userAvatar ? (
-                        <img
-                          src={p.userAvatar}
-                          alt={p.userName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span>{p.userName.slice(0, 2)}</span>
-                      )}
+                      {p.userAvatar
+                        ? <img src={p.userAvatar} alt={p.userName} className="w-full h-full object-cover" />
+                        : <span>{p.userName.slice(0, 2)}</span>}
                     </div>
 
-                    {/* Mic Status Badge on Avatar Corner */}
+                    {/* Mic badge */}
                     <div
                       className={`absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#121317] shadow-md ${
                         p.isMuted
                           ? 'bg-red-500 text-white'
-                          : isCurrentlySpeaking
+                          : speaking
                           ? 'bg-[#22C55E] text-black animate-bounce'
                           : 'bg-[#1F2128] text-[#8E939D]'
                       }`}
@@ -1156,29 +971,23 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Participant Name & Status */}
+                  {/* Name */}
                   <div className="flex items-center gap-1.5 mb-1 z-10">
-                    <span className="font-semibold text-sm text-white tracking-tight">
-                      {p.userName}
-                    </span>
+                    <span className="font-semibold text-sm text-white tracking-tight">{p.userName}</span>
                     {isMe && (
-                      <span className="px-1.5 py-0.2 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
-                        YOU
-                      </span>
+                      <span className="px-1.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">YOU</span>
                     )}
                   </div>
 
-                  {/* Audio Waveform Equalizer when Speaking */}
+                  {/* Speaking waveform / Idle status */}
                   <div className="h-4 flex items-center gap-1 mt-1 z-10">
-                    {isCurrentlySpeaking ? (
+                    {speaking ? (
                       <>
                         <span className="w-1 h-3.5 bg-[#22C55E] rounded-full animate-pulse" />
                         <span className="w-1 h-5 bg-[#22C55E] rounded-full animate-pulse delay-75" />
                         <span className="w-1 h-2 bg-[#22C55E] rounded-full animate-pulse delay-150" />
                         <span className="w-1 h-4 bg-[#22C55E] rounded-full animate-pulse delay-100" />
-                        <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">
-                          Speaking...
-                        </span>
+                        <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">Speaking...</span>
                       </>
                     ) : (
                       <span className="text-[10px] text-[#6B707B] font-mono">
@@ -1187,9 +996,19 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     )}
                   </div>
 
-                  {/* Top-Right Signal Badge */}
-                  <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] text-[#6B707B] font-mono">
-                    <Signal size={12} className="text-[#22C55E]" />
+                  {/* Connection state badge (top-right) */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-mono">
+                    {isMe ? (
+                      <Signal size={12} className="text-[#22C55E]" />
+                    ) : pcState === 'connected' ? (
+                      <Signal size={12} className="text-[#22C55E]" />
+                    ) : pcState === 'connecting' || pcState === 'new' ? (
+                      <Wifi size={12} className="text-[#DCB001] animate-pulse" />
+                    ) : pcState === 'failed' || pcState === 'disconnected' ? (
+                      <WifiOff size={12} className="text-red-400" />
+                    ) : (
+                      <Signal size={12} className="text-[#6B707B]" />
+                    )}
                   </div>
                 </div>
               );
@@ -1197,9 +1016,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           </div>
         </div>
 
-        {/* ── Bottom Floating Audio Dock Controls ── */}
+        {/* ── Bottom Controls Dock ── */}
         <div className="h-20 border-t border-[#1C1E23] bg-[#0E0F12]/95 backdrop-blur-xl flex items-center justify-center gap-4 px-6 z-30 shadow-2xl">
-          {/* Mute Mic Button */}
+          {/* Mute */}
           <button
             onClick={handleToggleMute}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl ${
@@ -1213,7 +1032,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <span>{isMuted ? 'Unmute Mic' : 'Mute Mic'}</span>
           </button>
 
-          {/* Deafen Button */}
+          {/* Deafen */}
           <button
             onClick={handleToggleDeafen}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl ${
@@ -1227,9 +1046,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <span>{isDeafened ? 'Undeafen' : 'Deafen'}</span>
           </button>
 
-          {/* Device Settings Toggle */}
+          {/* Devices */}
           <button
-            onClick={() => setShowDeviceSettings((prev) => !prev)}
+            onClick={() => setShowDeviceSettings(p => !p)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border ${
               showDeviceSettings
                 ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40'
@@ -1237,43 +1056,39 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             }`}
             title="Audio Input / Output Device Preferences"
           >
-            <Sliders size={15} />
-            <span>Devices</span>
+            <Sliders size={15} /><span>Devices</span>
           </button>
 
-          {/* Leave Meeting Call Button */}
+          {/* Leave */}
           <button
             onClick={handleLeaveCall}
             className="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer"
             title="Disconnect & Exit Call"
           >
-            <PhoneOff size={16} />
-            <span>Leave Call</span>
+            <PhoneOff size={16} /><span>Leave Call</span>
           </button>
         </div>
 
-        {/* ── Hidden Audio Players for Remote Participants in React DOM ── */}
+        {/* ── Hidden React-managed audio elements (prevents GC throttling) ── */}
         <div className="hidden" aria-hidden="true">
           {renderedParticipants
-            .filter((p) => p.peerId !== localPeerId)
-            .map((p) => (
+            .filter(p => p.peerId !== localPeerId)
+            .map(p => (
               <audio
                 key={p.peerId}
-                id={`audio_elem_${p.peerId}`}
                 autoPlay
                 playsInline
                 muted={isDeafened}
-                ref={(el) => {
-                  if (el) {
-                    remoteAudioElementsRef.current.set(p.peerId, el);
-                    const stream = remoteStreams[p.peerId];
-                    if (stream && el.srcObject !== stream) {
-                      el.srcObject = stream;
-                      el.play().catch(() => setAutoplayBlocked(true));
-                    }
-                    if (selectedOutputId && typeof (el as any).setSinkId === 'function') {
-                      (el as any).setSinkId(selectedOutputId).catch(() => {});
-                    }
+                ref={el => {
+                  if (!el) return;
+                  audioElemsRef.current.set(p.peerId, el);
+                  const stream = remoteStreams[p.peerId];
+                  if (stream && el.srcObject !== stream) {
+                    el.srcObject = stream;
+                    el.play().catch(() => setAutoplayBlocked(true));
+                  }
+                  if (selectedOutputId && typeof (el as any).setSinkId === 'function') {
+                    (el as any).setSinkId(selectedOutputId).catch(() => {});
                   }
                 }}
               />

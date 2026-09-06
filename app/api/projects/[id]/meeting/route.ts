@@ -122,6 +122,24 @@ export async function POST(
     const room = getRoom(projectId);
 
     if (action === 'join') {
+      // Remove any stale entries for the same userId (prevents ghost duplicates on rejoin/refresh)
+      const staleIds: string[] = [];
+      for (const [existingPeerId, existingP] of room.entries()) {
+        if (String(existingP.userId) === String(session.id) && existingPeerId !== peerId) {
+          staleIds.push(existingPeerId);
+        }
+      }
+      for (const staleId of staleIds) {
+        room.delete(staleId);
+        // Notify others about the stale peer leaving
+        broadcastRealtimeEvent({
+          type: 'MEETING_LEFT',
+          projectId: String(projectId),
+          payload: { peerId: staleId, userId: session.id },
+          senderSessionId: 'system',
+        }).catch(() => {});
+      }
+
       const participant: MeetingParticipant = {
         peerId,
         userId: session.id,
