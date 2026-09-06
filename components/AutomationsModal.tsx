@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 
 interface AutomationsModalProps {
   isOpen: boolean;
@@ -172,28 +173,34 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-mono text-[#787C83] mb-1">Trigger Event</label>
-                    <select
+                    <CustomDropdown<string>
                       value={newTrigger}
-                      onChange={(e) => setNewTrigger(e.target.value)}
-                      className="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg outline-none cursor-pointer"
-                    >
-                      <option value="status_changed">When Status changes to Done</option>
-                      <option value="issue_created">When Task is Created</option>
-                      <option value="priority_changed">When Priority is Critical</option>
-                    </select>
+                      onChange={(val) => setNewTrigger(val)}
+                      options={[
+                        { value: 'status_changed', label: 'When Status changes to Done' },
+                        { value: 'issue_created', label: 'When Task is Created' },
+                        { value: 'priority_changed', label: 'When Priority is Critical' },
+                      ]}
+                      className="w-full"
+                      triggerClassName="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg hover:border-[#DCB001]/50"
+                      size="sm"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-mono text-[#787C83] mb-1">Action to Execute</label>
-                    <select
+                    <CustomDropdown<string>
                       value={newAction}
-                      onChange={(e) => setNewAction(e.target.value)}
-                      className="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg outline-none cursor-pointer"
-                    >
-                      <option value="change_status">Move Status to Needs Review</option>
-                      <option value="set_priority">Set Priority to High</option>
-                      <option value="assign_user">Assign to Project Lead</option>
-                    </select>
+                      onChange={(val) => setNewAction(val)}
+                      options={[
+                        { value: 'change_status', label: 'Move Status to Needs Review' },
+                        { value: 'set_priority', label: 'Set Priority to High' },
+                        { value: 'assign_user', label: 'Assign to Project Lead' },
+                      ]}
+                      className="w-full"
+                      triggerClassName="w-full bg-[#1B1C1F] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2.5 py-1.5 rounded-lg hover:border-[#DCB001]/50"
+                      size="sm"
+                    />
                   </div>
                 </div>
 

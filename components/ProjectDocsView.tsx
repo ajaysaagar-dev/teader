@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 
 import { toast } from 'sonner';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { RandomLoadingText } from './ui/RandomLoadingText';
 import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache';
 import { useRealtimeSubscription, RealtimeEvent, publishClientRealtimeEvent } from '@/lib/useRealtime';
@@ -1736,18 +1737,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   <FileCode size={13} />
                   <span>Create in [{activeFolderForCreation}]:</span>
                 </div>
-                <select
+                <CustomDropdown<string>
                   value={activeFolderForCreation}
-                  onChange={(e) => setActiveFolderForCreation(e.target.value)}
-                  className="bg-[#0E1012] border border-[#2A2C30] text-[10px] text-[#CFD4DD] rounded px-1.5 py-0.5 outline-none"
-                >
-                  <option value={DEFAULT_FOLDER}>Start (Default)</option>
-                  {customFolders.map((f) => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setActiveFolderForCreation(val)}
+                  options={[
+                    { value: DEFAULT_FOLDER, label: 'Start (Default)' },
+                    ...customFolders.map((f) => ({
+                      value: f,
+                      label: f,
+                    })),
+                  ]}
+                  triggerClassName="bg-[#0E1012] border border-[#2A2C30] text-[10px] text-[#CFD4DD] rounded px-1.5 py-0.5 hover:border-[#DCB001]/50"
+                  size="xs"
+                />
               </div>
               <div className="flex items-center gap-1.5">
                 <input

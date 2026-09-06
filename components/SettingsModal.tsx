@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { applyUIScale, resetUIScale, getSavedUIScale, DEFAULT_UI_SCALE } from './UIScaleInitializer';
 import { getDesktopInfo } from '@/lib/desktop';
 import { ThemeColorSettings } from './ThemeColorSettings';
+import { CustomDropdown } from './ui/CustomDropdown';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -241,14 +242,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <p className="font-semibold text-white">Default Launch Tab</p>
                           <p className="text-[11px] text-[var(--text-muted)]">Page loaded on initial app open</p>
                         </div>
-                        <select
+                        <CustomDropdown<string>
                           value={defaultPage}
-                          onChange={(e) => setDefaultPage(e.target.value)}
-                          className="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1 text-xs text-[var(--text-primary)] outline-none"
-                        >
-                          <option value="/dashboard">Dashboard</option>
-                          <option value="/projects">Projects Directory</option>
-                        </select>
+                          onChange={(val) => setDefaultPage(val)}
+                          options={[
+                            { value: '/dashboard', label: 'Dashboard' },
+                            { value: '/projects', label: 'Projects Directory' },
+                          ]}
+                          triggerClassName="bg-[var(--bg-input)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1 text-xs text-[var(--text-primary)] hover:border-[var(--accent-yellow)]/50"
+                          size="sm"
+                        />
                       </div>
 
                       <div className="flex items-center justify-between py-2">

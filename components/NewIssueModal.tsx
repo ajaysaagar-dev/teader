@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { 
   getTaskShortId, 
@@ -772,16 +773,19 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
                               Priority
                             </label>
-                            <select
+                            <CustomDropdown<Priority>
                               value={priority}
-                              onChange={(e) => setPriority(e.target.value as Priority)}
-                              className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none capitalize cursor-pointer"
-                            >
-                              <option value="critical">Critical (P0)</option>
-                              <option value="high">High (P1)</option>
-                              <option value="medium">Medium (P2)</option>
-                              <option value="low">Low (P3)</option>
-                            </select>
+                              onChange={(val) => setPriority(val)}
+                              options={[
+                                { value: 'critical', label: 'Critical (P0)' },
+                                { value: 'high', label: 'High (P1)' },
+                                { value: 'medium', label: 'Medium (P2)' },
+                                { value: 'low', label: 'Low (P3)' },
+                              ]}
+                              className="w-full"
+                              triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] capitalize hover:border-[#DCB001]/50"
+                              size="sm"
+                            />
                           </div>
 
                           {/* Assignee */}
@@ -789,20 +793,22 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
                               Assignee
                             </label>
-                            <select
+                            <CustomDropdown<string>
                               value={assigneeName}
-                              onChange={(e) => setAssigneeName(e.target.value)}
-                              className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none cursor-pointer"
-                            >
-                              <option value="General (Anyone)">General (Anyone)</option>
-                              {joinedMembers.map((m) => (
-                                <option key={m.id} value={m.name}>
-                                  {m.name}
-                                </option>
-                              ))}
-                              <option value="karri">karri</option>
-                              <option value="jori">jori</option>
-                            </select>
+                              onChange={(val) => setAssigneeName(val)}
+                              options={[
+                                { value: 'General (Anyone)', label: 'General (Anyone)' },
+                                ...joinedMembers.map((m) => ({
+                                  value: m.name,
+                                  label: m.name,
+                                })),
+                                { value: 'karri', label: 'karri' },
+                                { value: 'jori', label: 'jori' },
+                              ]}
+                              className="w-full"
+                              triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] hover:border-[#DCB001]/50"
+                              size="sm"
+                            />
                           </div>
 
                           {/* Estimate */}
@@ -890,22 +896,21 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                           <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
                             Destination Folder
                           </label>
-                          <select
+                          <CustomDropdown<string>
                             value={targetFolderId}
-                            onChange={(e) => {
-                              const selectedId = e.target.value;
+                            onChange={(selectedId) => {
                               setTargetFolderId(selectedId);
                               const found = availableFolderOptions.find((f) => f.id === selectedId);
                               setTargetFolder(found ? found.name : selectedId);
                             }}
-                            className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] outline-none cursor-pointer font-sans text-xs"
-                          >
-                            {availableFolderOptions.map((f) => (
-                              <option key={f.id} value={f.id}>
-                                📁 {f.name} {f.id !== 'folder_general' && f.createdAt ? `(${new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}
-                              </option>
-                            ))}
-                          </select>
+                            options={availableFolderOptions.map((f) => ({
+                              value: f.id,
+                              label: `📁 ${f.name} ${f.id !== 'folder_general' && f.createdAt ? `(${new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}`,
+                            }))}
+                            className="w-full"
+                            triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] font-sans text-xs hover:border-[#DCB001]/50"
+                            size="sm"
+                          />
                         </div>
 
                         {/* Labels */}

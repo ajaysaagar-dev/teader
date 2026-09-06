@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -156,30 +157,34 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
           <div className="flex items-center gap-1.5 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded-md shrink-0">
             <Layers size={12} className="text-[#DCB001]" />
             <span className="text-[10px] text-[#787C83] uppercase font-mono font-bold">Group:</span>
-            <select
+            <CustomDropdown<GroupByMode>
               value={groupBy}
-              onChange={(e) => setGroupBy(e.target.value as GroupByMode)}
-              className="bg-transparent text-xs text-[#CFD4DD] outline-none cursor-pointer font-medium"
-            >
-              <option value="epic" className="bg-[#1B1C1F] text-[#CFD4DD]">Folder / Epic</option>
-              <option value="status" className="bg-[#1B1C1F] text-[#CFD4DD]">Status</option>
-              <option value="assignee" className="bg-[#1B1C1F] text-[#CFD4DD]">Assignee</option>
-              <option value="flat" className="bg-[#1B1C1F] text-[#CFD4DD]">Flat List</option>
-            </select>
+              onChange={(val) => setGroupBy(val)}
+              options={[
+                { value: 'epic', label: 'Folder / Epic' },
+                { value: 'status', label: 'Status' },
+                { value: 'assignee', label: 'Assignee' },
+                { value: 'flat', label: 'Flat List' },
+              ]}
+              triggerClassName="bg-transparent border-0 text-xs text-[#CFD4DD] font-medium p-0 hover:text-white"
+              size="xs"
+            />
           </div>
 
           {/* Priority Filter */}
-          <select
+          <CustomDropdown<string>
             value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="bg-[#131415] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2 py-1 rounded-md outline-none cursor-pointer shrink-0"
-          >
-            <option value="all" className="bg-[#1B1C1F]">All Priorities</option>
-            <option value="critical" className="bg-[#1B1C1F]">Critical</option>
-            <option value="high" className="bg-[#1B1C1F]">High</option>
-            <option value="medium" className="bg-[#1B1C1F]">Medium</option>
-            <option value="low" className="bg-[#1B1C1F]">Low</option>
-          </select>
+            onChange={(val) => setSelectedPriority(val)}
+            options={[
+              { value: 'all', label: 'All Priorities' },
+              { value: 'critical', label: 'Critical' },
+              { value: 'high', label: 'High' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'low', label: 'Low' },
+            ]}
+            triggerClassName="bg-[#131415] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2 py-1 rounded-md hover:border-[#DCB001]/50"
+            size="xs"
+          />
         </div>
 
         {/* Right Controls: Expand / Collapse All & New Task Button */}
@@ -356,10 +361,16 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                             {/* Right: Status Pill, Priority, Assignee */}
                             <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {/* Status Pill with Inline Changer */}
-                              <select
+                              <CustomDropdown<Status>
                                 value={issue.status}
-                                onChange={(e) => onUpdateIssueStatus(issue.id, e.target.value as Status)}
-                                className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border outline-none cursor-pointer ${
+                                onChange={(val) => onUpdateIssueStatus(issue.id, val)}
+                                options={[
+                                  { value: 'todo', label: 'Todo' },
+                                  { value: 'in_progress', label: 'In Progress' },
+                                  { value: 'needs_review', label: 'Needs Review' },
+                                  { value: 'done', label: 'Done' },
+                                ]}
+                                triggerClassName={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${
                                   issue.status === 'done'
                                     ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30'
                                     : issue.status === 'in_progress'
@@ -368,12 +379,10 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                                     ? 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30'
                                     : 'bg-[#2A2C30] text-[#787C83] border-[#2A2C30]'
                                 }`}
-                              >
-                                <option value="todo" className="bg-[#1B1C1F] text-[#CFD4DD]">Todo</option>
-                                <option value="in_progress" className="bg-[#1B1C1F] text-[#DCB001]">In Progress</option>
-                                <option value="needs_review" className="bg-[#1B1C1F] text-[#3B82F6]">Needs Review</option>
-                                <option value="done" className="bg-[#1B1C1F] text-[#22C55E]">Done</option>
-                              </select>
+                                size="xs"
+                                showChevron={false}
+                                align="right"
+                              />
 
                               {/* Priority Badge */}
                               <span

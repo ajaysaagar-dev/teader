@@ -17,6 +17,7 @@ import { RealtimeBadge } from '@/components/RealtimeBadge';
 
 
 import { Avatar } from '@/components/ui/Avatar';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { 
   FolderKanban, 
   Key, 
@@ -2234,22 +2235,26 @@ export default function SingleProjectPage() {
 
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Status Dropdown */}
-                    <div className="flex items-center gap-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg px-2 py-1">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
-                      <select
+                      <CustomDropdown<Status>
                         value={selectedIssue.status}
-                        onChange={(e) => handleUpdateStatus(selectedIssue.id, e.target.value as Status)}
-                        className="bg-transparent text-xs text-[#DCB001] outline-none cursor-pointer font-semibold capitalize"
-                      >
-                        <option value="todo" className="bg-[#131415] text-white">Todo</option>
-                        <option value="in_progress" className="bg-[#131415] text-white">In Progress</option>
-                        <option value="needs_review" className="bg-[#131415] text-white">Needs Review</option>
-                        <option value="done" disabled={!canCompleteTasks} className="bg-[#131415] text-white">
-                          Done {!canCompleteTasks ? '(No Access)' : ''}
-                        </option>
-                        <option value="blocked" className="bg-[#131415] text-white">Blocked</option>
-                        <option value="cancelled" className="bg-[#131415] text-white">Cancelled</option>
-                      </select>
+                        onChange={(val) => handleUpdateStatus(selectedIssue.id, val)}
+                        options={[
+                          { value: 'todo', label: 'Todo' },
+                          { value: 'in_progress', label: 'In Progress' },
+                          { value: 'needs_review', label: 'Needs Review' },
+                          {
+                            value: 'done',
+                            label: `Done ${!canCompleteTasks ? '(No Access)' : ''}`,
+                            disabled: !canCompleteTasks,
+                          },
+                          { value: 'blocked', label: 'Blocked' },
+                          { value: 'cancelled', label: 'Cancelled' },
+                        ]}
+                        triggerClassName="bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1 text-xs text-[#DCB001] font-semibold hover:border-[#DCB001]/50"
+                        size="xs"
+                      />
                     </div>
 
                     {/* Close Button with X Icon */}

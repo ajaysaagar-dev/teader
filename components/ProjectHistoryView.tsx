@@ -24,6 +24,7 @@ import {
   CalendarClock
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { HistoryEntry } from '@/lib/types';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 
@@ -266,45 +267,45 @@ export function ProjectHistoryView({
           </div>
 
           {/* Entity Type Filter */}
-          <div className="relative">
-            <select
-              value={selectedEntityFilter}
-              onChange={(e) => setSelectedEntityFilter(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] focus:border-[#DCB001] rounded-lg text-xs text-white outline-none transition-colors appearance-none cursor-pointer"
-            >
-              <option value="all">All Entity Types</option>
-              <option value="task">Tasks</option>
-              <option value="folder">Folders</option>
-              <option value="doc">Documentation</option>
-              <option value="subtask">Subtasks</option>
-              <option value="member">Members & Permissions</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#787C83] pointer-events-none" />
-          </div>
+          <CustomDropdown<string>
+            value={selectedEntityFilter}
+            onChange={(val) => setSelectedEntityFilter(val)}
+            options={[
+              { value: 'all', label: 'All Entity Types' },
+              { value: 'task', label: 'Tasks' },
+              { value: 'folder', label: 'Folders' },
+              { value: 'doc', label: 'Documentation' },
+              { value: 'subtask', label: 'Subtasks' },
+              { value: 'member', label: 'Members & Permissions' },
+            ]}
+            className="w-full"
+            triggerClassName="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] hover:border-[#DCB001]/50 text-xs text-white rounded-lg"
+            size="sm"
+          />
 
           {/* Action Filter */}
-          <div className="relative">
-            <select
-              value={selectedActionFilter}
-              onChange={(e) => setSelectedActionFilter(e.target.value)}
-              className="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] focus:border-[#DCB001] rounded-lg text-xs text-white outline-none transition-colors appearance-none cursor-pointer"
-            >
-              <option value="all">All Action Types</option>
-              <option value="task_created">Task Created</option>
-              <option value="task_updated">Task Updated</option>
-              <option value="task_deleted">Task Deleted</option>
-              <option value="folder_created">Folder Created</option>
-              <option value="folder_updated">Folder Renamed/Moved</option>
-              <option value="folder_deleted">Folder Deleted</option>
-              <option value="doc_created">Doc Created</option>
-              <option value="doc_updated">Doc Updated</option>
-              <option value="doc_deleted">Doc Deleted</option>
-              <option value="date_edited">Date Edited</option>
-              <option value="member_permissions_updated">Permissions Updated</option>
-              <option value="tasks_reordered">Tasks Reordered</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#787C83] pointer-events-none" />
-          </div>
+          <CustomDropdown<string>
+            value={selectedActionFilter}
+            onChange={(val) => setSelectedActionFilter(val)}
+            options={[
+              { value: 'all', label: 'All Action Types' },
+              { value: 'task_created', label: 'Task Created' },
+              { value: 'task_updated', label: 'Task Updated' },
+              { value: 'task_deleted', label: 'Task Deleted' },
+              { value: 'folder_created', label: 'Folder Created' },
+              { value: 'folder_updated', label: 'Folder Renamed/Moved' },
+              { value: 'folder_deleted', label: 'Folder Deleted' },
+              { value: 'doc_created', label: 'Doc Created' },
+              { value: 'doc_updated', label: 'Doc Updated' },
+              { value: 'doc_deleted', label: 'Doc Deleted' },
+              { value: 'date_edited', label: 'Date Edited' },
+              { value: 'member_permissions_updated', label: 'Permissions Updated' },
+              { value: 'tasks_reordered', label: 'Tasks Reordered' },
+            ]}
+            className="w-full"
+            triggerClassName="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] hover:border-[#DCB001]/50 text-xs text-white rounded-lg"
+            size="sm"
+          />
         </div>
 
         {/* Audit Log Timeline */}

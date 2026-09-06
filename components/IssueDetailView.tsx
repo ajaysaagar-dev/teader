@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { 
   Check,
   Plus,
@@ -628,33 +629,41 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
             {/* Status Selector */}
             <div>
               <span className="text-[#787C83] block mb-1 font-medium">Status</span>
-              <select
+              <CustomDropdown<Status>
                 value={issue.status}
-                onChange={(e) => handleStatusChange(e.target.value as Status)}
-                className="w-full bg-[#131415] border border-[#2A2C30] text-[#DCB001] font-semibold rounded-lg p-2 outline-none cursor-pointer"
-              >
-                <option value="todo">Todo</option>
-                <option value="in_progress">In Progress</option>
-                <option value="needs_review">Needs Review</option>
-                <option value="done" disabled={!canCompleteTasks}>
-                  Done {!canCompleteTasks ? '(No Access)' : ''}
-                </option>
-              </select>
+                onChange={(val) => handleStatusChange(val)}
+                options={[
+                  { value: 'todo', label: 'Todo' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'needs_review', label: 'Needs Review' },
+                  {
+                    value: 'done',
+                    label: `Done ${!canCompleteTasks ? '(No Access)' : ''}`,
+                    disabled: !canCompleteTasks,
+                  },
+                ]}
+                className="w-full"
+                triggerClassName="w-full bg-[#131415] border border-[#2A2C30] text-[#DCB001] font-semibold rounded-lg p-2 hover:border-[#DCB001]/50"
+                size="sm"
+              />
             </div>
 
             {/* Priority Selector */}
             <div>
               <span className="text-[#787C83] block mb-1 font-medium">Priority</span>
-              <select
+              <CustomDropdown<Priority>
                 value={issue.priority}
-                onChange={(e) => handlePriorityChange(e.target.value as Priority)}
-                className="w-full bg-[#131415] border border-[#2A2C30] text-white font-medium rounded-lg p-2 outline-none cursor-pointer capitalize"
-              >
-                <option value="critical">Critical (P0)</option>
-                <option value="high">High (P1)</option>
-                <option value="medium">Medium (P2)</option>
-                <option value="low">Low (P3)</option>
-              </select>
+                onChange={(val) => handlePriorityChange(val)}
+                options={[
+                  { value: 'critical', label: 'Critical (P0)' },
+                  { value: 'high', label: 'High (P1)' },
+                  { value: 'medium', label: 'Medium (P2)' },
+                  { value: 'low', label: 'Low (P3)' },
+                ]}
+                className="w-full"
+                triggerClassName="w-full bg-[#131415] border border-[#2A2C30] text-white font-medium rounded-lg p-2 hover:border-[#DCB001]/50 capitalize"
+                size="sm"
+              />
             </div>
 
             {/* Due Date */}

@@ -44,6 +44,7 @@ import {
   Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 
 // ─── Interfaces & Quality Types ──────────────────────────────────────────────
 
@@ -1784,18 +1785,21 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                 <Mic size={12} className="text-[#DCB001]" /> Microphone (Input)
               </label>
-              <select
+              <CustomDropdown<string>
                 value={selectedInputId}
-                onChange={(e) => handleSwitchMic(e.target.value)}
-                className="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#DCB001] transition-colors cursor-pointer"
-              >
-                {audioInputDevices.length === 0 && <option value="">Default Microphone</option>}
-                {audioInputDevices.map((d, i) => (
-                  <option key={d.deviceId || i} value={d.deviceId}>
-                    {d.label || `Microphone ${i + 1}`}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleSwitchMic(val)}
+                options={
+                  audioInputDevices.length === 0
+                    ? [{ value: '', label: 'Default Microphone' }]
+                    : audioInputDevices.map((d, i) => ({
+                        value: d.deviceId,
+                        label: d.label || `Microphone ${i + 1}`,
+                      }))
+                }
+                className="w-full"
+                triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
+                size="sm"
+              />
             </div>
 
             {/* Output Selection */}
@@ -1803,18 +1807,21 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
                 <Headphones size={12} className="text-[#DCB001]" /> Speaker (Output)
               </label>
-              <select
+              <CustomDropdown<string>
                 value={selectedOutputId}
-                onChange={(e) => handleSwitchSpeaker(e.target.value)}
-                className="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 outline-none focus:border-[#DCB001] transition-colors cursor-pointer"
-              >
-                {audioOutputDevices.length === 0 && <option value="">Default Speaker</option>}
-                {audioOutputDevices.map((d, i) => (
-                  <option key={d.deviceId || i} value={d.deviceId}>
-                    {d.label || `Speaker ${i + 1}`}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleSwitchSpeaker(val)}
+                options={
+                  audioOutputDevices.length === 0
+                    ? [{ value: '', label: 'Default Speaker' }]
+                    : audioOutputDevices.map((d, i) => ({
+                        value: d.deviceId,
+                        label: d.label || `Speaker ${i + 1}`,
+                      }))
+                }
+                className="w-full"
+                triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
+                size="sm"
+              />
               <p className="mt-1 text-[10px] text-[#787C83]">Output switching works in Chrome, Edge, and modern browsers.</p>
             </div>
           </div>

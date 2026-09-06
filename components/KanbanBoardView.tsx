@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { TaskContextMenu } from '@/components/ui/TaskContextMenu';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { 
   Plus, 
   Search, 
@@ -227,32 +228,35 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
           </div>
 
           {/* Folder Filter */}
-          <div className="flex items-center gap-1 bg-[var(--bg-main)] border border-[var(--border-primary)] px-2 py-0.5 rounded-md h-7 shrink-0">
-            <Folder size={12} className="text-[var(--accent-yellow)]" />
-            <select
-              value={selectedFolder}
-              onChange={(e) => setSelectedFolder(e.target.value)}
-              className="bg-transparent text-xs text-[var(--text-primary)] outline-none font-medium cursor-pointer"
-            >
-              <option value="all" className="bg-[var(--bg-card)]">All Folders</option>
-              {folderList.map((f) => (
-                <option key={f} value={f} className="bg-[var(--bg-card)]">{f}</option>
-              ))}
-            </select>
-          </div>
+          <CustomDropdown<string>
+            value={selectedFolder}
+            onChange={(val) => setSelectedFolder(val)}
+            options={[
+              { value: 'all', label: 'All Folders', icon: <Folder size={12} className="text-[var(--accent-yellow)]" /> },
+              ...folderList.map((f) => ({
+                value: f,
+                label: f,
+                icon: <Folder size={12} className="text-[var(--accent-yellow)]" />,
+              })),
+            ]}
+            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] px-2 py-0.5 rounded-md h-7 text-xs text-[var(--text-primary)] font-medium hover:border-[var(--accent-yellow)]/50"
+            size="xs"
+          />
 
           {/* Priority Select */}
-          <select
+          <CustomDropdown<string>
             value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="bg-[var(--bg-main)] border border-[var(--border-primary)] text-xs text-[var(--text-primary)] rounded-md px-2 py-1 outline-none font-mono cursor-pointer h-7"
-          >
-            <option value="all">All Priorities</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+            onChange={(val) => setSelectedPriority(val)}
+            options={[
+              { value: 'all', label: 'All Priorities' },
+              { value: 'critical', label: 'Critical' },
+              { value: 'high', label: 'High' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'low', label: 'Low' },
+            ]}
+            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] text-xs text-[var(--text-primary)] rounded-md px-2 py-0.5 font-mono h-7 hover:border-[var(--accent-yellow)]/50"
+            size="xs"
+          />
         </div>
 
         {/* Right Action Controls */}

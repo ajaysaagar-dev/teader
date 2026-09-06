@@ -11,6 +11,7 @@ import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 
 export default function TaskDetailsPage() {
   const params = useParams();
@@ -224,16 +225,18 @@ export default function TaskDetailsPage() {
             {/* Status Selector */}
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] text-[#787C83] font-mono hidden sm:inline">Status:</span>
-              <select
+              <CustomDropdown<Status>
                 value={issue.status}
-                onChange={(e) => handleUpdateStatus(e.target.value as Status)}
-                className="bg-[#1A1B1D] text-xs text-[#DCB001] border border-[#2A2C30] rounded-lg px-2.5 py-1 outline-none cursor-pointer font-semibold hover:border-[#DCB001]/50 transition-colors"
-              >
-                <option value="todo">Todo</option>
-                <option value="in_progress">In Progress</option>
-                <option value="needs_review">Needs Review</option>
-                <option value="done">Done</option>
-              </select>
+                onChange={(val) => handleUpdateStatus(val)}
+                options={[
+                  { value: 'todo', label: 'Todo' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'needs_review', label: 'Needs Review' },
+                  { value: 'done', label: 'Done' },
+                ]}
+                triggerClassName="bg-[#1A1B1D] text-xs text-[#DCB001] border border-[#2A2C30] rounded-lg px-2.5 py-1 font-semibold hover:border-[#DCB001]/50"
+                size="xs"
+              />
             </div>
           </div>
         </div>

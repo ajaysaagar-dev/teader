@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner';
 import { ProjectMessage } from '@/lib/db';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 
 interface Project {
   id: number;
@@ -412,23 +413,17 @@ export default function ConversationsPage() {
               <label className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] block mb-1.5 font-medium">
                 Active Project
               </label>
-              <div className="relative">
-                <select
-                  value={selectedProjectId || ''}
-                  onChange={(e) => setSelectedProjectId(Number(e.target.value))}
-                  className="w-full appearance-none bg-[#17181C] border border-[#2A2C30] text-white text-xs font-semibold rounded-lg px-3 py-2 pr-8 focus:outline-none focus:border-[#DCB001] transition-colors cursor-pointer"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.key})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#787C83] pointer-events-none"
-                />
-              </div>
+              <CustomDropdown<number>
+                value={selectedProjectId || undefined}
+                onChange={(val) => setSelectedProjectId(val)}
+                options={projects.map((p) => ({
+                  value: p.id,
+                  label: `${p.name} (${p.key})`,
+                }))}
+                className="w-full"
+                triggerClassName="w-full bg-[#17181C] border border-[#2A2C30] text-white text-xs font-semibold rounded-lg px-3 py-2 hover:border-[#DCB001]/50 focus:border-[#DCB001]"
+                placeholder="Select project..."
+              />
             </div>
 
             {/* Channels Navigation */}

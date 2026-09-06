@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Issue, Status, Priority, Subtask } from '@/lib/types';
 import { Avatar } from './ui/Avatar';
+import { CustomDropdown } from './ui/CustomDropdown';
 import { TaskContextMenu } from './ui/TaskContextMenu';
 import { 
   FolderTree, 
@@ -1284,16 +1285,20 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                     )}
 
                                     {/* Status Switcher Dropdown */}
-                                    <select
+                                    <CustomDropdown<Status>
                                       value={issue.status}
-                                      onChange={(e) => onUpdateIssueStatus && onUpdateIssueStatus(issue.id, e.target.value as Status)}
-                                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border outline-none cursor-pointer bg-[#131415] ${statusCfg.text} ${statusCfg.border}`}
-                                    >
-                                      <option value="todo">Todo</option>
-                                      <option value="in_progress">In Progress</option>
-                                      <option value="needs_review">Needs Review</option>
-                                      <option value="done">Done</option>
-                                    </select>
+                                      onChange={(val) => onUpdateIssueStatus && onUpdateIssueStatus(issue.id, val)}
+                                      options={[
+                                        { value: 'todo', label: 'Todo' },
+                                        { value: 'in_progress', label: 'In Progress' },
+                                        { value: 'needs_review', label: 'Needs Review' },
+                                        { value: 'done', label: 'Done' },
+                                      ]}
+                                      triggerClassName={`text-[11px] font-semibold px-2 py-0.5 rounded border bg-[#131415] ${statusCfg.text} ${statusCfg.border}`}
+                                      size="xs"
+                                      showChevron={false}
+                                      align="right"
+                                    />
 
                                     {/* Assignee Avatar */}
                                     {issue.assignee && (

@@ -4,6 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Issue, Status, Priority } from '@/lib/types';
 import { Avatar } from '@/components/ui/Avatar';
 import { TaskContextMenu } from '@/components/ui/TaskContextMenu';
+import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { 
   Plus, 
   Search, 
@@ -151,45 +152,50 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
           </div>
 
           {/* Status Filter */}
-          <select
+          <CustomDropdown<string>
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] focus:border-[#DCB001] outline-none cursor-pointer"
-          >
-            <option value="all">All Statuses</option>
-            <option value="todo">Todo</option>
-            <option value="in_progress">In Progress</option>
-            <option value="needs_review">Needs Review</option>
-            <option value="done">Done</option>
-          </select>
+            onChange={(val) => setSelectedStatus(val)}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'todo', label: 'Todo' },
+              { value: 'in_progress', label: 'In Progress' },
+              { value: 'needs_review', label: 'Needs Review' },
+              { value: 'done', label: 'Done' },
+            ]}
+            triggerClassName="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50"
+            size="sm"
+          />
 
           {/* Priority Filter */}
-          <select
+          <CustomDropdown<string>
             value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
-            className="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] focus:border-[#DCB001] outline-none cursor-pointer"
-          >
-            <option value="all">All Priorities</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+            onChange={(val) => setSelectedPriority(val)}
+            options={[
+              { value: 'all', label: 'All Priorities' },
+              { value: 'critical', label: 'Critical' },
+              { value: 'high', label: 'High' },
+              { value: 'medium', label: 'Medium' },
+              { value: 'low', label: 'Low' },
+            ]}
+            triggerClassName="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50"
+            size="sm"
+          />
 
           {/* Folder Filter */}
           {availableFolders.length > 0 && (
-            <select
+            <CustomDropdown<string>
               value={selectedFolder}
-              onChange={(e) => setSelectedFolder(e.target.value)}
-              className="bg-[#17181A] text-xs text-[#DCB001] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] focus:border-[#DCB001] outline-none cursor-pointer font-medium"
-            >
-              <option value="all">📁 All Folders</option>
-              {availableFolders.map((f) => (
-                <option key={f} value={f}>
-                  📁 {f}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedFolder(val)}
+              options={[
+                { value: 'all', label: '📁 All Folders' },
+                ...availableFolders.map((f) => ({
+                  value: f,
+                  label: `📁 ${f}`,
+                })),
+              ]}
+              triggerClassName="bg-[#17181A] text-xs text-[#DCB001] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50 font-medium"
+              size="sm"
+            />
           )}
         </div>
 
