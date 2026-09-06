@@ -132,13 +132,20 @@ export interface MeetingParticipant {
   lastSeen: number;
 }
 
-// ─── Electron & Browser Desktop Media Capture Polyfill ───────────────────────
+// ─── Universal Desktop & Mobile Screen Capture Polyfill ───────────────────────
 async function captureDesktopMediaStream(config?: {
   width?: number;
   height?: number;
   fps?: number;
   includeAudio?: boolean;
 }): Promise<MediaStream> {
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    (/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+      (typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(max-width: 768px)').matches));
+
   const isElectron =
     typeof window !== 'undefined' &&
     (Boolean((window as any).teaderDesktop?.isDesktop) ||
@@ -148,37 +155,57 @@ async function captureDesktopMediaStream(config?: {
   const targetWidth = config?.width || 1920;
   const targetHeight = config?.height || 1080;
   const targetFps = config?.fps || 60;
-  const targetAudio = config?.includeAudio ?? true;
+  // Mobile browsers (Chrome Android, iOS) do NOT support capturing system audio in getDisplayMedia
+  const targetAudio = isMobile ? false : (config?.includeAudio ?? true);
 
-  // 1. In standard browser, attempt getDisplayMedia first
-  if (!isElectron && typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
+    throw new Error('Media devices are not available in this environment');
+  }
+
+  // 1. Standard / Mobile Browser: getDisplayMedia
+  if (!isElectron && navigator.mediaDevices.getDisplayMedia) {
+    // 1a. Try with requested constraints (framerate-only on mobile, dimensions on desktop)
     try {
+      const videoConstraints: MediaTrackConstraints = isMobile
+        ? { frameRate: { ideal: targetFps, max: targetFps } }
+        : {
+            width: { ideal: targetWidth, max: targetWidth },
+            height: { ideal: targetHeight, max: targetHeight },
+            frameRate: { ideal: targetFps, max: targetFps },
+          };
+
       return await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          width: { ideal: targetWidth, max: targetWidth },
-          height: { ideal: targetHeight, max: targetHeight },
-          frameRate: { ideal: targetFps, max: targetFps },
-        },
+        video: videoConstraints,
         audio: targetAudio,
       });
-    } catch (err: any) {
-      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
-        throw err;
+    } catch (err1: any) {
+      if (err1?.name === 'NotAllowedError' || err1?.message?.includes('Permission denied')) {
+        throw err1;
       }
-      console.warn('[getDisplayMedia fallback triggered]:', err);
+      console.warn('[getDisplayMedia primary attempt note]:', err1);
+    }
+
+    // 1b. Universal clean fallback: { video: true, audio: false }
+    // This is the most compatible WebRTC capture specification (works reliably on Chrome Android 107+)
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+    } catch (err1b: any) {
+      if (err1b?.name === 'NotAllowedError' || err1b?.message?.includes('Permission denied')) {
+        throw err1b;
+      }
+      console.warn('[getDisplayMedia clean fallback note]:', err1b);
     }
   }
 
-  // 2. Electron / Fallback 1: chromeMediaSource: 'screen' (Direct full desktop capture)
-  if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+  // 2. Electron-only Desktop fallbacks (chromeMediaSource)
+  if (isElectron && navigator.mediaDevices.getUserMedia) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: targetAudio
-          ? ({
-              mandatory: {
-                chromeMediaSource: 'desktop',
-              },
-            } as any)
+          ? ({ mandatory: { chromeMediaSource: 'desktop' } } as any)
           : false,
         video: {
           mandatory: {
@@ -190,19 +217,14 @@ async function captureDesktopMediaStream(config?: {
         } as any,
       });
       return stream;
-    } catch (err1: any) {
-      console.warn('[Capture fallback 1 (screen) note]:', err1);
+    } catch (err2: any) {
+      console.warn('[Capture fallback 1 (screen) note]:', err2);
     }
 
-    // 3. Electron / Fallback 2: chromeMediaSource: 'desktop'
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: targetAudio
-          ? ({
-              mandatory: {
-                chromeMediaSource: 'desktop',
-              },
-            } as any)
+          ? ({ mandatory: { chromeMediaSource: 'desktop' } } as any)
           : false,
         video: {
           mandatory: {
@@ -214,44 +236,73 @@ async function captureDesktopMediaStream(config?: {
         } as any,
       });
       return stream;
-    } catch (err2: any) {
-      console.warn('[Capture fallback 2 (desktop) note]:', err2);
+    } catch (err3: any) {
+      console.warn('[Capture fallback 2 (desktop) note]:', err3);
     }
   }
 
-  // 4. Electron / Fallback 3: Standard getDisplayMedia if available
-  if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
-    return await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: targetAudio,
-    });
+  // 3. Last-ditch generic getDisplayMedia attempt
+  if (navigator.mediaDevices.getDisplayMedia) {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+    } catch (errFinal: any) {
+      if (errFinal?.name === 'NotAllowedError' || errFinal?.message?.includes('Permission denied')) {
+        throw errFinal;
+      }
+    }
   }
 
-  throw new Error('Screen capture is not supported in this desktop environment');
+  if (isMobile) {
+    throw new Error(
+      'Screen sharing is not supported by your mobile browser. Please use Chrome on Android and ensure you are using HTTPS.'
+    );
+  }
+
+  throw new Error('Screen capture is not supported in this browser environment');
 }
 
-// Install getDisplayMedia polyfill once for Electron environments
+// Install getDisplayMedia polyfill once for Electron environments & mobile clean fallback
 if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.mediaDevices) {
   const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia?.bind(navigator.mediaDevices);
 
   (navigator.mediaDevices as any).getDisplayMedia = async function (constraints?: any) {
+    const isMobile =
+      /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+      (window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+
     const isElectron =
       Boolean((window as any).teaderDesktop?.isDesktop) ||
       /electron/i.test(navigator.userAgent) ||
       /teaderdesktop/i.test(navigator.userAgent);
 
     if (originalGetDisplayMedia && !isElectron) {
+      // If mobile, ensure audio is not passed to native getDisplayMedia
+      const mobileSafeConstraints = isMobile
+        ? {
+            video:
+              typeof constraints?.video === 'object'
+                ? { frameRate: constraints.video.frameRate }
+                : true,
+            audio: false,
+          }
+        : constraints;
+
       try {
-        return await originalGetDisplayMedia(constraints);
+        return await originalGetDisplayMedia(mobileSafeConstraints);
       } catch (err: any) {
         if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
           throw err;
         }
-        const isNotSupported =
-          err?.name === 'NotSupportedError' ||
-          (err?.message && err.message.toLowerCase().includes('not supported'));
-        if (!isNotSupported) {
-          throw err;
+        // If failed due to audio or constraints, try basic { video: true, audio: false }
+        try {
+          return await originalGetDisplayMedia({ video: true, audio: false });
+        } catch (retryErr: any) {
+          if (retryErr?.name === 'NotAllowedError' || retryErr?.message?.includes('Permission denied')) {
+            throw retryErr;
+          }
         }
       }
     }
@@ -259,7 +310,7 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigat
     const width = constraints?.video?.width?.ideal || constraints?.video?.width?.max || 1920;
     const height = constraints?.video?.height?.ideal || constraints?.video?.height?.max || 1080;
     const fps = constraints?.video?.frameRate?.ideal || constraints?.video?.frameRate?.max || 60;
-    const includeAudio = Boolean(constraints?.audio);
+    const includeAudio = isMobile ? false : Boolean(constraints?.audio);
 
     return await captureDesktopMediaStream({ width, height, fps, includeAudio });
   };
@@ -1016,9 +1067,17 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       return;
     }
 
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      (/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+        (typeof window !== 'undefined' &&
+          window.matchMedia &&
+          window.matchMedia('(max-width: 768px)').matches));
+
     const targetRes = config?.resolution ?? selectedResolution;
     const targetFps = config?.fps ?? selectedFps;
-    const targetAudio = config?.includeAudio ?? includeScreenAudio;
+    // On mobile devices, system audio in screen capture is unsupported and causes getDisplayMedia to throw NotSupportedError
+    const targetAudio = isMobile ? false : (config?.includeAudio ?? includeScreenAudio);
 
     const resConfig = RESOLUTION_CONFIG[targetRes];
     const maxBitrate = resConfig.bitrates[targetFps] || 5_000_000;
@@ -1030,16 +1089,19 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       let sharedSuccessfully = false;
 
       // Attempt 1: Standard LiveKit setScreenShareEnabled
+      // On mobile devices, do not specify forced fixed landscape width/height or audio: true
       try {
         await room.localParticipant.setScreenShareEnabled(
           true,
           {
             audio: targetAudio,
-            resolution: {
-              width: resConfig.width,
-              height: resConfig.height,
-              frameRate: targetFps,
-            },
+            resolution: isMobile
+              ? undefined
+              : {
+                  width: resConfig.width,
+                  height: resConfig.height,
+                  frameRate: targetFps,
+                },
           },
           {
             videoEncoding: {
@@ -2221,7 +2283,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       {/* ── Screen Share Settings Modal ── */}
       {showScreenShareModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-[#121318] border border-[#282A34] rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-5">
+          <div className="bg-[#121318] border border-[#282A34] rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl space-y-5">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#20222B]">
               <div className="flex items-center gap-2.5">
@@ -2318,31 +2380,55 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
             {/* Screen Audio Toggle */}
             <div className="pt-2 border-t border-[#20222B]">
-              <div
-                onClick={() => setIncludeScreenAudio((prev) => !prev)}
-                className="flex items-center justify-between p-3 rounded-xl bg-[#181920] border border-[#2B2D37] hover:border-[#383B47] transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-1.5 rounded-lg ${includeScreenAudio ? 'bg-[#22C55E]/15 text-[#22C55E]' : 'bg-[#22242B] text-[#787C83]'}`}>
-                    {includeScreenAudio ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                  </div>
+              {typeof navigator !== 'undefined' &&
+              (/android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+                (typeof window !== 'undefined' &&
+                  window.matchMedia &&
+                  window.matchMedia('(max-width: 768px)').matches)) ? (
+                <div className="p-3 rounded-xl bg-[#181920] border border-[#2B2D37] flex items-center gap-2.5 text-xs text-[#9BA1A6]">
+                  <Volume2 size={16} className="text-[#DCB001] shrink-0" />
                   <div>
-                    <p className="text-xs font-semibold text-white">Share System Audio</p>
-                    <p className="text-[10px] text-[#787C83]">Stream tab/desktop sound alongside your microphone</p>
+                    <p className="font-semibold text-white">Microphone Audio Active</p>
+                    <p className="text-[10px] text-[#787C83]">
+                      Mobile Chrome streams screen video while your microphone continuously transmits your voice.
+                    </p>
                   </div>
                 </div>
+              ) : (
                 <div
-                  className={`w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${
-                    includeScreenAudio ? 'bg-[#22C55E]' : 'bg-[#2B2D37]'
-                  }`}
+                  onClick={() => setIncludeScreenAudio((prev) => !prev)}
+                  className="flex items-center justify-between p-3 rounded-xl bg-[#181920] border border-[#2B2D37] hover:border-[#383B47] transition-all cursor-pointer"
                 >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`p-1.5 rounded-lg ${
+                        includeScreenAudio
+                          ? 'bg-[#22C55E]/15 text-[#22C55E]'
+                          : 'bg-[#22242B] text-[#787C83]'
+                      }`}
+                    >
+                      {includeScreenAudio ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white">Share System Audio</p>
+                      <p className="text-[10px] text-[#787C83]">
+                        Stream tab/desktop sound alongside your microphone
+                      </p>
+                    </div>
+                  </div>
                   <div
-                    className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                      includeScreenAudio ? 'translate-x-5' : 'translate-x-0'
+                    className={`w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${
+                      includeScreenAudio ? 'bg-[#22C55E]' : 'bg-[#2B2D37]'
                     }`}
-                  />
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        includeScreenAudio ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Action Buttons */}
