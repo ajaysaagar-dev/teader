@@ -115,7 +115,7 @@ async function isProjectMember(userId, projectId) {
   if (!pool) return true;
   try {
     const res = await pool.query(
-      `SELECT 1 FROM "projects" WHERE "id" = $1 AND "owner_id" = $2
+      `SELECT 1 FROM "projects" WHERE "id" = $1 AND ("owner_id" = $2 OR "creatorId" = $2)
        UNION ALL
        SELECT 1 FROM "project_members" WHERE "projectId" = $1 AND "userId" = $2
        LIMIT 1`,
