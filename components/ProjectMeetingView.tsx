@@ -8,6 +8,7 @@ import {
   Participant,
   LocalParticipant,
   RemoteParticipant,
+  LocalAudioTrack,
   ConnectionState,
   ConnectionQuality,
 } from 'livekit-client';
@@ -26,6 +27,9 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
+  Sparkles,
+  Shield,
+  ShieldAlert,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -35,9 +39,12 @@ export interface ParticipantInfo {
   identity: string;
   name: string;
   avatar?: string;
+  role?: string;
+  isAdmin?: boolean;
   isSpeaking: boolean;
   isMuted: boolean;
   isLocal: boolean;
+  audioTrackSid?: string;
   connectionQuality: ConnectionQuality;
   joinedAt: number;
 }
@@ -71,8 +78,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const [participants, setParticipants] = useState<ParticipantInfo[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
+  const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
+  const krispProcessorRef = useRef<any>(null);
 
   // Meeting duration timer
   const [meetingDuration, setMeetingDuration] = useState(0);
@@ -151,10 +163,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // ── Transform LiveKit Participant into ParticipantInfo ──
   const mapParticipant = useCallback((p: Participant): ParticipantInfo => {
     let avatar: string | undefined = undefined;
+    let role: string | undefined = undefined;
+    let isAdmin: boolean = false;
+
     if (p.metadata) {
       try {
         const meta = JSON.parse(p.metadata);
         avatar = meta.avatar;
+        role = meta.role;
+        isAdmin = Boolean(meta.isAdmin);
       } catch {}
     }
 
@@ -165,9 +182,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       identity: p.identity,
       name: p.name || p.identity,
       avatar,
+      role,
+      isAdmin,
       isSpeaking: p.isSpeaking,
       isMuted: isLocal ? !(p as LocalParticipant).isMicrophoneEnabled : (micPub?.isMuted ?? true),
       isLocal,
+      audioTrackSid: micPub?.trackSid,
       connectionQuality: p.connectionQuality,
       joinedAt: p.joinedAt ? p.joinedAt.getTime() : Date.now(),
     };
@@ -193,6 +213,50 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     setParticipants(list);
   }, [mapParticipant]);
 
+  // ── LiveKit Noise Filter Application ──
+  const applyNoiseFilter = useCallback(async (enabled: boolean) => {
+    const room = roomRef.current;
+    if (!room || !room.localParticipant) return;
+
+    const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const localTrack = micPub?.track as LocalAudioTrack | undefined;
+    if (!localTrack) return;
+
+    try {
+      if (enabled) {
+        if (!krispProcessorRef.current) {
+          const { isKrispNoiseFilterSupported, KrispNoiseFilter } = await import(
+            '@livekit/krisp-noise-filter'
+          );
+          if (isKrispNoiseFilterSupported()) {
+            const processor = KrispNoiseFilter();
+            await localTrack.setProcessor(processor);
+            krispProcessorRef.current = processor;
+            await processor.setEnabled(true);
+          } else {
+            console.info('[LiveKit] Krisp not supported on this browser engine; native WebRTC noise cancellation active.');
+          }
+        } else {
+          await krispProcessorRef.current.setEnabled(true);
+        }
+      } else {
+        if (krispProcessorRef.current) {
+          await krispProcessorRef.current.setEnabled(false);
+        }
+      }
+    } catch (err) {
+      console.warn('[LiveKit Noise Filter note]:', err);
+    }
+  }, []);
+
+  // ── Toggle Noise Reduction Button Handler ──
+  const handleToggleNoiseReduction = async () => {
+    const next = !noiseReductionEnabled;
+    setNoiseReductionEnabled(next);
+    await applyNoiseFilter(next);
+    toast.info(next ? 'LiveKit Noise Reduction enabled' : 'LiveKit Noise Reduction disabled');
+  };
+
   // ── Connect to LiveKit Room ──
   const connectToVoiceRoom = useCallback(async () => {
     setErrorMessage(null);
@@ -206,7 +270,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         throw new Error(errorData.error || `Failed to authenticate with voice server (${res.status})`);
       }
 
-      const { token, url } = await res.json();
+      const { token, url, isAdmin } = await res.json();
+      setCurrentUserIsAdmin(Boolean(isAdmin));
 
       if (!token || !url) {
         throw new Error('Invalid token response from voice server');
@@ -272,6 +337,25 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         .on(RoomEvent.ConnectionQualityChanged, () => {
           syncParticipants();
         })
+        .on(RoomEvent.DataReceived, async (payload: Uint8Array, participant?: RemoteParticipant) => {
+          try {
+            const decoded = new TextDecoder().decode(payload);
+            const msg = JSON.parse(decoded);
+            if (msg.type === 'ADMIN_MUTE' && msg.targetIdentity === room.localParticipant.identity) {
+              const shouldMute = Boolean(msg.muted);
+              await room.localParticipant.setMicrophoneEnabled(!shouldMute);
+              setIsMuted(shouldMute);
+              if (shouldMute) {
+                toast.warning('Your microphone was muted by a project admin');
+              } else {
+                toast.success('Your microphone was unmuted by a project admin');
+              }
+              syncParticipants();
+            }
+          } catch (e) {
+            console.warn('[LiveKit DataReceived error]:', e);
+          }
+        })
         .on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
           if (track.kind === Track.Kind.Audio) {
             const audioEl = track.attach();
@@ -312,6 +396,24 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       await room.localParticipant.setMicrophoneEnabled(true);
       setIsMuted(false);
 
+      // 7. Apply LiveKit Noise Reduction if enabled by default
+      if (noiseReductionEnabled) {
+        const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+        const localTrack = micPub?.track as LocalAudioTrack | undefined;
+        if (localTrack) {
+          try {
+            const { isKrispNoiseFilterSupported, KrispNoiseFilter } = await import(
+              '@livekit/krisp-noise-filter'
+            );
+            if (isKrispNoiseFilterSupported()) {
+              const processor = KrispNoiseFilter();
+              await localTrack.setProcessor(processor);
+              krispProcessorRef.current = processor;
+            }
+          } catch {}
+        }
+      }
+
       await refreshDevices();
       syncParticipants();
     } catch (err: any) {
@@ -321,7 +423,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       setConnectionState(ConnectionState.Disconnected);
       toast.error('Voice connection failed');
     }
-  }, [projectId, refreshDevices, syncParticipants]);
+  }, [projectId, noiseReductionEnabled, refreshDevices, syncParticipants]);
 
   // Connect on mount
   useEffect(() => {
@@ -334,10 +436,16 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       }
       attachedAudioElementsRef.current.forEach((el) => el.remove());
       attachedAudioElementsRef.current.clear();
+      if (krispProcessorRef.current) {
+        try {
+          krispProcessorRef.current.destroy?.();
+        } catch {}
+        krispProcessorRef.current = null;
+      }
     };
   }, [connectToVoiceRoom]);
 
-  // ── Toggle Microphone Mute ──
+  // ── Toggle Local Microphone Mute ──
   const handleToggleMute = async () => {
     const room = roomRef.current;
     if (!room || !room.localParticipant) return;
@@ -350,6 +458,61 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       toast.info(nextMuted ? 'Microphone muted' : 'Microphone unmuted');
     } catch (err: any) {
       console.warn('[Toggle Mute Error]:', err);
+    }
+  };
+
+  // ── Admin Mute / Unmute Remote Participant ──
+  const handleAdminToggleMute = async (
+    targetIdentity: string,
+    trackSid: string | undefined,
+    shouldMute: boolean,
+    participantName: string
+  ) => {
+    if (!currentUserIsAdmin) {
+      toast.error('Only project admins can mute or unmute participants');
+      return;
+    }
+
+    const room = roomRef.current;
+    if (!room) return;
+
+    try {
+      // 1. Send instantaneous real-time signal via LiveKit data channel
+      const payload = new TextEncoder().encode(
+        JSON.stringify({
+          type: 'ADMIN_MUTE',
+          targetIdentity,
+          muted: shouldMute,
+        })
+      );
+      await room.localParticipant.publishData(payload, { reliable: true });
+
+      // 2. Call server-side API to enforce mute state via LiveKit RoomServiceClient
+      const res = await fetch('/api/livekit-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          targetIdentity,
+          trackSid,
+          muted: shouldMute,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Server mute enforcement failed');
+      }
+
+      toast.success(
+        shouldMute
+          ? `Muted ${participantName}`
+          : `Unmuted ${participantName}`
+      );
+      syncParticipants();
+    } catch (err: any) {
+      console.warn('[Admin Mute Error]:', err);
+      toast.error(err.message || 'Failed to update participant mute state');
     }
   };
 
@@ -374,6 +537,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       try {
         await room.switchActiveDevice('audioinput', deviceId);
         toast.success('Microphone switched');
+
+        // Re-apply noise reduction to the newly switched track if enabled
+        if (noiseReductionEnabled) {
+          const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+          const localTrack = micPub?.track as LocalAudioTrack | undefined;
+          if (localTrack && krispProcessorRef.current) {
+            await localTrack.setProcessor(krispProcessorRef.current);
+          }
+        }
       } catch (err) {
         console.warn('[switchActiveDevice mic]:', err);
       }
@@ -449,6 +621,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-semibold border border-[#22C55E]/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
                   LIVE
+                </span>
+              )}
+              {currentUserIsAdmin && (
+                <span className="px-2 py-0.5 rounded-full bg-[#DCB001]/15 text-[#DCB001] text-[10px] font-mono font-bold border border-[#DCB001]/30 flex items-center gap-1">
+                  <Shield size={10} />
+                  ADMIN
                 </span>
               )}
             </div>
@@ -665,7 +843,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Name */}
+                  {/* Name & Role Badges */}
                   <div className="flex items-center gap-1.5 mb-1 z-10">
                     <span className="font-semibold text-sm text-white tracking-tight">
                       {p.name}
@@ -673,6 +851,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     {p.isLocal && (
                       <span className="px-1.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
                         YOU
+                      </span>
+                    )}
+                    {p.isAdmin && (
+                      <span className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5" title="Project Admin">
+                        <Shield size={9} />
+                        ADMIN
                       </span>
                     )}
                   </div>
@@ -696,6 +880,41 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     )}
                   </div>
 
+                  {/* ── Admin Remote Mute / Unmute Action ── */}
+                  {currentUserIsAdmin && !p.isLocal && (
+                    <div className="mt-3 z-10 flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAdminToggleMute(
+                            p.identity,
+                            p.audioTrackSid,
+                            !p.isMuted,
+                            p.name
+                          );
+                        }}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer shadow-sm ${
+                          p.isMuted
+                            ? 'bg-[#22C55E]/15 hover:bg-[#22C55E]/25 text-[#22C55E] border-[#22C55E]/30'
+                            : 'bg-red-500/15 hover:bg-red-500/25 text-red-400 border-red-500/30'
+                        }`}
+                        title={p.isMuted ? 'Admin: Unmute this participant' : 'Admin: Mute this participant'}
+                      >
+                        {p.isMuted ? (
+                          <>
+                            <Mic size={12} />
+                            <span>Unmute</span>
+                          </>
+                        ) : (
+                          <>
+                            <MicOff size={12} />
+                            <span>Mute</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
                   {/* Connection Quality Indicator */}
                   <div className="absolute top-3 right-3 flex items-center gap-1 text-[10px] font-mono">
                     {p.connectionQuality === ConnectionQuality.Excellent ||
@@ -716,11 +935,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         </div>
 
         {/* ── Bottom Controls Dock ── */}
-        <div className="h-20 border-t border-[#1C1E23] bg-[#0E0F12]/95 backdrop-blur-xl flex items-center justify-center gap-4 px-6 z-30 shadow-2xl">
+        <div className="h-20 border-t border-[#1C1E23] bg-[#0E0F12]/95 backdrop-blur-xl flex items-center justify-center gap-3 px-6 z-30 shadow-2xl flex-wrap">
           {/* Mute Button */}
           <button
             onClick={handleToggleMute}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl cursor-pointer ${
               isMuted
                 ? 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
                 : 'bg-[#1E2027] hover:bg-[#282B34] text-white border border-[#343742]'
@@ -738,7 +957,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {/* Deafen Button */}
           <button
             onClick={handleToggleDeafen}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all shadow-xl cursor-pointer ${
               isDeafened
                 ? 'bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30'
                 : 'bg-[#1E2027] hover:bg-[#282B34] text-white border border-[#343742]'
@@ -753,10 +972,31 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <span>{isDeafened ? 'Undeafen' : 'Deafen'}</span>
           </button>
 
+          {/* LiveKit Noise Reduction Button (Default: Enabled) */}
+          <button
+            onClick={handleToggleNoiseReduction}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
+              noiseReductionEnabled
+                ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40 hover:bg-[#22C55E]/25 shadow-sm'
+                : 'bg-[#16171C] hover:bg-[#22242B] text-[#9BA1A6] border-[#292B33]'
+            }`}
+            title={
+              noiseReductionEnabled
+                ? 'LiveKit Noise Reduction: Enabled (Click to disable)'
+                : 'LiveKit Noise Reduction: Disabled (Click to enable)'
+            }
+          >
+            <Sparkles
+              size={15}
+              className={noiseReductionEnabled ? 'text-[#22C55E]' : 'text-[#787C83]'}
+            />
+            <span>Noise Reduction {noiseReductionEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
           {/* Devices Button */}
           <button
             onClick={() => setShowDeviceSettings((prev) => !prev)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
               showDeviceSettings
                 ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40'
                 : 'bg-[#16171C] hover:bg-[#22242B] text-[#9BA1A6] border-[#292B33]'
@@ -770,7 +1010,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {/* Leave Button */}
           <button
             onClick={handleLeaveCall}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer"
             title="Disconnect & Exit Call"
           >
             <PhoneOff size={16} />

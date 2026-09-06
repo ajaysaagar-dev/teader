@@ -15,6 +15,7 @@
     "db:reset": "tsx scripts/db-seed.ts"
   },
   "dependencies": {
+    "@livekit/krisp-noise-filter": "^0.4.4",
     "@prisma/client": "^7.9.0",
     "@types/ws": "^8.18.1",
     "bcryptjs": "^3.0.3",
