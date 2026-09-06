@@ -862,30 +862,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     return () => window.clearInterval(cleanup);
   }, []);
 
-  const activeDocCollaborators = useMemo(() => {
-    const byUser = new Map<string, DocsPresence>();
-    Object.values(activeDocsPresence).forEach((presence) => {
-      if (presence.userId === currentUser?.id || !presence.docId) return;
-      const previous = byUser.get(presence.userId);
-      if (!previous || previous.lastSeen < presence.lastSeen) byUser.set(presence.userId, presence);
-    });
-
-    const remoteCollaborators = Array.from(byUser.values());
-    if (!currentUser || !selectedDoc) return remoteCollaborators;
-
-    return [
-      {
-        presenceId: docsPresenceIdRef.current,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        docId: String(selectedDoc.id),
-        docTitle: selectedDoc.fileName || selectedDoc.title || 'No document selected',
-        lastSeen: Date.now(),
-      },
-      ...remoteCollaborators,
-    ];
-  }, [activeDocsPresence, currentUser, selectedDoc]);
-
   const hasUnsavedChanges = useMemo(() => {
     return activeContent !== savedContent || activeTitle !== savedTitle;
   }, [activeContent, savedContent, activeTitle, savedTitle]);
@@ -1670,7 +1646,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   }, [docs, customFolders, searchQuery]);
 
   return (
-    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-hidden">
+    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-hidden overscroll-none">
       {/* ─── Main Two-Column Layout ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* ─── Left Sidebar: Folders & Markdown Files (Drag and Drop) ─────── */}
@@ -2456,24 +2432,6 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           )}
         </div>
       </div>
-
-      {activeDocCollaborators.length > 0 && (
-        <div className="absolute bottom-3 left-3 z-30 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1.5 rounded-xl border border-[#2A2C30] bg-[#111215]/95 px-2.5 py-2 shadow-xl backdrop-blur-sm">
-          <Users size={13} className="text-[#22C55E]" />
-          <span className="mr-1 text-[10px] font-mono uppercase tracking-wider text-[#787C83]">Active</span>
-          {activeDocCollaborators.map((presence) => (
-            <div key={presence.userId} className="group relative">
-              <span className="inline-flex cursor-default items-center gap-1.5 rounded-md border border-[#22C55E]/25 bg-[#22C55E]/10 px-2 py-1 text-[11px] font-semibold text-[#CFD4DD]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] shadow-[0_0_6px_#22C55E]" />
-                {presence.userName}
-              </span>
-              <div className="pointer-events-none absolute bottom-full left-0 z-40 mb-2 w-max max-w-56 rounded-lg border border-[#2A2C30] bg-[#1B1C1F] px-2.5 py-1.5 text-[11px] text-[#CFD4DD] opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                Viewing: <span className="font-mono text-[#DCB001]">{presence.docTitle}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Tab Context Menu */}
       {tabContextMenu && (
