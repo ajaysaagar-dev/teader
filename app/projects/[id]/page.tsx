@@ -50,7 +50,8 @@ import {
   AlertTriangle,
   Settings,
   Workflow,
-  Radio
+  Radio,
+  AppWindow
 } from 'lucide-react';
 
 
@@ -106,6 +107,10 @@ const ProjectConversationView = dynamic(
   () => import('@/components/ProjectConversationView').then((m) => ({ default: m.ProjectConversationView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectAppsView = dynamic(
+  () => import('@/components/ProjectAppsView').then((m) => ({ default: m.ProjectAppsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const ProjectSettingsView = dynamic(
   () => import('@/components/ProjectSettingsView').then((m) => ({ default: m.ProjectSettingsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -147,7 +152,7 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'history' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'apps' | 'history' | 'settings';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
@@ -155,6 +160,7 @@ function parseViewTab(view?: string): ProjectTab {
   const v = String(view).toLowerCase();
   if (v === 'meeting' || v === 'call' || v === 'audio' || v === 'voice' || v === 'conference' || v === 'huddle') return 'meeting';
   if (v === 'chats' || v === 'chat' || v === 'conversation' || v === 'conversations' || v === 'messages' || v === 'discuss') return 'chats';
+  if (v === 'apps' || v === 'app' || v === 'tools' || v === 'integrations' || v === 'store' || v === 'widgets') return 'apps';
   if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow' || v === 'whiteboard') return 'charts';
   if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
@@ -1956,6 +1962,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('apps')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'apps'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project External Apps, Tools & Web Integrations"
+            >
+              <AppWindow size={13} />
+              <span>Apps</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('history')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'history'
@@ -2037,6 +2056,13 @@ export default function SingleProjectPage() {
                   projectName={project?.name}
                   projectKey={project?.key}
                   currentUser={currentUser}
+                />
+              </div>
+            ) : activeTab === 'apps' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectAppsView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
                 />
               </div>
             ) : activeTab === 'history' ? (
