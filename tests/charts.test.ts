@@ -330,4 +330,99 @@ describe('Charts Database & Management Operations', () => {
     expect(nextViewport.x).toBe(170); // 50 + 120
     expect(nextViewport.y).toBe(180); // 100 + 80
   });
+
+  it('dynamically adapts connection links based on the relative positions of elements', () => {
+    type AnchorPosition = 'top' | 'right' | 'bottom' | 'left';
+    interface TestElem {
+      id: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+
+    const getAnchorCoord = (elem: TestElem, anchor: AnchorPosition) => {
+      switch (anchor) {
+        case 'top':
+          return { x: elem.x + elem.width / 2, y: elem.y };
+        case 'bottom':
+          return { x: elem.x + elem.width / 2, y: elem.y + elem.height };
+        case 'left':
+          return { x: elem.x, y: elem.y + elem.height / 2 };
+        case 'right':
+        default:
+          return { x: elem.x + elem.width, y: elem.y + elem.height / 2 };
+      }
+    };
+
+    const getDynamicAnchors = (fromElem: TestElem, toElem: TestElem): { fromAnchor: AnchorPosition; toAnchor: AnchorPosition } => {
+      const ANCHORS: AnchorPosition[] = ['top', 'right', 'bottom', 'left'];
+      const ANCHOR_NORMALS: Record<AnchorPosition, { dx: number; dy: number }> = {
+        top: { dx: 0, dy: -1 },
+        bottom: { dx: 0, dy: 1 },
+        left: { dx: -1, dy: 0 },
+        right: { dx: 1, dy: 0 },
+      };
+
+      let bestScore = Infinity;
+      let bestPair: { fromAnchor: AnchorPosition; toAnchor: AnchorPosition } = {
+        fromAnchor: 'right',
+        toAnchor: 'left',
+      };
+
+      for (const a1 of ANCHORS) {
+        const p1 = getAnchorCoord(fromElem, a1);
+        const n1 = ANCHOR_NORMALS[a1];
+
+        for (const a2 of ANCHORS) {
+          const p2 = getAnchorCoord(toElem, a2);
+          const n2 = ANCHOR_NORMALS[a2];
+
+          const vx = p2.x - p1.x;
+          const vy = p2.y - p1.y;
+          const dist = Math.hypot(vx, vy);
+
+          const dotStart = vx * n1.dx + vy * n1.dy;
+          const dotEnd = vx * (-n2.dx) + vy * (-n2.dy);
+
+          let penalty = 0;
+          if (dotStart < 0) penalty += Math.abs(dotStart) * 3.5;
+          if (dotEnd < 0) penalty += Math.abs(dotEnd) * 3.5;
+
+          if ((a1 === 'right' && a2 === 'left') || (a1 === 'left' && a2 === 'right')) {
+            if (Math.abs(vy) < 40) penalty -= 35;
+          }
+          if ((a1 === 'bottom' && a2 === 'top') || (a1 === 'top' && a2 === 'bottom')) {
+            if (Math.abs(vx) < 40) penalty -= 35;
+          }
+
+          const score = dist + penalty;
+          if (score < bestScore) {
+            bestScore = score;
+            bestPair = { fromAnchor: a1, toAnchor: a2 };
+          }
+        }
+      }
+
+      return bestPair;
+    };
+
+    const elemA: TestElem = { id: 'a', x: 100, y: 100, width: 160, height: 80 };
+    const elemB: TestElem = { id: 'b', x: 400, y: 100, width: 160, height: 80 };
+
+    // 1. Elem A is to the left of Elem B -> right to left
+    expect(getDynamicAnchors(elemA, elemB)).toEqual({ fromAnchor: 'right', toAnchor: 'left' });
+
+    // 2. Elem A is moved to the right of Elem B -> left to right
+    const elemARight: TestElem = { id: 'a', x: 700, y: 100, width: 160, height: 80 };
+    expect(getDynamicAnchors(elemARight, elemB)).toEqual({ fromAnchor: 'left', toAnchor: 'right' });
+
+    // 3. Elem A is moved above Elem B -> bottom to top
+    const elemAAbove: TestElem = { id: 'a', x: 400, y: -100, width: 160, height: 80 };
+    expect(getDynamicAnchors(elemAAbove, elemB)).toEqual({ fromAnchor: 'bottom', toAnchor: 'top' });
+
+    // 4. Elem A is moved below Elem B -> top to bottom
+    const elemABelow: TestElem = { id: 'a', x: 400, y: 350, width: 160, height: 80 };
+    expect(getDynamicAnchors(elemABelow, elemB)).toEqual({ fromAnchor: 'top', toAnchor: 'bottom' });
+  });
 });

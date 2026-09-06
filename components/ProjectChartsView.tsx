@@ -906,36 +906,75 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     }
   }, []);
 
-  // Compute best anchors automatically
-  const getAutoAnchors = useCallback((fromElem: ChartElement, toElem: ChartElement) => {
-    const fromCenter = { x: fromElem.x + fromElem.width / 2, y: fromElem.y + fromElem.height / 2 };
-    const toCenter = { x: toElem.x + toElem.width / 2, y: toElem.y + toElem.height / 2 };
-    const dx = toCenter.x - fromCenter.x;
-    const dy = toCenter.y - fromCenter.y;
+  // ── Compute best anchors dynamically based on relative positions of both linked elements ──
+  const getDynamicAnchors = useCallback((fromElem: ChartElement, toElem: ChartElement): { fromAnchor: AnchorPosition; toAnchor: AnchorPosition } => {
+    if (!fromElem || !toElem) {
+      return { fromAnchor: 'right', toAnchor: 'left' };
+    }
 
-    let fromAnchor: AnchorPosition = 'right';
-    let toAnchor: AnchorPosition = 'left';
+    if (fromElem.id === toElem.id) {
+      return { fromAnchor: 'top', toAnchor: 'right' };
+    }
 
-    if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx > 0) {
-        fromAnchor = 'right';
-        toAnchor = 'left';
-      } else {
-        fromAnchor = 'left';
-        toAnchor = 'right';
-      }
-    } else {
-      if (dy > 0) {
-        fromAnchor = 'bottom';
-        toAnchor = 'top';
-      } else {
-        fromAnchor = 'top';
-        toAnchor = 'bottom';
+    const ANCHORS: AnchorPosition[] = ['top', 'right', 'bottom', 'left'];
+    const ANCHOR_NORMALS: Record<AnchorPosition, { dx: number; dy: number }> = {
+      top: { dx: 0, dy: -1 },
+      bottom: { dx: 0, dy: 1 },
+      left: { dx: -1, dy: 0 },
+      right: { dx: 1, dy: 0 },
+    };
+
+    let bestScore = Infinity;
+    let bestPair: { fromAnchor: AnchorPosition; toAnchor: AnchorPosition } = {
+      fromAnchor: 'right',
+      toAnchor: 'left',
+    };
+
+    for (const a1 of ANCHORS) {
+      const p1 = getAnchorCoord(fromElem, a1);
+      const n1 = ANCHOR_NORMALS[a1];
+
+      for (const a2 of ANCHORS) {
+        const p2 = getAnchorCoord(toElem, a2);
+        const n2 = ANCHOR_NORMALS[a2];
+
+        const vx = p2.x - p1.x;
+        const vy = p2.y - p1.y;
+        const dist = Math.hypot(vx, vy);
+
+        // Target must lie in front of the exit anchor (n1)
+        const dotStart = vx * n1.dx + vy * n1.dy;
+        // Source must lie in front of the entry anchor (-n2)
+        const dotEnd = vx * (-n2.dx) + vy * (-n2.dy);
+
+        let penalty = 0;
+        if (dotStart < 0) {
+          penalty += Math.abs(dotStart) * 3.5;
+        }
+        if (dotEnd < 0) {
+          penalty += Math.abs(dotEnd) * 3.5;
+        }
+
+        // Collinear alignment preferences for clean axis-aligned connections
+        if ((a1 === 'right' && a2 === 'left') || (a1 === 'left' && a2 === 'right')) {
+          if (Math.abs(vy) < 40) penalty -= 35;
+        }
+        if ((a1 === 'bottom' && a2 === 'top') || (a1 === 'top' && a2 === 'bottom')) {
+          if (Math.abs(vx) < 40) penalty -= 35;
+        }
+
+        const score = dist + penalty;
+        if (score < bestScore) {
+          bestScore = score;
+          bestPair = { fromAnchor: a1, toAnchor: a2 };
+        }
       }
     }
 
-    return { fromAnchor, toAnchor };
-  }, []);
+    return bestPair;
+  }, [getAnchorCoord]);
+
+  const getAutoAnchors = getDynamicAnchors;
 
   // ── Keyboard shortcuts (Ctrl+S for save, Undo, Redo, Duplicate, Delete) ──
   useEffect(() => {
@@ -1252,14 +1291,30 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
     if (resizingInfo) {
       setResizingInfo(null);
-      pushHistory(elements, connections);
-      syncLocalChanges(elements, connections);
+      const updatedConns = connectionsRef.current.map((conn) => {
+        const fromElem = elementsRef.current.find((e) => e.id === conn.fromId);
+        const toElem = elementsRef.current.find((e) => e.id === conn.toId);
+        if (!fromElem || !toElem) return conn;
+        const { fromAnchor, toAnchor } = getDynamicAnchors(fromElem, toElem);
+        return { ...conn, fromAnchor, toAnchor };
+      });
+      setConnections(updatedConns);
+      pushHistory(elements, updatedConns);
+      syncLocalChanges(elements, updatedConns);
     }
 
     if (isDraggingElementRef.current) {
       isDraggingElementRef.current = false;
-      pushHistory(elements, connections);
-      syncLocalChanges(elements, connections);
+      const updatedConns = connectionsRef.current.map((conn) => {
+        const fromElem = elementsRef.current.find((e) => e.id === conn.fromId);
+        const toElem = elementsRef.current.find((e) => e.id === conn.toId);
+        if (!fromElem || !toElem) return conn;
+        const { fromAnchor, toAnchor } = getDynamicAnchors(fromElem, toElem);
+        return { ...conn, fromAnchor, toAnchor };
+      });
+      setConnections(updatedConns);
+      pushHistory(elements, updatedConns);
+      syncLocalChanges(elements, updatedConns);
     }
 
     if (linkingStateRef.current) {
@@ -2000,39 +2055,50 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   const toElem = elements.find((e) => e.id === conn.toId);
                   if (!fromElem || !toElem) return null;
 
-                  const start = getAnchorCoord(fromElem, conn.fromAnchor || 'right');
-                  const end = getAnchorCoord(toElem, conn.toAnchor || 'left');
+                  // Dynamically resolve anchors based on current positions of fromElem and toElem
+                  const { fromAnchor, toAnchor } = getDynamicAnchors(fromElem, toElem);
+                  const start = getAnchorCoord(fromElem, fromAnchor);
+                  const end = getAnchorCoord(toElem, toAnchor);
                   const isSelected = selectedConnectionId === conn.id;
 
                   const dx = end.x - start.x;
                   const dy = end.y - start.y;
-                  const offset = Math.max(40, Math.min(120, Math.abs(dx) * 0.45));
+                  const dist = Math.hypot(dx, dy);
+                  const offset = Math.max(30, Math.min(140, dist * 0.4));
 
-                  let cp1x = start.x + offset;
+                  let cp1x = start.x;
                   let cp1y = start.y;
-                  let cp2x = end.x - offset;
+                  let cp2x = end.x;
                   let cp2y = end.y;
 
-                  if (conn.fromAnchor === 'top') {
-                    cp1x = start.x;
-                    cp1y = start.y - offset;
-                  } else if (conn.fromAnchor === 'bottom') {
-                    cp1x = start.x;
-                    cp1y = start.y + offset;
-                  } else if (conn.fromAnchor === 'left') {
-                    cp1x = start.x - offset;
-                    cp1y = start.y;
+                  switch (fromAnchor) {
+                    case 'right':
+                      cp1x = start.x + offset;
+                      break;
+                    case 'left':
+                      cp1x = start.x - offset;
+                      break;
+                    case 'top':
+                      cp1y = start.y - offset;
+                      break;
+                    case 'bottom':
+                      cp1y = start.y + offset;
+                      break;
                   }
 
-                  if (conn.toAnchor === 'top') {
-                    cp2x = end.x;
-                    cp2y = end.y - offset;
-                  } else if (conn.toAnchor === 'bottom') {
-                    cp2x = end.x;
-                    cp2y = end.y + offset;
-                  } else if (conn.toAnchor === 'right') {
-                    cp2x = end.x + offset;
-                    cp2y = end.y;
+                  switch (toAnchor) {
+                    case 'right':
+                      cp2x = end.x + offset;
+                      break;
+                    case 'left':
+                      cp2x = end.x - offset;
+                      break;
+                    case 'top':
+                      cp2y = end.y - offset;
+                      break;
+                    case 'bottom':
+                      cp2y = end.y + offset;
+                      break;
                   }
 
                   const pathD = `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
