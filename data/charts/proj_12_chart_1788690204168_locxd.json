@@ -7,8 +7,8 @@
   "data": {
     "elements": [
       {
-        "x": 120,
-        "y": 180,
+        "x": -92,
+        "y": 388,
         "id": "elem-1",
         "text": "Client App\n(Web & Mobile)",
         "type": "rectangle",
@@ -23,8 +23,8 @@
         "backgroundColor": "#1e1e1e"
       },
       {
-        "x": 402,
-        "y": 509,
+        "x": 348,
+        "y": 391,
         "id": "elem-2",
         "text": "API Server\nREST & WebSockets",
         "type": "rounded-rectangle",
@@ -39,8 +39,8 @@
         "backgroundColor": "#1e1e1e"
       },
       {
-        "x": 902,
-        "y": 493,
+        "x": 840,
+        "y": 358,
         "id": "elem-3",
         "text": "PostgreSQL DB\n& Client Cache",
         "type": "cylinder",
@@ -53,11 +53,59 @@
         "borderStyle": "solid",
         "borderWidth": 2,
         "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 99,
+        "y": 562,
+        "id": "elem_1788693767684_zif3",
+        "text": "Process",
+        "type": "rectangle",
+        "width": 274,
+        "height": 137,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 857,
+        "y": 598,
+        "id": "elem_1788693771191_t5qo",
+        "text": "Process",
+        "type": "rectangle",
+        "width": 160,
+        "height": 80,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 563,
+        "y": 613,
+        "id": "elem_1788693777570_r4y0",
+        "text": "Sample",
+        "type": "textbox",
+        "width": 180,
+        "height": 30,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
       }
     ],
     "viewport": {
-      "x": 0,
-      "y": 0,
+      "x": 188,
+      "y": -116,
       "zoom": 1
     },
     "connections": [
@@ -86,10 +134,30 @@
         "arrowEnd": true,
         "toAnchor": "left",
         "fromAnchor": "right"
+      },
+      {
+        "id": "conn_1788693797552_hwyz",
+        "toId": "elem_1788693777570_r4y0",
+        "color": "#ffffff",
+        "width": 2,
+        "fromId": "elem_1788693767684_zif3",
+        "arrowEnd": true,
+        "toAnchor": "left",
+        "fromAnchor": "right"
+      },
+      {
+        "id": "conn_1788693799017_vo77",
+        "toId": "elem_1788693771191_t5qo",
+        "color": "#ffffff",
+        "width": 2,
+        "fromId": "elem_1788693777570_r4y0",
+        "arrowEnd": true,
+        "toAnchor": "left",
+        "fromAnchor": "right"
       }
     ]
   },
   "orderIndex": 0,
   "createdAt": "2026-09-06T10:23:24.168Z",
-  "updatedAt": "2026-09-06T10:54:46.198Z"
+  "updatedAt": "2026-09-06T11:24:22.071Z"
 }
