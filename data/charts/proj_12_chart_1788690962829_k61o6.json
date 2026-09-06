@@ -1,0 +1,36 @@
+{
+  "id": "chart_1788690962829_k61o6",
+  "projectId": 12,
+  "userId": 13,
+  "userName": "ajaysaagar",
+  "title": "Done",
+  "data": {
+    "elements": [
+      {
+        "id": "elem_1788690971957_6csj",
+        "type": "rectangle",
+        "x": 346,
+        "y": 279,
+        "width": 160,
+        "height": 80,
+        "text": "Process",
+        "fontSize": 14,
+        "textAlign": "center",
+        "borderColor": "#ffffff",
+        "borderWidth": 2,
+        "borderStyle": "solid",
+        "backgroundColor": "#1e1e1e",
+        "textColor": "#ffffff"
+      }
+    ],
+    "connections": [],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "orderIndex": 0,
+  "createdAt": "2026-09-06T10:36:05.381Z",
+  "updatedAt": "2026-09-06T10:36:31.860Z"
+}

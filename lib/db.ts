@@ -117,6 +117,7 @@ let memoryJoinRequestsStore: any[] = [];
 let memoryPermissionsStore: any[] = [];
 let memoryProjectHistoryStore: any[] = [];
 let memoryDocFoldersStore: any[] = [];
+let memoryProjectChartsStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -345,6 +346,21 @@ export async function initDB(): Promise<void> {
             "orderIndex" INT DEFAULT 0,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT "uq_project_doc_folder" UNIQUE ("projectId", "name")
+          );
+        `);
+
+        // 9c. Create Project Charts Table
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_charts" (
+            "id" VARCHAR(64) PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "userId" INT DEFAULT 1,
+            "userName" VARCHAR(128) DEFAULT 'karri',
+            "title" VARCHAR(255) NOT NULL,
+            "data" JSONB NOT NULL DEFAULT '{"elements":[],"connections":[],"viewport":{"x":0,"y":0,"zoom":1}}',
+            "orderIndex" INT DEFAULT 0,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
           );
         `);
 
@@ -2754,6 +2770,160 @@ export async function updateIssueCreatedAtDB(issueId: string, newCreatedAt: stri
   if (target) {
     target.createdAt = isoDate;
   }
+  return true;
+}
+
+// ─── Project Charts Database Helpers ───────────────────────────────────────────
+
+export interface ProjectChartRecord {
+  id: string;
+  projectId: number;
+  userId?: number;
+  userName?: string;
+  title: string;
+  data: any;
+  orderIndex?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getProjectChartsDB(projectId: string | number): Promise<ProjectChartRecord[]> {
+  await initDB();
+  let numId = Number(projectId);
+  if (isNaN(numId)) {
+    const project = await getProjectByIdDB(projectId);
+    if (project) numId = Number(project.id);
+  }
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT * FROM "project_charts" WHERE "projectId" = $1 ORDER BY "orderIndex" ASC, "updatedAt" DESC`,
+      [numId]
+    );
+    return (result.rows || []).map((row: any) => ({
+      ...row,
+      data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+    }));
+  } catch {
+    return memoryProjectChartsStore
+      .filter((c) => Number(c.projectId) === numId)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }
+}
+
+export async function getProjectChartByIdDB(chartId: string): Promise<ProjectChartRecord | null> {
+  await initDB();
+  try {
+    const p = getPool();
+    const result = await p.query(`SELECT * FROM "project_charts" WHERE "id" = $1 LIMIT 1`, [chartId]);
+    if (result.rows && result.rows[0]) {
+      const row = result.rows[0];
+      return {
+        ...row,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+      };
+    }
+    return null;
+  } catch {
+    return memoryProjectChartsStore.find((c) => c.id === chartId) || null;
+  }
+}
+
+export async function createProjectChartDB(data: {
+  id: string;
+  projectId: number | string;
+  userId?: number | string;
+  userName?: string;
+  title: string;
+  data?: any;
+  orderIndex?: number;
+}): Promise<ProjectChartRecord> {
+  await initDB();
+  let numProjId = Number(data.projectId);
+  if (isNaN(numProjId)) {
+    const project = await getProjectByIdDB(data.projectId);
+    numProjId = project ? Number(project.id) : 1;
+  }
+  const numUserId = data.userId ? Number(data.userId) : 1;
+  const userName = data.userName || 'karri';
+  const now = new Date().toISOString();
+  const chartData = data.data || { elements: [], connections: [], viewport: { x: 0, y: 0, zoom: 1 } };
+  const orderIndex = data.orderIndex !== undefined ? Number(data.orderIndex) : 0;
+
+  const record: ProjectChartRecord = {
+    id: data.id,
+    projectId: numProjId,
+    userId: numUserId,
+    userName,
+    title: data.title || 'Untitled Diagram',
+    data: chartData,
+    orderIndex,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    const p = getPool();
+    await p.query(
+      `INSERT INTO "project_charts" ("id", "projectId", "userId", "userName", "title", "data", "orderIndex", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "data" = $6, "updatedAt" = $9`,
+      [record.id, record.projectId, record.userId, record.userName, record.title, JSON.stringify(record.data), record.orderIndex, record.createdAt, record.updatedAt]
+    );
+  } catch {}
+
+  memoryProjectChartsStore = memoryProjectChartsStore.filter((c) => c.id !== data.id);
+  memoryProjectChartsStore.unshift(record);
+  return record;
+}
+
+export async function updateProjectChartDB(
+  chartId: string,
+  updates: { title?: string; data?: any; orderIndex?: number }
+): Promise<ProjectChartRecord | null> {
+  await initDB();
+  const now = new Date().toISOString();
+  const fields: string[] = ['"updatedAt" = $1'];
+  const values: any[] = [now];
+  let paramIdx = 2;
+
+  if (updates.title !== undefined) {
+    fields.push(`"title" = $${paramIdx++}`);
+    values.push(updates.title);
+  }
+  if (updates.data !== undefined) {
+    fields.push(`"data" = $${paramIdx++}`);
+    values.push(JSON.stringify(updates.data));
+  }
+  if (updates.orderIndex !== undefined) {
+    fields.push(`"orderIndex" = $${paramIdx++}`);
+    values.push(updates.orderIndex);
+  }
+
+  values.push(chartId);
+  try {
+    const p = getPool();
+    await p.query(`UPDATE "project_charts" SET ${fields.join(', ')} WHERE "id" = $${paramIdx}`, values);
+  } catch {}
+
+  const target = memoryProjectChartsStore.find((c) => c.id === chartId);
+  if (target) {
+    if (updates.title !== undefined) target.title = updates.title;
+    if (updates.data !== undefined) target.data = updates.data;
+    if (updates.orderIndex !== undefined) target.orderIndex = updates.orderIndex;
+    target.updatedAt = now;
+    return target;
+  }
+  return await getProjectChartByIdDB(chartId);
+}
+
+export async function deleteProjectChartDB(chartId: string): Promise<boolean> {
+  await initDB();
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM "project_charts" WHERE "id" = $1`, [chartId]);
+  } catch {}
+  memoryProjectChartsStore = memoryProjectChartsStore.filter((c) => c.id !== chartId);
   return true;
 }
 

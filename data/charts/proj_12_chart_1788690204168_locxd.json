@@ -1,0 +1,95 @@
+{
+  "id": "chart_1788690204168_locxd",
+  "projectId": 12,
+  "userId": 13,
+  "userName": "ajaysaagar",
+  "title": "Sample File",
+  "data": {
+    "elements": [
+      {
+        "x": 120,
+        "y": 180,
+        "id": "elem-1",
+        "text": "Client App\n(Web & Mobile)",
+        "type": "rectangle",
+        "width": 170,
+        "height": 80,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 402,
+        "y": 509,
+        "id": "elem-2",
+        "text": "API Server\nREST & WebSockets",
+        "type": "rounded-rectangle",
+        "width": 170,
+        "height": 80,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 902,
+        "y": 493,
+        "id": "elem-3",
+        "text": "PostgreSQL DB\n& Client Cache",
+        "type": "cylinder",
+        "width": 160,
+        "height": 100,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    },
+    "connections": [
+      {
+        "id": "conn-1",
+        "toId": "elem-2",
+        "color": "#ffffff",
+        "label": "HTTPS / WSS",
+        "style": "curved",
+        "width": 2,
+        "dashed": false,
+        "fromId": "elem-1",
+        "arrowEnd": true,
+        "toAnchor": "left",
+        "fromAnchor": "right"
+      },
+      {
+        "id": "conn-2",
+        "toId": "elem-3",
+        "color": "#ffffff",
+        "label": "SQL Queries",
+        "style": "curved",
+        "width": 2,
+        "dashed": false,
+        "fromId": "elem-2",
+        "arrowEnd": true,
+        "toAnchor": "left",
+        "fromAnchor": "right"
+      }
+    ]
+  },
+  "orderIndex": 0,
+  "createdAt": "2026-09-06T10:23:24.168Z",
+  "updatedAt": "2026-09-06T10:54:46.198Z"
+}

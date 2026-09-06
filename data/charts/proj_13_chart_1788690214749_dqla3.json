@@ -1,0 +1,95 @@
+{
+  "id": "chart_1788690214749_dqla3",
+  "projectId": 13,
+  "userId": 13,
+  "userName": "ajaysaagar",
+  "title": "Architecture Overview",
+  "data": {
+    "elements": [
+      {
+        "id": "elem-1",
+        "type": "rectangle",
+        "x": 120,
+        "y": 180,
+        "width": 170,
+        "height": 80,
+        "text": "Client App\n(Web & Mobile)",
+        "fontSize": 14,
+        "textAlign": "center",
+        "borderColor": "#ffffff",
+        "borderWidth": 2,
+        "borderStyle": "solid",
+        "backgroundColor": "#1e1e1e",
+        "textColor": "#ffffff"
+      },
+      {
+        "id": "elem-2",
+        "type": "rounded-rectangle",
+        "x": 400,
+        "y": 180,
+        "width": 170,
+        "height": 80,
+        "text": "API Server\nREST & WebSockets",
+        "fontSize": 14,
+        "textAlign": "center",
+        "borderColor": "#ffffff",
+        "borderWidth": 2,
+        "borderStyle": "solid",
+        "backgroundColor": "#1e1e1e",
+        "textColor": "#ffffff"
+      },
+      {
+        "id": "elem-3",
+        "type": "cylinder",
+        "x": 680,
+        "y": 170,
+        "width": 160,
+        "height": 100,
+        "text": "PostgreSQL DB\n& Client Cache",
+        "fontSize": 14,
+        "textAlign": "center",
+        "borderColor": "#ffffff",
+        "borderWidth": 2,
+        "borderStyle": "solid",
+        "backgroundColor": "#1e1e1e",
+        "textColor": "#ffffff"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-1",
+        "fromId": "elem-1",
+        "toId": "elem-2",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "label": "HTTPS / WSS",
+        "style": "curved",
+        "color": "#ffffff",
+        "width": 2,
+        "dashed": false,
+        "arrowEnd": true
+      },
+      {
+        "id": "conn-2",
+        "fromId": "elem-2",
+        "toId": "elem-3",
+        "fromAnchor": "right",
+        "toAnchor": "left",
+        "label": "SQL Queries",
+        "style": "curved",
+        "color": "#ffffff",
+        "width": 2,
+        "dashed": false,
+        "arrowEnd": true
+      }
+    ],
+    "viewport": {
+      "x": 0,
+      "y": 0,
+      "zoom": 1
+    }
+  },
+  "orderIndex": 0,
+  "createdAt": "2026-09-06T10:23:34.750Z",
+  "updatedAt": "2026-09-06T10:23:34.750Z"
+}

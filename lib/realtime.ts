@@ -21,7 +21,10 @@ export type RealtimeEventType =
   | 'DOC_FOLDER_CREATED'
   | 'DOC_FOLDER_DELETED'
   | 'DOC_FOLDERS_REORDERED'
-  | 'DOCS_REORDERED';
+  | 'DOCS_REORDERED'
+  | 'CHART_CREATED'
+  | 'CHART_UPDATED'
+  | 'CHART_DELETED';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;

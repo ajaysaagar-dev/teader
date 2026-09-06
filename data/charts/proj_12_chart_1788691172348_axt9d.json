@@ -1,0 +1,105 @@
+{
+  "id": "chart_1788691172348_axt9d",
+  "projectId": 12,
+  "userId": 13,
+  "userName": "ajaysaagar",
+  "title": "Chart 4",
+  "data": {
+    "elements": [
+      {
+        "x": 714,
+        "y": 655,
+        "id": "elem_1788691174781_16eu",
+        "text": "Process",
+        "type": "rectangle",
+        "width": 160,
+        "height": 80,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 370,
+        "y": 274,
+        "id": "elem_1788691175125_ju89",
+        "text": "Component",
+        "type": "rounded-rectangle",
+        "width": 160,
+        "height": 80,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 402,
+        "y": 489,
+        "id": "elem_1788691178349_bj4s",
+        "text": "Text Name",
+        "type": "diamond",
+        "width": 130,
+        "height": 90,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      },
+      {
+        "x": 821,
+        "y": 343,
+        "id": "elem_1788691179172_ge9e",
+        "text": "Database",
+        "type": "cylinder",
+        "width": 140,
+        "height": 90,
+        "fontSize": 14,
+        "textAlign": "center",
+        "textColor": "#ffffff",
+        "borderColor": "#ffffff",
+        "borderStyle": "solid",
+        "borderWidth": 2,
+        "backgroundColor": "#1e1e1e"
+      }
+    ],
+    "viewport": {
+      "x": -117,
+      "y": -25,
+      "zoom": 1
+    },
+    "connections": [
+      {
+        "id": "conn_1788692012675_q5tz",
+        "toId": "elem_1788691179172_ge9e",
+        "color": "#ffffff",
+        "width": 2,
+        "fromId": "elem_1788691178349_bj4s",
+        "arrowEnd": true,
+        "toAnchor": "left",
+        "fromAnchor": "right"
+      },
+      {
+        "id": "conn_1788692017299_jlj7",
+        "toId": "elem_1788691174781_16eu",
+        "color": "#ffffff",
+        "width": 2,
+        "fromId": "elem_1788691175125_ju89",
+        "arrowEnd": true,
+        "toAnchor": "top",
+        "fromAnchor": "right"
+      }
+    ]
+  },
+  "orderIndex": 0,
+  "createdAt": "2026-09-06T10:39:32.390Z",
+  "updatedAt": "2026-09-06T10:53:46.380Z"
+}
