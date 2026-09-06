@@ -47,7 +47,8 @@ import {
   MessageSquare,
   Trash2,
   AlertTriangle,
-  Settings
+  Settings,
+  Workflow
 } from 'lucide-react';
 
 
@@ -85,6 +86,10 @@ const DependencyGraphView = dynamic(
 );
 const ProjectDocsView = dynamic(
   () => import('@/components/ProjectDocsView').then((m) => ({ default: m.ProjectDocsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const ProjectChartsView = dynamic(
+  () => import('@/components/ProjectChartsView').then((m) => ({ default: m.ProjectChartsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
 const ConversationDrawer = dynamic(
@@ -132,13 +137,14 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'history' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'history' | 'settings';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
-  if (v === 'overview' || v === 'analytics' || v === 'charts' || v === 'insights' || v === 'stats') return 'overview';
+  if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow' || v === 'whiteboard') return 'charts';
+  if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
   if (v === 'history' || v === 'audit' || v === 'log' || v === 'changelog') return 'history';
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
@@ -1693,7 +1699,7 @@ export default function SingleProjectPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
+        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[#131415] text-[#CFD4DD] font-sans">
         {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
         <div className="h-11 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
           {/* Left: Breadcrumbs & Project Identity */}
@@ -1822,7 +1828,7 @@ export default function SingleProjectPage() {
         </div>
 
         {/* 2. 4-Page Primary Navigation Bar (Overview | Tasks | Docs | Settings + Chat Drawer Toggle) */}
-        <div className="h-11 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3">
+        <div className="h-11 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
           <div className="flex items-center gap-1 bg-[#101113] p-1 rounded-xl border border-[#222428]">
             <button
               onClick={() => handleTabSwitch('overview')}
@@ -1862,6 +1868,19 @@ export default function SingleProjectPage() {
             >
               <BookOpen size={13} />
               <span>Docs</span>
+            </button>
+
+            <button
+              onClick={() => handleTabSwitch('charts')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'charts'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Diagrams, Flowcharts & Architecture Canvases"
+            >
+              <Workflow size={13} />
+              <span>Charts</span>
             </button>
 
             <button
@@ -1923,6 +1942,14 @@ export default function SingleProjectPage() {
           ) : activeTab === 'docs' ? (
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               <ProjectDocsView
+                projectId={project?.id || projectIdParam || 1}
+                projectName={project?.name}
+                projectKey={project?.key}
+              />
+            </div>
+          ) : activeTab === 'charts' ? (
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
+              <ProjectChartsView
                 projectId={project?.id || projectIdParam || 1}
                 projectName={project?.name}
                 projectKey={project?.key}
