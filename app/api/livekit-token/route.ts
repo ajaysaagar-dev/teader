@@ -19,9 +19,11 @@ export async function GET(request: Request) {
   }
 
   // 3. Verify the user has access to this specific project
-  const access = await assertProjectAccess(session.id, projectId);
-  if (!access) {
-    return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  try {
+    await assertProjectAccess(session.id, projectId);
+  } catch (err: any) {
+    const status = err.status || 403;
+    return NextResponse.json({ error: err.message || 'Access denied' }, { status });
   }
 
   // 4. Read server-only env vars (NEVER exposed to browser)
