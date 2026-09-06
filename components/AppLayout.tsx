@@ -20,7 +20,12 @@ import {
   ChevronDown,
   Loader2,
   MessageSquare,
-  Settings
+  Settings,
+  Radio,
+  Mic,
+  MicOff,
+  PhoneOff,
+  Maximize2
 } from 'lucide-react';
 
 
@@ -88,6 +93,46 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     window.addEventListener('teader_user_updated', handleUserUpdate);
     return () => window.removeEventListener('teader_user_updated', handleUserUpdate);
   }, []);
+
+  const [activeMeeting, setActiveMeeting] = useState<{
+    isActive: boolean;
+    projectId: number | string;
+    projectName: string;
+    isMuted: boolean;
+    duration: string;
+    isMini: boolean;
+    speakerName?: string;
+    isSpeaking?: boolean;
+  } | null>(null);
+
+  // Listen for active meeting updates across pages and tabs
+  useEffect(() => {
+    const handleActiveMeetingUpdate = (e: any) => {
+      setActiveMeeting(e.detail || null);
+    };
+    window.addEventListener('teader_active_meeting_update', handleActiveMeetingUpdate);
+    return () => window.removeEventListener('teader_active_meeting_update', handleActiveMeetingUpdate);
+  }, []);
+
+  const handleOpenMeeting = () => {
+    if (!activeMeeting) return;
+    // Dispatch tab switch event if already on the project page
+    window.dispatchEvent(new CustomEvent('teader_switch_project_tab', { detail: 'meeting' }));
+    // Navigate if on another page
+    if (!pathname.startsWith(`/projects/${activeMeeting.projectId}`)) {
+      router.push(`/projects/${activeMeeting.projectId}?tab=meeting`);
+    }
+  };
+
+  const handleLeaveMeeting = () => {
+    window.dispatchEvent(new CustomEvent('teader_meeting_action', { detail: 'leave' }));
+    setActiveMeeting(null);
+  };
+
+  const handleToggleMeetingMute = () => {
+    window.dispatchEvent(new CustomEvent('teader_meeting_action', { detail: 'toggle_mute' }));
+    setActiveMeeting((prev) => (prev ? { ...prev, isMuted: !prev.isMuted } : null));
+  };
 
   // Verify authentication before rendering workspace
   useEffect(() => {
@@ -190,6 +235,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isDashboardActive = pathname === '/dashboard' || pathname === '/';
   const isProjectsActive = pathname.startsWith('/projects');
   const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
+  const isFullMeetingView =
+    Boolean(
+      activeMeeting &&
+      pathname.startsWith(`/projects/${activeMeeting.projectId}`) &&
+      !activeMeeting.isMini
+    );
 
   return (
     <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
@@ -254,6 +305,75 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         </div>
 
+
+        {/* Active Meeting Widget in App Header (For other pages/tabs) */}
+        {activeMeeting && !isFullMeetingView && (
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#14161F] border border-[#2B2D38] shadow-sm select-none">
+            <div
+              onClick={handleOpenMeeting}
+              className="flex items-center gap-2 cursor-pointer group"
+              title="Click to open full meeting"
+            >
+              <div className="relative flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 flex items-center justify-center">
+                  <Radio size={12} className="text-[#22C55E] animate-pulse" />
+                </div>
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#22C55E] animate-ping" />
+              </div>
+
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white group-hover:text-[var(--accent-yellow)] transition-colors truncate max-w-[110px] sm:max-w-[150px]">
+                    {activeMeeting.projectName}
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] font-mono text-[9px] font-bold border border-[#22C55E]/30 shrink-0">
+                    LIVE
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#787C83] leading-none">
+                  {activeMeeting.duration || '00:00'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 border-l border-[#242634] pl-2 ml-1">
+              {/* Mic Toggle */}
+              <button
+                type="button"
+                onClick={handleToggleMeetingMute}
+                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                  activeMeeting.isMuted
+                    ? 'bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25'
+                    : 'bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]'
+                }`}
+                title={activeMeeting.isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+              >
+                {activeMeeting.isMuted ? <MicOff size={12} /> : <Mic size={12} />}
+              </button>
+
+              {/* Open Meeting Button */}
+              <button
+                type="button"
+                onClick={handleOpenMeeting}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#DCB001]/15 hover:bg-[#DCB001]/25 text-[#DCB001] border border-[#DCB001]/35 text-[11px] font-semibold transition-all cursor-pointer"
+                title="Open Meeting"
+              >
+                <Maximize2 size={11} />
+                <span>Open Meeting</span>
+              </button>
+
+              {/* Leave Call Button */}
+              <button
+                type="button"
+                onClick={handleLeaveMeeting}
+                className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 border border-red-500/35 transition-colors cursor-pointer"
+                title="Leave Meeting"
+              >
+                <PhoneOff size={12} />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Top Right: Global Controls */}
         <div className="flex items-center gap-2">

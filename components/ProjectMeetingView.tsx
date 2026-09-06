@@ -1395,228 +1395,64 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     connectionState === ConnectionState.Connecting ||
     connectionState === ConnectionState.Reconnecting;
 
-  // ── Floating Draggable Miniscreen (Picture-in-Picture) Rendering ──
+  // ── Meeting Active Status Broadcasting to App Header ──
+  // Broadcast meeting state to App Header for other pages
+  useEffect(() => {
+    if (isConnected) {
+      const activeSpeaker =
+        participants.find((p) => p.isSpeaking && !p.isMuted) || participants[0];
+      const info = {
+        isActive: true,
+        projectId,
+        projectName,
+        isMuted,
+        duration: formattedTimer,
+        isMini: !!isMini,
+        speakerName: activeSpeaker?.name,
+        isSpeaking: !!activeSpeaker?.isSpeaking,
+      };
+      window.dispatchEvent(new CustomEvent('teader_active_meeting_update', { detail: info }));
+    } else {
+      window.dispatchEvent(new CustomEvent('teader_active_meeting_update', { detail: null }));
+    }
+  }, [isConnected, projectId, projectName, isMuted, formattedTimer, isMini, participants]);
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('teader_active_meeting_update', { detail: null }));
+    };
+  }, []);
+
+  // Listen for actions dispatched from App Header (e.g. Leave Call, Toggle Mic Mute)
+  useEffect(() => {
+    const handleMeetingAction = (e: any) => {
+      const action = e.detail;
+      if (action === 'leave') {
+        handleLeaveCall();
+      } else if (action === 'toggle_mute') {
+        handleToggleMute();
+      }
+    };
+    window.addEventListener('teader_meeting_action', handleMeetingAction);
+    return () => window.removeEventListener('teader_meeting_action', handleMeetingAction);
+  }, [handleLeaveCall, handleToggleMute]);
+
+  // When user navigates to other pages/tabs (isMini === true), meeting indicators and
+  // controls are shown cleanly in the App Header (with Open Meeting and Leave Call options).
+  // No floating miniscreen covers the page content.
   if (isMini) {
-    const screenSharingParticipant = participants.find(
-      (p) => p.isScreenSharing && p.screenShareTrack
-    );
-    const activeSpeaker =
-      participants.find((p) => p.isSpeaking && !p.isMuted) || participants[0];
-
-    const posX =
-      miniPosition?.x ??
-      (typeof window !== 'undefined'
-        ? Math.max(16, window.innerWidth - 300 - 24)
-        : 20);
-    const posY =
-      miniPosition?.y ??
-      (typeof window !== 'undefined'
-        ? Math.max(16, window.innerHeight - 80 - 24)
-        : 20);
-
-    return (
-      <div
-        ref={miniScreenRef}
-        style={{
-          position: 'fixed',
-          left: `${posX}px`,
-          top: `${posY}px`,
-          zIndex: 50,
-        }}
-        onClick={unlockAudio}
-        className={`rounded-xl bg-[#0F1015]/95 border border-[#2B2D38] shadow-2xl shadow-black/80 backdrop-blur-xl overflow-hidden flex flex-col select-none animate-in fade-in zoom-in-95 duration-150 transition-shadow hover:border-[#3D4150] ${
-          screenSharingParticipant ? 'w-64 sm:w-72' : 'w-auto max-w-[320px]'
-        }`}
-      >
-        {/* If screen sharing is active: show compact video tile with overlay controls */}
-        {screenSharingParticipant && screenSharingParticipant.screenShareTrack ? (
-          <div className="flex flex-col">
-            {/* Minimal draggable top header */}
-            <div
-              onPointerDown={handleDragPointerDown}
-              onPointerMove={handleDragPointerMove}
-              onPointerUp={handleDragPointerUp}
-              className="h-7 px-2.5 bg-[#15161E] border-b border-[#222430] flex items-center justify-between cursor-grab active:cursor-grabbing touch-none select-none"
-              title="Drag to move miniscreen anywhere"
-            >
-              <div className="flex items-center gap-1.5 overflow-hidden pointer-events-none">
-                <GripHorizontal size={13} className="text-[#787C83] shrink-0" />
-                <span className="text-[11px] font-bold text-white truncate max-w-[130px]">
-                  {screenSharingParticipant.name}
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping shrink-0" />
-              </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onExpandMeeting?.();
-                  }}
-                  className="p-1 rounded hover:bg-[#252836] text-[#A0A5B0] hover:text-white transition-colors cursor-pointer"
-                  title="Expand to Full Meeting"
-                >
-                  <Maximize2 size={11} />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleLeaveCall();
-                  }}
-                  className="p-1 rounded hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                  title="Leave Call"
-                >
-                  <PhoneOff size={11} />
-                </button>
-              </div>
-            </div>
-
-            {/* Video Canvas */}
-            <div
-              onClick={() => onExpandMeeting?.()}
-              className="relative w-full aspect-video bg-black cursor-pointer group flex items-center justify-center overflow-hidden"
-              title="Click to expand meeting"
-            >
-              <ScreenShareVideo
-                track={screenSharingParticipant.screenShareTrack}
-                isLocal={screenSharingParticipant.isLocal}
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <span className="px-2 py-0.5 rounded bg-black/80 text-white text-[10px] font-semibold flex items-center gap-1 border border-white/15">
-                  <Maximize2 size={10} className="text-[#DCB001]" /> Expand
-                </span>
-              </div>
-            </div>
-
-            {/* Minimal footer: Mic & Timer */}
-            <div className="h-7 px-2.5 bg-[#101218] border-t border-[#1F212C] flex items-center justify-between">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleMute();
-                }}
-                className={`p-1 rounded transition-colors ${
-                  isMuted ? 'text-red-400 hover:text-red-300' : 'text-[#22C55E] hover:text-green-300'
-                }`}
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <MicOff size={11} /> : <Mic size={11} />}
-              </button>
-              <span className="font-mono text-[9px] text-[#787C83]">{formattedTimer}</span>
-            </div>
-          </div>
-        ) : (
-          /* Simple Voice Pill (Ultra Clean & Minimal) */
-          <div
-            onPointerDown={handleDragPointerDown}
-            onPointerMove={handleDragPointerMove}
-            onPointerUp={handleDragPointerUp}
-            className="flex items-center gap-2.5 px-3 py-2 cursor-grab active:cursor-grabbing touch-none select-none"
-            title="Drag to move miniscreen anywhere"
-          >
-            <GripHorizontal size={13} className="text-[#787C83] shrink-0 pointer-events-none" />
-
-            {/* Active speaker avatar */}
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                onExpandMeeting?.();
-              }}
-              className="relative shrink-0 cursor-pointer"
-              title="Click to expand meeting"
-            >
-              <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center overflow-hidden text-[10px] font-bold ${
-                  activeSpeaker?.isSpeaking
-                    ? 'ring-2 ring-[#22C55E] bg-[#22C55E]/20 text-[#22C55E]'
-                    : 'bg-[#1A1C24] text-white border border-[#2B2D38]'
-                }`}
-              >
-                <Avatar user={{ name: activeSpeaker?.name, avatar: activeSpeaker?.avatar }} size="xs" />
-              </div>
-              {activeSpeaker?.isMuted && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 flex items-center justify-center text-white text-[7px]">
-                  <MicOff size={7} />
-                </span>
-              )}
-            </div>
-
-            {/* Speaker Name / Call info */}
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                onExpandMeeting?.();
-              }}
-              className="min-w-0 flex-1 cursor-pointer pr-1"
-              title="Click to expand meeting"
-            >
-              <p className="text-[11px] font-bold text-white truncate max-w-[110px]">
-                {activeSpeaker ? activeSpeaker.name : projectName}
-              </p>
-              <div className="flex items-center gap-1 text-[9px] font-mono text-[#787C83]">
-                {activeSpeaker?.isSpeaking ? (
-                  <span className="text-[#22C55E] font-medium flex items-center gap-0.5">
-                    <Radio size={8} className="animate-pulse" /> Speaking
-                  </span>
-                ) : (
-                  <span>{formattedTimer}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Action Controls */}
-            <div className="flex items-center gap-1 shrink-0">
-              {/* Mic Toggle */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggleMute();
-                }}
-                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                  isMuted
-                    ? 'bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25'
-                    : 'bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]'
-                }`}
-                title={isMuted ? 'Unmute Mic' : 'Mute Mic'}
-              >
-                {isMuted ? <MicOff size={11} /> : <Mic size={11} />}
-              </button>
-
-              {/* Expand to full meeting */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onExpandMeeting?.();
-                }}
-                className="p-1.5 rounded-lg bg-[#181A22] hover:bg-[#252836] text-[#A0A5B0] hover:text-white border border-[#2B2D38] transition-colors cursor-pointer"
-                title="Expand to Full Meeting"
-              >
-                <Maximize2 size={11} />
-              </button>
-
-              {/* Leave Call */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLeaveCall();
-                }}
-                className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 border border-red-500/30 transition-colors cursor-pointer"
-                title="Leave Call"
-              >
-                <PhoneOff size={11} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    if (autoplayBlocked) {
+      return (
+        <div
+          onClick={unlockAudio}
+          className="fixed bottom-4 right-4 z-50 p-2.5 rounded-xl bg-amber-500/90 text-black text-xs font-bold shadow-2xl flex items-center gap-2 cursor-pointer animate-pulse"
+        >
+          <VolumeX size={14} />
+          <span>Click to enable call audio</span>
+        </div>
+      );
+    }
+    return null;
   }
 
   return (

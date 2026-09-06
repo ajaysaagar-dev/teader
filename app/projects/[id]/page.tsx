@@ -296,6 +296,19 @@ export default function SingleProjectPage() {
     [projectIdParam]
   );
 
+  useEffect(() => {
+    const handleSwitchTabEvent = (e: any) => {
+      if (e.detail === 'meeting') {
+        setIsInMeeting(true);
+        handleTabSwitch('meeting');
+      } else if (e.detail) {
+        handleTabSwitch(e.detail);
+      }
+    };
+    window.addEventListener('teader_switch_project_tab', handleSwitchTabEvent);
+    return () => window.removeEventListener('teader_switch_project_tab', handleSwitchTabEvent);
+  }, [handleTabSwitch]);
+
   const [project, setProject] = useState<ProjectItem | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);

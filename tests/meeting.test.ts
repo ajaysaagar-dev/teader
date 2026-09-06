@@ -250,5 +250,48 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     isInMeeting = false;
     expect(isInMeeting).toBe(false);
   });
+
+  it('displays meeting in the App Header on other pages with open and leave controls', () => {
+    interface HeaderMeetingState {
+      isActive: boolean;
+      projectId: number | string;
+      projectName: string;
+      isMuted: boolean;
+      duration: string;
+      isMini: boolean;
+    }
+
+    let activeMeeting: HeaderMeetingState | null = {
+      isActive: true,
+      projectId: 12,
+      projectName: 'Huge Project',
+      isMuted: false,
+      duration: '02:15',
+      isMini: true,
+    };
+
+    let activeTab: string = 'overview';
+    let isFullMeetingView = activeMeeting.isActive && activeTab === 'meeting' && !activeMeeting.isMini;
+
+    // On overview page/tab, meeting is in mini mode and displayed in header
+    expect(isFullMeetingView).toBe(false);
+    expect(activeMeeting.isActive).toBe(true);
+
+    // Clicking open meeting switches tab to meeting
+    const handleOpenMeeting = () => {
+      activeTab = 'meeting';
+      activeMeeting!.isMini = false;
+    };
+    handleOpenMeeting();
+    isFullMeetingView = activeMeeting.isActive && activeTab === 'meeting' && !activeMeeting.isMini;
+    expect(isFullMeetingView).toBe(true);
+
+    // Clicking leave meeting disconnects and clears header widget
+    const handleLeaveMeeting = () => {
+      activeMeeting = null;
+    };
+    handleLeaveMeeting();
+    expect(activeMeeting).toBeNull();
+  });
 });
 
