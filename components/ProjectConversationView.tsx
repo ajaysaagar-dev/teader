@@ -85,8 +85,7 @@ export function ProjectConversationView({
   const [searchMember, setSearchMember] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
 
-  // Sidebar Toggles for responsive drawer alignment
-  const [showChannelsSidebar, setShowChannelsSidebar] = useState(false);
+  // Sidebar Toggles for member sidebar
   const [showMembersSidebar, setShowMembersSidebar] = useState(false);
 
   // Channel Creation Modal State
@@ -368,18 +367,9 @@ export function ProjectConversationView({
 
   return (
     <div className="relative flex flex-1 h-full min-h-0 w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
-      {/* ─── Collapsible / Slide-Out Left Channels Sidebar ──────────── */}
-      {showChannelsSidebar && (
-        <div
-          onClick={() => setShowChannelsSidebar(false)}
-          className="absolute inset-0 z-30 bg-black/50 backdrop-blur-xs transition-opacity"
-        />
-      )}
-
+      {/* ─── Left Channels Sidebar (Always Shown) ──────────── */}
       <aside
-        className={`absolute inset-y-0 left-0 z-30 w-64 bg-[#111215] border-r border-[#222428] flex flex-col justify-between select-none shadow-2xl transition-transform duration-200 ease-in-out ${
-          showChannelsSidebar ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className="w-56 sm:w-64 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between select-none h-full min-h-0"
       >
         <div className="flex flex-col h-full min-h-0">
           <div className="p-3.5 border-b border-[#222428] flex items-center justify-between">
@@ -391,23 +381,15 @@ export function ProjectConversationView({
               <span className="text-[10px] font-mono text-[#787C83]">({channels.length})</span>
             </div>
 
-            <div className="flex items-center gap-1">
-              {isUserAdmin && (
-                <button
-                  onClick={() => setIsNewChannelModalOpen(true)}
-                  className="p-1 rounded-md text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors cursor-pointer"
-                  title="Create Channel (Admin Only)"
-                >
-                  <Plus size={14} />
-                </button>
-              )}
+            {isUserAdmin && (
               <button
-                onClick={() => setShowChannelsSidebar(false)}
-                className="p-1 rounded-md text-[#787C83] hover:text-white hover:bg-[#1E2024] transition-colors cursor-pointer"
+                onClick={() => setIsNewChannelModalOpen(true)}
+                className="p-1 rounded-md text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors cursor-pointer"
+                title="Create Channel (Admin Only)"
               >
-                <X size={14} />
+                <Plus size={14} />
               </button>
-            </div>
+            )}
           </div>
 
           <div className="flex-1 p-2 space-y-1 overflow-y-auto custom-scrollbar">
@@ -420,7 +402,6 @@ export function ProjectConversationView({
                   <button
                     onClick={() => {
                       setActiveChannel(ch.name);
-                      setShowChannelsSidebar(false);
                     }}
                     className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left truncate cursor-pointer ${
                       isActive
@@ -572,17 +553,12 @@ export function ProjectConversationView({
       <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#0E0F12]">
         {/* Modern Header Banner */}
         <div className="h-12 px-3 sm:px-4 border-b border-[#222428] bg-[#111215]/90 backdrop-blur flex items-center justify-between shrink-0 gap-2">
-          {/* Channel Selector Pill Button */}
+          {/* Active Channel Display */}
           <div className="flex items-center gap-2 min-w-0">
-            <button
-              onClick={() => setShowChannelsSidebar(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#17181C] hover:bg-[#202227] border border-[#2A2C30] hover:border-[#DCB001]/40 text-white font-bold text-xs transition-colors cursor-pointer shrink-0"
-              title="View all channels"
-            >
-              <Hash size={13} className="text-[#DCB001]" />
-              <span className="truncate max-w-[120px] sm:max-w-[160px]">{activeChannelObj.name}</span>
-              <ChevronDown size={12} className="text-[#787C83]" />
-            </button>
+            <div className="flex items-center gap-1.5 px-2 py-1 text-white font-bold text-xs shrink-0">
+              <Hash size={14} className="text-[#DCB001]" />
+              <span className="truncate max-w-[140px] sm:max-w-[220px]">{activeChannelObj.name}</span>
+            </div>
 
             {activeChannelObj.desc && (
               <span className="text-[11px] text-[#787C83] truncate hidden sm:inline" title={activeChannelObj.desc}>
