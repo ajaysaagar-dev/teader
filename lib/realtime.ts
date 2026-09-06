@@ -24,7 +24,11 @@ export type RealtimeEventType =
   | 'DOCS_REORDERED'
   | 'CHART_CREATED'
   | 'CHART_UPDATED'
-  | 'CHART_DELETED';
+  | 'CHART_DELETED'
+  | 'MEETING_SIGNAL'
+  | 'MEETING_JOINED'
+  | 'MEETING_LEFT'
+  | 'MEETING_STATE';
 
 export interface RealtimeEvent<T = any> {
   type: RealtimeEventType;
