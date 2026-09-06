@@ -635,31 +635,25 @@ export function ProjectConversationView({
                     </div>
                   )}
 
-                  {/* Message Row with Proper Alignment */}
-                  <div
-                    className={`flex items-end gap-2 group/msg ${
-                      isMe ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    {/* Teammate Avatar (Left Side Only) */}
-                    {!isMe && (
-                      <Avatar
-                        user={{ id: msg.userId, name: msg.userName, avatar: msg.userAvatar }}
-                        size="sm"
-                        className="rounded-lg mb-0.5 shrink-0"
-                      />
-                    )}
+                  {/* Message Row - All Left Aligned */}
+                  <div className="flex items-start gap-2.5 group/msg justify-start">
+                    {/* Author Avatar (Always on Left) */}
+                    <Avatar
+                      user={{
+                        id: msg.userId || (isMe ? currentUser?.id : undefined),
+                        name: isMe ? (currentUser?.name || msg.userName) : msg.userName,
+                        avatar: isMe ? (msg.userAvatar || currentUser?.avatar) : msg.userAvatar,
+                      }}
+                      size="sm"
+                      className={`rounded-lg mt-0.5 shrink-0 ${isMe ? 'ring-1 ring-[#DCB001]/40' : ''}`}
+                    />
 
                     {/* Message Bubble Container */}
-                    <div
-                      className={`flex flex-col min-w-0 max-w-[86%] sm:max-w-[78%] ${
-                        isMe ? 'items-end' : 'items-start'
-                      }`}
-                    >
+                    <div className="flex flex-col min-w-0 max-w-[88%] sm:max-w-[80%] items-start">
                       {/* Sender Info & Role Badge */}
                       <div className="flex items-center gap-1.5 px-1 mb-1 select-none">
-                        <span className="text-[11px] font-bold text-white truncate">
-                          {isMe ? 'You' : msg.userName}
+                        <span className={`text-[11px] font-bold truncate ${isMe ? 'text-[#DCB001]' : 'text-white'}`}>
+                          {isMe ? `${currentUser?.name || msg.userName} (You)` : msg.userName}
                         </span>
 
                         {isOwner && (
@@ -688,17 +682,15 @@ export function ProjectConversationView({
                       <div
                         className={`relative px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                           isMe
-                            ? 'bg-[#DCB001]/15 text-white border border-[#DCB001]/35 rounded-br-xs'
-                            : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-bl-xs'
+                            ? 'bg-[#DCB001]/10 text-white border border-[#DCB001]/30 rounded-tl-xs'
+                            : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-tl-xs'
                         }`}
                       >
                         {msg.content}
 
                         {/* Hover Action Menu */}
                         <div
-                          className={`absolute top-1 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#111215]/95 border border-[#2A2C30] rounded-lg p-0.5 shadow-md ${
-                            isMe ? 'right-full mr-1.5' : 'left-full ml-1.5'
-                          }`}
+                          className="absolute top-1 left-full ml-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#111215]/95 border border-[#2A2C30] rounded-lg p-0.5 shadow-md z-10"
                         >
                           <button
                             onClick={() => {
@@ -723,15 +715,6 @@ export function ProjectConversationView({
                         </div>
                       </div>
                     </div>
-
-                    {/* Current User Avatar (Right Side) */}
-                    {isMe && (
-                      <Avatar
-                        user={{ id: msg.userId || currentUser?.id, name: currentUser?.name || msg.userName, avatar: msg.userAvatar || currentUser?.avatar }}
-                        size="sm"
-                        className="rounded-lg mb-0.5 shrink-0 ring-1 ring-[#DCB001]/40"
-                      />
-                    )}
                   </div>
                 </React.Fragment>
               );

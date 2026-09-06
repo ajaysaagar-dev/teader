@@ -1837,22 +1837,22 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
             return (
               <div
-                className={`grid gap-4 w-full h-full auto-rows-fr ${
+                className={`grid gap-4 w-full h-full min-h-full auto-rows-fr ${
                   hasAnyScreenShare
                     ? participants.length === 1
-                      ? 'grid-cols-1 max-w-5xl mx-auto'
+                      ? 'grid-cols-1'
                       : participants.length === 2
-                      ? 'grid-cols-1 lg:grid-cols-2 max-w-6xl mx-auto'
+                      ? 'grid-cols-1 lg:grid-cols-2'
                       : participants.length <= 4
-                      ? 'grid-cols-1 sm:grid-cols-2 max-w-6xl mx-auto'
-                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto'
+                      ? 'grid-cols-1 sm:grid-cols-2'
+                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                     : participants.length === 1
-                    ? 'grid-cols-1 max-w-lg mx-auto'
+                    ? 'grid-cols-1'
                     : participants.length === 2
-                    ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
+                    ? 'grid-cols-1 sm:grid-cols-2'
                     : participants.length <= 4
-                    ? 'grid-cols-2 max-w-4xl mx-auto'
-                    : 'grid-cols-2 md:grid-cols-3 max-w-6xl mx-auto'
+                    ? 'grid-cols-1 sm:grid-cols-2'
+                    : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
                 }`}
               >
                 {participants.map((p) => {
@@ -1867,10 +1867,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                           setFullscreenParticipant(p);
                         }
                       }}
-                      className={`relative rounded-2xl bg-[#121317] border transition-all duration-200 flex flex-col shadow-xl overflow-hidden ${
+                      className={`relative rounded-2xl bg-[#121317] border transition-all duration-200 flex flex-col shadow-xl overflow-hidden w-full h-full ${
                         isSharingThisScreen
-                          ? 'cursor-pointer hover:border-[#DCB001]/50 min-h-[260px] aspect-video'
-                          : 'items-center justify-center p-6 min-h-[220px]'
+                          ? 'cursor-pointer hover:border-[#DCB001]/50 min-h-[260px]'
+                          : 'items-center justify-center p-6 sm:p-8 min-h-[220px]'
                       } ${
                         speaking
                           ? 'border-[#22C55E] ring-4 ring-[#22C55E]/20 shadow-[0_0_24px_rgba(34,197,94,0.2)]'
@@ -1984,20 +1984,24 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                       ) : (
                         <>
                           {/* Avatar */}
-                          <div className="relative mb-3.5">
+                          <div className="relative mb-5 flex items-center justify-center">
                             <div
-                              className={`w-20 h-20 rounded-full flex items-center justify-center overflow-hidden font-bold text-xl uppercase transition-all duration-200 ${
+                              className={`w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 shadow-2xl ${
                                 speaking
                                   ? 'ring-4 ring-[#22C55E] ring-offset-4 ring-offset-[#121317] scale-105'
                                   : 'ring-2 ring-[#2B2D35]'
                               }`}
                             >
-                              <Avatar user={{ name: p.name, avatar: p.avatar }} className="w-20 h-20 text-2xl font-bold font-mono" />
+                              <Avatar
+                                user={{ name: p.name, avatar: p.avatar }}
+                                size="full"
+                                className="w-full h-full text-4xl sm:text-5xl md:text-6xl font-bold font-mono"
+                              />
                             </div>
 
                             {/* Mic badge */}
                             <div
-                              className={`absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#121317] shadow-md ${
+                              className={`absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border-2 border-[#121317] shadow-lg ${
                                 p.isMuted
                                   ? 'bg-red-500 text-white'
                                   : speaking
@@ -2005,17 +2009,17 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                                   : 'bg-[#1F2128] text-[#8E939D]'
                               }`}
                             >
-                              {p.isMuted ? <MicOff size={11} /> : <Mic size={11} />}
+                              {p.isMuted ? <MicOff size={14} /> : <Mic size={14} />}
                             </div>
                           </div>
 
                           {/* Name & Role Badges */}
-                          <div className="flex items-center gap-1.5 mb-1 z-10">
-                            <span className="font-semibold text-sm text-white tracking-tight">
+                          <div className="flex items-center gap-2 mb-1.5 z-10">
+                            <span className="font-bold text-base sm:text-xl text-white tracking-tight">
                               {p.name}
                             </span>
                             {p.isLocal && (
-                              <span className="px-1.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-mono text-[9px] font-bold border border-[#DCB001]/30">
+                              <span className="px-2 py-0.5 rounded-md bg-[#DCB001]/20 text-[#DCB001] font-mono text-[10px] sm:text-xs font-bold border border-[#DCB001]/30">
                                 YOU
                               </span>
                             )}
