@@ -93,6 +93,17 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // Participants & Remote Streams Map
   const [participants, setParticipants] = useState<MeetingParticipant[]>([]);
   const [remoteSpeaking, setRemoteSpeaking] = useState<Record<string, boolean>>({});
+  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
+
+  // Synchronized Ref values to avoid stale closures in listeners/heartbeats
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
+  const isDeafenedRef = useRef(isDeafened);
+  isDeafenedRef.current = isDeafened;
+  const localSpeakingRef = useRef(localSpeaking);
+  localSpeakingRef.current = localSpeaking;
+  const selectedOutputIdRef = useRef(selectedOutputId);
+  selectedOutputIdRef.current = selectedOutputId;
 
   // Audio References
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -107,6 +118,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const pendingIceCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
   const seenCandidatesRef = useRef<Map<string, Set<string>>>(new Map());
   const isMakingOfferRef = useRef<Map<string, boolean>>(new Map());
+  const lastProcessedOfferRef = useRef<Map<string, string>>(new Map());
+  const lastProcessedAnswerRef = useRef<Map<string, string>>(new Map());
 
   // Meeting timer
   useEffect(() => {
@@ -230,6 +243,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // ── Ensure Remote Audio Element is Audible & Playing ──
   const ensureRemoteAudioPlaying = useCallback(
     (remotePeerId: string, remoteStream: MediaStream) => {
+      setRemoteStreams((prev) => ({ ...prev, [remotePeerId]: remoteStream }));
+
+      remoteStream.getAudioTracks().forEach((track) => {
+        track.enabled = true;
+      });
+
       let audioElem = remoteAudioElementsRef.current.get(remotePeerId);
       if (!audioElem) {
         audioElem = document.createElement('audio');
@@ -244,10 +263,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       if (audioElem.srcObject !== remoteStream) {
         audioElem.srcObject = remoteStream;
       }
-      audioElem.muted = isDeafened;
+      audioElem.muted = isDeafenedRef.current;
 
-      if (selectedOutputId && typeof (audioElem as any).setSinkId === 'function') {
-        (audioElem as any).setSinkId(selectedOutputId).catch(() => {});
+      if (selectedOutputIdRef.current && typeof (audioElem as any).setSinkId === 'function') {
+        (audioElem as any).setSinkId(selectedOutputIdRef.current).catch(() => {});
       }
 
       const attemptPlay = () => {
@@ -261,25 +280,27 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       attemptPlay();
 
       remoteStream.getAudioTracks().forEach((track) => {
-        track.enabled = true;
         track.onunmute = () => attemptPlay();
       });
 
       // Attach Web Audio Analyser to monitor remote speaker volume
       try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const remoteCtx = new AudioContextClass();
-        if (remoteCtx.state === 'suspended') {
-          remoteCtx.resume().catch(() => {});
+        let existing = remoteAnalysersRef.current.get(remotePeerId);
+        if (!existing) {
+          const remoteCtx = new AudioContextClass();
+          if (remoteCtx.state === 'suspended') {
+            remoteCtx.resume().catch(() => {});
+          }
+          const remoteSource = remoteCtx.createMediaStreamSource(remoteStream);
+          const remoteAnalyser = remoteCtx.createAnalyser();
+          remoteAnalyser.fftSize = 128;
+          remoteSource.connect(remoteAnalyser);
+          remoteAnalysersRef.current.set(remotePeerId, { ctx: remoteCtx, analyser: remoteAnalyser });
         }
-        const remoteSource = remoteCtx.createMediaStreamSource(remoteStream);
-        const remoteAnalyser = remoteCtx.createAnalyser();
-        remoteAnalyser.fftSize = 128;
-        remoteSource.connect(remoteAnalyser);
-        remoteAnalysersRef.current.set(remotePeerId, { ctx: remoteCtx, analyser: remoteAnalyser });
       } catch {}
     },
-    [isDeafened, selectedOutputId]
+    []
   );
 
   // ── 3. Create or Get Peer Connection ──
@@ -295,7 +316,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       // Add local audio tracks if available, or add receive-only transceiver
       if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
         localStreamRef.current.getTracks().forEach((track) => {
-          pc.addTrack(track, localStreamRef.current!);
+          const senders = pc.getSenders();
+          if (!senders.some((s) => s.track === track)) {
+            pc.addTrack(track, localStreamRef.current!);
+          }
         });
       } else {
         try {
@@ -327,6 +351,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           remoteAnalysersRef.current.delete(remotePeerId);
           pendingIceCandidatesRef.current.delete(remotePeerId);
           seenCandidatesRef.current.delete(remotePeerId);
+          lastProcessedOfferRef.current.delete(remotePeerId);
+          lastProcessedAnswerRef.current.delete(remotePeerId);
+          setRemoteStreams((prev) => {
+            const next = { ...prev };
+            delete next[remotePeerId];
+            return next;
+          });
         }
       };
 
@@ -501,6 +532,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         // ── Offer Handling with Perfect Negotiation (Resolves Glare) ──
         if (signalType === 'offer') {
           try {
+            if (!data || !data.sdp) return;
+            // Prevent duplicate offers from triggering renegotiation
+            if (lastProcessedOfferRef.current.get(fromPeerId) === data.sdp) {
+              return;
+            }
+            lastProcessedOfferRef.current.set(fromPeerId, data.sdp);
+
             const isPolite = localPeerId.localeCompare(fromPeerId) > 0;
             const isMakingOffer = isMakingOfferRef.current.get(fromPeerId) || false;
             const offerCollision = isMakingOffer || pc.signalingState !== 'stable';
@@ -521,13 +559,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             await drainIceCandidates(fromPeerId, pc);
 
             // Ensure our local audio tracks are attached
-            if (localStreamRef.current) {
-              localStreamRef.current.getTracks().forEach((track) => {
-                const senders = pc.getSenders();
-                if (!senders.some((s) => s.track === track)) {
-                  pc.addTrack(track, localStreamRef.current!);
-                }
-              });
+            if (localStreamRef.current && localStreamRef.current.getAudioTracks().length > 0) {
+              const audioTrack = localStreamRef.current.getAudioTracks()[0];
+              const senders = pc.getSenders();
+              const sender = senders.find((s) => s.track && s.track.kind === 'audio');
+              if (sender) {
+                await sender.replaceTrack(audioTrack);
+              } else {
+                pc.addTrack(audioTrack, localStreamRef.current);
+              }
             }
 
             const answer = await pc.createAnswer();
@@ -541,6 +581,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         // ── Answer Handling ──
         else if (signalType === 'answer') {
           try {
+            if (!data || !data.sdp) return;
+            // Prevent duplicate answers
+            if (lastProcessedAnswerRef.current.get(fromPeerId) === data.sdp) {
+              return;
+            }
+            lastProcessedAnswerRef.current.set(fromPeerId, data.sdp);
+
             if (pc.signalingState === 'have-local-offer') {
               await pc.setRemoteDescription(new RTCSessionDescription(data));
               await drainIceCandidates(fromPeerId, pc);
@@ -593,6 +640,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         }
         if (Array.isArray(updatedList)) {
           setParticipants(updatedList);
+        } else if (participant && participant.peerId !== localPeerId) {
+          setParticipants((prev) => {
+            if (prev.some((p) => p.peerId === participant.peerId)) return prev;
+            return [...prev, participant];
+          });
         }
       }
 
@@ -613,9 +665,18 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           remoteAnalysersRef.current.delete(leftPeerId);
           pendingIceCandidatesRef.current.delete(leftPeerId);
           seenCandidatesRef.current.delete(leftPeerId);
+          lastProcessedOfferRef.current.delete(leftPeerId);
+          lastProcessedAnswerRef.current.delete(leftPeerId);
+          setRemoteStreams((prev) => {
+            const next = { ...prev };
+            delete next[leftPeerId];
+            return next;
+          });
         }
         if (Array.isArray(updatedList)) {
           setParticipants(updatedList);
+        } else if (leftPeerId) {
+          setParticipants((prev) => prev.filter((p) => p.peerId !== leftPeerId));
         }
       }
 
@@ -643,6 +704,44 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     projectId,
     onEvent: handleRealtimeMeetingEvent,
   });
+
+  // ── Instant Leave Broadcast & Server Notification ──
+  const performLeave = useCallback(
+    (isUnloading = false) => {
+      // 1. Instantly broadcast left event across all browser tabs
+      publishClientRealtimeEvent({
+        type: 'MEETING_LEFT',
+        projectId,
+        payload: {
+          peerId: localPeerId,
+          userId: currentUser?.id,
+        },
+        senderSessionId: localPeerId,
+      });
+
+      // 2. Inform server via beacon (if unloading) or fetch with keepalive
+      const leaveBody = JSON.stringify({
+        action: 'leave',
+        peerId: localPeerId,
+      });
+
+      if (isUnloading && typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        try {
+          const blob = new Blob([leaveBody], { type: 'application/json' });
+          navigator.sendBeacon(`/api/projects/${projectId}/meeting`, blob);
+          return;
+        } catch {}
+      }
+
+      fetch(`/api/projects/${projectId}/meeting`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: leaveBody,
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [currentUser?.id, localPeerId, projectId]
+  );
 
   // ── 7. Join Room on Mount & Start Heartbeat ──
   useEffect(() => {
@@ -687,36 +786,43 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
     startMeetingSession();
 
-    // Periodic Heartbeat
+    // Periodic Heartbeat every 8s to keep presence active and reconcile state
     const heartbeat = setInterval(async () => {
       try {
-        await fetch(`/api/projects/${projectId}/meeting`, {
+        const res = await fetch(`/api/projects/${projectId}/meeting`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'heartbeat',
             peerId: localPeerId,
-            isMuted,
-            isDeafened,
-            isSpeaking: localSpeaking,
+            isMuted: isMutedRef.current,
+            isDeafened: isDeafenedRef.current,
+            isSpeaking: localSpeakingRef.current,
           }),
         });
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json.participants)) {
+            setParticipants(json.participants);
+          }
+        }
       } catch {}
-    }, 12000);
+    }, 8000);
+
+    const handleUnload = () => {
+      performLeave(true);
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+    window.addEventListener('pagehide', handleUnload);
 
     return () => {
       isCancelled = true;
       clearInterval(heartbeat);
+      window.removeEventListener('beforeunload', handleUnload);
+      window.removeEventListener('pagehide', handleUnload);
 
-      // Leave meeting cleanup
-      fetch(`/api/projects/${projectId}/meeting`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'leave',
-          peerId: localPeerId,
-        }),
-      }).catch(() => {});
+      performLeave(false);
 
       // Close all peer connections
       peerConnectionsRef.current.forEach((pc) => pc.close());
@@ -725,6 +831,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       // Remove audio elements
       remoteAudioElementsRef.current.forEach((el) => el.remove());
       remoteAudioElementsRef.current.clear();
+      remoteAnalysersRef.current.clear();
 
       // Stop local microphone tracks
       if (localStreamRef.current) {
@@ -732,7 +839,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       }
       if (localVolumeIntervalRef.current) clearInterval(localVolumeIntervalRef.current);
     };
-  }, [initLocalAudio, initiateOfferToPeer, localPeerId, projectId]);
+  }, [initLocalAudio, initiateOfferToPeer, localPeerId, performLeave, projectId]);
 
   // ── 7. Microphone Device Switching ──
   const handleSwitchMic = async (deviceId: string) => {
@@ -744,6 +851,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // ── 8. Speaker / Output Device Switching ──
   const handleSwitchSpeaker = async (deviceId: string) => {
     setSelectedOutputId(deviceId);
+    selectedOutputIdRef.current = deviceId;
     remoteAudioElementsRef.current.forEach((audio) => {
       if (typeof (audio as any).setSinkId === 'function') {
         (audio as any).setSinkId(deviceId).catch((err: any) => {
@@ -758,6 +866,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const handleToggleMute = () => {
     const nextMuted = !isMuted;
     setIsMuted(nextMuted);
+    isMutedRef.current = nextMuted;
 
     if (localStreamRef.current) {
       localStreamRef.current.getAudioTracks().forEach((t) => {
@@ -783,6 +892,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const handleToggleDeafen = () => {
     const nextDeafen = !isDeafened;
     setIsDeafened(nextDeafen);
+    isDeafenedRef.current = nextDeafen;
 
     remoteAudioElementsRef.current.forEach((audio) => {
       audio.muted = nextDeafen;
@@ -793,6 +903,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
   // ── 11. Leave Meeting ──
   const handleLeaveCall = () => {
+    performLeave(false);
     if (onLeaveMeeting) {
       onLeaveMeeting();
     } else {
@@ -1139,6 +1250,34 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <PhoneOff size={16} />
             <span>Leave Call</span>
           </button>
+        </div>
+
+        {/* ── Hidden Audio Players for Remote Participants in React DOM ── */}
+        <div className="hidden" aria-hidden="true">
+          {renderedParticipants
+            .filter((p) => p.peerId !== localPeerId)
+            .map((p) => (
+              <audio
+                key={p.peerId}
+                id={`audio_elem_${p.peerId}`}
+                autoPlay
+                playsInline
+                muted={isDeafened}
+                ref={(el) => {
+                  if (el) {
+                    remoteAudioElementsRef.current.set(p.peerId, el);
+                    const stream = remoteStreams[p.peerId];
+                    if (stream && el.srcObject !== stream) {
+                      el.srcObject = stream;
+                      el.play().catch(() => setAutoplayBlocked(true));
+                    }
+                    if (selectedOutputId && typeof (el as any).setSinkId === 'function') {
+                      (el as any).setSinkId(selectedOutputId).catch(() => {});
+                    }
+                  }
+                }}
+              />
+            ))}
         </div>
       </div>
     </div>

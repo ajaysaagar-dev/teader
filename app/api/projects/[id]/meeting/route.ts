@@ -35,13 +35,32 @@ function getRoom(projectId: string | number): Map<string, MeetingParticipant> {
   return projectMeetingRooms.get(key)!;
 }
 
-function pruneInactive(room: Map<string, MeetingParticipant>): MeetingParticipant[] {
-  const cutoff = Date.now() - 35000;
+function pruneInactive(room: Map<string, MeetingParticipant>, projectId?: string | number): MeetingParticipant[] {
+  const cutoff = Date.now() - 25000;
+  const pruned: MeetingParticipant[] = [];
   for (const [peerId, p] of room.entries()) {
     if (p.lastSeen < cutoff) {
       room.delete(peerId);
+      pruned.push(p);
     }
   }
+
+  if (pruned.length > 0 && projectId) {
+    const remaining = Array.from(room.values());
+    for (const p of pruned) {
+      broadcastRealtimeEvent({
+        type: 'MEETING_LEFT',
+        projectId: String(projectId),
+        payload: {
+          peerId: p.peerId,
+          userId: p.userId,
+          participants: remaining,
+        },
+        senderSessionId: 'system',
+      }).catch(() => {});
+    }
+  }
+
   return Array.from(room.values());
 }
 
@@ -63,7 +82,7 @@ export async function GET(
     }
 
     const room = getRoom(projectId);
-    const participants = pruneInactive(room);
+    const participants = pruneInactive(room, projectId);
 
     return NextResponse.json({
       success: true,
@@ -117,7 +136,7 @@ export async function POST(
       };
 
       room.set(peerId, participant);
-      const participants = pruneInactive(room);
+      const participants = pruneInactive(room, projectId);
 
       // Broadcast join to project
       await broadcastRealtimeEvent({
@@ -140,7 +159,7 @@ export async function POST(
     if (action === 'leave') {
       const removed = room.get(peerId);
       room.delete(peerId);
-      const participants = pruneInactive(room);
+      const participants = pruneInactive(room, projectId);
 
       if (removed) {
         await broadcastRealtimeEvent({
@@ -163,13 +182,12 @@ export async function POST(
     }
 
     if (action === 'state' || action === 'heartbeat') {
-      const existing = room.get(peerId);
+      let existing = room.get(peerId);
       if (existing) {
         existing.lastSeen = Date.now();
         if (typeof isMuted === 'boolean') existing.isMuted = isMuted;
         if (typeof isDeafened === 'boolean') existing.isDeafened = isDeafened;
         if (typeof isSpeaking === 'boolean') existing.isSpeaking = isSpeaking;
-
         room.set(peerId, existing);
 
         if (action === 'state') {
@@ -186,9 +204,24 @@ export async function POST(
             senderSessionId: peerId,
           });
         }
+      } else if (action === 'heartbeat') {
+        // Self-heal participant registration if missing
+        existing = {
+          peerId,
+          userId: session.id,
+          userName: session.name || session.email || 'Collaborator',
+          userAvatar: session.avatar || '',
+          userEmail: session.email || '',
+          isMuted: isMuted ?? false,
+          isDeafened: isDeafened ?? false,
+          isSpeaking: isSpeaking ?? false,
+          joinedAt: Date.now(),
+          lastSeen: Date.now(),
+        };
+        room.set(peerId, existing);
       }
 
-      const participants = pruneInactive(room);
+      const participants = pruneInactive(room, projectId);
       return NextResponse.json({
         success: true,
         participant: existing || null,

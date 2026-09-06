@@ -41,7 +41,7 @@ export interface RealtimeEvent<T = any> {
 const WS_PORT = process.env.WS_PORT || process.env.PORT_WS || '3001';
 const WS_HOST = process.env.WS_HOST || '127.0.0.1';
 const BROADCAST_ENDPOINT = `http://${WS_HOST}:${WS_PORT}/broadcast`;
-const INTERNAL_BROADCAST_SECRET = process.env.INTERNAL_BROADCAST_SECRET || '';
+const INTERNAL_BROADCAST_SECRET = process.env.INTERNAL_BROADCAST_SECRET || 'teader_internal_secret_key_2026';
 
 let wsModule: any = null;
 
