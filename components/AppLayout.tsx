@@ -178,7 +178,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
+    <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
       {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
       <header className="h-12 px-4 bg-[var(--bg-header)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-40">
         {/* Top Left: Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
@@ -297,7 +297,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </div>
 
       ) : !currentUser ? null : (
-        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none">
           {children}
         </main>
       )}

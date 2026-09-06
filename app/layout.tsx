@@ -48,6 +48,10 @@ export const viewport: Viewport = {
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {
@@ -131,7 +135,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${sora.variable} h-full w-full antialiased dark`}
+      className={`${inter.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${sora.variable} h-full h-[100dvh] w-full overflow-hidden overscroll-none antialiased dark`}
     >
       <head>
         {/* Structured Data JSON-LD */}
@@ -152,7 +156,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
-      <body className="min-h-full w-full bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">
+      <body className="h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">
         <ConsoleBranding />
         {children}
 
