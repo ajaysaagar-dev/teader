@@ -48,7 +48,8 @@ import {
   Trash2,
   AlertTriangle,
   Settings,
-  Workflow
+  Workflow,
+  Radio
 } from 'lucide-react';
 
 
@@ -90,6 +91,10 @@ const ProjectDocsView = dynamic(
 );
 const ProjectChartsView = dynamic(
   () => import('@/components/ProjectChartsView').then((m) => ({ default: m.ProjectChartsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
+const ProjectMeetingView = dynamic(
+  () => import('@/components/ProjectMeetingView').then((m) => ({ default: m.ProjectMeetingView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
 const ConversationDrawer = dynamic(
@@ -137,12 +142,13 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'history' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'history' | 'settings';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
   if (!view) return 'overview';
   const v = String(view).toLowerCase();
+  if (v === 'meeting' || v === 'call' || v === 'audio' || v === 'voice' || v === 'conference' || v === 'huddle') return 'meeting';
   if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow' || v === 'whiteboard') return 'charts';
   if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
@@ -1884,6 +1890,19 @@ export default function SingleProjectPage() {
             </button>
 
             <button
+              onClick={() => handleTabSwitch('meeting')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'meeting'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Group Audio Meeting & Voice Call"
+            >
+              <Radio size={13} className={activeTab === 'meeting' ? 'text-[#22C55E] animate-pulse' : ''} />
+              <span>Meeting</span>
+            </button>
+
+            <button
               onClick={() => handleTabSwitch('history')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                 activeTab === 'history'
@@ -1953,6 +1972,15 @@ export default function SingleProjectPage() {
                 projectId={project?.id || projectIdParam || 1}
                 projectName={project?.name}
                 projectKey={project?.key}
+              />
+            </div>
+          ) : activeTab === 'meeting' ? (
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
+              <ProjectMeetingView
+                projectId={project?.id || projectIdParam || 1}
+                projectName={project?.name || 'Project'}
+                currentUser={currentUser}
+                onLeaveMeeting={() => handleTabSwitch('overview')}
               />
             </div>
           ) : activeTab === 'history' ? (
