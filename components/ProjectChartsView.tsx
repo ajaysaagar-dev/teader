@@ -172,6 +172,17 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [editingElementId, setEditingElementId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
+  const editingElementIdRef = useRef<string | null>(null);
+  const editingTextRef = useRef<string>('');
+
+  useEffect(() => {
+    editingElementIdRef.current = editingElementId;
+  }, [editingElementId]);
+
+  useEffect(() => {
+    editingTextRef.current = editingText;
+  }, [editingText]);
+
   const [activeTool, setActiveTool] = useState<'select' | 'link' | 'pan'>('select');
 
   // Interactive interaction refs and state
@@ -585,24 +596,73 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     [activeChartId, projectId, viewport]
   );
 
-  // Commit text to element (triggered on Enter button click or keyboard Enter)
+  // Commit text to element (triggered on click anywhere, blur, Set Text click, or keyboard Enter)
+  const commitCurrentEditingText = useCallback(() => {
+    const currentId = editingElementIdRef.current;
+    if (!currentId) return;
+
+    const textToSave = editingTextRef.current;
+    const currentElements = elementsRef.current;
+    const currentConnections = connectionsRef.current;
+
+    const targetElem = currentElements.find((el) => el.id === currentId);
+    const nextElements = currentElements.map((el) =>
+      el.id === currentId ? { ...el, text: textToSave } : el
+    );
+
+    elementsRef.current = nextElements;
+    setElements(nextElements);
+    editingElementIdRef.current = null;
+    setEditingElementId(null);
+
+    // Save and push history if changed
+    if (!targetElem || targetElem.text !== textToSave) {
+      pushHistory(nextElements, currentConnections);
+      syncLocalChanges(nextElements, currentConnections);
+      toast.success('Text saved to element');
+    }
+  }, [pushHistory, syncLocalChanges]);
+
   const handleCommitElementText = useCallback(
-    (elemId: string, textToCommit: string) => {
-      const nextElements = elements.map((el) =>
-        el.id === elemId ? { ...el, text: textToCommit } : el
-      );
-      setElements(nextElements);
-      setEditingElementId(null);
-      pushHistory(nextElements, connections);
-      syncLocalChanges(nextElements, connections);
-      toast.success('Text set to element');
+    (elemId?: string, textToCommit?: string) => {
+      if (textToCommit !== undefined) {
+        editingTextRef.current = textToCommit;
+      }
+      if (elemId && editingElementIdRef.current !== elemId) {
+        editingElementIdRef.current = elemId;
+      }
+      commitCurrentEditingText();
     },
-    [connections, elements, pushHistory, syncLocalChanges]
+    [commitCurrentEditingText]
   );
+
+  // Global listener: clicking anywhere outside the active editing textarea automatically commits and saves the text
+  useEffect(() => {
+    const handleGlobalPointerDown = (e: MouseEvent | TouchEvent) => {
+      if (!editingElementIdRef.current) return;
+
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('[data-chart-editing-box="true"]')) {
+        return;
+      }
+
+      commitCurrentEditingText();
+    };
+
+    window.addEventListener('mousedown', handleGlobalPointerDown, true);
+    window.addEventListener('touchstart', handleGlobalPointerDown, true);
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalPointerDown, true);
+      window.removeEventListener('touchstart', handleGlobalPointerDown, true);
+    };
+  }, [commitCurrentEditingText]);
 
   // Switch to a chart tab
   const handleSelectChart = useCallback(
     (chartId: string) => {
+      if (editingElementIdRef.current) {
+        commitCurrentEditingText();
+      }
       if (chartId === activeChartId) return;
 
       setOpenChartIds((prev) => {
@@ -1145,9 +1205,12 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     // Left-click (0) or middle-click (1) on empty canvas area initiates drag-to-pan
     if (e.button !== 0 && e.button !== 1) return;
 
+    if (editingElementIdRef.current) {
+      commitCurrentEditingText();
+    }
+
     setSelectedElementIds([]);
     setSelectedConnectionId(null);
-    setEditingElementId(null);
 
     // Click & hold on any empty area of the canvas allows drag to pan
     isPanningRef.current = true;
@@ -1380,6 +1443,9 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
   // ── Element Drag Start ──
   const handleElementMouseDown = (e: React.MouseEvent, elemId: string) => {
+    if (editingElementIdRef.current && editingElementIdRef.current !== elemId) {
+      commitCurrentEditingText();
+    }
     e.stopPropagation();
 
     // If linking mode is active and we clicked another element, create connection
@@ -2330,31 +2396,38 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         className="w-full h-full flex items-center justify-center z-10 select-none pointer-events-auto"
                       >
                         {isEditing ? (
-                          <div className="w-full h-full relative flex items-center justify-center pointer-events-auto">
+                          <div
+                            data-chart-editing-box="true"
+                            className="w-full h-full relative flex items-center justify-center pointer-events-auto"
+                          >
                             <textarea
                               autoFocus
                               value={editingText}
-                              onChange={(e) => setEditingText(e.target.value)}
+                              onChange={(e) => {
+                                setEditingText(e.target.value);
+                                editingTextRef.current = e.target.value;
+                              }}
                               onFocus={(e) => e.currentTarget.select()}
                               onBlur={() => {
-                                handleCommitElementText(elem.id, editingText);
+                                commitCurrentEditingText();
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                   e.preventDefault();
-                                  handleCommitElementText(elem.id, editingText);
+                                  commitCurrentEditingText();
                                   return;
                                 }
                                 if (e.key === 'Escape') {
-                                  setEditingElementId(null);
+                                  commitCurrentEditingText();
                                 }
                               }}
-                              className="w-full h-full bg-black/60 text-white text-center focus:outline-none resize-none overflow-hidden font-sans border border-[#DCB001] rounded px-1 py-0.5 shadow-md"
+                              className="w-full h-full bg-black/70 text-white text-center focus:outline-none resize-none overflow-hidden font-sans border-2 border-[#DCB001] rounded px-1 py-0.5 shadow-lg"
                               style={{ fontSize: `${elem.fontSize || 14}px` }}
                             />
 
-                            {/* Floating Enter button */}
+                            {/* Floating Enter / Set button */}
                             <div
+                              data-chart-editing-box="true"
                               style={{
                                 position: 'absolute',
                                 bottom: '-30px',
@@ -2374,7 +2447,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                                 onMouseDown={(e) => {
                                   e.stopPropagation();
                                   e.preventDefault();
-                                  handleCommitElementText(elem.id, editingText);
+                                  commitCurrentEditingText();
                                 }}
                                 className="flex items-center gap-1 px-1.5 py-0.2 bg-[#DCB001] hover:bg-[#c9a102] text-black font-bold text-[10px] rounded transition-colors cursor-pointer"
                                 title="Click to set text to element"

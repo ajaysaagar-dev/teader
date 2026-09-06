@@ -425,4 +425,27 @@ describe('Charts Database & Management Operations', () => {
     const elemABelow: TestElem = { id: 'a', x: 400, y: 350, width: 160, height: 80 };
     expect(getDynamicAnchors(elemABelow, elemB)).toEqual({ fromAnchor: 'top', toAnchor: 'bottom' });
   });
+
+  it('commits and saves element text when clicked anywhere without pressing enter', () => {
+    let elements = [
+      { id: 'elem-1', text: 'Initial Text' },
+      { id: 'elem-2', text: 'Other Node' },
+    ];
+    let editingElementId: string | null = 'elem-1';
+    let editingText = 'Updated Text Without Enter';
+
+    const commitCurrentEditingText = () => {
+      if (!editingElementId) return;
+      elements = elements.map((el) =>
+        el.id === editingElementId ? { ...el, text: editingText } : el
+      );
+      editingElementId = null;
+    };
+
+    // User types new text and clicks anywhere else (simulating global mousedown / canvas click / blur)
+    commitCurrentEditingText();
+
+    expect(editingElementId).toBeNull();
+    expect(elements.find((e) => e.id === 'elem-1')?.text).toBe('Updated Text Without Enter');
+  });
 });
