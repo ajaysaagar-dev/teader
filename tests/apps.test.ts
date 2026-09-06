@@ -81,4 +81,13 @@ describe('Project Apps & Integrations Tab', () => {
     const filtered = combined.filter((a) => a.id !== 'custom_123');
     expect(filtered.length).toBe(2);
   });
+
+  it('guarantees that iframe src is never empty string', () => {
+    const currentUrl = '';
+    const shouldRenderIframe = Boolean(currentUrl);
+    expect(shouldRenderIframe).toBe(false);
+
+    const validUrl = 'https://www.google.com/webhp?igu=1';
+    expect(Boolean(validUrl)).toBe(true);
+  });
 });

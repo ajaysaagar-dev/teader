@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   ExternalLink,
@@ -72,12 +72,15 @@ interface ProjectAppsViewProps {
 }
 
 export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps) {
-  const [selectedAppId, setSelectedAppId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(`teader_last_app_${projectId}`) || null;
-    }
-    return null;
-  });
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`teader_last_app_${projectId}`);
+      }
+    } catch {}
+  }, [projectId]);
 
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [addressInput, setAddressInput] = useState<string>('');
@@ -116,10 +119,6 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
     setAddressInput(urlToLoad);
     setIsLoadingIframe(true);
     setIframeKey((prev) => prev + 1);
-
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`teader_last_app_${projectId}`, app.id);
-    }
   };
 
   // Close active app view back to apps directory
@@ -127,9 +126,6 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
     setSelectedAppId(null);
     setCurrentUrl('');
     setAddressInput('');
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(`teader_last_app_${projectId}`);
-    }
   };
 
   // Navigate or search from address bar
@@ -435,16 +431,18 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             )}
 
             {/* Embedded Iframe */}
-            <iframe
-              key={iframeKey}
-              ref={iframeRef}
-              src={currentUrl}
-              onLoad={() => setIsLoadingIframe(false)}
-              allow="camera; microphone; fullscreen; clipboard-read; clipboard-write; encrypted-media; picture-in-picture; autoplay"
-              sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-downloads allow-presentation"
-              className="w-full h-full border-0 bg-white"
-              title={activeApp.name}
-            />
+            {currentUrl ? (
+              <iframe
+                key={iframeKey}
+                ref={iframeRef}
+                src={currentUrl}
+                onLoad={() => setIsLoadingIframe(false)}
+                allow="camera; microphone; fullscreen; clipboard-read; clipboard-write; encrypted-media; picture-in-picture; autoplay"
+                sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-downloads allow-presentation"
+                className="w-full h-full border-0 bg-white"
+                title={activeApp.name}
+              />
+            ) : null}
 
             {/* Bottom Overlay Info */}
             <div className="absolute bottom-2 right-3 z-10 flex items-center gap-2 bg-[#1B1C20]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#2A2C30] text-[11px] text-[#787C83] shadow-lg">
