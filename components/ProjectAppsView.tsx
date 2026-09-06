@@ -41,6 +41,13 @@ const DEFAULT_APPS: AppDefinition[] = [
     iconColor: 'text-[#FF0000]'
   },
   {
+    id: 'sketchfab',
+    name: 'Sketchfab',
+    defaultUrl: 'https://sketchfab.com',
+    iconBg: 'bg-[#1CAAD9]/10 border-[#1CAAD9]/30',
+    iconColor: 'text-[#1CAAD9]'
+  },
+  {
     id: 'wikipedia',
     name: 'Wikipedia',
     defaultUrl: 'https://en.m.wikipedia.org',
@@ -55,6 +62,27 @@ const DEFAULT_APPS: AppDefinition[] = [
     iconColor: 'text-[#6965DB]'
   }
 ];
+
+function getIframeSrc(url: string, appId?: string): string {
+  if (!url) return '';
+  if (appId === 'google' || url.includes('google.com')) {
+    if (url.includes('igu=1')) return url;
+    return url + (url.includes('?') ? '&igu=1' : '?igu=1');
+  }
+  if (appId === 'youtube' || url.includes('youtube-nocookie.com') || url.includes('youtube.com/embed')) {
+    return url;
+  }
+  if (appId === 'wikipedia' || url.includes('wikipedia.org')) {
+    return url;
+  }
+  if (appId === 'excalidraw' || url.includes('excalidraw.com')) {
+    return url;
+  }
+
+  // Any other external websites (Sketchfab, custom sites):
+  // Route through proxy to strip X-Frame-Options: SAMEORIGIN/DENY and CSP!
+  return `/api/apps/proxy?url=${encodeURIComponent(url)}`;
+}
 
 function extractYouTubeVideoId(input: string): string | null {
   if (!input) return null;
@@ -435,10 +463,9 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
               <iframe
                 key={iframeKey}
                 ref={iframeRef}
-                src={currentUrl}
+                src={getIframeSrc(currentUrl, activeApp.id)}
                 onLoad={() => setIsLoadingIframe(false)}
-                allow="camera; microphone; fullscreen; clipboard-read; clipboard-write; encrypted-media; picture-in-picture; autoplay"
-                sandbox="allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-downloads allow-presentation"
+                allow="accelerometer; autoplay; camera; clipboard-read; clipboard-write; encrypted-media; fullscreen; gyroscope; microphone; picture-in-picture; web-share; xr-spatial-tracking"
                 className="w-full h-full border-0 bg-white"
                 title={activeApp.name}
               />
@@ -618,6 +645,26 @@ function AppIcon({ app, size = 24 }: { app: AppDefinition; size?: number }) {
           fill="#FF0000"
         />
         <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#FFFFFF" />
+      </svg>
+    );
+  }
+
+  if (app.id === 'sketchfab') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path
+          d="M12 2L3 7v10l9 5 9-5V7l-9-5z"
+          stroke="#1CAAD9"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M12 22V12M12 12L3 7M12 12l9-5"
+          stroke="#1CAAD9"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+        <circle cx="12" cy="12" r="2.5" fill="#1CAAD9" />
       </svg>
     );
   }

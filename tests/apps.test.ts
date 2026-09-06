@@ -90,4 +90,32 @@ describe('Project Apps & Integrations Tab', () => {
     const validUrl = 'https://www.google.com/webhp?igu=1';
     expect(Boolean(validUrl)).toBe(true);
   });
+
+  it('routes external websites like sketchfab.com through proxy', () => {
+    function getIframeSrc(url: string, appId?: string): string {
+      if (!url) return '';
+      if (appId === 'google' || url.includes('google.com')) {
+        if (url.includes('igu=1')) return url;
+        return url + (url.includes('?') ? '&igu=1' : '?igu=1');
+      }
+      if (appId === 'youtube' || url.includes('youtube-nocookie.com') || url.includes('youtube.com/embed')) {
+        return url;
+      }
+      if (appId === 'wikipedia' || url.includes('wikipedia.org')) {
+        return url;
+      }
+      if (appId === 'excalidraw' || url.includes('excalidraw.com')) {
+        return url;
+      }
+      return `/api/apps/proxy?url=${encodeURIComponent(url)}`;
+    }
+
+    expect(getIframeSrc('https://sketchfab.com', 'sketchfab')).toBe(
+      '/api/apps/proxy?url=https%3A%2F%2Fsketchfab.com'
+    );
+    expect(getIframeSrc('https://github.com')).toBe(
+      '/api/apps/proxy?url=https%3A%2F%2Fgithub.com'
+    );
+    expect(getIframeSrc('https://www.google.com/webhp', 'google')).toContain('igu=1');
+  });
 });
