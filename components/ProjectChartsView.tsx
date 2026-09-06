@@ -1435,6 +1435,51 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     syncLocalChanges(elements, connections, next);
   };
 
+  // ── Mouse Wheel Zoom (Cursor-Centered Zoom In & Out) ──
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (isDraggingElementRef.current || resizingInfo) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const pointerY = e.clientY - rect.top;
+
+      const currentVp = viewportRef.current;
+      const worldX = (pointerX - currentVp.x) / currentVp.zoom;
+      const worldY = (pointerY - currentVp.y) / currentVp.zoom;
+
+      // Multiplicative zoom scaling: wheel up (negative deltaY) zooms in, wheel down (positive deltaY) zooms out
+      const zoomFactor = Math.pow(2, -e.deltaY * 0.002);
+      const nextZoom = Math.min(3.0, Math.max(0.15, Number((currentVp.zoom * zoomFactor).toFixed(2))));
+
+      if (nextZoom === currentVp.zoom) return;
+
+      // Cursor-centered zoom: keep the world point fixed directly under the mouse pointer
+      const nextX = Math.round(pointerX - worldX * nextZoom);
+      const nextY = Math.round(pointerY - worldY * nextZoom);
+
+      const nextVp = {
+        x: nextX,
+        y: nextY,
+        zoom: nextZoom,
+      };
+
+      setViewport(nextVp);
+      syncLocalChanges(elementsRef.current, connectionsRef.current, nextVp);
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, [resizingInfo, syncLocalChanges]);
+
   // ── Export options ──
   const handleExportJSON = () => {
     const activeChart = charts.find((c) => c.id === activeChartId);

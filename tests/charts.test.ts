@@ -275,4 +275,36 @@ describe('Charts Database & Management Operations', () => {
     const snapFarAway = findSnappedAnchor(100, 100, elem);
     expect(snapFarAway).toBeNull();
   });
+
+  it('calculates cursor-centered zoom in and out on mouse wheel', () => {
+    const initialViewport = { x: 0, y: 0, zoom: 1 };
+    const pointer = { x: 400, y: 300 };
+
+    // World coords under pointer
+    const worldX = (pointer.x - initialViewport.x) / initialViewport.zoom;
+    const worldY = (pointer.y - initialViewport.y) / initialViewport.zoom;
+    expect(worldX).toBe(400);
+    expect(worldY).toBe(300);
+
+    // Zoom IN: negative deltaY (wheel scrolled forward/up)
+    const deltaIn = -100;
+    const factorIn = Math.pow(2, -deltaIn * 0.002);
+    const nextZoomIn = Math.min(3.0, Math.max(0.15, Number((initialViewport.zoom * factorIn).toFixed(2))));
+    expect(nextZoomIn).toBeGreaterThan(1);
+
+    const nextXIn = Math.round(pointer.x - worldX * nextZoomIn);
+    const nextYIn = Math.round(pointer.y - worldY * nextZoomIn);
+
+    // Verify pointer still points to same world coordinate
+    const recomputedWorldXIn = (pointer.x - nextXIn) / nextZoomIn;
+    const recomputedWorldYIn = (pointer.y - nextYIn) / nextZoomIn;
+    expect(Math.round(recomputedWorldXIn)).toBe(400);
+    expect(Math.round(recomputedWorldYIn)).toBe(300);
+
+    // Zoom OUT: positive deltaY (wheel scrolled backward/down)
+    const deltaOut = 100;
+    const factorOut = Math.pow(2, -deltaOut * 0.002);
+    const nextZoomOut = Math.min(3.0, Math.max(0.15, Number((initialViewport.zoom * factorOut).toFixed(2))));
+    expect(nextZoomOut).toBeLessThan(1);
+  });
 });
