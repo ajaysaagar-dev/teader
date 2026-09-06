@@ -49,6 +49,19 @@ export interface ParticipantInfo {
   joinedAt: number;
 }
 
+export interface MeetingParticipant {
+  peerId: string;
+  userId: number | string;
+  userName: string;
+  userAvatar?: string;
+  userEmail?: string;
+  isMuted: boolean;
+  isDeafened: boolean;
+  isSpeaking: boolean;
+  joinedAt: number;
+  lastSeen: number;
+}
+
 interface ProjectMeetingViewProps {
   projectId: string | number;
   projectName: string;

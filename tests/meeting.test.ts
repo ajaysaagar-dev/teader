@@ -83,7 +83,7 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     const pruneInactive = (r: Map<string, MeetingParticipant>, timeoutMs = 35000) => {
       const cutoff = Date.now() - timeoutMs;
       for (const [peerId, p] of r.entries()) {
-        if (p.lastSeen < cutoff) {
+        if ((p.lastSeen ?? 0) < cutoff) {
           r.delete(peerId);
         }
       }
