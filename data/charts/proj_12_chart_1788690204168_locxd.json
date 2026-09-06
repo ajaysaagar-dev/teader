@@ -23,8 +23,8 @@
         "backgroundColor": "#1e1e1e"
       },
       {
-        "x": 348,
-        "y": 391,
+        "x": 330,
+        "y": 224,
         "id": "elem-2",
         "text": "API Server\nREST & WebSockets",
         "type": "rounded-rectangle",
@@ -159,5 +159,5 @@
   },
   "orderIndex": 0,
   "createdAt": "2026-09-06T10:23:24.168Z",
-  "updatedAt": "2026-09-06T11:24:22.071Z"
+  "updatedAt": "2026-09-06T11:25:33.103Z"
 }
