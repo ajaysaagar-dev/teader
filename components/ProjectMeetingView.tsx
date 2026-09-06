@@ -9,6 +9,7 @@ import {
   LocalParticipant,
   RemoteParticipant,
   LocalAudioTrack,
+  LocalVideoTrack,
   ConnectionState,
   ConnectionQuality,
 } from 'livekit-client';
@@ -99,6 +100,112 @@ export interface MeetingParticipant {
   lastSeen: number;
 }
 
+// ─── Electron & Browser Desktop Media Capture Polyfill ───────────────────────
+async function captureDesktopMediaStream(): Promise<MediaStream> {
+  const isElectron =
+    typeof window !== 'undefined' &&
+    (Boolean((window as any).teaderDesktop?.isDesktop) ||
+      /electron/i.test(navigator.userAgent) ||
+      /teaderdesktop/i.test(navigator.userAgent));
+
+  // 1. In standard browser, attempt getDisplayMedia first
+  if (!isElectron && typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 60, max: 60 },
+        },
+        audio: true,
+      });
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
+        throw err;
+      }
+      console.warn('[getDisplayMedia fallback triggered]:', err);
+    }
+  }
+
+  // 2. Electron / Fallback 1: chromeMediaSource: 'screen' (Direct full desktop capture)
+  if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'screen',
+            maxWidth: 1920,
+            maxHeight: 1080,
+            maxFrameRate: 60,
+          },
+        } as any,
+      });
+      return stream;
+    } catch (err1: any) {
+      console.warn('[Capture fallback 1 (screen) note]:', err1);
+    }
+
+    // 3. Electron / Fallback 2: chromeMediaSource: 'desktop'
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          mandatory: {
+            chromeMediaSource: 'desktop',
+            maxWidth: 1920,
+            maxHeight: 1080,
+            maxFrameRate: 60,
+          },
+        } as any,
+      });
+      return stream;
+    } catch (err2: any) {
+      console.warn('[Capture fallback 2 (desktop) note]:', err2);
+    }
+  }
+
+  // 4. Electron / Fallback 3: Standard getDisplayMedia if available
+  if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia) {
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: true,
+    });
+  }
+
+  throw new Error('Screen capture is not supported in this desktop environment');
+}
+
+// Install getDisplayMedia polyfill once for Electron environments
+if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigator.mediaDevices) {
+  const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia?.bind(navigator.mediaDevices);
+
+  (navigator.mediaDevices as any).getDisplayMedia = async function (constraints?: any) {
+    const isElectron =
+      Boolean((window as any).teaderDesktop?.isDesktop) ||
+      /electron/i.test(navigator.userAgent) ||
+      /teaderdesktop/i.test(navigator.userAgent);
+
+    if (originalGetDisplayMedia && !isElectron) {
+      try {
+        return await originalGetDisplayMedia(constraints);
+      } catch (err: any) {
+        if (err?.name === 'NotAllowedError' || err?.message?.includes('Permission denied')) {
+          throw err;
+        }
+        const isNotSupported =
+          err?.name === 'NotSupportedError' ||
+          (err?.message && err.message.toLowerCase().includes('not supported'));
+        if (!isNotSupported) {
+          throw err;
+        }
+      }
+    }
+
+    return await captureDesktopMediaStream();
+  };
+}
+
 interface ProjectMeetingViewProps {
   projectId: string | number;
   projectName: string;
@@ -135,6 +242,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   // Screen Share State (1080p 60fps, default: disabled)
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const [fullscreenParticipant, setFullscreenParticipant] = useState<ParticipantInfo | null>(null);
+  const customScreenTrackRef = useRef<LocalVideoTrack | null>(null);
 
   // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
   const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
@@ -292,7 +400,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     // Local participant
     if (room.localParticipant) {
       list.push(mapParticipant(room.localParticipant));
-      setIsSharingScreen(Boolean(room.localParticipant.isScreenShareEnabled));
+      setIsSharingScreen(
+        Boolean(room.localParticipant.isScreenShareEnabled || customScreenTrackRef.current)
+      );
     }
 
     // Remote participants
@@ -631,6 +741,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     connectToVoiceRoom();
 
     return () => {
+      if (customScreenTrackRef.current) {
+        try {
+          customScreenTrackRef.current.stop();
+        } catch {}
+        customScreenTrackRef.current = null;
+      }
       if (roomRef.current) {
         if (roomRef.current.localParticipant?.isScreenShareEnabled) {
           roomRef.current.localParticipant.setScreenShareEnabled(false).catch(() => {});
@@ -666,7 +782,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   };
 
-  // ── Toggle Screen Sharing (1080p 60fps) ──
+  // ── Toggle Screen Sharing (1080p 60fps - Compatible with Browser & Electron Forge) ──
   const handleToggleScreenShare = async () => {
     const room = roomRef.current;
     if (!room || !room.localParticipant) {
@@ -678,27 +794,78 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       const nextState = !isSharingScreen;
       if (nextState) {
         toast.info('Starting 1080p 60fps screen stream…');
-        await room.localParticipant.setScreenShareEnabled(
-          true,
-          {
-            audio: true,
-            resolution: {
-              width: 1920,
-              height: 1080,
-              frameRate: 60,
+
+        let sharedSuccessfully = false;
+
+        // Attempt 1: Try LiveKit native setScreenShareEnabled
+        try {
+          await room.localParticipant.setScreenShareEnabled(
+            true,
+            {
+              audio: true,
+              resolution: {
+                width: 1920,
+                height: 1080,
+                frameRate: 60,
+              },
             },
-          },
-          {
+            {
+              videoEncoding: {
+                maxBitrate: 4_500_000,
+                maxFramerate: 60,
+              },
+            }
+          );
+          sharedSuccessfully = true;
+        } catch (lkErr: any) {
+          if (lkErr?.name === 'NotAllowedError' || lkErr?.message?.includes('Permission denied')) {
+            throw lkErr;
+          }
+          console.warn('[LiveKit setScreenShareEnabled note, attempting direct desktop capture]:', lkErr);
+        }
+
+        // Attempt 2: If native setScreenShareEnabled failed (e.g. Electron Forge), capture desktop stream and publish track directly
+        if (!sharedSuccessfully) {
+          const stream = await captureDesktopMediaStream();
+          const videoTrack = stream.getVideoTracks()[0];
+          if (!videoTrack) {
+            throw new Error('No screen video track was acquired');
+          }
+
+          const localVideoTrack = new LocalVideoTrack(videoTrack, undefined, false);
+          localVideoTrack.source = Track.Source.ScreenShare;
+
+          videoTrack.onended = () => {
+            if (customScreenTrackRef.current) {
+              room.localParticipant.unpublishTrack(customScreenTrackRef.current, true).catch(() => {});
+              customScreenTrackRef.current.stop();
+              customScreenTrackRef.current = null;
+            }
+            setIsSharingScreen(false);
+            syncParticipants();
+          };
+
+          await room.localParticipant.publishTrack(localVideoTrack, {
+            source: Track.Source.ScreenShare,
             videoEncoding: {
               maxBitrate: 4_500_000,
               maxFramerate: 60,
             },
-          }
-        );
+          });
+
+          customScreenTrackRef.current = localVideoTrack;
+        }
+
         setIsSharingScreen(true);
         toast.success('Screen stream active (1080p 60fps)');
       } else {
-        await room.localParticipant.setScreenShareEnabled(false);
+        // Stop screen share
+        if (customScreenTrackRef.current) {
+          await room.localParticipant.unpublishTrack(customScreenTrackRef.current, true).catch(() => {});
+          customScreenTrackRef.current.stop();
+          customScreenTrackRef.current = null;
+        }
+        await room.localParticipant.setScreenShareEnabled(false).catch(() => {});
         setIsSharingScreen(false);
         toast.info('Screen stream stopped');
       }
@@ -710,7 +877,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       } else {
         toast.error(err?.message || 'Failed to start screen stream');
       }
-      setIsSharingScreen(Boolean(room.localParticipant?.isScreenShareEnabled));
+      setIsSharingScreen(
+        Boolean(room.localParticipant?.isScreenShareEnabled || customScreenTrackRef.current)
+      );
       syncParticipants();
     }
   };
