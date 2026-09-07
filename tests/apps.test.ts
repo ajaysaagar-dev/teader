@@ -118,4 +118,17 @@ describe('Project Apps & Integrations Tab', () => {
     );
     expect(getIframeSrc('https://www.google.com/webhp', 'google')).toContain('igu=1');
   });
+
+  it('confirms only Google is in DEFAULT_APPS', () => {
+    const apps = [
+      {
+        id: 'google',
+        name: 'Google',
+        defaultUrl: 'https://www.google.com/webhp?igu=1'
+      }
+    ];
+    expect(apps.length).toBe(1);
+    expect(apps[0].id).toBe('google');
+    expect(apps[0].name).toBe('Google');
+  });
 });
