@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Octokit } from 'octokit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,32 +22,29 @@ export async function GET(request: NextRequest) {
     const page = searchParams.get('page') || '1';
     const perPage = searchParams.get('per_page') || '100';
 
-    // If a search query is provided, use GitHub search API, else list user repos
-    let githubUrl = `https://api.github.com/user/repos?per_page=${perPage}&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`;
+    const octokit = new Octokit({ auth: token });
+    let rawRepos: any[] = [];
+    let totalCount = 0;
 
     if (query.trim()) {
-      githubUrl = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}+user:@me&sort=updated&per_page=${perPage}&page=${page}`;
+      const { data } = await octokit.rest.search.repos({
+        q: `${query.trim()} user:@me`,
+        sort: 'updated',
+        per_page: Number(perPage) || 100,
+        page: Number(page) || 1,
+      });
+      rawRepos = data.items || [];
+      totalCount = data.total_count || rawRepos.length;
+    } else {
+      const { data } = await octokit.rest.repos.listForAuthenticatedUser({
+        per_page: Number(perPage) || 100,
+        page: Number(page) || 1,
+        sort: 'updated',
+        affiliation: 'owner,collaborator,organization_member',
+      });
+      rawRepos = data || [];
+      totalCount = data.length;
     }
-
-    const res = await fetch(githubUrl, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'Teader-Workspace',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      return NextResponse.json(
-        { error: errorData.message || 'Failed to fetch repositories from GitHub' },
-        { status: res.status }
-      );
-    }
-
-    const data = await res.json();
-    const rawRepos = Array.isArray(data) ? data : data.items || [];
 
     const repos = rawRepos.map((r: any) => ({
       id: r.id,
@@ -69,9 +67,13 @@ export async function GET(request: NextRequest) {
       },
     }));
 
-    return NextResponse.json({ repos, totalCount: data.total_count || repos.length });
+    return NextResponse.json({ repos, totalCount });
   } catch (err: any) {
     console.error('GET /api/github/repos error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to list GitHub repositories' }, { status: 500 });
+    const status = err.status || 500;
+    return NextResponse.json(
+      { error: err.message || 'Failed to list GitHub repositories' },
+      { status: status >= 400 && status < 600 ? status : 500 }
+    );
   }
 }

@@ -1,9 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { NextRequest } from 'next/server';
 import {
   getProjectRepositoriesDB,
   addProjectRepositoryDB,
   deleteProjectRepositoryDB,
 } from '@/lib/db';
+import { GET as getUserRoute } from '@/app/api/github/user/route';
+import { GET as getReposRoute } from '@/app/api/github/repos/route';
 
 describe('Project GitHub Repositories Database & Workflow', () => {
   const testProjectId = 999;
@@ -116,5 +119,21 @@ describe('Project GitHub Repositories Database & Workflow', () => {
     const repos = await getProjectRepositoriesDB(testProjectId);
     expect(repos.some((r) => r.fullName === 'testowner/repo-1')).toBe(true);
     expect(repos.some((r) => r.fullName === 'testowner/repo-2')).toBe(true);
+  });
+
+  it('returns 401 from /api/github/user when no token is provided', async () => {
+    const req = new NextRequest('http://localhost:3000/api/github/user');
+    const res = await getUserRoute(req);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toContain('token is required');
+  });
+
+  it('returns 401 from /api/github/repos when no token is provided', async () => {
+    const req = new NextRequest('http://localhost:3000/api/github/repos');
+    const res = await getReposRoute(req);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toContain('token is required');
   });
 });

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Octokit } from 'octokit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,24 +17,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'GitHub access token is required' }, { status: 401 });
     }
 
-    const res = await fetch('https://api.github.com/user', {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'Teader-Workspace',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-    });
+    const octokit = new Octokit({ auth: token });
+    const { data: userData } = await octokit.rest.users.getAuthenticated();
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      return NextResponse.json(
-        { error: errorData.message || 'Invalid or expired GitHub access token' },
-        { status: res.status }
-      );
-    }
-
-    const userData = await res.json();
     return NextResponse.json({
       user: {
         id: userData.id,
@@ -48,6 +34,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.error('GET /api/github/user error:', err);
-    return NextResponse.json({ error: err.message || 'Failed to verify GitHub token' }, { status: 500 });
+    const status = err.status || 500;
+    return NextResponse.json(
+      { error: err.message || 'Invalid or expired GitHub access token' },
+      { status: status >= 400 && status < 600 ? status : 500 }
+    );
   }
 }
