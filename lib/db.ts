@@ -414,6 +414,32 @@ export async function initDB(): Promise<void> {
           await p.query(`CREATE INDEX IF NOT EXISTS "idx_project_history_created" ON "project_history" ("createdAt" DESC);`);
         } catch {}
 
+        // 13. Create Project Repositories Table for GitHub / Git Integrations
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_repositories" (
+            "id" SERIAL PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "repoId" BIGINT,
+            "name" VARCHAR(255) NOT NULL,
+            "fullName" VARCHAR(255) NOT NULL,
+            "htmlUrl" TEXT NOT NULL,
+            "description" TEXT,
+            "defaultBranch" VARCHAR(100) DEFAULT 'main',
+            "isPrivate" BOOLEAN DEFAULT false,
+            "language" VARCHAR(100),
+            "starsCount" INT DEFAULT 0,
+            "forksCount" INT DEFAULT 0,
+            "openIssuesCount" INT DEFAULT 0,
+            "createdBy" INT DEFAULT NULL,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "unique_project_repository" UNIQUE ("projectId", "fullName")
+          );
+        `);
+        try {
+          await p.query(`CREATE INDEX IF NOT EXISTS "idx_project_repositories_project" ON "project_repositories" ("projectId");`);
+        } catch {}
+
 
         // Seed all core team users if not present with persistent profile images
         const defaultUsers = [
@@ -2994,4 +3020,199 @@ export async function deleteProjectChartDB(chartId: string): Promise<boolean> {
   memoryProjectChartsStore = memoryProjectChartsStore.filter((c) => c.id !== chartId);
   return true;
 }
+
+// ==========================================
+// Project Repositories (GitHub Integration)
+// ==========================================
+
+export interface ProjectRepositoryRecord {
+  id: number;
+  projectId: number;
+  repoId?: number | null;
+  name: string;
+  fullName: string;
+  htmlUrl: string;
+  description?: string | null;
+  defaultBranch?: string;
+  isPrivate?: boolean;
+  language?: string | null;
+  starsCount?: number;
+  forksCount?: number;
+  openIssuesCount?: number;
+  createdBy?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+let memoryProjectRepositoriesStore: ProjectRepositoryRecord[] = [];
+
+export async function getProjectRepositoriesDB(projectId: number): Promise<ProjectRepositoryRecord[]> {
+  await initDB();
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `SELECT * FROM "project_repositories" WHERE "projectId" = $1 ORDER BY "createdAt" DESC`,
+      [projectId]
+    );
+    if (res.rows && res.rows.length > 0) {
+      return res.rows.map((r: any) => ({
+        id: r.id,
+        projectId: r.projectId,
+        repoId: r.repoId ? Number(r.repoId) : null,
+        name: r.name,
+        fullName: r.fullName,
+        htmlUrl: r.htmlUrl,
+        description: r.description,
+        defaultBranch: r.defaultBranch || 'main',
+        isPrivate: Boolean(r.isPrivate),
+        language: r.language,
+        starsCount: Number(r.starsCount || 0),
+        forksCount: Number(r.forksCount || 0),
+        openIssuesCount: Number(r.openIssuesCount || 0),
+        createdBy: r.createdBy,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
+      }));
+    }
+  } catch (err: any) {
+    console.warn('[getProjectRepositoriesDB error]:', err.message);
+  }
+  return memoryProjectRepositoriesStore.filter((r) => r.projectId === projectId);
+}
+
+export async function addProjectRepositoryDB(
+  projectId: number,
+  repo: {
+    repoId?: number | null;
+    name: string;
+    fullName: string;
+    htmlUrl: string;
+    description?: string | null;
+    defaultBranch?: string;
+    isPrivate?: boolean;
+    language?: string | null;
+    starsCount?: number;
+    forksCount?: number;
+    openIssuesCount?: number;
+  },
+  userId?: number
+): Promise<ProjectRepositoryRecord> {
+  await initDB();
+  const now = new Date().toISOString();
+  try {
+    const p = getPool();
+    const res = await p.query(
+      `INSERT INTO "project_repositories" 
+        ("projectId", "repoId", "name", "fullName", "htmlUrl", "description", "defaultBranch", "isPrivate", "language", "starsCount", "forksCount", "openIssuesCount", "createdBy", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $14)
+       ON CONFLICT ("projectId", "fullName") DO UPDATE SET
+         "description" = EXCLUDED."description",
+         "defaultBranch" = EXCLUDED."defaultBranch",
+         "isPrivate" = EXCLUDED."isPrivate",
+         "language" = EXCLUDED."language",
+         "starsCount" = EXCLUDED."starsCount",
+         "forksCount" = EXCLUDED."forksCount",
+         "openIssuesCount" = EXCLUDED."openIssuesCount",
+         "updatedAt" = EXCLUDED."updatedAt"
+       RETURNING *`,
+      [
+        projectId,
+        repo.repoId || null,
+        repo.name,
+        repo.fullName,
+        repo.htmlUrl,
+        repo.description || null,
+        repo.defaultBranch || 'main',
+        Boolean(repo.isPrivate),
+        repo.language || null,
+        repo.starsCount || 0,
+        repo.forksCount || 0,
+        repo.openIssuesCount || 0,
+        userId || null,
+        now,
+      ]
+    );
+    if (res.rows && res.rows[0]) {
+      const r = res.rows[0];
+      const record: ProjectRepositoryRecord = {
+        id: r.id,
+        projectId: r.projectId,
+        repoId: r.repoId ? Number(r.repoId) : null,
+        name: r.name,
+        fullName: r.fullName,
+        htmlUrl: r.htmlUrl,
+        description: r.description,
+        defaultBranch: r.defaultBranch || 'main',
+        isPrivate: Boolean(r.isPrivate),
+        language: r.language,
+        starsCount: Number(r.starsCount || 0),
+        forksCount: Number(r.forksCount || 0),
+        openIssuesCount: Number(r.openIssuesCount || 0),
+        createdBy: r.createdBy,
+        createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : now,
+        updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : now,
+      };
+      memoryProjectRepositoriesStore = memoryProjectRepositoriesStore.filter(
+        (m) => !(m.projectId === projectId && m.fullName === repo.fullName)
+      );
+      memoryProjectRepositoriesStore.unshift(record);
+      return record;
+    }
+  } catch (err: any) {
+    console.warn('[addProjectRepositoryDB error]:', err.message);
+  }
+
+  const existingIndex = memoryProjectRepositoriesStore.findIndex(
+    (m) => m.projectId === projectId && m.fullName === repo.fullName
+  );
+  const newRecord: ProjectRepositoryRecord = {
+    id: existingIndex >= 0 ? memoryProjectRepositoriesStore[existingIndex].id : Date.now(),
+    projectId,
+    repoId: repo.repoId || null,
+    name: repo.name,
+    fullName: repo.fullName,
+    htmlUrl: repo.htmlUrl,
+    description: repo.description || null,
+    defaultBranch: repo.defaultBranch || 'main',
+    isPrivate: Boolean(repo.isPrivate),
+    language: repo.language || null,
+    starsCount: repo.starsCount || 0,
+    forksCount: repo.forksCount || 0,
+    openIssuesCount: repo.openIssuesCount || 0,
+    createdBy: userId || null,
+    createdAt: existingIndex >= 0 ? memoryProjectRepositoriesStore[existingIndex].createdAt : now,
+    updatedAt: now,
+  };
+  if (existingIndex >= 0) {
+    memoryProjectRepositoriesStore[existingIndex] = newRecord;
+  } else {
+    memoryProjectRepositoriesStore.unshift(newRecord);
+  }
+  return newRecord;
+}
+
+export async function deleteProjectRepositoryDB(
+  projectId: number,
+  repoIdOrFullName: string | number
+): Promise<boolean> {
+  await initDB();
+  try {
+    const p = getPool();
+    if (typeof repoIdOrFullName === 'number') {
+      await p.query(`DELETE FROM "project_repositories" WHERE "projectId" = $1 AND "id" = $2`, [projectId, repoIdOrFullName]);
+    } else {
+      await p.query(
+        `DELETE FROM "project_repositories" WHERE "projectId" = $1 AND ("fullName" = $2 OR "name" = $2)`,
+        [projectId, repoIdOrFullName]
+      );
+    }
+  } catch (err: any) {
+    console.warn('[deleteProjectRepositoryDB error]:', err.message);
+  }
+  memoryProjectRepositoriesStore = memoryProjectRepositoriesStore.filter(
+    (m) => !(m.projectId === projectId && (m.id === repoIdOrFullName || m.fullName === repoIdOrFullName || m.name === repoIdOrFullName))
+  );
+  return true;
+}
+
 
