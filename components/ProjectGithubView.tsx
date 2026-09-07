@@ -25,6 +25,7 @@ import {
   RotateCw
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProjectGithubRepoDetailView } from './ProjectGithubRepoDetailView';
 
 export function GithubIcon({ size = 24, className = '' }: { size?: number; className?: string }) {
   return (
@@ -131,6 +132,7 @@ export function ProjectGithubView({
   // Repositories Data for this Project (The Page List)
   const [projectRepos, setProjectRepos] = useState<ProjectRepositoryRecord[]>([]);
   const [isLoadingProjectRepos, setIsLoadingProjectRepos] = useState<boolean>(true);
+  const [activeRepo, setActiveRepo] = useState<ProjectRepositoryRecord | null>(null);
 
   // All User Repositories from GitHub
   const [allUserRepos, setAllUserRepos] = useState<RepositoryItem[]>([]);
@@ -381,16 +383,9 @@ export function ProjectGithubView({
     toast.success('Copied clone command to clipboard!');
   };
 
-  // Open repository (either embedded or custom handler)
-  const handleOpenRepo = (repo: RepositoryItem) => {
-    if (onOpenInEmbed) {
-      onOpenInEmbed(repo.htmlUrl, repo.name);
-    } else {
-      setEmbeddedUrl(repo.htmlUrl);
-      setEmbeddedTitle(repo.name);
-      setIsLoadingIframe(true);
-      setIframeKey((k) => k + 1);
-    }
+  // Open repository in native in-app detail view
+  const handleOpenRepo = (repo: ProjectRepositoryRecord | RepositoryItem) => {
+    setActiveRepo(repo as ProjectRepositoryRecord);
   };
 
   // Filtered Project Repos (The Page List)
@@ -455,6 +450,17 @@ export function ProjectGithubView({
       setSelectedRepoFullNames(new Set(unaddedFiltered.map((r) => r.fullName)));
     }
   };
+
+  // If viewing repository details in-app
+  if (activeRepo) {
+    return (
+      <ProjectGithubRepoDetailView
+        repo={activeRepo}
+        projectId={projectId}
+        onBack={() => setActiveRepo(null)}
+      />
+    );
+  }
 
   // If in embedded browser view
   if (embeddedUrl) {

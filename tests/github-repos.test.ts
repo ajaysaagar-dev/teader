@@ -7,6 +7,7 @@ import {
 } from '@/lib/db';
 import { GET as getUserRoute } from '@/app/api/github/user/route';
 import { GET as getReposRoute } from '@/app/api/github/repos/route';
+import { GET as getRepoDetailRoute } from '@/app/api/github/repo/route';
 
 describe('Project GitHub Repositories Database & Workflow', () => {
   const testProjectId = 999;
@@ -135,5 +136,23 @@ describe('Project GitHub Repositories Database & Workflow', () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toContain('token is required');
+  });
+
+  it('returns 401 from /api/github/repo when no token is provided', async () => {
+    const req = new NextRequest('http://localhost:3000/api/github/repo?owner=facebook&repo=react');
+    const res = await getRepoDetailRoute(req);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toContain('token is required');
+  });
+
+  it('returns 400 from /api/github/repo when owner or repo is missing', async () => {
+    const req = new NextRequest('http://localhost:3000/api/github/repo', {
+      headers: { 'x-github-token': 'fake-test-token' },
+    });
+    const res = await getRepoDetailRoute(req);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('Owner and repo query parameters are required');
   });
 });
