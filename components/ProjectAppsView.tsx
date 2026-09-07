@@ -35,6 +35,15 @@ function getIframeSrc(url: string): string {
     if (url.includes('igu=1')) return url;
     return url + (url.includes('?') ? '&igu=1' : '?igu=1');
   }
+  // In Electron desktop app, X-Frame-Options and CSP frame-ancestors are stripped at the network layer
+  if (
+    typeof window !== 'undefined' &&
+    ((window as any).electronAPI ||
+      navigator.userAgent.includes('TeaderDesktop') ||
+      navigator.userAgent.includes('Electron'))
+  ) {
+    return url;
+  }
   return `/api/apps/proxy?url=${encodeURIComponent(url)}`;
 }
 
@@ -90,7 +99,11 @@ export function ProjectAppsView({ projectId }: ProjectAppsViewProps) {
     let target = addressInput.trim();
 
     if (!target.startsWith('http://') && !target.startsWith('https://')) {
-      target = `https://www.google.com/search?q=${encodeURIComponent(target)}&igu=1`;
+      if (target.includes('.') && !target.includes(' ')) {
+        target = `https://${target}`;
+      } else {
+        target = `https://www.google.com/search?q=${encodeURIComponent(target)}&igu=1`;
+      }
     } else if (target.includes('google.com') && !target.includes('igu=1')) {
       target = target + (target.includes('?') ? '&igu=1' : '?igu=1');
     }
