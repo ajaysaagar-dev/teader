@@ -1,7 +1,8 @@
-﻿'use client';
+'use client';
 
 import React, { useState } from 'react';
 import { Search, Blocks, X, CheckCircle2 } from 'lucide-react';
+import { ProjectGithubView } from './ProjectGithubView';
 
 export interface PluginItem {
   id: string;
@@ -78,6 +79,16 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
   const filteredPlugins = PLUGINS.filter((plugin) =>
     plugin.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
   );
+
+  if (selectedPlugin?.id === 'github') {
+    return (
+      <ProjectGithubView
+        projectId={projectId}
+        projectName={projectName}
+        onBackToPlugins={() => setSelectedPlugin(null)}
+      />
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0D0E11] overflow-hidden select-none">

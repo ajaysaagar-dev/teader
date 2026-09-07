@@ -32,13 +32,6 @@ export const DEFAULT_APPS: AppDefinition[] = [
     defaultUrl: 'https://www.google.com/webhp?igu=1',
     iconBg: 'bg-[#4285F4]/10 border-[#4285F4]/30',
     iconColor: 'text-[#4285F4]'
-  },
-  {
-    id: 'github',
-    name: 'GitHub',
-    defaultUrl: 'https://github.com',
-    iconBg: 'bg-white/10 border-white/20',
-    iconColor: 'text-white'
   }
 ];
 
