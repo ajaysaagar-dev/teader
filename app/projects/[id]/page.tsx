@@ -51,7 +51,8 @@ import {
   Settings,
   Workflow,
   Radio,
-  AppWindow
+  AppWindow,
+  Blocks
 } from 'lucide-react';
 
 
@@ -123,6 +124,10 @@ const IssueDetailView = dynamic(
   () => import('@/components/IssueDetailView').then((m) => ({ default: m.IssueDetailView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectPluginsView = dynamic(
+  () => import('@/components/ProjectPluginsView').then((m) => ({ default: m.ProjectPluginsView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 
 
 const NewIssueModal = dynamic(
@@ -152,7 +157,7 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'apps' | 'history' | 'settings';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'apps' | 'history' | 'settings' | 'plugins';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
@@ -165,6 +170,7 @@ function parseViewTab(view?: string): ProjectTab {
   if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
   if (v === 'history' || v === 'audit' || v === 'log' || v === 'changelog') return 'history';
+  if (v === 'plugins' || v === 'plugin' || v === 'addons' || v === 'extensions') return 'plugins';
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
   if (
     v === 'tasks' ||
@@ -1999,6 +2005,19 @@ export default function SingleProjectPage() {
               <Settings size={13} />
               <span>Settings</span>
             </button>
+
+            <button
+              onClick={() => handleTabSwitch('plugins')}
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+                activeTab === 'plugins'
+                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+              }`}
+              title="Project Plugins & Version Control Tools"
+            >
+              <Blocks size={13} />
+              <span>Plugins</span>
+            </button>
           </div>
 
           {/* Quick Chat Drawer Toggle Button */}
@@ -2099,6 +2118,14 @@ export default function SingleProjectPage() {
                 }}
                 onMemberKicked={(userId) => setJoinedMembers((members) => members.filter((member) => String(member.id) !== String(userId)))}
                 onMembersUpdated={setJoinedMembers}
+              />
+            </div>
+          ) : activeTab === 'plugins' ? (
+            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+              <ProjectPluginsView
+                projectId={project?.id || projectIdParam || 1}
+                projectName={project?.name}
+                projectKey={project?.key}
               />
             </div>
           ) : (
