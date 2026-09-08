@@ -46,6 +46,12 @@ import {
 import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { Avatar } from '@/components/ui/Avatar';
+import {
+  type NoiseSuppressionMode,
+  NOISE_SUPPRESSION_CONFIG,
+  NOISE_SUPPRESSION_MODES,
+  nextNoiseSuppressionMode,
+} from '@/lib/noise-suppression';
 
 // ─── Interfaces & Quality Types ──────────────────────────────────────────────
 
@@ -373,8 +379,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const customScreenTrackRef = useRef<LocalVideoTrack | null>(null);
   const customScreenAudioTrackRef = useRef<LocalAudioTrack | null>(null);
 
-  // Noise Reduction State (LiveKit Krisp AI Filter, default: enabled)
-  const [noiseReductionEnabled, setNoiseReductionEnabled] = useState(true);
+  // Noise Suppression Mode: 'off' | 'standard' | 'high' (default: 'high' = Krisp AI)
+  // Off = no processing, Standard = WebRTC native, High = Krisp AI (~10-20ms added latency)
+  const [noiseSuppressionMode, setNoiseSuppressionMode] = useState<NoiseSuppressionMode>('high');
+  const noiseSuppressionModeRef = useRef<NoiseSuppressionMode>('high');
+  noiseSuppressionModeRef.current = noiseSuppressionMode;
   const krispProcessorRef = useRef<any>(null);
 
   // Voice Normalization State (Dynamic Range Compressor + Makeup Gain, default: enabled for all users)
@@ -617,8 +626,10 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     setParticipants(list);
   }, [mapParticipant]);
 
-  // ── LiveKit Noise Filter Application ──
-  const applyNoiseFilter = useCallback(async (enabled: boolean) => {
+  // ── Apply Noise Suppression Mode to Active Mic Track ──
+  // Manages Krisp processor lifecycle and WebRTC noiseSuppression constraint
+  // based on the selected mode (off / standard / high).
+  const applyNoiseSuppressionMode = useCallback(async (mode: NoiseSuppressionMode) => {
     const room = roomRef.current;
     if (!room || !room.localParticipant) return;
 
@@ -626,8 +637,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     const localTrack = micPub?.track as LocalAudioTrack | undefined;
     if (!localTrack) return;
 
+    const config = NOISE_SUPPRESSION_CONFIG[mode];
+
     try {
-      if (enabled) {
+      // Step 1: Handle Krisp processor state
+      if (config.useKrisp) {
+        // Mode is 'high' — enable or create Krisp processor
         if (!krispProcessorRef.current) {
           const { isKrispNoiseFilterSupported, KrispNoiseFilter } = await import(
             '@livekit/krisp-noise-filter'
@@ -638,28 +653,55 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             krispProcessorRef.current = processor;
             await processor.setEnabled(true);
           } else {
-            console.info('[LiveKit] Krisp not supported on this browser engine; native WebRTC noise cancellation active.');
+            // Krisp unsupported — fall back to Standard mode automatically
+            console.info('[Noise Suppression] Krisp not supported on this browser; falling back to Standard mode.');
+            toast.info('Krisp AI not supported on this browser — using Standard noise suppression');
+            setNoiseSuppressionMode('standard');
+            noiseSuppressionModeRef.current = 'standard';
+            return;
           }
         } else {
           await krispProcessorRef.current.setEnabled(true);
         }
       } else {
+        // Mode is 'off' or 'standard' — disable Krisp if it was active
         if (krispProcessorRef.current) {
           await krispProcessorRef.current.setEnabled(false);
         }
       }
+
+      // Step 2: Update WebRTC noiseSuppression constraint on the underlying MediaStreamTrack
+      // This controls the browser's built-in noise suppression (separate from Krisp).
+      const mediaTrack = localTrack.mediaStreamTrack;
+      if (mediaTrack && typeof mediaTrack.applyConstraints === 'function') {
+        try {
+          await mediaTrack.applyConstraints({
+            noiseSuppression: config.webrtcNoiseSuppression,
+          });
+        } catch (constraintErr) {
+          // Some browsers don't support runtime constraint changes — not critical
+          console.info('[Noise Suppression] Could not update WebRTC noiseSuppression constraint:', constraintErr);
+        }
+      }
     } catch (err) {
-      console.warn('[LiveKit Noise Filter note]:', err);
+      console.warn('[Noise Suppression mode change note]:', err);
     }
   }, []);
 
-  // ── Toggle Noise Reduction Button Handler ──
-  const handleToggleNoiseReduction = async () => {
-    const next = !noiseReductionEnabled;
-    setNoiseReductionEnabled(next);
-    await applyNoiseFilter(next);
-    toast.info(next ? 'LiveKit Noise Reduction enabled' : 'LiveKit Noise Reduction disabled');
-  };
+  // ── Noise Suppression Mode Change Handler (Bottom Dock Button + Settings Drawer) ──
+  const handleNoiseSuppressionChange = useCallback(async (mode: NoiseSuppressionMode) => {
+    setNoiseSuppressionMode(mode);
+    noiseSuppressionModeRef.current = mode;
+    await applyNoiseSuppressionMode(mode);
+    const config = NOISE_SUPPRESSION_CONFIG[mode];
+    toast.info(`Noise suppression: ${config.label}`);
+  }, [applyNoiseSuppressionMode]);
+
+  // ── Cycle Noise Suppression Mode (Click handler for bottom dock button) ──
+  const handleCycleNoiseSuppression = useCallback(async () => {
+    const next = nextNoiseSuppressionMode(noiseSuppressionModeRef.current);
+    await handleNoiseSuppressionChange(next);
+  }, [handleNoiseSuppressionChange]);
 
   // ── Voice Normalization Update Handler (Equalizes low and high volumes) ──
   const updateNormalizationState = useCallback((enabled: boolean) => {
@@ -723,12 +765,14 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       }
 
       // 3. Initialize LiveKit Room instance with audio and 1080p 60fps video capabilities
+      // noiseSuppression initial value matches the current noise suppression mode setting
+      const initialNoiseConfig = NOISE_SUPPRESSION_CONFIG[noiseSuppressionModeRef.current];
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
         audioCaptureDefaults: {
           echoCancellation: true,
-          noiseSuppression: true,
+          noiseSuppression: initialNoiseConfig.webrtcNoiseSuppression,
           autoGainControl: true, // Hardware/browser mic normalization enabled by default
           sampleRate: 48000,
         },
@@ -934,23 +978,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       await room.localParticipant.setMicrophoneEnabled(true);
       setIsMuted(false);
 
-      // 7. Apply LiveKit Noise Reduction if enabled by default
-      if (noiseReductionEnabled) {
-        const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
-        const localTrack = micPub?.track as LocalAudioTrack | undefined;
-        if (localTrack) {
-          try {
-            const { isKrispNoiseFilterSupported, KrispNoiseFilter } = await import(
-              '@livekit/krisp-noise-filter'
-            );
-            if (isKrispNoiseFilterSupported()) {
-              const processor = KrispNoiseFilter();
-              await localTrack.setProcessor(processor);
-              krispProcessorRef.current = processor;
-            }
-          } catch {}
-        }
-      }
+      // 7. Apply noise suppression based on current mode setting
+      // Uses the centralized handler that manages both Krisp and WebRTC constraints
+      await applyNoiseSuppressionMode(noiseSuppressionModeRef.current);
 
       await refreshDevices();
       syncParticipants();
@@ -961,7 +991,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       setConnectionState(ConnectionState.Disconnected);
       toast.error('Voice connection failed');
     }
-  }, [projectId, noiseReductionEnabled, refreshDevices, syncParticipants]);
+  }, [projectId, applyNoiseSuppressionMode, refreshDevices, syncParticipants]);
 
   // Connect on mount
   useEffect(() => {
@@ -1342,14 +1372,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         await room.switchActiveDevice('audioinput', deviceId);
         toast.success('Microphone switched');
 
-        // Re-apply noise reduction to the newly switched track if enabled
-        if (noiseReductionEnabled) {
-          const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
-          const localTrack = micPub?.track as LocalAudioTrack | undefined;
-          if (localTrack && krispProcessorRef.current) {
-            await localTrack.setProcessor(krispProcessorRef.current);
-          }
-        }
+        // Re-apply current noise suppression mode to the newly switched track
+        await applyNoiseSuppressionMode(noiseSuppressionModeRef.current);
       } catch (err) {
         console.warn('[switchActiveDevice mic]:', err);
       }
@@ -1617,50 +1641,88 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
         {/* Device Settings Drawer */}
         {showDeviceSettings && (
-          <div className="mx-6 mt-4 p-4 rounded-2xl bg-[#141519] border border-[#2B2D33] shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
-            {/* Input Selection */}
-            <div className="flex-1 w-full">
-              <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Mic size={12} className="text-[#DCB001]" /> Microphone (Input)
-              </label>
-              <CustomDropdown<string>
-                value={selectedInputId}
-                onChange={(val) => handleSwitchMic(val)}
-                options={
-                  audioInputDevices.length === 0
-                    ? [{ value: '', label: 'Default Microphone' }]
-                    : audioInputDevices.map((d, i) => ({
-                        value: d.deviceId,
-                        label: d.label || `Microphone ${i + 1}`,
-                      }))
-                }
-                className="w-full"
-                triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
-                size="sm"
-              />
+          <div className="mx-6 mt-4 p-4 rounded-2xl bg-[#141519] border border-[#2B2D33] shadow-2xl flex flex-col gap-4 z-30 animate-in fade-in slide-in-from-top-2 duration-200">
+            {/* Row 1: Input & Output Selection */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Input Selection */}
+              <div className="flex-1 w-full">
+                <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                  <Mic size={12} className="text-[#DCB001]" /> Microphone (Input)
+                </label>
+                <CustomDropdown<string>
+                  value={selectedInputId}
+                  onChange={(val) => handleSwitchMic(val)}
+                  options={
+                    audioInputDevices.length === 0
+                      ? [{ value: '', label: 'Default Microphone' }]
+                      : audioInputDevices.map((d, i) => ({
+                          value: d.deviceId,
+                          label: d.label || `Microphone ${i + 1}`,
+                        }))
+                  }
+                  className="w-full"
+                  triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
+                  size="sm"
+                />
+              </div>
+
+              {/* Output Selection */}
+              <div className="flex-1 w-full">
+                <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                  <Headphones size={12} className="text-[#DCB001]" /> Speaker (Output)
+                </label>
+                <CustomDropdown<string>
+                  value={selectedOutputId}
+                  onChange={(val) => handleSwitchSpeaker(val)}
+                  options={
+                    audioOutputDevices.length === 0
+                      ? [{ value: '', label: 'Default Speaker' }]
+                      : audioOutputDevices.map((d, i) => ({
+                          value: d.deviceId,
+                          label: d.label || `Speaker ${i + 1}`,
+                        }))
+                  }
+                  className="w-full"
+                  triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
+                  size="sm"
+                />
+                <p className="mt-1 text-[10px] text-[#787C83]">Output switching works in Chrome, Edge, and modern browsers.</p>
+              </div>
             </div>
 
-            {/* Output Selection */}
-            <div className="flex-1 w-full">
-              <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                <Headphones size={12} className="text-[#DCB001]" /> Speaker (Output)
+            {/* Row 2: Noise Suppression Mode Selector */}
+            <div className="pt-3 border-t border-[#22242A]">
+              <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
+                <Sparkles size={12} className="text-[#DCB001]" /> Noise Suppression
               </label>
-              <CustomDropdown<string>
-                value={selectedOutputId}
-                onChange={(val) => handleSwitchSpeaker(val)}
-                options={
-                  audioOutputDevices.length === 0
-                    ? [{ value: '', label: 'Default Speaker' }]
-                    : audioOutputDevices.map((d, i) => ({
-                        value: d.deviceId,
-                        label: d.label || `Speaker ${i + 1}`,
-                      }))
-                }
-                className="w-full"
-                triggerClassName="w-full bg-[#1A1C22] border border-[#33363F] text-white text-xs rounded-xl px-3 py-2 hover:border-[#DCB001]/50"
-                size="sm"
-              />
-              <p className="mt-1 text-[10px] text-[#787C83]">Output switching works in Chrome, Edge, and modern browsers.</p>
+              <div className="grid grid-cols-3 gap-2">
+                {NOISE_SUPPRESSION_MODES.map((mode) => {
+                  const config = NOISE_SUPPRESSION_CONFIG[mode];
+                  const isSelected = noiseSuppressionMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => handleNoiseSuppressionChange(mode)}
+                      className={`relative p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#DCB001]/10 border-[#DCB001]/50 ring-1 ring-[#DCB001]/30'
+                          : 'bg-[#1A1C22] border-[#2A2D35] hover:border-[#3A3D45]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-bold ${isSelected ? 'text-[#DCB001]' : 'text-white'}`}>
+                          {config.label}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle2 size={14} className="text-[#DCB001]" />
+                        )}
+                      </div>
+                      <p className="text-[10px] text-[#787C83] leading-snug">{config.description}</p>
+                      <p className="text-[9px] text-[#5A5E67] mt-1 font-mono">+{config.addedLatency} latency</p>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -2031,25 +2093,29 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             )}
           </button>
 
-          {/* LiveKit Noise Reduction Button (Default: Enabled) */}
+          {/* Noise Suppression Mode Button (Cycles: Off → Standard → High Quality) */}
           <button
-            onClick={handleToggleNoiseReduction}
+            onClick={handleCycleNoiseSuppression}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
-              noiseReductionEnabled
+              noiseSuppressionMode === 'high'
                 ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40 hover:bg-[#22C55E]/25 shadow-sm'
+                : noiseSuppressionMode === 'standard'
+                ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 hover:bg-[#DCB001]/25 shadow-sm'
                 : 'bg-[#16171C] hover:bg-[#22242B] text-[#9BA1A6] border-[#292B33]'
             }`}
-            title={
-              noiseReductionEnabled
-                ? 'LiveKit AI Noise Reduction: Enabled (Click to disable)'
-                : 'LiveKit AI Noise Reduction: Disabled (Click to enable)'
-            }
+            title={`Noise suppression: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label} (+${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].addedLatency} latency) — Click to cycle`}
           >
             <Sparkles
               size={15}
-              className={noiseReductionEnabled ? 'text-[#22C55E]' : 'text-[#787C83]'}
+              className={
+                noiseSuppressionMode === 'high'
+                  ? 'text-[#22C55E]'
+                  : noiseSuppressionMode === 'standard'
+                  ? 'text-[#DCB001]'
+                  : 'text-[#787C83]'
+              }
             />
-            <span>Noise Reduction {noiseReductionEnabled ? 'ON' : 'OFF'}</span>
+            <span>Noise: {NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label}</span>
           </button>
 
           {/* Voice Normalization Button (Default: Enabled) */}
