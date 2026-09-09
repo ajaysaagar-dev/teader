@@ -57,25 +57,57 @@ import {
 
 export type ScreenResolution = '720' | '1080' | '1440';
 export type ScreenFps = 24 | 30 | 48 | 60;
+export type BitrateQuality = 'low' | 'medium' | 'high' | 'ultra';
 
+export const BITRATE_QUALITY_OPTIONS: {
+  value: BitrateQuality;
+  label: string;
+  desc: string;
+  color: string;
+}[] = [
+  { value: 'low', label: 'Low', desc: 'Saves bandwidth', color: '#9BA1A6' },
+  { value: 'medium', label: 'Medium', desc: 'Balanced quality', color: '#DCB001' },
+  { value: 'high', label: 'High', desc: 'Sharp & clear', color: '#22C55E' },
+  { value: 'ultra', label: 'Ultra', desc: 'Maximum fidelity', color: '#A78BFA' },
+];
+
+// Optimized bitrate matrix: resolution → fps → quality tier → bitrate (bps).
+// Values are tuned for best visual quality at each tier without causing lag.
+// "High" is the recommended default — delivers sharp, clean video on most connections.
+// "Ultra" pushes near-lossless quality for users with strong upload bandwidth.
 export const RESOLUTION_CONFIG: Record<
   ScreenResolution,
-  { width: number; height: number; bitrates: Record<ScreenFps, number> }
+  { width: number; height: number; bitrates: Record<ScreenFps, Record<BitrateQuality, number>> }
 > = {
   '720': {
     width: 1280,
     height: 720,
-    bitrates: { 24: 1_800_000, 30: 2_200_000, 48: 2_600_000, 60: 2_800_000 },
+    bitrates: {
+      24: { low: 800_000, medium: 1_500_000, high: 2_500_000, ultra: 4_000_000 },
+      30: { low: 1_000_000, medium: 2_000_000, high: 3_000_000, ultra: 5_000_000 },
+      48: { low: 1_200_000, medium: 2_500_000, high: 3_500_000, ultra: 6_000_000 },
+      60: { low: 1_500_000, medium: 3_000_000, high: 4_000_000, ultra: 7_000_000 },
+    },
   },
   '1080': {
     width: 1920,
     height: 1080,
-    bitrates: { 24: 3_500_000, 30: 4_000_000, 48: 4_800_000, 60: 5_000_000 },
+    bitrates: {
+      24: { low: 1_500_000, medium: 3_000_000, high: 5_000_000, ultra: 8_000_000 },
+      30: { low: 2_000_000, medium: 4_000_000, high: 6_000_000, ultra: 10_000_000 },
+      48: { low: 2_500_000, medium: 5_000_000, high: 7_500_000, ultra: 12_000_000 },
+      60: { low: 3_000_000, medium: 6_000_000, high: 9_000_000, ultra: 14_000_000 },
+    },
   },
   '1440': {
     width: 2560,
     height: 1440,
-    bitrates: { 24: 6_000_000, 30: 7_000_000, 48: 8_500_000, 60: 9_000_000 },
+    bitrates: {
+      24: { low: 3_000_000, medium: 6_000_000, high: 9_000_000, ultra: 14_000_000 },
+      30: { low: 4_000_000, medium: 7_000_000, high: 11_000_000, ultra: 17_000_000 },
+      48: { low: 5_000_000, medium: 9_000_000, high: 14_000_000, ultra: 22_000_000 },
+      60: { low: 6_000_000, medium: 11_000_000, high: 16_000_000, ultra: 25_000_000 },
+    },
   },
 };
 
@@ -162,7 +194,7 @@ async function captureDesktopMediaStream(config?: {
 
   const targetWidth = config?.width || 1920;
   const targetHeight = config?.height || 1080;
-  const targetFps = config?.fps || 60;
+  const targetFps = config?.fps || 30;
   // Mobile browsers (Chrome Android, iOS) do NOT support capturing system audio in getDisplayMedia
   const targetAudio = isMobile ? false : (config?.includeAudio ?? true);
 
@@ -317,7 +349,7 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && navigat
 
     const width = constraints?.video?.width?.ideal || constraints?.video?.width?.max || 1920;
     const height = constraints?.video?.height?.ideal || constraints?.video?.height?.max || 1080;
-    const fps = constraints?.video?.frameRate?.ideal || constraints?.video?.frameRate?.max || 60;
+    const fps = constraints?.video?.frameRate?.ideal || constraints?.video?.frameRate?.max || 30;
     const includeAudio = isMobile ? false : Boolean(constraints?.audio);
 
     return await captureDesktopMediaStream({ width, height, fps, includeAudio });
@@ -368,7 +400,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const [fullscreenParticipant, setFullscreenParticipant] = useState<ParticipantInfo | null>(null);
   const [showScreenShareModal, setShowScreenShareModal] = useState(false);
   const [selectedResolution, setSelectedResolution] = useState<ScreenResolution>('1080');
-  const [selectedFps, setSelectedFps] = useState<ScreenFps>(60);
+  const [selectedFps, setSelectedFps] = useState<ScreenFps>(30);
+  const [selectedBitrateQuality, setSelectedBitrateQuality] = useState<BitrateQuality>('high');
   const [includeScreenAudio, setIncludeScreenAudio] = useState(true);
   const [activeStreamQuality, setActiveStreamQuality] = useState<{ res: string; fps: number } | null>(null);
   const activeStreamQualityRef = useRef<{ res: string; fps: number } | null>(null);
@@ -582,7 +615,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
     const quality = participantQualitiesRef.current.get(p.identity) || (isLocal ? activeStreamQualityRef.current : null);
     const screenShareResolution = quality ? `${quality.res}p` : '1080p';
-    const screenShareFps = quality ? quality.fps : 60;
+    const screenShareFps = quality ? quality.fps : 30;
 
     return {
       identity: p.identity,
@@ -780,7 +813,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           resolution: {
             width: 1920,
             height: 1080,
-            frameRate: 60,
+            frameRate: 30,
           },
         },
       });
@@ -1087,10 +1120,11 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   }, [syncParticipants]);
 
-  // ── Start Screen Sharing (with Custom Resolution 720/1080/1440, FPS 24/30/48/60, Audio) ──
+  // ── Start Screen Sharing (with Custom Resolution 720/1080/1440, FPS 24/30/48/60, Bitrate Quality, Audio) ──
   const handleStartScreenShare = async (config?: {
     resolution?: ScreenResolution;
     fps?: ScreenFps;
+    bitrateQuality?: BitrateQuality;
     includeAudio?: boolean;
   }) => {
     const room = roomRef.current;
@@ -1108,11 +1142,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
 
     const targetRes = config?.resolution ?? selectedResolution;
     const targetFps = config?.fps ?? selectedFps;
+    const targetQuality = config?.bitrateQuality ?? selectedBitrateQuality;
     // On mobile devices, system audio in screen capture is unsupported and causes getDisplayMedia to throw NotSupportedError
     const targetAudio = isMobile ? false : (config?.includeAudio ?? includeScreenAudio);
 
     const resConfig = RESOLUTION_CONFIG[targetRes];
-    const maxBitrate = resConfig.bitrates[targetFps] || 5_000_000;
+    const maxBitrate = resConfig.bitrates[targetFps]?.[targetQuality] || resConfig.bitrates[targetFps]?.['high'] || 6_000_000;
+    const qualityLabel = BITRATE_QUALITY_OPTIONS.find((o) => o.value === targetQuality)?.label || targetQuality;
 
     setShowScreenShareModal(false);
     toast.info(`Starting ${targetRes}p ${targetFps}fps screen stream…`);
@@ -1208,6 +1244,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             type: 'STREAM_QUALITY',
             res: targetRes,
             fps: targetFps,
+            quality: targetQuality,
             isSharing: true,
           })
         );
@@ -1216,7 +1253,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         console.warn('[publishData STREAM_QUALITY note]:', e);
       }
 
-      toast.success(`Screen stream active (${targetRes}p ${targetFps}fps)`);
+      toast.success(`Screen stream active (${targetRes}p ${targetFps}fps · ${qualityLabel})`);
       syncParticipants();
     } catch (err: any) {
       console.warn('[Screen Share Error]:', err);
@@ -1829,7 +1866,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                             <div className="flex items-center gap-1.5 pointer-events-auto">
                               <span className="px-2 py-0.5 rounded-lg bg-[#22C55E]/20 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/40 flex items-center gap-1 backdrop-blur-md shadow-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
-                                {p.screenShareResolution || '1080p'} {p.screenShareFps || 60}fps LIVE
+                                {p.screenShareResolution || '1080p'} {p.screenShareFps || 30}fps LIVE
                               </span>
                               <button
                                 onClick={(e) => {
@@ -2189,7 +2226,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white tracking-tight">Stream Quality & Audio</h3>
-                  <p className="text-[11px] text-[#787C83]">Configure resolution and frame rate</p>
+                  <p className="text-[11px] text-[#787C83]">Configure resolution, frame rate, and video quality</p>
                 </div>
               </div>
               <button
@@ -2275,6 +2312,49 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               </div>
             </div>
 
+            {/* Bitrate Quality Options */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-white/90 flex items-center justify-between">
+                <span>Video Quality</span>
+                <span className="text-[10px] text-[#A0A5B0] font-normal">Higher = sharper image, more bandwidth</span>
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {BITRATE_QUALITY_OPTIONS.map((item) => {
+                  const isSelected = selectedBitrateQuality === item.value;
+                  const isRecommended = item.value === 'high';
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSelectedBitrateQuality(item.value)}
+                      className={`relative flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? `bg-[${item.color}]/15 border-[${item.color}] shadow-[0_0_15px_${item.color}26]`
+                          : 'bg-[#181920] border-[#2B2D37] text-[#9BA1A6] hover:bg-[#1E2028] hover:text-white'
+                      }`}
+                      style={isSelected ? {
+                        backgroundColor: `${item.color}15`,
+                        borderColor: item.color,
+                        color: item.color,
+                        boxShadow: `0 0 15px ${item.color}26`,
+                      } : undefined}
+                    >
+                      {isRecommended && (
+                        <span className="absolute -top-2 px-1.5 py-0.5 rounded-full bg-[#22C55E] text-black text-[8px] font-bold uppercase tracking-wider">
+                          Best
+                        </span>
+                      )}
+                      <span className={`text-xs font-bold ${isSelected ? '' : 'text-inherit'}`}>{item.label}</span>
+                      <span className="text-[9px] text-[#787C83] mt-0.5">{item.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[#5A5E67] mt-1 font-mono">
+                {selectedResolution}p {selectedFps}fps · {(RESOLUTION_CONFIG[selectedResolution].bitrates[selectedFps]?.[selectedBitrateQuality] / 1_000_000).toFixed(1)} Mbps
+              </p>
+            </div>
+
             {/* Screen Audio Toggle */}
             <div className="pt-2 border-t border-[#20222B]">
               {typeof navigator !== 'undefined' &&
@@ -2343,7 +2423,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 className="flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#DCB001] to-[#E6BA0A] hover:brightness-110 text-black shadow-lg shadow-[#DCB001]/20 transition-all cursor-pointer"
               >
                 <ScreenShare size={15} />
-                <span>Start Stream ({selectedResolution}p {selectedFps}fps)</span>
+                <span>Start Stream ({selectedResolution}p {selectedFps}fps · {BITRATE_QUALITY_OPTIONS.find((o) => o.value === selectedBitrateQuality)?.label})</span>
               </button>
             </div>
           </div>
@@ -2369,7 +2449,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                   )}
                   <span className="px-2 py-0.5 rounded-full bg-[#22C55E]/15 text-[#22C55E] text-[10px] font-mono font-bold border border-[#22C55E]/30 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
-                    {fullscreenParticipant.screenShareResolution || '1080p'} {fullscreenParticipant.screenShareFps || 60}fps LIVE
+                    {fullscreenParticipant.screenShareResolution || '1080p'} {fullscreenParticipant.screenShareFps || 30}fps LIVE
                   </span>
                 </div>
                 <p className="text-[11px] text-[#787C83]">

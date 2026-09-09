@@ -163,23 +163,34 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     expect(jwt.split('.')).toHaveLength(3); // Standard 3-part JWT
   });
 
-  it('validates screen sharing resolution, fps, and bitrate matrix', async () => {
-    const { RESOLUTION_CONFIG } = await import('@/components/ProjectMeetingView');
+  it('validates screen sharing resolution, fps, and bitrate quality tier matrix', async () => {
+    const { RESOLUTION_CONFIG, BITRATE_QUALITY_OPTIONS } = await import('@/components/ProjectMeetingView');
     expect(RESOLUTION_CONFIG).toBeDefined();
+    expect(BITRATE_QUALITY_OPTIONS).toBeDefined();
 
     // Check resolutions
     expect(RESOLUTION_CONFIG['720']).toEqual(expect.objectContaining({ width: 1280, height: 720 }));
     expect(RESOLUTION_CONFIG['1080']).toEqual(expect.objectContaining({ width: 1920, height: 1080 }));
     expect(RESOLUTION_CONFIG['1440']).toEqual(expect.objectContaining({ width: 2560, height: 1440 }));
 
+    // Check quality tier labels exist
+    const qualityValues = BITRATE_QUALITY_OPTIONS.map((o: any) => o.value);
+    expect(qualityValues).toEqual(['low', 'medium', 'high', 'ultra']);
+
     // Check FPS options for each resolution: 24, 30, 48, 60
     const fpsList = [24, 30, 48, 60] as const;
+    const qualityTiers = ['low', 'medium', 'high', 'ultra'] as const;
     (['720', '1080', '1440'] as const).forEach((res) => {
       fpsList.forEach((fps) => {
-        expect(RESOLUTION_CONFIG[res].bitrates[fps]).toBeGreaterThan(0);
+        qualityTiers.forEach((quality) => {
+          expect(RESOLUTION_CONFIG[res].bitrates[fps][quality]).toBeGreaterThan(0);
+        });
+        // Ensure higher quality tier gets greater bitrate
+        expect(RESOLUTION_CONFIG[res].bitrates[fps]['ultra']).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[fps]['low']);
+        expect(RESOLUTION_CONFIG[res].bitrates[fps]['high']).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[fps]['medium']);
       });
-      // Ensure higher FPS gets equal or greater bitrate
-      expect(RESOLUTION_CONFIG[res].bitrates[60]).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[24]);
+      // Ensure higher FPS gets equal or greater bitrate at same quality
+      expect(RESOLUTION_CONFIG[res].bitrates[60]['high']).toBeGreaterThan(RESOLUTION_CONFIG[res].bitrates[24]['high']);
     });
   });
 
