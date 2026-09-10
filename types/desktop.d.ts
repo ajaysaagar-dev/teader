@@ -4,6 +4,15 @@ export interface TeaderDesktopAPI {
   appVersion: string;
   platform: string;
   electronVersion: string;
+  getGpuInfo?: () => Promise<{
+    available: boolean;
+    gpuInfo?: any;
+    featureStatus?: any;
+    isHardwareAccelerated?: boolean;
+    webgpu?: string;
+    platform?: string;
+    error?: string;
+  }>;
   downloadAndInstallUpdate?: (url?: string) => Promise<{ success: boolean; path: string }>;
   onUpdateProgress?: (callback: (progress: { percent: number; receivedBytes: number; totalBytes: number }) => void) => () => void;
 }

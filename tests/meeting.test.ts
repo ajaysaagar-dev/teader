@@ -325,19 +325,31 @@ describe('Project Audio Meeting Operations & State Logic', () => {
 
     expect(NOISE_SUPPRESSION_MODES).toEqual(['off', 'standard', 'high', 'extreme']);
 
-    // Check Extreme Voice-Only Isolation configuration
+    // Check Extreme Voice-Only Isolation configuration with GPU acceleration
     const extremeConfig = NOISE_SUPPRESSION_CONFIG['extreme'];
     expect(extremeConfig).toBeDefined();
     expect(extremeConfig.useVoiceIsolation).toBe(true);
     expect(extremeConfig.useKrisp).toBe(true);
+    expect(extremeConfig.useGpuAcceleration).toBe(true);
     expect(extremeConfig.webrtcNoiseSuppression).toBe(true);
     expect(extremeConfig.label).toContain('Extreme');
+    expect(extremeConfig.label).toContain('GPU Voice Only');
 
     // Check cycle transitions: off -> standard -> high -> extreme -> off
     expect(nextNoiseSuppressionMode('off')).toBe('standard');
     expect(nextNoiseSuppressionMode('standard')).toBe('high');
     expect(nextNoiseSuppressionMode('high')).toBe('extreme');
     expect(nextNoiseSuppressionMode('extreme')).toBe('off');
+  });
+
+  it('detects desktop GPU acceleration and exposes hardware diagnostics', async () => {
+    const { getDesktopGpuInfo } = await import('@/lib/desktop');
+
+    // Default node environment fallback
+    const info = await getDesktopGpuInfo();
+    expect(info).toBeDefined();
+    expect(typeof info.isGpuAccelerated).toBe('boolean');
+    expect(typeof info.gpuDeviceName).toBe('string');
   });
 });
 

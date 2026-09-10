@@ -55,3 +55,60 @@ export function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
+/**
+ * Diagnostic helper to query GPU hardware acceleration and WebGPU availability
+ * either through the Electron desktop bridge or browser WebGPU APIs.
+ */
+export async function getDesktopGpuInfo(): Promise<{
+  isGpuAccelerated: boolean;
+  gpuDeviceName: string;
+  source: 'electron' | 'webgpu' | 'none';
+  raw?: any;
+}> {
+  if (typeof window === 'undefined') {
+    return { isGpuAccelerated: false, gpuDeviceName: 'None', source: 'none' };
+  }
+
+  // 1. First attempt through Electron desktop IPC bridge
+  if (window.teaderDesktop?.getGpuInfo) {
+    try {
+      const res = await window.teaderDesktop.getGpuInfo();
+      if (res && res.available) {
+        let deviceName = 'Hardware Accelerated GPU';
+        if (res.gpuInfo?.gpuDevice && Array.isArray(res.gpuInfo.gpuDevice) && res.gpuInfo.gpuDevice[0]) {
+          const dev = res.gpuInfo.gpuDevice[0];
+          deviceName = dev.driverDescription || dev.deviceDescription || `Vendor ID: ${dev.vendorId}`;
+        }
+        return {
+          isGpuAccelerated: Boolean(res.isHardwareAccelerated || res.webgpu === 'enabled'),
+          gpuDeviceName: deviceName,
+          source: 'electron',
+          raw: res,
+        };
+      }
+    } catch {}
+  }
+
+  // 2. Direct WebGPU API query
+  if (typeof navigator !== 'undefined' && (navigator as any).gpu) {
+    try {
+      const adapter = await (navigator as any).gpu.requestAdapter({
+        powerPreference: 'high-performance',
+      });
+      if (adapter) {
+        let name = 'WebGPU Hardware Adapter';
+        if (adapter.info) {
+          name = adapter.info.device || adapter.info.description || adapter.info.vendor || name;
+        }
+        return {
+          isGpuAccelerated: true,
+          gpuDeviceName: name,
+          source: 'webgpu',
+        };
+      }
+    } catch {}
+  }
+
+  return { isGpuAccelerated: false, gpuDeviceName: 'CPU WebAudio Fallback', source: 'none' };
+}
+

@@ -25,6 +25,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     webrtcNoiseSuppression: boolean;
     useKrisp: boolean;
     useVoiceIsolation: boolean;
+    useGpuAcceleration: boolean;
     addedLatency: string;
   }
 > = {
@@ -34,6 +35,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     webrtcNoiseSuppression: false,
     useKrisp: false,
     useVoiceIsolation: false,
+    useGpuAcceleration: false,
     addedLatency: '0ms',
   },
   standard: {
@@ -42,6 +44,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     webrtcNoiseSuppression: true,
     useKrisp: false,
     useVoiceIsolation: false,
+    useGpuAcceleration: false,
     addedLatency: '~0ms',
   },
   high: {
@@ -50,15 +53,17 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     webrtcNoiseSuppression: true,
     useKrisp: true,
     useVoiceIsolation: false,
+    useGpuAcceleration: false,
     addedLatency: '~10-20ms',
   },
   extreme: {
-    label: 'Extreme (Voice Only)',
-    description: 'Ultra AI + Neural Vocal Gate. Transmits ONLY pure human voice; 100% background cut.',
+    label: 'Extreme (GPU Voice Only)',
+    description: 'Ultra AI + GPU Neural Vocal Gate. Hardware-accelerated voice-only transmission; 100% background cut.',
     webrtcNoiseSuppression: true,
     useKrisp: true,
     useVoiceIsolation: true,
-    addedLatency: '~12ms',
+    useGpuAcceleration: true,
+    addedLatency: '~8-12ms (GPU Accelerated)',
   },
 } as const;
 

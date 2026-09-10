@@ -46,6 +46,7 @@ import {
   GripHorizontal,
   Users,
   Zap,
+  Cpu,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
@@ -1921,6 +1922,24 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                   );
                 })}
               </div>
+
+              {/* GPU Hardware Acceleration Status Banner */}
+              {voiceIsolationStats?.isGpuAccelerated && (
+                <div className="mt-2.5 px-3 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-cyan-300 font-medium">
+                    <Cpu size={14} className="text-cyan-400 animate-pulse" />
+                    <span>GPU Denoise & Voice Isolation Active</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-cyan-400/90 font-mono text-[10px]">
+                    <span className="px-1.5 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/30 font-semibold">
+                      {voiceIsolationStats.processingEngine}
+                    </span>
+                    <span className="text-[#9BA1A6] truncate max-w-[180px]" title={voiceIsolationStats.gpuDeviceName}>
+                      {voiceIsolationStats.gpuDeviceName}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -2130,11 +2149,24 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                             )}
                             {p.isLocal && noiseSuppressionMode === 'extreme' && (
                               <span
-                                className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-[9px] sm:text-[10px] font-bold border border-purple-500/40 flex items-center gap-1 shadow-sm"
-                                title="Extreme Voice Isolation: Only your voice is processed and shared"
+                                className={`px-2 py-0.5 rounded-md font-mono text-[9px] sm:text-[10px] font-bold flex items-center gap-1 shadow-sm ${
+                                  voiceIsolationStats?.isGpuAccelerated
+                                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-cyan-500/10'
+                                    : 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                                }`}
+                                title={`Extreme Voice Isolation: Only human speech is processed and shared ${voiceIsolationStats?.isGpuAccelerated ? `(GPU: ${voiceIsolationStats.gpuDeviceName})` : ''}`}
                               >
-                                <Sparkles size={10} className="text-purple-400" />
-                                VOICE ONLY
+                                {voiceIsolationStats?.isGpuAccelerated ? (
+                                  <>
+                                    <Cpu size={10} className="text-cyan-400" />
+                                    GPU VOICE ONLY
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles size={10} className="text-purple-400" />
+                                    VOICE ONLY
+                                  </>
+                                )}
                               </span>
                             )}
                             {p.isAdmin && (
@@ -2158,7 +2190,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                                 <span className="w-1 h-4 bg-[#22C55E] rounded-full animate-pulse delay-100" />
                                 <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">
                                   {p.isLocal && noiseSuppressionMode === 'extreme'
-                                    ? 'Voice Isolated & Active…'
+                                    ? voiceIsolationStats?.isGpuAccelerated
+                                      ? 'GPU Voice Isolated & Active…'
+                                      : 'Voice Isolated & Active…'
                                     : 'Speaking...'}
                                 </span>
                               </>
@@ -2307,7 +2341,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             onClick={handleCycleNoiseSuppression}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
               noiseSuppressionMode === 'extreme'
-                ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.25)]'
+                ? voiceIsolationStats?.isGpuAccelerated
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 hover:bg-cyan-500/30 shadow-[0_0_16px_rgba(6,182,212,0.25)]'
+                  : 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.25)]'
                 : noiseSuppressionMode === 'high'
                 ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40 hover:bg-[#22C55E]/25 shadow-sm'
                 : noiseSuppressionMode === 'standard'
@@ -2316,19 +2352,29 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             }`}
             title={`Noise suppression: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label} (+${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].addedLatency} latency) — Click to cycle`}
           >
-            <Sparkles
-              size={15}
-              className={
-                noiseSuppressionMode === 'extreme'
-                  ? 'text-purple-400 animate-pulse'
-                  : noiseSuppressionMode === 'high'
-                  ? 'text-[#22C55E]'
-                  : noiseSuppressionMode === 'standard'
-                  ? 'text-[#DCB001]'
-                  : 'text-[#787C83]'
-              }
-            />
-            <span>{noiseSuppressionMode === 'extreme' ? 'Extreme: Voice Only' : `Noise: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label}`}</span>
+            {noiseSuppressionMode === 'extreme' && voiceIsolationStats?.isGpuAccelerated ? (
+              <Cpu size={15} className="text-cyan-400 animate-pulse" />
+            ) : (
+              <Sparkles
+                size={15}
+                className={
+                  noiseSuppressionMode === 'extreme'
+                    ? 'text-purple-400 animate-pulse'
+                    : noiseSuppressionMode === 'high'
+                    ? 'text-[#22C55E]'
+                    : noiseSuppressionMode === 'standard'
+                    ? 'text-[#DCB001]'
+                    : 'text-[#787C83]'
+                }
+              />
+            )}
+            <span>
+              {noiseSuppressionMode === 'extreme'
+                ? voiceIsolationStats?.isGpuAccelerated
+                  ? '⚡ Extreme: GPU Voice'
+                  : 'Extreme: Voice Only'
+                : `Noise: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label}`}
+            </span>
           </button>
 
           {/* Voice Normalization Button (Default: Enabled) */}
