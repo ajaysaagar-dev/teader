@@ -54,8 +54,8 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium rounded-md border transition-colors ${
-        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-xs'
+      className={`inline-flex items-center gap-1.5 font-medium font-mono rounded-md border transition-colors ${
+        size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1 text-xs'
       } ${className}`}
       style={{
         color: config.color,

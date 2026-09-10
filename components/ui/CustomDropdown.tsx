@@ -150,9 +150,9 @@ export function CustomDropdown<T extends string | number = string>({
   };
 
   const sizeClasses = {
-    xs: 'text-[11px] py-1 px-2 gap-1.5 rounded-md',
-    sm: 'text-xs py-1.5 px-2.5 gap-2 rounded-lg',
-    md: 'text-xs sm:text-sm py-2 px-3 gap-2.5 rounded-lg',
+    xs: 'text-xs py-1.5 px-2.5 gap-1.5 rounded-md',
+    sm: 'text-sm py-2 px-3 gap-2 rounded-lg',
+    md: 'text-sm py-2.5 px-4 gap-2.5 rounded-lg',
   }[size];
 
   const chevronSizes = {
@@ -196,7 +196,7 @@ export function CustomDropdown<T extends string | number = string>({
           {showChevron && (
             <ChevronDown
               size={chevronSizes}
-              className={`shrink-0 text-[#787C83] transition-transform duration-200 ${
+              className={`shrink-0 text-[#9CA3AF] transition-transform duration-200 ${
                 isOpen ? 'rotate-180 text-white' : ''
               }`}
             />
@@ -208,13 +208,13 @@ export function CustomDropdown<T extends string | number = string>({
         <div
           role="listbox"
           aria-activedescendant={selectedOption ? `${selectId}-opt-${selectedOption.value}` : undefined}
-          className={`absolute z-[100] min-w-full w-max max-h-60 overflow-y-auto bg-[#141518] border border-[#2A2C30] rounded-lg shadow-2xl py-1 text-xs custom-scrollbar ${
+          className={`absolute z-[100] min-w-full min-w-[150px] w-max max-h-60 overflow-y-auto bg-[#141518] border border-[#2A2C30] rounded-lg shadow-2xl py-1 text-sm custom-scrollbar ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'} ${menuClassName}`}
           onClick={(e) => e.stopPropagation()}
         >
           {options.length === 0 ? (
-            <div className="px-3 py-2 text-[#787C83] italic text-center">No options</div>
+            <div className="px-3 py-2 text-[#9CA3AF] italic text-center">No options</div>
           ) : (
             options.map((option) => {
               const isSelected = option.value === value;
@@ -227,12 +227,12 @@ export function CustomDropdown<T extends string | number = string>({
                   aria-selected={isSelected}
                   disabled={option.disabled}
                   onClick={(e) => handleSelect(option, e)}
-                  className={`w-full px-2.5 py-1.5 flex items-center justify-between gap-3 text-left transition-colors ${
+                  className={`w-full px-3 py-2 flex items-center justify-between gap-3 text-left transition-colors ${
                     option.disabled
-                      ? 'opacity-40 cursor-not-allowed text-[#787C83]'
+                      ? 'opacity-40 cursor-not-allowed text-[#9CA3AF]'
                       : isSelected
                       ? 'bg-[#DCB001]/10 text-[#DCB001] font-semibold hover:bg-[#DCB001]/15'
-                      : 'text-[#CFD4DD] hover:bg-[#1F2126] hover:text-white cursor-pointer'
+                      : 'text-[#E5E7EB] hover:bg-[#1F2126] hover:text-white cursor-pointer'
                   } ${optionClassName} ${option.className || ''}`}
                 >
                   <div className="flex items-center gap-2 truncate flex-1">
@@ -240,7 +240,7 @@ export function CustomDropdown<T extends string | number = string>({
                     <div className="truncate">
                       <div className="truncate">{option.label}</div>
                       {option.description && (
-                        <div className="text-[10px] text-[#787C83] font-normal truncate">
+                        <div className="text-xs text-[#9CA3AF] font-normal truncate">
                           {option.description}
                         </div>
                       )}

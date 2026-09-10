@@ -140,7 +140,7 @@ export default function LoginPage() {
       <div className="min-h-screen bg-[#131415] text-[#CFD4DD] font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
-          <span className="text-xs font-mono text-[#787C83]">Verifying saved session...</span>
+          <span className="text-sm font-mono text-[#9CA3AF]">Verifying saved session...</span>
         </div>
       </div>
     );
@@ -154,18 +154,18 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden relative z-10">
         {/* Header Branding */}
         <div className="p-8 pb-6 text-center space-y-2 border-b border-[#2A2C30] bg-[#0F1011]">
-          <h1 className="text-xl font-bold text-white tracking-tight">Welcome to Teader</h1>
-          <p className="text-xs text-[#787C83]">Sign in to access your projects and task boards</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Welcome to Teader</h1>
+          <p className="text-sm text-[#9CA3AF]">Sign in to access your projects and task boards</p>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleLogin} className="p-8 space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
+            <label className="block text-sm font-semibold text-[#CFD4DD] mb-1.5">
               Email or Username
             </label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-3 text-[#787C83]" />
+              <Mail size={18} className="absolute left-3 top-3.5 text-[#9CA3AF]" />
               <input
                 type="text"
                 required
@@ -173,17 +173,17 @@ export default function LoginPage() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="e.g. karri or karri@teader.io"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-10 pr-3 py-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
+            <label className="block text-sm font-semibold text-[#CFD4DD] mb-1.5">
               Password
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-3 text-[#787C83]" />
+              <Lock size={18} className="absolute left-3 top-3.5 text-[#9CA3AF]" />
               <input
                 type="password"
                 required
@@ -191,39 +191,39 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-10 pr-3 py-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
           </div>
 
           {/* Remember Me Checkbox */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-sm">
             <button
               type="button"
               onClick={() => setRememberMe((prev) => !prev)}
               className="flex items-center gap-2 text-[#CFD4DD] hover:text-white cursor-pointer select-none group"
             >
               {rememberMe ? (
-                <CheckSquare size={15} className="text-[#DCB001]" />
+                <CheckSquare size={16} className="text-[#DCB001]" />
               ) : (
-                <Square size={15} className="text-[#787C83] group-hover:text-[#CFD4DD]" />
+                <Square size={16} className="text-[#9CA3AF] group-hover:text-[#CFD4DD]" />
               )}
-              <span className="text-[11px] font-medium">Remember me (Keep me signed in)</span>
+              <span className="text-xs font-medium">Remember me (Keep me signed in)</span>
             </button>
           </div>
           
           <button
             type="submit"
             disabled={!identifier.trim() || !password.trim() || isSubmitting}
-            className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-xl shadow-lg transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-xl shadow-lg transition-all disabled:opacity-50"
           >
-            <LogIn size={15} />
+            <LogIn size={18} />
             <span>Sign In</span>
           </button>
         </form>
 
         {/* Register Footer Link */}
-        <div className="p-4 bg-[#17181A] border-t border-[#2A2C30] text-center text-xs text-[#787C83]">
+        <div className="p-4 bg-[#17181A] border-t border-[#2A2C30] text-center text-sm text-[#9CA3AF]">
           Don&apos;t have an account?{' '}
           <Link href="/register" className="text-[#DCB001] font-semibold hover:underline">
             Register here

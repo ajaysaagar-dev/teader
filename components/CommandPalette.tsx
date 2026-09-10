@@ -267,7 +267,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           {/* Search Input Bar */}
-          <div className="flex items-center px-4 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
+          <div className="flex items-center px-4 py-3 border-b border-[#2A2C30] bg-[#0F1011]">
             <Search size={18} className="text-[#DCB001] mr-3 shrink-0" />
             <input
               ref={inputRef}
@@ -279,12 +279,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               }}
               onKeyDown={handleKeyDown}
               placeholder="Type a command, search issues, or use operators (e.g. status:done, priority:high)..."
-              className="w-full bg-transparent text-sm text-[#CFD4DD] placeholder-[#787C83] outline-none"
+              className="w-full bg-transparent text-sm text-[#E5E7EB] placeholder-[#9CA3AF] outline-none"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="p-1 text-[#787C83] hover:text-white rounded transition-colors"
+                className="p-1 text-[#9CA3AF] hover:text-white rounded transition-colors"
               >
                 <X size={15} />
               </button>
@@ -296,7 +296,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Quick Actions */}
             {filteredActions.length > 0 && (
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold text-[#787C83] uppercase tracking-wider font-mono">
+                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
                   Commands & Views
                 </div>
                 <div className="space-y-0.5">
@@ -309,17 +309,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         key={act.id}
                         onClick={act.run}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
                             ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#CFD4DD] hover:bg-[#222427]'
+                            : 'text-[#E5E7EB] hover:bg-[#222427]'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <Icon size={14} className={isSelected ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+                        <div className="flex items-center gap-3">
+                          <Icon size={16} className={isSelected ? 'text-[#DCB001]' : 'text-[#9CA3AF]'} />
                           <span className="font-medium">{act.label}</span>
                         </div>
-                        <span className="text-[10px] font-mono text-[#787C83] opacity-60">
+                        <span className="text-xs text-[#9CA3AF] opacity-60">
                           {act.category}
                         </span>
                       </button>
@@ -332,7 +332,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Issues */}
             {filteredIssues.length > 0 && (
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold text-[#787C83] uppercase tracking-wider font-mono">
+                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
                   Tasks ({filteredIssues.length})
                 </div>
                 <div className="space-y-0.5">
@@ -348,20 +348,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
                             ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#CFD4DD] hover:bg-[#222427]'
+                            : 'text-[#E5E7EB] hover:bg-[#222427]'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 overflow-hidden mr-2">
-                          <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0">
+                        <div className="flex items-center gap-3 overflow-hidden mr-2">
+                          <span className="font-mono text-xs font-bold text-[#DCB001] shrink-0">
                             {issue.key}
                           </span>
-                          <span className="truncate text-[#CFD4DD]">{issue.title}</span>
+                          <span className="truncate text-[#E5E7EB]">{issue.title}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
-                          <span className="px-1.5 py-0.5 rounded bg-[#131415] text-[#787C83] border border-[#2A2C30] capitalize">
+                        <div className="flex items-center gap-1.5 shrink-0 text-xs text-[#9CA3AF]">
+                          <span className="px-1.5 py-0.5 rounded bg-[#131415] border border-[#2A2C30] capitalize">
                             {issue.status.replace('_', ' ')}
                           </span>
                         </div>
@@ -375,7 +375,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Projects */}
             {filteredProjects.length > 0 && (
               <div>
-                <div className="px-3 py-1 text-[10px] font-bold text-[#787C83] uppercase tracking-wider font-mono">
+                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
                   Projects ({filteredProjects.length})
                 </div>
                 <div className="space-y-0.5">
@@ -390,18 +390,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-xs rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
                             ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#CFD4DD] hover:bg-[#222427]'
+                            : 'text-[#E5E7EB] hover:bg-[#222427]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <FolderKanban size={13} className="text-[#DCB001]" />
+                          <FolderKanban size={15} className="text-[#DCB001]" />
                           <span className="font-mono font-bold text-[#DCB001]">{p.key}</span>
-                          <span className="text-[#CFD4DD]">{p.name}</span>
+                          <span className="text-[#E5E7EB]">{p.name}</span>
                         </div>
-                        <span className="text-[10px] text-[#787C83] font-mono">Open Workspace ↵</span>
+                        <span className="text-xs text-[#9CA3AF]">Open Workspace ↵</span>
                       </button>
                     );
                   })}
@@ -410,16 +410,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             )}
 
             {flatItems.length === 0 && (
-              <div className="p-8 text-center text-xs text-[#787C83] space-y-1">
-                <Search size={20} className="mx-auto opacity-40 mb-2" />
-                <p className="font-semibold text-[#CFD4DD]">No matching commands or tasks found</p>
-                <p className="text-[11px]">Try searching by task ID, title, or status (e.g. `status:done`)</p>
+              <div className="p-8 text-center text-xs text-[#9CA3AF] space-y-2">
+                <Search size={24} className="mx-auto opacity-40 mb-2" />
+                <p className="font-semibold text-[#E5E7EB] text-sm">No matching commands or tasks found</p>
+                <p className="text-xs">Try searching by task ID, title, or status (e.g. `status:done`)</p>
               </div>
             )}
           </div>
 
           {/* Footer Shortcuts & Syntax Hints */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#0F1011] border-t border-[#2A2C30] text-[10px] text-[#787C83] font-mono">
+          <div className="flex items-center justify-between px-4 py-3 bg-[#0F1011] border-t border-[#2A2C30] text-xs text-[#9CA3AF] font-mono">
             <div className="flex items-center gap-3">
               <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↑↓</kbd> Navigate</span>
               <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↵</kbd> Execute</span>

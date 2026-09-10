@@ -275,12 +275,12 @@ export default function DashboardPage() {
         <div className="px-6 py-6 border-b border-[#2A2C30] bg-[#141517]/80 backdrop-blur-md shrink-0">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] mb-1">
+              <div className="flex items-center gap-2 text-xs font-medium tracking-wider text-[#DCB001] mb-1">
                 <Sparkles size={13} />
                 <span>WORKSPACE OVERVIEW & ANALYTICS</span>
               </div>
               <h1 className="text-2xl font-bold text-white tracking-tight">Executive Dashboard</h1>
-              <p className="text-xs text-[#787C83] mt-0.5">
+              <p className="text-sm text-[#9CA3AF] mt-0.5">
                 Real-time aggregated health, task velocity, and project graphs across all repositories.
               </p>
             </div>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
               <RealtimeBadge />
               <Link
                 href="/projects"
-                className="flex items-center gap-2 px-3.5 py-2 bg-[#1C1D20] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-white rounded-lg text-xs font-medium transition-all shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#1C1D20] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/50 text-white rounded-lg text-sm font-medium transition-all shadow-sm"
               >
                 <FolderKanban size={14} className="text-[#DCB001]" />
                 <span>Explore All Projects ({projects.length})</span>
@@ -302,76 +302,76 @@ export default function DashboardPage() {
         {/* Dashboard Main Content Grid */}
         <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
           {/* 1. Global Stat KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {/* Card: Total Projects */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#DCB001]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#DCB001]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">PROJECTS</span>
+                <span className="text-xs font-semibold tracking-wide">PROJECTS</span>
                 <FolderKanban size={15} className="text-[#DCB001]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.totalProjects}</span>
-                <span className="text-[10px] text-[#22C55E] font-mono">Active</span>
+                <span className="text-xs text-[#22C55E] font-mono">Active</span>
               </div>
             </div>
 
             {/* Card: Total Tasks */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#DCB001]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#DCB001]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">TOTAL TASKS</span>
+                <span className="text-xs font-semibold tracking-wide">TOTAL TASKS</span>
                 <Layers size={15} className="text-[#06B6D4]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.totalTasks}</span>
-                <span className="text-[10px] text-[#787C83] font-mono">Global</span>
+                <span className="text-xs text-[#9CA3AF] font-mono">Global</span>
               </div>
             </div>
 
             {/* Card: In Progress */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#F59E0B]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#F59E0B]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">IN PROGRESS</span>
+                <span className="text-xs font-semibold tracking-wide">IN PROGRESS</span>
                 <Flame size={15} className="text-[#F59E0B]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-[#F59E0B] font-mono">{globalMetrics.inProgress}</span>
-                <span className="text-[10px] text-[#787C83] font-mono">Active</span>
+                <span className="text-xs text-[#9CA3AF] font-mono">Active</span>
               </div>
             </div>
 
             {/* Card: Blocked */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#EF4444]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#EF4444]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">BLOCKED</span>
+                <span className="text-xs font-semibold tracking-wide">BLOCKED</span>
                 <ShieldAlert size={15} className="text-[#EF4444]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-[#EF4444] font-mono">{globalMetrics.blocked}</span>
-                <span className="text-[10px] text-[#EF4444] font-mono">Needs Lead</span>
+                <span className="text-xs text-[#EF4444] font-mono">Needs Lead</span>
               </div>
             </div>
 
             {/* Card: Done */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#22C55E]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#22C55E]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">COMPLETED</span>
+                <span className="text-xs font-semibold tracking-wide">COMPLETED</span>
                 <CheckCircle2 size={15} className="text-[#22C55E]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-[#22C55E] font-mono">{globalMetrics.completed}</span>
-                <span className="text-[10px] text-[#22C55E] font-mono">Shipped</span>
+                <span className="text-xs text-[#22C55E] font-mono">Shipped</span>
               </div>
             </div>
 
             {/* Card: Completion Velocity */}
-            <div className="p-4 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#A855F7]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[#141517] border border-[#2A2C30] flex flex-col justify-between hover:border-[#A855F7]/50 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[#787C83]">
-                <span className="text-[11px] font-mono font-medium">VELOCITY</span>
+                <span className="text-xs font-semibold tracking-wide">VELOCITY</span>
                 <TrendingUp size={15} className="text-[#A855F7]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.overallPercent}%</span>
-                <span className="text-[10px] text-[#787C83] font-mono">{globalMetrics.totalEstHours}h est</span>
+                <span className="text-xs text-[#9CA3AF] font-mono">{globalMetrics.totalEstHours}h est</span>
               </div>
             </div>
           </div>
@@ -381,9 +381,9 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Activity size={16} className="text-[#DCB001]" />
-                <h2 className="text-sm font-bold text-white tracking-tight">Global Task Status Spectrum</h2>
+                <h2 className="text-base font-bold text-white tracking-tight">Global Task Status Spectrum</h2>
               </div>
-              <span className="text-xs font-mono text-[#787C83]">{globalMetrics.totalTasks} Tasks Tracked</span>
+              <span className="text-sm text-[#9CA3AF]">{globalMetrics.totalTasks} Tasks Tracked</span>
             </div>
 
             {/* Visual Segmented Progress Bar */}
@@ -427,30 +427,30 @@ export default function DashboardPage() {
 
             {/* Legend & Breakdown Chips */}
             <div className="flex flex-wrap items-center gap-4 text-xs pt-1">
-              <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E]" />
                 <span className="text-[#CFD4DD]">Done:</span>
-                <span className="font-bold text-white">{globalMetrics.completed}</span>
+                <span className="font-bold text-white font-mono">{globalMetrics.completed}</span>
               </div>
-              <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]" />
                 <span className="text-[#CFD4DD]">In Progress:</span>
-                <span className="font-bold text-white">{globalMetrics.inProgress}</span>
+                <span className="font-bold text-white font-mono">{globalMetrics.inProgress}</span>
               </div>
-              <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#A855F7]" />
                 <span className="text-[#CFD4DD]">Needs Review:</span>
-                <span className="font-bold text-white">{globalMetrics.needsReview}</span>
+                <span className="font-bold text-white font-mono">{globalMetrics.needsReview}</span>
               </div>
-              <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]" />
                 <span className="text-[#CFD4DD]">Blocked:</span>
-                <span className="font-bold text-white">{globalMetrics.blocked}</span>
+                <span className="font-bold text-white font-mono">{globalMetrics.blocked}</span>
               </div>
-              <div className="flex items-center gap-1.5 font-mono">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#4B4E56]" />
                 <span className="text-[#CFD4DD]">Todo:</span>
-                <span className="font-bold text-white">{globalMetrics.todo}</span>
+                <span className="font-bold text-white font-mono">{globalMetrics.todo}</span>
               </div>
             </div>
           </div>
@@ -483,7 +483,7 @@ export default function DashboardPage() {
                       <span className="px-2 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] text-[#DCB001] font-mono text-xs font-bold rounded">
                         {proj.key}
                       </span>
-                      <span className="text-[11px] font-mono text-[#787C83]">
+                      <span className="text-xs text-[#9CA3AF]">
                         Owner: <span className="text-[#CFD4DD]">{proj.ownerName}</span>
                       </span>
                     </div>
@@ -491,15 +491,15 @@ export default function DashboardPage() {
                     <h3 className="text-base font-semibold text-white group-hover:text-[#DCB001] transition-colors line-clamp-1">
                       {proj.name}
                     </h3>
-                    <p className="text-xs text-[#787C83] line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-[#9CA3AF] line-clamp-2 leading-relaxed">
                       {proj.description || 'Enterprise project repository with full task lifecycle and branch explorer graph.'}
                     </p>
                   </div>
 
                   {/* Progress & Metrics */}
                   <div className="space-y-2 pt-2 border-t border-[#2A2C30]/50">
-                    <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-[#787C83]">Progress</span>
+                    <div className="flex items-center justify-between text-xs text-[#9CA3AF]">
+                      <span>Progress</span>
                       <span className="text-white font-bold">{proj.progressPercent}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-[#1B1C1F] rounded-full overflow-hidden">
@@ -509,7 +509,7 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] font-mono text-[#787C83] pt-1">
+                    <div className="flex items-center justify-between text-xs text-[#9CA3AF] pt-1">
                       <span>{proj.totalTasks} Tasks</span>
                       <span className="text-[#22C55E]">{proj.completedTasks} Done</span>
                       {proj.blockedTasks > 0 ? (
@@ -536,40 +536,40 @@ export default function DashboardPage() {
               <div className="flex items-center gap-1 bg-[#101113] p-1 rounded-lg border border-[#2A2C30] text-xs">
                 <button
                   onClick={() => setActiveFilter('all')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
                     activeFilter === 'all'
                       ? 'bg-[#222427] text-white'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   All ({issues.length})
                 </button>
                 <button
                   onClick={() => setActiveFilter('in_progress')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
                     activeFilter === 'in_progress'
                       ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   In Progress ({globalMetrics.inProgress})
                 </button>
                 <button
                   onClick={() => setActiveFilter('blocked')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
                     activeFilter === 'blocked'
                       ? 'bg-[#EF4444]/20 text-[#EF4444]'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Blocked ({globalMetrics.blocked})
                 </button>
                 <button
                   onClick={() => setActiveFilter('done')}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded font-medium transition-all ${
                     activeFilter === 'done'
                       ? 'bg-[#22C55E]/20 text-[#22C55E]'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Done ({globalMetrics.completed})
@@ -587,17 +587,17 @@ export default function DashboardPage() {
                   <div
                     key={iss.id}
                     onClick={() => router.push(`/task/${iss.id}/details`)}
-                    className="py-3 px-2 flex items-center justify-between gap-4 hover:bg-[#1B1C1F]/60 rounded-lg transition-all cursor-pointer group"
+                    className="py-3.5 px-3 flex items-center justify-between gap-4 hover:bg-[#1B1C1F]/60 rounded-lg transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#101113] border border-[#2A2C30] px-2 py-0.5 rounded shrink-0">
                         {iss.key}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-white group-hover:text-[#DCB001] transition-colors truncate">
+                        <p className="text-sm font-semibold text-white group-hover:text-[#DCB001] transition-colors truncate">
                           {iss.title}
                         </p>
-                        <p className="text-[10px] text-[#787C83] font-mono truncate">
+                        <p className="text-xs text-[#9CA3AF] font-mono truncate">
                           {iss.epic || iss.project || 'General'}
                         </p>
                       </div>
@@ -606,12 +606,12 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-3 shrink-0">
                       {/* Priority */}
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded capitalize ${
+                        className={`text-xs font-mono px-2 py-0.5 rounded capitalize ${
                           iss.priority === 'critical'
                             ? 'bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30'
                             : iss.priority === 'high'
                             ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
-                            : 'bg-[#1F2023] text-[#787C83]'
+                            : 'bg-[#1F2023] text-[#9CA3AF]'
                         }`}
                       >
                         {iss.priority}
@@ -619,7 +619,7 @@ export default function DashboardPage() {
 
                       {/* Status */}
                       <span
-                        className={`text-[10px] font-mono px-2 py-0.5 rounded capitalize ${
+                        className={`text-xs font-mono px-2 py-0.5 rounded capitalize ${
                           isDone
                             ? 'bg-[#22C55E]/15 text-[#22C55E]'
                             : isBlocked
@@ -633,8 +633,8 @@ export default function DashboardPage() {
                       </span>
 
                       {/* Assignee */}
-                      <div className="hidden sm:flex items-center gap-1.5 text-[11px] font-mono text-[#9BA1A6]">
-                        <User size={11} className="text-[#787C83]" />
+                      <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-[#9BA1A6]">
+                        <User size={12} className="text-[#9CA3AF]" />
                         <span>{iss.assigneeName || 'Unassigned'}</span>
                       </div>
                     </div>

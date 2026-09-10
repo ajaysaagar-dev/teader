@@ -220,22 +220,22 @@ export default function MyWorkPage() {
               </div>
               <h1 className="text-xl font-bold text-white tracking-tight">My Work & Focus Workspace</h1>
             </div>
-            <p className="text-xs text-[#787C83]">
+            <p className="text-sm text-[#9CA3AF]">
               Personal cross-project dashboard for {currentUser?.name || 'Engineer'}
             </p>
           </div>
 
           {/* Quick Metrics Header Pills */}
-          <div className="flex items-center gap-2 text-xs font-mono">
+          <div className="flex items-center gap-2 text-sm">
             <RealtimeBadge />
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-xl">
-              <span className="text-[#DCB001] font-bold">{myAssignedIssues.length}</span>
-              <span className="text-[#787C83]">Assigned Tasks</span>
+              <span className="text-[#DCB001] font-bold font-mono">{myAssignedIssues.length}</span>
+              <span className="text-[#9CA3AF]">Assigned Tasks</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-xl">
               <Flame size={13} className="text-[#F97316]" />
-              <span className="text-white font-bold">{pomodoroCycles}</span>
-              <span className="text-[#787C83]">Focus Sessions</span>
+              <span className="text-white font-bold font-mono">{pomodoroCycles}</span>
+              <span className="text-[#9CA3AF]">Focus Sessions</span>
             </div>
           </div>
         </div>
@@ -246,35 +246,35 @@ export default function MyWorkPage() {
           <div className="col-span-12 lg:col-span-8 space-y-4">
             {/* Filter Tabs & Search */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-1 text-xs">
+              <div className="flex items-center bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-1 text-sm">
                 <button
                   onClick={() => setFilterTab('assigned')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                    filterTab === 'assigned' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    filterTab === 'assigned' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Assigned ({myAssignedIssues.filter((i) => i.status !== 'done').length})
                 </button>
                 <button
                   onClick={() => setFilterTab('blocked')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                    filterTab === 'blocked' ? 'bg-[#2A2C30] text-[#EF4444] shadow-sm' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    filterTab === 'blocked' ? 'bg-[#2A2C30] text-[#EF4444] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Blocked ({blockedIssues.length})
                 </button>
                 <button
                   onClick={() => setFilterTab('due')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                    filterTab === 'due' ? 'bg-[#2A2C30] text-[#3B82F6] shadow-sm' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    filterTab === 'due' ? 'bg-[#2A2C30] text-[#3B82F6] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Due Soon ({dueSoonIssues.length})
                 </button>
                 <button
                   onClick={() => setFilterTab('completed')}
-                  className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${
-                    filterTab === 'completed' ? 'bg-[#2A2C30] text-[#22C55E] shadow-sm' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                    filterTab === 'completed' ? 'bg-[#2A2C30] text-[#22C55E] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                   }`}
                 >
                   Completed ({completedIssues.length})
@@ -283,13 +283,13 @@ export default function MyWorkPage() {
 
               {/* Search Bar */}
               <div className="relative flex-1 max-w-xs">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#787C83]" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
                 <input
                   type="text"
                   placeholder="Filter tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#1B1C1F] border border-[#2A2C30] rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-[#787C83] outline-none"
+                  className="w-full bg-[#1B1C1F] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#DCB001]/40 focus:ring-offset-1 focus:ring-offset-[#131415]"
                 />
               </div>
             </div>
@@ -299,8 +299,8 @@ export default function MyWorkPage() {
               {displayedIssues.length === 0 ? (
                 <div className="p-12 text-center bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl space-y-2">
                   <CheckCircle2 size={32} className="mx-auto text-[#22C55E]/60 mb-2" />
-                  <h3 className="text-sm font-bold text-white">All clear in this section!</h3>
-                  <p className="text-xs text-[#787C83]">No tasks matching this filter.</p>
+                  <h3 className="text-base font-bold text-white">All clear in this section!</h3>
+                  <p className="text-sm text-[#9CA3AF]">No tasks matching this filter.</p>
                 </div>
               ) : (
                 displayedIssues.map((issue) => {
@@ -317,17 +317,17 @@ export default function MyWorkPage() {
                     >
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap text-xs">
-                          <span className="font-mono font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+                          <span className="font-mono font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2.5 py-1 rounded">
                             {issue.key}
                           </span>
-                          <span className="text-[#787C83] font-mono text-[11px]">
+                          <span className="text-[#9CA3AF] text-xs">
                             {issue.project}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-[#131415] text-[10px] font-mono capitalize border border-[#2A2C30]">
+                          <span className="px-2 py-0.5 rounded bg-[#131415] text-xs capitalize border border-[#2A2C30]">
                             {issue.status.replace('_', ' ')}
                           </span>
                           {issue.priority === 'critical' && (
-                            <span className="px-2 py-0.5 rounded bg-[#EF4444]/20 text-[#EF4444] text-[10px] font-mono font-bold border border-[#EF4444]/40">
+                            <span className="px-2 py-0.5 rounded bg-[#EF4444]/20 text-[#EF4444] text-xs font-bold border border-[#EF4444]/40">
                               Critical
                             </span>
                           )}
@@ -350,7 +350,7 @@ export default function MyWorkPage() {
                             setIsPomodoroRunning(true);
                             toast.info(`Focus session started for ${issue.key}`);
                           }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                          className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                             isCurrentFocus
                               ? 'bg-[#DCB001] text-[#0F1011]'
                               : 'bg-[#131415] hover:bg-[#2A2C30] text-[#CFD4DD] border border-[#2A2C30]'
@@ -371,21 +371,21 @@ export default function MyWorkPage() {
           <div className="col-span-12 lg:col-span-4 space-y-6">
             <div className="p-6 bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl space-y-5 shadow-xl text-center">
               <div className="flex items-center justify-between pb-3 border-b border-[#2A2C30]">
-                <div className="flex items-center gap-2 text-xs font-bold text-white">
+                <div className="flex items-center gap-2 text-sm font-bold text-white">
                   <Flame size={16} className="text-[#F97316]" />
                   <span>Pomodoro Focus Timer</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#787C83]">25m Work / 5m Break</span>
+                <span className="text-xs text-[#9CA3AF]">25m Work / 5m Break</span>
               </div>
 
               {/* Active Focus Target */}
               {focusIssue ? (
                 <div className="p-3 bg-[#131415] border border-[#DCB001]/40 rounded-xl text-left space-y-1">
-                  <span className="text-[10px] font-mono text-[#DCB001] font-bold">Active Focus Target</span>
+                  <span className="text-xs text-[#DCB001] font-bold">Active Focus Target</span>
                   <div className="text-xs font-bold text-white truncate">{focusIssue.key}: {focusIssue.title}</div>
                 </div>
               ) : (
-                <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl text-xs text-[#787C83] italic">
+                <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl text-sm text-[#9CA3AF] italic">
                   Select a task from your list to anchor this focus session.
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function MyWorkPage() {
                 <div className="text-4xl sm:text-5xl font-mono font-black text-white tracking-widest">
                   {formatPomodoro(pomodoroSeconds)}
                 </div>
-                <span className="text-xs font-mono text-[#787C83] mt-1 block">
+                <span className="text-xs text-[#9CA3AF] mt-1 block">
                   {isPomodoroRunning ? '⚡ Deep Focus Mode Active' : 'Paused / Ready'}
                 </span>
               </div>
@@ -404,7 +404,7 @@ export default function MyWorkPage() {
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => setIsPomodoroRunning((prev) => !prev)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md ${
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md ${
                     isPomodoroRunning
                       ? 'bg-[#EF4444] hover:bg-[#dc2626] text-white'
                       : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
@@ -419,7 +419,7 @@ export default function MyWorkPage() {
                     setIsPomodoroRunning(false);
                     setPomodoroSeconds(25 * 60);
                   }}
-                  className="p-2.5 bg-[#131415] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-xl text-[#787C83] hover:text-white transition-colors"
+                  className="p-2.5 bg-[#131415] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-xl text-[#9CA3AF] hover:text-white transition-colors"
                   title="Reset Timer"
                 >
                   <RotateCcw size={14} />

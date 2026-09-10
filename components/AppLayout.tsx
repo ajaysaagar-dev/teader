@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { clearAllLocalCaches } from '@/lib/client-cache';
-import { 
-  LayoutDashboard, 
-  FolderKanban, 
-  User, 
-  Search, 
-  Plus, 
-  HelpCircle, 
-  LogOut, 
-  ShieldCheck, 
-  Check, 
-  X, 
+import React, { useState, useEffect, Suspense, useCallback } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { clearAllLocalCaches } from "@/lib/client-cache";
+import {
+  LayoutDashboard,
+  FolderKanban,
+  User,
+  Search,
+  Plus,
+  HelpCircle,
+  LogOut,
+  ShieldCheck,
+  Check,
+  X,
   Sparkles,
   Command,
   ChevronDown,
@@ -25,23 +25,34 @@ import {
   Mic,
   MicOff,
   PhoneOff,
-  Maximize2
-} from 'lucide-react';
+  Maximize2,
+} from "lucide-react";
 
+import { CommandPalette } from "@/components/CommandPalette";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
+import { SettingsModal } from "@/components/SettingsModal";
+import { ProfileAvatarPickerModal } from "@/components/ProfileAvatarPickerModal";
+import { Issue, FileDiff } from "@/lib/types";
+import { Avatar } from "@/components/ui/Avatar";
+import { reconcileCreatedIssue } from "@/lib/reconcileIssue";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 
-import { CommandPalette } from '@/components/CommandPalette';
-import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
-import { SettingsModal } from '@/components/SettingsModal';
-import { ProfileAvatarPickerModal } from '@/components/ProfileAvatarPickerModal';
-import { Issue, FileDiff } from '@/lib/types';
-import { Avatar } from '@/components/ui/Avatar';
-import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
-import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
-import dynamic from 'next/dynamic';
-
-const NewIssueModal = dynamic(() => import('@/components/NewIssueModal').then(m => ({ default: m.NewIssueModal })), { ssr: false });
-const DiffViewerModal = dynamic(() => import('@/components/DiffViewerModal').then(m => ({ default: m.DiffViewerModal })), { ssr: false });
+const NewIssueModal = dynamic(
+  () =>
+    import("@/components/NewIssueModal").then((m) => ({
+      default: m.NewIssueModal,
+    })),
+  { ssr: false },
+);
+const DiffViewerModal = dynamic(
+  () =>
+    import("@/components/DiffViewerModal").then((m) => ({
+      default: m.DiffViewerModal,
+    })),
+  { ssr: false },
+);
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -49,18 +60,28 @@ interface AppLayoutProps {
 
 const SAMPLE_DIFFS: FileDiff[] = [
   {
-    path: 'src/api/workspace.ts',
-    status: 'modified',
+    path: "src/api/workspace.ts",
+    status: "modified",
     additions: 1,
     deletions: 1,
     hunks: [
       {
-        header: '@@ -12,4 +12,4 @@',
+        header: "@@ -12,4 +12,4 @@",
         lines: [
-          { type: 'context', content: '  async function loadWorkspace(id: string) {' },
-          { type: 'delete', content: "    const data = await fetch('/api/workspace/' + id);" },
-          { type: 'add', content: "    const data = await fetch('/api/workspace/' + id, { cache: 'no-store' });" },
-          { type: 'context', content: '    return data.json();' },
+          {
+            type: "context",
+            content: "  async function loadWorkspace(id: string) {",
+          },
+          {
+            type: "delete",
+            content: "    const data = await fetch('/api/workspace/' + id);",
+          },
+          {
+            type: "add",
+            content:
+              "    const data = await fetch('/api/workspace/' + id, { cache: 'no-store' });",
+          },
+          { type: "context", content: "    return data.json();" },
         ],
       },
     ],
@@ -90,8 +111,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         setCurrentUser(e.detail);
       }
     };
-    window.addEventListener('teader_user_updated', handleUserUpdate);
-    return () => window.removeEventListener('teader_user_updated', handleUserUpdate);
+    window.addEventListener("teader_user_updated", handleUserUpdate);
+    return () =>
+      window.removeEventListener("teader_user_updated", handleUserUpdate);
   }, []);
 
   const [activeMeeting, setActiveMeeting] = useState<{
@@ -110,14 +132,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     const handleActiveMeetingUpdate = (e: any) => {
       setActiveMeeting(e.detail || null);
     };
-    window.addEventListener('teader_active_meeting_update', handleActiveMeetingUpdate);
-    return () => window.removeEventListener('teader_active_meeting_update', handleActiveMeetingUpdate);
+    window.addEventListener(
+      "teader_active_meeting_update",
+      handleActiveMeetingUpdate,
+    );
+    return () =>
+      window.removeEventListener(
+        "teader_active_meeting_update",
+        handleActiveMeetingUpdate,
+      );
   }, []);
 
   const handleOpenMeeting = () => {
     if (!activeMeeting) return;
     // Dispatch tab switch event if already on the project page
-    window.dispatchEvent(new CustomEvent('teader_switch_project_tab', { detail: 'meeting' }));
+    window.dispatchEvent(
+      new CustomEvent("teader_switch_project_tab", { detail: "meeting" }),
+    );
     // Navigate if on another page
     if (!pathname.startsWith(`/projects/${activeMeeting.projectId}`)) {
       router.push(`/projects/${activeMeeting.projectId}?tab=meeting`);
@@ -125,44 +156,50 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   const handleLeaveMeeting = () => {
-    window.dispatchEvent(new CustomEvent('teader_meeting_action', { detail: 'leave' }));
+    window.dispatchEvent(
+      new CustomEvent("teader_meeting_action", { detail: "leave" }),
+    );
     setActiveMeeting(null);
   };
 
   const handleToggleMeetingMute = () => {
-    window.dispatchEvent(new CustomEvent('teader_meeting_action', { detail: 'toggle_mute' }));
-    setActiveMeeting((prev) => (prev ? { ...prev, isMuted: !prev.isMuted } : null));
+    window.dispatchEvent(
+      new CustomEvent("teader_meeting_action", { detail: "toggle_mute" }),
+    );
+    setActiveMeeting((prev) =>
+      prev ? { ...prev, isMuted: !prev.isMuted } : null,
+    );
   };
 
   // Verify authentication before rendering workspace
   useEffect(() => {
     try {
-      const cached = localStorage.getItem('teader_user');
+      const cached = localStorage.getItem("teader_user");
       if (cached) setCurrentUser(JSON.parse(cached));
     } catch {}
 
-    fetch('/api/auth/me')
+    fetch("/api/auth/me")
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
           setCurrentUser(data.user);
           try {
-            localStorage.setItem('teader_user', JSON.stringify(data.user));
+            localStorage.setItem("teader_user", JSON.stringify(data.user));
           } catch {}
           setIsCheckingAuth(false);
-        } else if (pathname !== '/login' && pathname !== '/register') {
+        } else if (pathname !== "/login" && pathname !== "/register") {
           try {
-            localStorage.removeItem('teader_user');
-            localStorage.removeItem('teader_token');
+            localStorage.removeItem("teader_user");
+            localStorage.removeItem("teader_token");
           } catch {}
           router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
       })
       .catch(() => {
-        if (pathname !== '/login' && pathname !== '/register') {
+        if (pathname !== "/login" && pathname !== "/register") {
           try {
-            localStorage.removeItem('teader_user');
-            localStorage.removeItem('teader_token');
+            localStorage.removeItem("teader_user");
+            localStorage.removeItem("teader_token");
           } catch {}
           router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
         }
@@ -172,12 +209,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       });
   }, [pathname, router]);
 
-
   // Fetch data for command palette
   useEffect(() => {
     Promise.all([
-      fetch('/api/issues').then(r => r.ok ? r.json() : []).catch(() => []),
-      fetch('/api/projects').then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch("/api/issues")
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+      fetch("/api/projects")
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
     ]).then(([issueData, projectData]) => {
       if (Array.isArray(issueData)) setIssues(issueData);
       if (Array.isArray(projectData)) setProjects(projectData);
@@ -188,64 +228,74 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      const isEditable = tag === 'input' || tag === 'textarea' || tag === 'select' || (e.target as HTMLElement)?.isContentEditable;
+      const isEditable =
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        (e.target as HTMLElement)?.isContentEditable;
       if (isEditable) return;
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandPaletteOpen(true);
-      } else if (e.key.toLowerCase() === 'c' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      } else if (
+        e.key.toLowerCase() === "c" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         setIsNewIssueModalOpen(true);
-      } else if (e.key === '?') {
+      } else if (e.key === "?") {
         e.preventDefault();
         setIsShortcutsModalOpen(true);
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         setIsCommandPaletteOpen(false);
         setIsShortcutsModalOpen(false);
         setIsAccountModalOpen(false);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleCreateIssue = (newIssue: Issue) => {
-    setIssues(prev => reconcileCreatedIssue(prev, newIssue));
+    setIssues((prev) => reconcileCreatedIssue(prev, newIssue));
     toast.success(`Created ${newIssue.key}`);
   };
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch("/api/auth/logout", { method: "POST" });
       try {
         clearAllLocalCaches();
-        localStorage.removeItem('teader_user');
-        localStorage.removeItem('teader_token');
+        localStorage.removeItem("teader_user");
+        localStorage.removeItem("teader_token");
       } catch {}
-      toast.success('Logged out successfully');
+      toast.success("Logged out successfully");
       setIsAccountModalOpen(false);
-      router.push('/login');
+      router.push("/login");
     } catch {
-      toast.error('Logout failed');
+      toast.error("Logout failed");
     }
   };
 
-  const isDashboardActive = pathname === '/dashboard' || pathname === '/';
-  const isProjectsActive = pathname.startsWith('/projects');
-  const isConversationActive = pathname.startsWith('/conversations') || pathname.startsWith('/conversation');
-  const isFullMeetingView =
-    Boolean(
-      activeMeeting &&
-      pathname.startsWith(`/projects/${activeMeeting.projectId}`) &&
-      !activeMeeting.isMini
-    );
+  const isDashboardActive = pathname === "/dashboard" || pathname === "/";
+  const isProjectsActive = pathname.startsWith("/projects");
+  const isConversationActive =
+    pathname.startsWith("/conversations") ||
+    pathname.startsWith("/conversation");
+  const isFullMeetingView = Boolean(
+    activeMeeting &&
+    pathname.startsWith(`/projects/${activeMeeting.projectId}`) &&
+    !activeMeeting.isMini,
+  );
 
   return (
     <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
       {/* ─── Top Navbar Header (Replacing Sidebar with Top Tabs) ─────── */}
-      <header className="h-12 px-4 bg-[var(--bg-header)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-40">
+      <header className="h-14 px-4 bg-[var(--bg-header)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-40">
         {/* Top Left: Navigation Tabs (Dashboard, Projects, Conversation, Account) */}
         <div className="flex items-center gap-3">
           {/* Top Tabs: Dashboard, Projects, Account */}
@@ -253,58 +303,77 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             {/* Tab: Dashboard */}
             <Link
               href="/dashboard"
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isDashboardActive
-                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                  ? "bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]"
               }`}
             >
-              <LayoutDashboard size={13} className={isDashboardActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
+              <LayoutDashboard
+                size={16}
+                className={
+                  isDashboardActive
+                    ? "text-[var(--accent-yellow)]"
+                    : "text-[var(--text-muted)]"
+                }
+              />
               <span>Dashboard</span>
             </Link>
 
             {/* Tab: Projects */}
             <Link
               href="/projects"
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isProjectsActive
-                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                  ? "bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]"
               }`}
             >
-              <FolderKanban size={13} className={isProjectsActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
+              <FolderKanban
+                size={16}
+                className={
+                  isProjectsActive
+                    ? "text-[var(--accent-yellow)]"
+                    : "text-[var(--text-muted)]"
+                }
+              />
               <span>Projects</span>
             </Link>
 
             {/* Tab: Account */}
             <button
               onClick={() => setIsAccountModalOpen(true)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isAccountModalOpen
-                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                  ? "bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]"
               }`}
             >
-              <User size={13} className="text-[var(--cyan)]" />
+              <User size={16} className="text-[var(--cyan)]" />
               <span>Account</span>
             </button>
 
             {/* Tab: Settings */}
             <button
               onClick={() => setIsSettingsModalOpen(true)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
                 isSettingsModalOpen
-                  ? 'bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                  ? "bg-[var(--bg-hover)] text-white font-semibold shadow-sm border border-[var(--border-secondary)]"
+                  : "text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]"
               }`}
             >
-              <Settings size={13} className={isSettingsModalOpen ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
+              <Settings
+                size={16}
+                className={
+                  isSettingsModalOpen
+                    ? "text-[var(--accent-yellow)]"
+                    : "text-[var(--text-muted)]"
+                }
+              />
               <span>Settings</span>
             </button>
           </nav>
-
         </div>
-
 
         {/* Active Meeting Widget in App Header (For other pages/tabs) */}
         {activeMeeting && !isFullMeetingView && (
@@ -316,22 +385,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             >
               <div className="relative flex items-center justify-center">
                 <div className="w-6 h-6 rounded-full bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 flex items-center justify-center">
-                  <Radio size={12} className="text-[#22C55E] animate-pulse" />
+                  <Radio size={14} className="text-[#22C55E] animate-pulse" />
                 </div>
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#22C55E] animate-ping" />
               </div>
 
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-white group-hover:text-[var(--accent-yellow)] transition-colors truncate max-w-[110px] sm:max-w-[150px]">
+                  <span className="text-sm font-bold text-white group-hover:text-[var(--accent-yellow)] transition-colors truncate max-w-[110px] sm:max-w-[150px]">
                     {activeMeeting.projectName}
                   </span>
-                  <span className="px-1.5 py-0.2 rounded bg-[#22C55E]/15 text-[#22C55E] font-mono text-[9px] font-bold border border-[#22C55E]/30 shrink-0">
+                  <span className="px-1.5 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] font-mono text-xs font-bold border border-[#22C55E]/30 shrink-0">
                     LIVE
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#787C83] leading-none">
-                  {activeMeeting.duration || '00:00'}
+                <span className="text-xs font-mono text-[#9CA3AF] leading-none">
+                  {activeMeeting.duration || "00:00"}
                 </span>
               </div>
             </div>
@@ -343,22 +412,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 onClick={handleToggleMeetingMute}
                 className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                   activeMeeting.isMuted
-                    ? 'bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25'
-                    : 'bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]'
+                    ? "bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25"
+                    : "bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]"
                 }`}
-                title={activeMeeting.isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+                title={
+                  activeMeeting.isMuted
+                    ? "Unmute Microphone"
+                    : "Mute Microphone"
+                }
               >
-                {activeMeeting.isMuted ? <MicOff size={12} /> : <Mic size={12} />}
+                {activeMeeting.isMuted ? (
+                  <MicOff size={14} />
+                ) : (
+                  <Mic size={14} />
+                )}
               </button>
 
               {/* Open Meeting Button */}
               <button
                 type="button"
                 onClick={handleOpenMeeting}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#DCB001]/15 hover:bg-[#DCB001]/25 text-[#DCB001] border border-[#DCB001]/35 text-[11px] font-semibold transition-all cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#DCB001]/15 hover:bg-[#DCB001]/25 text-[#DCB001] border border-[#DCB001]/35 text-xs font-semibold transition-all cursor-pointer"
                 title="Open Meeting"
               >
-                <Maximize2 size={11} />
+                <Maximize2 size={14} />
                 <span>Open Meeting</span>
               </button>
 
@@ -369,7 +446,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 border border-red-500/35 transition-colors cursor-pointer"
                 title="Leave Meeting"
               >
-                <PhoneOff size={12} />
+                <PhoneOff size={14} />
               </button>
             </div>
           </div>
@@ -380,12 +457,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Command Palette Button */}
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-xs transition-all"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-sm transition-all"
             title="Search workspace (Ctrl + K)"
           >
-            <Search size={12} />
-            <span className="text-[11px] font-mono">Quick Search...</span>
-            <kbd className="px-1.5 py-0.2 text-[9px] font-mono bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
+            <Search size={16} />
+            <span className="text-xs font-mono">Quick Search...</span>
+            <kbd className="px-1.5 py-0.5 text-xs font-mono bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
               ⌘K
             </kbd>
           </button>
@@ -393,16 +470,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Keyboard Shortcuts */}
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="p-1.5 text-[var(--text-muted)] hover:text-white rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+            className="p-2 text-[var(--text-muted)] hover:text-white rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             title="Keyboard Shortcuts (?)"
           >
-            <HelpCircle size={15} />
+            <HelpCircle size={18} />
           </button>
 
           {/* User Profile Avatar / Logout Trigger */}
           <button
             onClick={() => setIsAccountModalOpen(true)}
-            className="flex items-center gap-1.5 p-0.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+            className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
             title="View Account"
           >
             <Avatar user={currentUser} size="sm" />
@@ -427,13 +504,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <span>Verifying workspace session...</span>
           </div>
         </div>
-
       ) : !currentUser ? null : (
         <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none">
           {children}
         </main>
       )}
-
 
       {/* ─── Account Settings Modal (Top Tab 'Account') ─────────────── */}
       <AnimatePresence>
@@ -452,8 +527,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     <User size={16} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white tracking-tight">Account & Profile</h3>
-                    <p className="text-[11px] font-mono text-[#787C83]">Active Session Credentials</p>
+                    <h3 className="text-sm font-bold text-white tracking-tight">
+                      Account & Profile
+                    </h3>
+                    <p className="text-[11px] font-mono text-[#787C83]">
+                      Active Session Credentials
+                    </p>
                   </div>
                 </div>
                 <button
@@ -480,8 +559,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-white truncate">{currentUser?.name || 'Developer User'}</p>
-                      <p className="text-xs font-mono text-[var(--text-muted)] truncate">{currentUser?.email || 'test@teader.io'}</p>
+                      <p className="text-sm font-bold text-white truncate">
+                        {currentUser?.name || "Developer User"}
+                      </p>
+                      <p className="text-xs font-mono text-[var(--text-muted)] truncate">
+                        {currentUser?.email || "test@teader.io"}
+                      </p>
                       <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.2 rounded bg-[var(--success-bg)] text-[var(--success)] text-[10px] font-mono font-medium border border-[var(--success-border)]">
                         <ShieldCheck size={10} /> Authenticated
                       </div>
@@ -500,16 +583,28 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 {/* Workspace Role & Status */}
                 <div className="space-y-2 text-xs font-mono">
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
-                    <span className="text-[var(--text-muted)]">Workspace Role</span>
-                    <span className="text-[var(--accent-yellow)] font-bold capitalize">{currentUser?.role || 'Project Lead'}</span>
+                    <span className="text-[var(--text-muted)]">
+                      Workspace Role
+                    </span>
+                    <span className="text-[var(--accent-yellow)] font-bold capitalize">
+                      {currentUser?.role || "Project Lead"}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
-                    <span className="text-[var(--text-muted)]">Database Connection</span>
-                    <span className="text-[var(--success)] font-medium">PostgreSQL localhost:5678 (teader_db)</span>
+                    <span className="text-[var(--text-muted)]">
+                      Database Connection
+                    </span>
+                    <span className="text-[var(--success)] font-medium">
+                      PostgreSQL localhost:5678 (teader_db)
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-primary)]">
-                    <span className="text-[var(--text-muted)]">Client Caching</span>
-                    <span className="text-[var(--cyan)] font-medium">0ms Optimistic SWR Active</span>
+                    <span className="text-[var(--text-muted)]">
+                      Client Caching
+                    </span>
+                    <span className="text-[var(--cyan)] font-medium">
+                      0ms Optimistic SWR Active
+                    </span>
                   </div>
                 </div>
               </div>
@@ -546,7 +641,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           setIsCommandPaletteOpen(false);
           if (issueId) router.push(`/task/${issueId}/details`);
         }}
-        onOpenNewIssue={() => { setIsCommandPaletteOpen(false); setIsNewIssueModalOpen(true); }}
+        onOpenNewIssue={() => {
+          setIsCommandPaletteOpen(false);
+          setIsNewIssueModalOpen(true);
+        }}
         onSelectView={() => setIsCommandPaletteOpen(false)}
       />
 
@@ -575,7 +673,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             onClose={() => setIsDiffModalOpen(false)}
             diffs={SAMPLE_DIFFS}
             title="Diff Preview"
-            onApply={() => { toast.success('Changes applied!'); setIsDiffModalOpen(false); }}
+            onApply={() => {
+              toast.success("Changes applied!");
+              setIsDiffModalOpen(false);
+            }}
           />
         </Suspense>
       )}

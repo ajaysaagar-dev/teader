@@ -39,15 +39,15 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
                 <GitCommit size={18} />
               </div>
               <div>
-                <h3 className="font-semibold text-sm text-[#CFD4DD]">{title}</h3>
-                <p className="text-xs text-[#787C83]">
+                <h3 className="text-lg font-bold text-[#E5E7EB]">{title}</h3>
+                <p className="text-xs text-[#9CA3AF]">
                   {diffs.length} changed file{diffs.length !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-[#787C83] hover:text-white rounded-lg hover:bg-[#222427] transition-colors"
+              className="p-1.5 text-[#9CA3AF] hover:text-white rounded-lg hover:bg-[#222427] transition-colors"
             >
               <X size={18} />
             </button>
@@ -59,11 +59,11 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
               <div key={idx} className="border border-[#2A2C30] rounded-lg overflow-hidden bg-[#0F1011]">
                 {/* File Header */}
                 <div className="flex items-center justify-between px-4 py-2.5 bg-[#17181A] border-b border-[#2A2C30] text-xs font-mono">
-                  <div className="flex items-center gap-2 text-[#CFD4DD]">
+                  <div className="flex items-center gap-2 text-[#E5E7EB]">
                     <FileCode size={14} className="text-[#0391A1]" />
                     <span>{diff.path}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] font-sans">
+                  <div className="flex items-center gap-2 text-xs font-sans">
                     <span className="text-[#22C55E]">+{diff.additions}</span>
                     <span className="text-[#C0393B]">-{diff.deletions}</span>
                   </div>
@@ -73,7 +73,7 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
                 <div className="divide-y divide-[#2A2C30] font-mono text-[12px] leading-relaxed">
                   {diff.hunks.map((hunk, hIdx) => (
                     <div key={hIdx}>
-                      <div className="px-4 py-1 text-[11px] bg-[#1A1B1D] text-[#DCB001] border-y border-[#2A2C30]">
+                      <div className="px-4 py-1 text-xs bg-[#1A1B1D] text-[#DCB001] border-y border-[#2A2C30]">
                         {hunk.header}
                       </div>
                       <div className="divide-y divide-[#2A2C30]/40">
@@ -91,7 +91,7 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
                                   : 'text-[#9499A0]'
                               }`}
                             >
-                              <span className="w-10 shrink-0 text-[#787C83] text-[10px] select-none text-right pr-3">
+                              <span className="w-10 shrink-0 text-[#9CA3AF] text-xs select-none text-right pr-3">
                                 {line.newLine || line.oldLine || ''}
                               </span>
                               <span className="w-4 shrink-0 select-none font-bold">
@@ -111,11 +111,11 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
 
           {/* Footer Actions */}
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#2A2C30] bg-[#0F1011]">
-            <span className="text-xs text-[#787C83]">Ready to commit and deploy</span>
+            <span className="text-sm text-[#9CA3AF]">Ready to commit and deploy</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="px-3.5 py-1.5 text-xs font-medium text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427] transition-colors"
+                className="px-4 py-2 text-sm font-medium text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427] transition-colors"
               >
                 Close Preview
               </button>
@@ -126,7 +126,7 @@ export const DiffViewerModal: React.FC<DiffViewerModalProps> = ({
                     onClose();
                     toast.success('Changes committed!');
                   }}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-[#CFD4DD] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded-lg shadow-sm transition-colors"
+                  className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-[#E5E7EB] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded-lg shadow-sm transition-colors"
                 >
                   <Check size={14} />
                   <span>Apply Patch & Merge</span>

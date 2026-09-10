@@ -311,7 +311,7 @@ export default function ProjectsPage() {
     return (
       <AppLayout>
         <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans relative">
-          <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+          <div className="px-6 py-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
             <div className="w-32 h-4 bg-[#2A2C30] animate-pulse rounded" />
             <div className="flex gap-2">
               <div className="w-28 h-7 bg-[#2A2C30] animate-pulse rounded-lg" />
@@ -335,8 +335,8 @@ export default function ProjectsPage() {
     <AppLayout>
       <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[#131415] text-[#CFD4DD] font-sans">
         {/* Top Workspace Header Bar */}
-        <div className="px-6 py-3 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
-          <h1 className="text-sm font-bold text-[#CFD4DD] flex items-center gap-2">
+        <div className="px-6 py-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+          <h1 className="text-base font-bold text-[#CFD4DD] flex items-center gap-2">
             <FolderKanban size={16} className="text-[#DCB001]" />
             Projects Directory
           </h1>
@@ -347,7 +347,7 @@ export default function ProjectsPage() {
                 setJoinKeyInput('');
                 setIsJoinProjectModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#DCB001] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded-lg shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#DCB001] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#DCB001]/40 rounded-lg shadow-sm transition-all"
             >
               <Link2 size={14} />
               <span>Join Project</span>
@@ -355,7 +355,7 @@ export default function ProjectsPage() {
 
             <button
               onClick={handleOpenCreateModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#CFD4DD] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded-lg shadow-sm transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-[#CFD4DD] bg-[#1E1E1E] hover:bg-[#2A2C30] border border-[#3B3D41] rounded-lg shadow-sm transition-all"
             >
               <Plus size={14} />
               <span>Create Project</span>
@@ -367,28 +367,28 @@ export default function ProjectsPage() {
         <div className="flex-1 min-h-0 p-6 overflow-y-auto space-y-6">
           <div className="flex items-center justify-between gap-4 max-w-xl bg-[#1B1C1F] p-3 rounded-xl border border-[#2A2C30]">
             <div className="flex items-center gap-2 flex-1">
-              <Search size={16} className="text-[#787C83]" />
+              <Search size={18} className="text-[#9CA3AF]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search projects by key or name..."
-                className="w-full bg-transparent text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none"
+                className="w-full bg-transparent text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none"
               />
             </div>
-            <span className="text-xs font-mono text-[#787C83]">{filteredProjects.length} projects</span>
+            <span className="text-sm text-[#9CA3AF]">{filteredProjects.length} projects</span>
           </div>
 
           {/* Projects Grid */}
           {filteredProjects.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-14 h-14 rounded-2xl bg-[#1B1C1F] border border-[#2A2C30] flex items-center justify-center mb-4">
-                <FolderKanban size={24} className="text-[#787C83]" />
+                <FolderKanban size={24} className="text-[#9CA3AF]" />
               </div>
-              <h3 className="text-sm font-bold text-[#CFD4DD] mb-1">
+              <h3 className="text-base font-bold text-[#CFD4DD] mb-1">
                 {searchQuery ? 'No projects match your search' : 'No projects yet'}
               </h3>
-              <p className="text-xs text-[#787C83] mb-5 max-w-xs">
+              <p className="text-sm text-[#9CA3AF] mb-5 max-w-xs">
                 {searchQuery
                   ? `Clear your search or try a different term`
                   : `Create your first project or join an existing one with a project key`}
@@ -431,20 +431,20 @@ export default function ProjectsPage() {
                       isOwner: Boolean(isOwner),
                     });
                   }}
-                  className="p-5 rounded-xl bg-[#1B1C1F] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 cursor-pointer space-y-4 shadow-sm group flex flex-col justify-between"
+                  className="p-6 rounded-xl bg-[#1B1C1F] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 cursor-pointer space-y-4 shadow-sm group flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-bold text-[#DCB001] bg-[#1A1B1D] px-2 py-0.5 rounded border border-[#2A2C30] truncate max-w-[170px]" title={proj.key}>
+                      <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#1A1B1D] px-2 py-0.5 rounded border border-[#2A2C30] truncate max-w-[170px]" title={proj.key}>
                         {proj.key}
                       </span>
                       <div className="flex items-center gap-2">
                         {isPending && (
-                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-[#DCB001]/40 bg-[#DCB001]/10 text-[#DCB001]">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-[#DCB001]/40 bg-[#DCB001]/10 text-[#DCB001]">
                             Pending Request
                           </span>
                         )}
-                        <span className="text-[11px] font-mono text-[#787C83] flex items-center gap-1">
+                        <span className="text-xs text-[#9CA3AF] flex items-center gap-1">
                           <User size={12} />
                           {proj.ownerName || 'karri'} {isOwner ? '(Owner)' : '(Member)'}
                         </span>
@@ -458,7 +458,7 @@ export default function ProjectsPage() {
                                 setEditName(proj.name);
                                 setEditDesc(proj.description || '');
                               }}
-                              className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1A1B1D] rounded transition-colors"
+                              className="p-1 text-[#9CA3AF] hover:text-[#DCB001] hover:bg-[#1A1B1D] rounded transition-colors"
                               title="Edit Project"
                             >
                               <Pencil size={13} />
@@ -470,7 +470,7 @@ export default function ProjectsPage() {
                                 setConfirmName('');
                                 setConfirmKey('');
                               }}
-                              className="p-1 text-[#787C83] hover:text-[#C0393B] hover:bg-[#1A1B1D] rounded transition-colors"
+                              className="p-1 text-[#9CA3AF] hover:text-[#C0393B] hover:bg-[#1A1B1D] rounded transition-colors"
                               title="Delete Project"
                             >
                               <Trash2 size={14} />
@@ -484,13 +484,13 @@ export default function ProjectsPage() {
                       {proj.name}
                     </h3>
 
-                    <p className="text-xs text-[#9499A0] line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-[#9CA3AF] line-clamp-2 leading-relaxed">
                       {proj.description || 'No description provided.'}
                     </p>
                   </div>
 
                   <div className="pt-3 border-t border-[#2A2C30] flex items-center justify-between text-xs">
-                    <span className="text-[#787C83] font-mono">{projTaskCount} tasks in board</span>
+                    <span className="text-[#9CA3AF]">{projTaskCount} tasks in board</span>
                     <span className="text-[#DCB001] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                       {isPending ? 'View Request' : 'Open Board'} <ArrowRight size={13} />
                     </span>
@@ -513,18 +513,18 @@ export default function ProjectsPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-                  <h3 className="text-xs font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
                     <FolderKanban size={15} className="text-[#DCB001]" />
                     Create New Project
                   </h3>
-                  <button onClick={() => setIsNewProjectModalOpen(false)} className="text-[#787C83] hover:text-white">
+                  <button onClick={() => setIsNewProjectModalOpen(false)} className="text-[#9CA3AF] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleCreateProject} className="p-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Project Name <span className="text-[#C0393B]">*</span>
                     </label>
                     <input
@@ -533,16 +533,16 @@ export default function ProjectsPage() {
                       value={newProjName}
                       onChange={(e) => setNewProjName(e.target.value)}
                       placeholder="e.g. Teader AI Analytics Core"
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001]"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001]"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-[#CFD4DD]">
+                      <label className="block text-sm font-semibold text-[#CFD4DD]">
                         Auto-Generated Unique Project Key (30 characters)
                       </label>
-                      <span className="text-[10px] text-[#22C55E] font-mono flex items-center gap-1">
+                      <span className="text-[10px] text-[#22C55E] flex items-center gap-1">
                         <Lock size={10} /> Read-Only
                       </span>
                     </div>
@@ -552,12 +552,12 @@ export default function ProjectsPage() {
                         readOnly
                         disabled
                         value={autoGeneratedKey}
-                        className="w-full bg-[#131415]/80 border border-[#DCB001]/40 rounded-lg p-2.5 text-[11px] text-[#DCB001] font-mono font-bold outline-none cursor-not-allowed select-all"
+                        className="w-full bg-[#131415]/80 border border-[#DCB001]/40 rounded-lg p-3 text-[11px] text-[#DCB001] font-mono font-bold outline-none cursor-not-allowed select-all"
                       />
                       <button
                         type="button"
                         onClick={() => setAutoGeneratedKey(generate30CharKeyClient())}
-                        className="absolute right-2 top-2 p-1 text-[10px] text-[#787C83] hover:text-white bg-[#1B1C1F] rounded border border-[#2A2C30] flex items-center gap-1"
+                        className="absolute right-2 top-2 p-1 text-[10px] text-[#9CA3AF] hover:text-white bg-[#1B1C1F] rounded border border-[#2A2C30] flex items-center gap-1"
                         title="Regenerate Key"
                       >
                         <Sparkles size={11} className="text-[#DCB001]" />
@@ -567,7 +567,7 @@ export default function ProjectsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Description
                     </label>
                     <textarea
@@ -575,19 +575,19 @@ export default function ProjectsPage() {
                       onChange={(e) => setNewProjDesc(e.target.value)}
                       rows={3}
                       placeholder="Briefly describe project goals..."
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] resize-none"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] resize-none"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">
+                    <span className="text-xs text-[#9CA3AF]">
                       {isFormValid ? 'Owner ID set to your account' : 'Enter project name'}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsNewProjectModalOpen(false)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-5 py-2.5 text-sm text-[#9CA3AF] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
@@ -595,7 +595,7 @@ export default function ProjectsPage() {
                       <button
                         type="submit"
                         disabled={!isFormValid}
-                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#22C55E] hover:bg-[#1ea34d] border border-[#22C55E] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-5 py-2.5 text-sm font-semibold text-[#0F1011] bg-[#22C55E] hover:bg-[#1ea34d] border border-[#22C55E] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         Create Project
                       </button>
@@ -618,22 +618,22 @@ export default function ProjectsPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#DCB001]/40 rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-                  <h3 className="text-xs font-bold text-[#DCB001] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#DCB001] uppercase tracking-wider flex items-center gap-2">
                     <Link2 size={16} />
                     Join Existing Project
                   </h3>
-                  <button onClick={() => setIsJoinProjectModalOpen(false)} className="text-[#787C83] hover:text-white">
+                  <button onClick={() => setIsJoinProjectModalOpen(false)} className="text-[#9CA3AF] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleJoinProject} className="p-5 space-y-4">
-                  <p className="text-xs text-[#9499A0]">
+                  <p className="text-sm text-[#9CA3AF]">
                     Enter the unique 30-character <strong>Project Key</strong> to add this project to your workspace directory.
                   </p>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Project Key <span className="text-[#C0393B]">*</span>
                     </label>
                     <input
@@ -642,24 +642,24 @@ export default function ProjectsPage() {
                       value={joinKeyInput}
                       onChange={(e) => setJoinKeyInput(e.target.value)}
                       placeholder="e.g. PRJTDR9X8K7L6M5N4P3Q2R1S0T9U8V"
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001] font-mono uppercase"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001] font-mono uppercase"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Instant 30-character key verification</span>
+                    <span className="text-xs text-[#9CA3AF]">Instant 30-character key verification</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsJoinProjectModalOpen(false)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-5 py-2.5 text-sm text-[#9CA3AF] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={!joinKeyInput.trim() || isJoining}
-                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-40 transition-all"
+                        className="px-5 py-2.5 text-sm font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-40 transition-all"
                       >
                         Join Project
                       </button>
@@ -682,11 +682,11 @@ export default function ProjectsPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#C0393B]/40 rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1112]">
-                  <h3 className="text-xs font-bold text-[#C0393B] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#C0393B] uppercase tracking-wider flex items-center gap-2">
                     <AlertTriangle size={16} />
                     Delete Project Confirmation
                   </h3>
-                  <button onClick={() => setProjectToDelete(null)} className="text-[#787C83] hover:text-white">
+                  <button onClick={() => setProjectToDelete(null)} className="text-[#9CA3AF] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
@@ -700,7 +700,7 @@ export default function ProjectsPage() {
 
                   <div className="p-3 bg-[#131415] rounded-lg border border-[#2A2C30] space-y-3">
                     <div>
-                      <label className="block text-[11px] text-[#787C83] mb-1">
+                      <label className="block text-xs text-[#9CA3AF] mb-1">
                         Type Project Name to confirm: <span className="text-white font-semibold">{projectToDelete.name}</span>
                       </label>
                       <input
@@ -709,12 +709,12 @@ export default function ProjectsPage() {
                         value={confirmName}
                         onChange={(e) => setConfirmName(e.target.value)}
                         placeholder={projectToDelete.name}
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#C0393B]"
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#C0393B]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-[#787C83] mb-1">
+                      <label className="block text-xs text-[#9CA3AF] mb-1">
                         Type Project Key to confirm: <span className="text-[#DCB001] font-mono text-[10px] font-bold block truncate">{projectToDelete.key}</span>
                       </label>
                       <input
@@ -722,18 +722,18 @@ export default function ProjectsPage() {
                         value={confirmKey}
                         onChange={(e) => setConfirmKey(e.target.value)}
                         placeholder="Paste or type 30-char key"
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#C0393B] font-mono uppercase"
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#C0393B] font-mono uppercase"
                       />
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Requires exact match</span>
+                    <span className="text-xs text-[#9CA3AF]">Requires exact match</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setProjectToDelete(null)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-5 py-2.5 text-sm text-[#9CA3AF] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
@@ -744,7 +744,7 @@ export default function ProjectsPage() {
                           confirmKey.trim().toUpperCase() !== projectToDelete.key.toUpperCase() ||
                           isDeleting
                         }
-                        className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-[#C0393B] hover:bg-[#A32D2F] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="flex items-center gap-1.5 px-5 py-2.5 text-sm font-semibold text-white bg-[#C0393B] hover:bg-[#A32D2F] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         <Trash2 size={13} />
                         <span>Confirm Delete</span>
@@ -768,18 +768,18 @@ export default function ProjectsPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-                  <h3 className="text-xs font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
                     <Pencil size={15} className="text-[#DCB001]" />
                     Edit Project
                   </h3>
-                  <button onClick={() => setProjectToEdit(null)} className="text-[#787C83] hover:text-white">
+                  <button onClick={() => setProjectToEdit(null)} className="text-[#9CA3AF] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveProjectEdit} className="p-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Project Name <span className="text-[#C0393B]">*</span>
                     </label>
                     <input
@@ -787,36 +787,36 @@ export default function ProjectsPage() {
                       autoFocus
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001]"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Description
                     </label>
                     <textarea
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       rows={3}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001] resize-none"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001] resize-none"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Saves to MySQL DB in real-time</span>
+                    <span className="text-xs text-[#9CA3AF]">Saves to MySQL DB in real-time</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setProjectToEdit(null)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-5 py-2.5 text-sm text-[#9CA3AF] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm"
+                        className="px-5 py-2.5 text-sm font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm"
                       >
                         Save Changes
                       </button>

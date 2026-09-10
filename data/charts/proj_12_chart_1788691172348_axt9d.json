@@ -55,8 +55,8 @@
         "backgroundColor": "#1e1e1e"
       },
       {
-        "x": 821,
-        "y": 343,
+        "x": 552,
+        "y": 560,
         "id": "elem_1788691179172_ge9e",
         "text": "Database",
         "type": "cylinder",
@@ -72,9 +72,9 @@
       }
     ],
     "viewport": {
-      "x": -117,
-      "y": -25,
-      "zoom": 1
+      "x": -121,
+      "y": -342,
+      "zoom": 1.32
     },
     "connections": [
       {
@@ -101,5 +101,5 @@
   },
   "orderIndex": 0,
   "createdAt": "2026-09-06T10:39:32.390Z",
-  "updatedAt": "2026-09-06T10:53:46.380Z"
+  "updatedAt": "2026-09-10T12:16:18.466Z"
 }

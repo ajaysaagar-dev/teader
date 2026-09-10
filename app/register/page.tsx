@@ -64,51 +64,51 @@ export default function RegisterPage() {
 
       <div className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden relative z-10">
         <div className="p-8 pb-6 text-center space-y-2 border-b border-[#2A2C30] bg-[#0F1011]">
-          <h1 className="text-xl font-bold text-white tracking-tight">Create Teader Account</h1>
-          <p className="text-xs text-[#787C83]">Register to manage projects, tasks, and team boards</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Create Teader Account</h1>
+          <p className="text-sm text-[#9CA3AF]">Register to manage projects, tasks, and team boards</p>
         </div>
 
         <form onSubmit={handleRegister} className="p-8 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
+            <label className="block text-sm font-semibold text-[#CFD4DD] mb-1.5">
               Full Name / Username
             </label>
             <div className="relative">
-              <User size={16} className="absolute left-3 top-3 text-[#787C83]" />
+              <User size={18} className="absolute left-3 top-3.5 text-[#9CA3AF]" />
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Alex Morgan"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-10 pr-3 py-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
+            <label className="block text-sm font-semibold text-[#CFD4DD] mb-1.5">
               Email Address
             </label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-3 text-[#787C83]" />
+              <Mail size={18} className="absolute left-3 top-3.5 text-[#9CA3AF]" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. alex@teader.io"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-10 pr-3 py-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#CFD4DD] mb-1.5">
-              Password <span className="text-[10px] text-[#787C83] font-normal">(min 6 characters)</span>
+            <label className="block text-sm font-semibold text-[#CFD4DD] mb-1.5">
+              Password <span className="text-xs text-[#9CA3AF] font-normal">(min 6 characters)</span>
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-3 text-[#787C83]" />
+              <Lock size={18} className="absolute left-3 top-3.5 text-[#9CA3AF]" />
               <input
                 type="password"
                 required
@@ -116,7 +116,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#CFD4DD] placeholder-[#787C83] outline-none focus:border-[#DCB001] transition-colors"
+                className="w-full bg-[#131415] border border-[#2A2C30] rounded-xl pl-10 pr-3 py-3 text-sm text-[#CFD4DD] placeholder-[#9CA3AF] outline-none focus:border-[#DCB001] transition-colors"
               />
             </div>
           </div>
@@ -124,14 +124,14 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={!name.trim() || !email.trim() || !password.trim() || isSubmitting}
-            className="w-full flex items-center justify-center gap-2 py-3 text-xs font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-xl shadow-lg transition-all disabled:opacity-50 mt-4"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-xl shadow-lg transition-all disabled:opacity-50 mt-4"
           >
-            <UserPlus size={15} />
+            <UserPlus size={18} />
             <span>Create Account</span>
           </button>
         </form>
 
-        <div className="p-4 bg-[#17181A] border-t border-[#2A2C30] text-center text-xs text-[#787C83]">
+        <div className="p-4 bg-[#17181A] border-t border-[#2A2C30] text-center text-sm text-[#9CA3AF]">
           Already have an account?{' '}
           <Link href="/login" className="text-[#DCB001] font-semibold hover:underline">
             Sign in

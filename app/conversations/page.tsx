@@ -412,7 +412,7 @@ export default function ConversationsPage() {
           <div>
             {/* Project Switcher Header */}
             <div className="p-3 border-b border-[#222428]">
-              <label className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] block mb-1.5 font-medium">
+              <label className="text-xs font-medium uppercase tracking-wider text-[#9CA3AF] block mb-1.5">
                 Active Project
               </label>
               <CustomDropdown<number>
@@ -431,16 +431,16 @@ export default function ConversationsPage() {
             {/* Channels Navigation */}
             <div className="p-3 space-y-1">
               <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] font-medium">
+                <span className="text-xs font-medium uppercase tracking-wider text-[#9CA3AF]">
                   Channels
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono text-[#585C60]">({channels.length})</span>
+                  <span className="text-xs text-[#6B7280]">({channels.length})</span>
                   {/* Admin-only Add Channel Button */}
                   {isUserAdmin && (
                     <button
                       onClick={() => setIsNewChannelModalOpen(true)}
-                      className="p-1 rounded text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors"
+                      className="p-1 rounded text-[#9CA3AF] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors"
                       title="Create New Channel (Admin Only)"
                     >
                       <Plus size={13} />
@@ -461,14 +461,14 @@ export default function ConversationsPage() {
                     >
                       <button
                         onClick={() => setActiveChannel(ch.name)}
-                        className={`flex-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left truncate ${
+                        className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left truncate ${
                           isActive
                             ? 'bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 font-semibold shadow-sm'
                             : 'text-[#8E939D] hover:text-white hover:bg-[#16171B]'
                         }`}
                         title={ch.desc || ch.name}
                       >
-                        <Hash size={14} className={isActive ? 'text-[#DCB001] shrink-0' : 'text-[#585C60] shrink-0'} />
+                        <Hash size={14} className={isActive ? 'text-[#DCB001] shrink-0' : 'text-[#6B7280] shrink-0'} />
                         <span className="truncate">{ch.name}</span>
                       </button>
 
@@ -479,7 +479,7 @@ export default function ConversationsPage() {
                             e.stopPropagation();
                             setChannelToDelete(ch.name);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[#787C83] hover:text-[#EF4444] hover:bg-[#1F2026] rounded transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#1F2026] rounded transition-all"
                           title={`Delete #${ch.name} (Admin Only)`}
                         >
                           <Trash2 size={12} />
@@ -494,12 +494,12 @@ export default function ConversationsPage() {
 
           {/* Quick Info Footer */}
           <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/60">
-            <div className="flex items-center justify-between text-[11px] text-[#787C83]">
+            <div className="flex items-center justify-between text-sm text-[#9CA3AF]">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Live Sync Active</span>
               </span>
-              <span className="font-mono text-[10px]">{members.length} joined</span>
+              <span className="font-mono text-xs">{members.length} joined</span>
             </div>
           </div>
         </aside>
@@ -516,12 +516,12 @@ export default function ConversationsPage() {
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <span>{activeChannelObj.name}</span>
                   {activeChannelObj.desc && (
-                    <span className="text-[11px] font-normal text-[#787C83] hidden sm:inline truncate">
+                    <span className="text-xs font-normal text-[#9CA3AF] hidden sm:inline truncate">
                       — {activeChannelObj.desc}
                     </span>
                   )}
                 </h2>
-                <p className="text-[10px] font-mono text-[#8E939D] truncate">
+                <p className="text-xs text-[#8E939D] truncate">
                   {selectedProject?.name} ({selectedProject?.key})
                 </p>
               </div>
@@ -529,7 +529,7 @@ export default function ConversationsPage() {
 
             <div className="flex items-center gap-2">
               {isUserAdmin && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
                   ADMIN ACCESS
                 </span>
               )}
@@ -552,7 +552,7 @@ export default function ConversationsPage() {
           {/* Messages Feed Area */}
           <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[#787C83] space-y-2">
+              <div className="flex flex-col items-center justify-center h-full text-sm font-mono text-[#9CA3AF] space-y-2">
                 <div className="w-6 h-6 border-2 border-[#DCB001] border-t-transparent rounded-full animate-spin" />
                 <span>Loading channel messages...</span>
               </div>
@@ -563,7 +563,7 @@ export default function ConversationsPage() {
                 </div>
                 <div className="max-w-sm space-y-1">
                   <h3 className="text-sm font-bold text-white">Welcome to #{activeChannelObj.name}!</h3>
-                  <p className="text-xs text-[#787C83]">
+                  <p className="text-sm text-[#9CA3AF]">
                     This is the start of the <span className="text-[#DCB001]">#{activeChannelObj.name}</span> channel for {selectedProject?.name}. Anyone can send messages!
                   </p>
                 </div>
@@ -584,7 +584,7 @@ export default function ConversationsPage() {
                   <React.Fragment key={`msg_frag_${msg.id ?? 'opt'}_${idx}`}>
                     {showDateSeparator && (
                       <div className="flex items-center justify-center my-3 select-none">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#17181C] border border-[#26282E] text-[10px] font-mono text-[#787C83]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#17181C] border border-[#26282E] text-sm font-mono text-[#9CA3AF]">
                           {currentDateLabel}
                         </span>
                       </div>
@@ -606,23 +606,23 @@ export default function ConversationsPage() {
                       {/* Message Bubble Container */}
                       <div className="flex flex-col min-w-0 max-w-[88%] sm:max-w-[80%] items-start">
                         <div className="flex items-center gap-1.5 px-1 mb-1 select-none">
-                          <span className={`text-[11px] font-bold truncate ${isMe ? 'text-[#DCB001]' : 'text-white'}`}>
+                          <span className={`text-xs font-bold truncate ${isMe ? 'text-[#DCB001]' : 'text-white'}`}>
                             {isMe ? `${currentUser?.name || msg.userName} (You)` : msg.userName}
                           </span>
 
                           {isOwner && (
-                            <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
                               OWNER
                             </span>
                           )}
 
                           {isAdmin && (
-                            <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
                               ADMIN
                             </span>
                           )}
 
-                          <span className="text-[9px] font-mono text-[#6A6E75]">
+                          <span className="text-[11px] font-mono text-[#6A6E75]">
                             {msg.createdAt
                               ? new Date(msg.createdAt).toLocaleTimeString([], {
                                   hour: '2-digit',
@@ -633,7 +633,7 @@ export default function ConversationsPage() {
                         </div>
 
                         <div
-                          className={`relative px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
+                          className={`relative px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                             isMe
                               ? 'bg-[#DCB001]/10 text-white border border-[#DCB001]/30 rounded-tl-xs'
                               : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-tl-xs'
@@ -649,7 +649,7 @@ export default function ConversationsPage() {
                                 navigator.clipboard.writeText(msg.content);
                                 toast.success('Copied message text');
                               }}
-                              className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                              className="p-1 rounded hover:bg-[#202227] text-[#9CA3AF] hover:text-white transition-colors cursor-pointer"
                               title="Copy text"
                             >
                               <Copy size={11} />
@@ -658,7 +658,7 @@ export default function ConversationsPage() {
                             {canDelete && (
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
-                                className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-[#EF4444] transition-colors cursor-pointer"
+                                className="p-1 rounded hover:bg-[#202227] text-[#9CA3AF] hover:text-[#EF4444] transition-colors cursor-pointer"
                                 title={isUserAdmin && !isMe ? 'Delete (Admin)' : 'Delete'}
                               >
                                 <Trash2 size={11} />
@@ -704,7 +704,7 @@ export default function ConversationsPage() {
                 onKeyDown={handleKeyDown}
                 placeholder={`Message #${activeChannelObj.name}... (Enter to send, Shift+Enter for new line)`}
                 rows={1}
-                className="flex-1 bg-transparent text-xs text-white placeholder-[#686C74] focus:outline-none resize-none max-h-32 min-h-[36px] py-2 px-1"
+                className="flex-1 bg-transparent text-sm text-white placeholder-[#686C74] focus:outline-none resize-none max-h-32 min-h-[36px] py-2 px-1"
               />
 
               <div className="flex items-center gap-1 shrink-0 pb-1">
@@ -714,7 +714,7 @@ export default function ConversationsPage() {
                   className={`p-1.5 rounded-lg transition-colors ${
                     showEmojiPicker
                       ? 'bg-[#DCB001]/20 text-[#DCB001]'
-                      : 'text-[#787C83] hover:text-white hover:bg-[#222428]'
+                      : 'text-[#9CA3AF] hover:text-white hover:bg-[#222428]'
                   }`}
                   title="Add emoji"
                 >
@@ -725,7 +725,7 @@ export default function ConversationsPage() {
                   type="button"
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isSending}
-                  className="p-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] disabled:bg-[#222428] text-[#0A0B0D] disabled:text-[#585C60] font-bold transition-all shadow-md"
+                  className="p-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] disabled:bg-[#222428] text-[#0A0B0D] disabled:text-[#6B7280] font-bold transition-all shadow-md"
                   title="Send message (Enter)"
                 >
                   <Send size={14} />
@@ -742,22 +742,22 @@ export default function ConversationsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users size={15} className="text-[#DCB001]" />
-                <h3 className="text-xs font-bold text-white tracking-tight">Joined Persons</h3>
+                <h3 className="text-sm font-bold text-white tracking-tight">Joined Persons</h3>
               </div>
-              <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-[#1E2024] text-[#DCB001] border border-[#2B2D33]">
+              <span className="px-1.5 py-0.5 rounded text-xs font-mono bg-[#1E2024] text-[#DCB001] border border-[#2B2D33]">
                 {members.length}
               </span>
             </div>
 
             {/* Member Search */}
             <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#686C74]" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#7B8290]" />
               <input
                 type="text"
                 value={searchMember}
                 onChange={(e) => setSearchMember(e.target.value)}
                 placeholder="Search joined members..."
-                className="w-full bg-[#17181C] border border-[#25272C] text-white text-[11px] rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[#DCB001] placeholder-[#585C60]"
+                className="w-full bg-[#17181C] border border-[#25272C] text-white text-xs rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[#DCB001] placeholder-[#585C60]"
               />
             </div>
           </div>
@@ -765,7 +765,7 @@ export default function ConversationsPage() {
           {/* Members List */}
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
             {filteredMembers.length === 0 ? (
-              <div className="text-center py-8 text-xs font-mono text-[#686C74]">
+              <div className="text-center py-8 text-xs font-mono text-[#7B8290]">
                 No members match search
               </div>
             ) : (
@@ -793,7 +793,7 @@ export default function ConversationsPage() {
                           {m.userName}
                         </span>
                         <span
-                          className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.2 rounded border ${
+                          className={`text-[11px] font-mono uppercase font-bold px-1.5 py-0.2 rounded border ${
                             isOwner
                               ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
                               : isAdmin
@@ -804,7 +804,7 @@ export default function ConversationsPage() {
                           {m.role || 'member'}
                         </span>
                       </div>
-                      <p className="text-[10px] font-mono text-[#686C74] truncate">
+                      <p className="text-xs font-mono text-[#7B8290] truncate">
                         {m.userEmail}
                       </p>
                     </div>
@@ -816,9 +816,9 @@ export default function ConversationsPage() {
 
           {/* Project Details Bottom Card */}
           <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/80 space-y-1.5">
-            <div className="flex items-center justify-between text-[10px]">
+            <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-white">Project Key</span>
-              <span className="font-mono text-[#787C83]">Share to join</span>
+              <span className="font-mono text-[#9CA3AF]">Share to join</span>
             </div>
             <div
               onClick={() => {
@@ -846,12 +846,12 @@ export default function ConversationsPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">Create New Channel</h3>
-                    <p className="text-xs text-[#787C83]">Admins can create project channels for topic discussions.</p>
+                    <p className="text-sm text-[#9CA3AF]">Admins can create project channels for topic discussions.</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsNewChannelModalOpen(false)}
-                  className="p-1 rounded-lg text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                  className="p-1 rounded-lg text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -859,29 +859,29 @@ export default function ConversationsPage() {
 
               <form onSubmit={handleCreateChannel} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#CFD4DD]">Channel Name</label>
+                  <label className="text-sm font-semibold text-[#CFD4DD]">Channel Name</label>
                   <div className="flex items-center gap-1.5 bg-[#101113] border border-[#2A2C30] focus-within:border-[#DCB001] rounded-xl px-3 py-2">
-                    <span className="text-xs font-mono text-[#787C83]">#</span>
+                    <span className="text-sm font-mono text-[#9CA3AF]">#</span>
                     <input
                       type="text"
                       required
                       value={newChannelName}
                       onChange={(e) => setNewChannelName(e.target.value)}
                       placeholder="e.g. backend-api, release-v2"
-                      className="w-full bg-transparent text-xs text-white placeholder-[#585C60] outline-none"
+                      className="w-full bg-transparent text-sm text-white placeholder-[#585C60] outline-none"
                       autoFocus
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#CFD4DD]">Description (Optional)</label>
+                  <label className="text-sm font-semibold text-[#CFD4DD]">Description (Optional)</label>
                   <textarea
                     value={newChannelDesc}
                     onChange={(e) => setNewChannelDesc(e.target.value)}
                     placeholder="What is this channel for?"
                     rows={2}
-                    className="w-full bg-[#101113] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl p-3 text-xs text-white placeholder-[#585C60] outline-none resize-none"
+                    className="w-full bg-[#101113] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl p-3 text-sm text-white placeholder-[#585C60] outline-none resize-none"
                   />
                 </div>
 
@@ -889,14 +889,14 @@ export default function ConversationsPage() {
                   <button
                     type="button"
                     onClick={() => setIsNewChannelModalOpen(false)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!newChannelName.trim() || isCreatingChannel}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#DCB001] hover:bg-[#c49c00] disabled:bg-[#2A2C30] text-[#0F1011] disabled:text-[#585C60] rounded-xl text-xs font-bold shadow-md transition-all"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#DCB001] hover:bg-[#c49c00] disabled:bg-[#2A2C30] text-[#0F1011] disabled:text-[#6B7280] rounded-xl text-sm font-bold shadow-md transition-all"
                   >
                     {isCreatingChannel ? (
                       <>
@@ -923,7 +923,7 @@ export default function ConversationsPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Delete Channel #{channelToDelete}?</h3>
-                  <p className="text-xs text-[#787C83]">All messages in this channel will be permanently removed.</p>
+                  <p className="text-sm text-[#9CA3AF]">All messages in this channel will be permanently removed.</p>
                 </div>
               </div>
 
@@ -931,7 +931,7 @@ export default function ConversationsPage() {
                 <button
                   type="button"
                   onClick={() => setChannelToDelete(null)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
                 >
                   Cancel
                 </button>
@@ -939,7 +939,7 @@ export default function ConversationsPage() {
                   type="button"
                   disabled={isDeletingChannel}
                   onClick={() => handleDeleteChannel(channelToDelete)}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-xl text-xs font-bold shadow-md transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-xl text-sm font-bold shadow-md transition-all"
                 >
                   {isDeletingChannel ? (
                     <>

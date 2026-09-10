@@ -1747,12 +1747,12 @@ export default function SingleProjectPage() {
       ) : (
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[#131415] text-[#CFD4DD] font-sans">
         {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
-        <div className="h-11 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+        <div className="h-13 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
           {/* Left: Breadcrumbs & Project Identity */}
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => router.push('/projects')}
-              className="text-xs text-[#787C83] hover:text-[#CFD4DD] font-mono flex items-center gap-1 transition-colors shrink-0"
+              className="text-sm text-[#9CA3AF] hover:text-[#CFD4DD] flex items-center gap-1 transition-colors shrink-0"
               title="Back to Projects"
             >
               <ArrowLeft size={13} />
@@ -1762,7 +1762,7 @@ export default function SingleProjectPage() {
 
             <div className="flex items-center gap-1.5 min-w-0">
               <FolderKanban size={14} className="text-[#DCB001] shrink-0" />
-              <span className="text-xs font-bold text-[#CFD4DD] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
+              <span className="text-sm font-bold text-[#CFD4DD] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
                 {project?.name}
               </span>
 
@@ -1776,7 +1776,7 @@ export default function SingleProjectPage() {
                         setIsEditProjectModalOpen(true);
                       }
                     }}
-                    className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
+                    className="p-1 text-[#9CA3AF] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
                     title="Edit Project Details (Creator Only)"
                   >
                     <Pencil size={12} />
@@ -1790,7 +1790,7 @@ export default function SingleProjectPage() {
                         setIsDeleteProjectModalOpen(true);
                       }
                     }}
-                    className="p-1 text-[#787C83] hover:text-[#EF4444] hover:bg-[#131415] rounded transition-colors"
+                    className="p-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#131415] rounded transition-colors"
                     title="Delete Project (Creator Only)"
                   >
                     <Trash2 size={12} />
@@ -1804,15 +1804,15 @@ export default function SingleProjectPage() {
             {project && (
               <button
                 onClick={handleCopyProjectKey}
-                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded text-[10px] font-mono text-[#DCB001] transition-all group shrink-0"
+                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded text-xs font-mono text-[#DCB001] transition-all group shrink-0"
                 title={`Click to copy Project Key: ${project.key}`}
               >
-                <Key size={10} className="text-[#787C83] group-hover:text-[#DCB001]" />
+                <Key size={10} className="text-[#9CA3AF] group-hover:text-[#DCB001]" />
                 <span className="font-bold truncate max-w-[90px] md:max-w-[120px]">{project.key}</span>
                 {copiedKey ? (
                   <Check size={11} className="text-[#22C55E]" />
                 ) : (
-                  <Copy size={10} className="text-[#787C83] group-hover:text-white" />
+                  <Copy size={10} className="text-[#9CA3AF] group-hover:text-white" />
                 )}
               </button>
             )}
@@ -1821,9 +1821,9 @@ export default function SingleProjectPage() {
           {/* Right: Creator, Stacked Members, Sync Pulse & Action Buttons */}
           <div className="flex items-center gap-2 text-xs shrink-0">
             {/* Project Creator Pill */}
-            <div className="hidden lg:flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md px-2 py-0.5 text-[11px]">
-              <Crown size={11} className={isCreator ? 'text-[#22C55E]' : 'text-[#787C83]'} />
-              <span className="text-[#787C83]">by</span>
+            <div className="hidden lg:flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md px-2 py-0.5 text-xs">
+              <Crown size={11} className={isCreator ? 'text-[#22C55E]' : 'text-[#9CA3AF]'} />
+              <span className="text-[#9CA3AF]">by</span>
               <span className="font-semibold text-[#CFD4DD] truncate max-w-[70px]">{project?.ownerName || 'karri'}</span>
             </div>
 
@@ -1854,7 +1854,7 @@ export default function SingleProjectPage() {
             {/* Import Tasks Button */}
             <button
               onClick={() => setIsImportTasksModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-xs text-[#9CA3AF] hover:text-[#CFD4DD] transition-all"
               title="Import Tasks from CSV / JSON"
             >
               <Upload size={12} />
@@ -1864,7 +1864,7 @@ export default function SingleProjectPage() {
             {/* Export Project Button */}
             <button
               onClick={handleExportProject}
-              className="hidden sm:flex items-center gap-1 px-2.5 py-1 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-[11px] text-[#787C83] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-xs text-[#9CA3AF] hover:text-[#CFD4DD] transition-all"
               title="Export Encrypted Project Dump (.teaderdumpfile)"
             >
               <Download size={12} />
@@ -1874,14 +1874,14 @@ export default function SingleProjectPage() {
         </div>
 
         {/* 2. 4-Page Primary Navigation Bar (Overview | Tasks | Docs | Settings + Chat Drawer Toggle) */}
-        <div className="h-11 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
+        <div className="h-12 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
           <div className="flex items-center gap-1 bg-[#101113] p-1 rounded-xl border border-[#222428]">
             <button
               onClick={() => handleTabSwitch('overview')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'overview'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
               }`}
               title="Project Overview & Analytics"
             >
@@ -1891,24 +1891,24 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('tasks')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'tasks'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
               }`}
               title="Project Tasks & Views (Board, List, Tree, Timeline, Dependencies)"
             >
               <LayoutGrid size={13} />
               <span>Tasks</span>
-              <span className="text-[10px] font-mono opacity-80">({projectIssues.length})</span>
+              <span className="text-xs font-mono opacity-80">({projectIssues.length})</span>
             </button>
 
             <button
               onClick={() => handleTabSwitch('docs')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'docs'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
               }`}
               title="Project Wiki & Specs"
             >
@@ -1918,7 +1918,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('charts')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'charts'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -1931,7 +1931,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('meeting')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'meeting'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : isInMeeting
@@ -1956,7 +1956,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('chats')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'chats'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -1969,7 +1969,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('apps')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'apps'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -1982,7 +1982,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('history')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'history'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -1995,7 +1995,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('settings')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'settings'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -2008,7 +2008,7 @@ export default function SingleProjectPage() {
 
             <button
               onClick={() => handleTabSwitch('plugins')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'plugins'
                   ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
                   : 'text-[#787C83] hover:text-[#CFD4DD]'
@@ -2023,7 +2023,7 @@ export default function SingleProjectPage() {
           {/* Quick Chat Drawer Toggle Button */}
           <button
             onClick={() => setIsChatOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-xl border transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-xl border transition-all ${
               isChatOpen
                 ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 shadow-sm'
                 : 'bg-[#101113] text-[#787C83] hover:text-[#CFD4DD] border-[#222428]'
@@ -2133,13 +2133,13 @@ export default function SingleProjectPage() {
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               {/* Secondary Task View Mode Segmented Switcher (Structure | Board | Timeline | List | Dependencies) */}
               <div className="px-4 py-2 border-b border-[#222428] bg-[#121316] flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center bg-[#181A1F] p-0.5 rounded-lg border border-[#2A2C30] text-xs">
+                <div className="flex items-center bg-[#181A1F] p-0.5 rounded-lg border border-[#2A2C30] text-sm">
                   <button
                     onClick={() => handleTaskModeSwitch('structure')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'structure'
                         ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                     }`}
                     title="Hierarchical Project Structure & Tree Explorer"
                   >
@@ -2149,10 +2149,10 @@ export default function SingleProjectPage() {
 
                   <button
                     onClick={() => handleTaskModeSwitch('board')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'board'
                         ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                     }`}
                     title="Kanban Board View"
                   >
@@ -2162,10 +2162,10 @@ export default function SingleProjectPage() {
 
                   <button
                     onClick={() => handleTaskModeSwitch('timeline')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'timeline'
                         ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                     }`}
                     title="Timeline & Calendar View"
                   >
@@ -2175,10 +2175,10 @@ export default function SingleProjectPage() {
 
                   <button
                     onClick={() => handleTaskModeSwitch('list')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'list'
                         ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                     }`}
                     title="Compact List View"
                   >
@@ -2188,10 +2188,10 @@ export default function SingleProjectPage() {
 
                   <button
                     onClick={() => handleTaskModeSwitch('dependencies')}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'dependencies'
                         ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#787C83] hover:text-[#CFD4DD]'
+                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
                     }`}
                     title="DAG Dependency Graph View"
                   >
@@ -2200,7 +2200,7 @@ export default function SingleProjectPage() {
                   </button>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-2 text-[11px] text-[#787C83] font-mono">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-[#9CA3AF] font-mono">
                   <span>{projectIssues.length} tasks</span>
                 </div>
               </div>
@@ -2315,10 +2315,10 @@ export default function SingleProjectPage() {
                 {/* Task Details View Header Bar */}
                 <div className="h-12 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 shrink-0">
+                    <span className="text-sm font-mono font-bold px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 shrink-0">
                       {getTaskShortId(selectedIssue, issues)}
                     </span>
-                    <span className="text-xs font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
+                    <span className="text-sm font-mono text-[#9CA3AF] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
                       {selectedIssue.key}
                     </span>
                     <span className="text-sm font-semibold text-white truncate max-w-[420px]">
@@ -2329,7 +2329,7 @@ export default function SingleProjectPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Status Dropdown */}
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-[#787C83] font-mono">Status:</span>
+                      <span className="text-xs text-[#9CA3AF] font-mono">Status:</span>
                       <CustomDropdown<Status>
                         value={selectedIssue.status}
                         onChange={(val) => handleUpdateStatus(selectedIssue.id, val)}
@@ -2424,18 +2424,18 @@ export default function SingleProjectPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-                  <h3 className="text-xs font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
                     <Pencil size={15} className="text-[#DCB001]" />
                     Edit Project
                   </h3>
-                  <button onClick={() => setIsEditProjectModalOpen(false)} className="text-[#787C83] hover:text-white">
+                  <button onClick={() => setIsEditProjectModalOpen(false)} className="text-[#9CA3AF] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveProjectEdit} className="p-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Project Name <span className="text-[#C0393B]">*</span>
                     </label>
                     <input
@@ -2443,36 +2443,36 @@ export default function SingleProjectPage() {
                       autoFocus
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001]"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
                       Description
                     </label>
                     <textarea
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       rows={3}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-2.5 text-xs text-[#CFD4DD] outline-none focus:border-[#DCB001] resize-none"
+                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001] resize-none"
                     />
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Saves to MySQL DB in real-time</span>
+                    <span className="text-xs text-[#9CA3AF]">Saves to MySQL DB in real-time</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsEditProjectModalOpen(false)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-4 py-1.5 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-50"
                       >
                         Save Changes
                       </button>
@@ -2493,31 +2493,31 @@ export default function SingleProjectPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#EF4444]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1112]">
-                  <h3 className="text-xs font-bold text-[#EF4444] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#EF4444] uppercase tracking-wider flex items-center gap-2">
                     <AlertTriangle size={16} />
                     Delete Project Confirmation
                   </h3>
                   <button
                     onClick={() => setIsDeleteProjectModalOpen(false)}
-                    className="text-[#787C83] hover:text-white"
+                    className="text-[#9CA3AF] hover:text-white"
                   >
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleDeleteProjectConfirmed} className="p-5 space-y-4">
-                  <div className="space-y-1.5 text-xs">
+                  <div className="space-y-1.5 text-sm">
                     <p className="text-[#CFD4DD]">
                       Are you sure you want to permanently delete project <strong className="text-white">{project.name}</strong>?
                     </p>
-                    <p className="text-[11px] text-[#EF4444]/80">
+                    <p className="text-xs text-[#EF4444]/80">
                       ⚠️ This will permanently remove all tasks, subtasks, channel conversations, docs, and member associations.
                     </p>
                   </div>
 
                   <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-3">
                     <div>
-                      <label className="block text-[11px] text-[#787C83] mb-1">
+                      <label className="block text-xs text-[#9CA3AF] mb-1">
                         Type Project Name to confirm: <span className="text-white font-semibold">{project.name}</span>
                       </label>
                       <input
@@ -2526,12 +2526,12 @@ export default function SingleProjectPage() {
                         value={confirmDeleteName}
                         onChange={(e) => setConfirmDeleteName(e.target.value)}
                         placeholder={project.name}
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#EF4444]"
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#EF4444]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-[#787C83] mb-1">
+                      <label className="block text-xs text-[#9CA3AF] mb-1">
                         Type Project Key to confirm: <span className="text-[#DCB001] font-mono text-[10px] font-bold block truncate">{project.key}</span>
                       </label>
                       <input
@@ -2539,18 +2539,18 @@ export default function SingleProjectPage() {
                         value={confirmDeleteKey}
                         onChange={(e) => setConfirmDeleteKey(e.target.value)}
                         placeholder="Paste or type project key"
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-2 text-xs text-[#CFD4DD] outline-none focus:border-[#EF4444] font-mono uppercase"
+                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#EF4444] font-mono uppercase"
                       />
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Requires exact match</span>
+                    <span className="text-xs text-[#9CA3AF]">Requires exact match</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsDeleteProjectModalOpen(false)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
@@ -2561,7 +2561,7 @@ export default function SingleProjectPage() {
                           confirmDeleteKey.trim().toUpperCase() !== project.key.toUpperCase() ||
                           isDeletingProject
                         }
-                        className="px-4 py-1.5 text-xs font-semibold text-white bg-[#EF4444] hover:bg-[#DC2626] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[#EF4444] hover:bg-[#DC2626] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         {isDeletingProject ? 'Deleting...' : 'Permanently Delete'}
                       </button>
@@ -2582,47 +2582,47 @@ export default function SingleProjectPage() {
                 className="w-full max-w-md bg-[#1B1C1F] border border-[#F97316]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               >
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1412]">
-                  <h3 className="text-xs font-bold text-[#F97316] uppercase tracking-wider flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#F97316] uppercase tracking-wider flex items-center gap-2">
                     <AlertTriangle size={16} />
                     Leave Project Confirmation
                   </h3>
                   <button
                     onClick={() => setIsLeaveProjectModalOpen(false)}
-                    className="text-[#787C83] hover:text-white"
+                    className="text-[#9CA3AF] hover:text-white"
                   >
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleLeaveProjectConfirmed} className="p-5 space-y-4">
-                  <div className="space-y-2 text-xs">
+                  <div className="space-y-2 text-sm">
                     <p className="text-[#CFD4DD]">
                       Are you sure you want to leave <strong className="text-white">{project.name}</strong>?
                     </p>
-                    <p className="text-[11px] text-[#A89488] leading-relaxed">
+                    <p className="text-xs text-[#A89488] leading-relaxed">
                       You will be removed as a member and this project will no longer appear in your dashboard. You can rejoin at any time using the Project Key.
                     </p>
                   </div>
 
-                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] flex items-center gap-2 font-mono text-xs text-[#DCB001]">
-                    <span className="text-[#787C83]">Project:</span>
+                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] flex items-center gap-2 font-mono text-sm text-[#DCB001]">
+                    <span className="text-[#9CA3AF]">Project:</span>
                     <span className="font-bold truncate">{project.name} ({project.key})</span>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-[11px] text-[#787C83]">Rejoin anytime with key</span>
+                    <span className="text-xs text-[#9CA3AF]">Rejoin anytime with key</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsLeaveProjectModalOpen(false)}
-                        className="px-3.5 py-1.5 text-xs text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={isLeavingProject}
-                        className="px-4 py-1.5 text-xs font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         {isLeavingProject ? 'Leaving...' : 'Confirm & Leave'}
                       </button>
@@ -2653,12 +2653,12 @@ export default function SingleProjectPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white tracking-tight">Export Project Package</h3>
-                      <p className="text-[11px] font-mono text-[#787C83]">AES-256-GCM Military Grade Encrypted Dump</p>
+                      <p className="text-xs font-mono text-[#9CA3AF]">AES-256-GCM Military Grade Encrypted Dump</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setIsExportModalOpen(false)}
-                    className="text-[#787C83] hover:text-white transition-colors"
+                    className="text-[#9CA3AF] hover:text-white transition-colors"
                   >
                     <X size={18} />
                   </button>
@@ -2673,14 +2673,14 @@ export default function SingleProjectPage() {
                         <FileText size={18} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-white font-mono truncate">{exportFileName}</p>
-                        <p className="text-[10px] text-[#787C83] font-mono">
+                        <p className="text-sm font-bold text-white font-mono truncate">{exportFileName}</p>
+                        <p className="text-xs text-[#9CA3AF] font-mono">
                           {exportFileSize ? `Size: ${exportFileSize} • ` : ''}Format: .teaderdumpfile
                         </p>
                       </div>
                     </div>
 
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 shrink-0">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 shrink-0">
                       Encrypted
                     </span>
                   </div>
@@ -2710,7 +2710,7 @@ export default function SingleProjectPage() {
                   </div>
 
                   {/* Feature Checklist inside dump */}
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-[#8E939D] pt-1">
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[#8E939D] pt-1">
                     <div className="flex items-center gap-1.5">
                       <Check size={12} className="text-[#22C55E]" />
                       <span>{projectIssues.length} Tasks & Subtasks</span>
@@ -2734,7 +2734,7 @@ export default function SingleProjectPage() {
                 <div className="px-6 py-4 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
                   <button
                     onClick={() => setIsExportModalOpen(false)}
-                    className="px-4 py-2 text-xs font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
                   >
                     Close
                   </button>
@@ -2742,7 +2742,7 @@ export default function SingleProjectPage() {
                   <button
                     onClick={handleTriggerDownload}
                     disabled={exportStep !== 'ready' || !exportBlobUrl}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
                   >
                     <Download size={15} className="stroke-[2.5]" />
                     <span>Download Teader Dump File</span>
