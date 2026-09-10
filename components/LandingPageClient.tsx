@@ -103,7 +103,7 @@ export default function LandingPageClient() {
 
           <div className="flex items-center gap-3">
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
               download
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#181A20] hover:bg-[#22252C] text-[#E5E7EB] border border-[#2D3139] hover:border-[#DCB001]/50 text-xs font-medium transition-all"
               title="Download Desktop App for Windows"
@@ -190,7 +190,7 @@ export default function LandingPageClient() {
             </Link>
 
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
               download
               className="flex items-center gap-2.5 px-5 py-3.5 rounded-xl bg-[#181A20] hover:bg-[#22252C] border border-[#2E323C] hover:border-[#DCB001]/60 text-white font-medium text-sm transition-all shadow-sm group hover:scale-105"
             >
@@ -552,7 +552,7 @@ export default function LandingPageClient() {
             </Link>
 
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
               download
               className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#181A20] hover:bg-[#22252C] border border-[#2E323C] hover:border-[#DCB001]/60 text-white font-medium text-sm transition-all"
             >
@@ -573,7 +573,7 @@ export default function LandingPageClient() {
 
           <div className="flex items-center gap-5">
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe"
+              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
               download
               className="text-[#DCB001] hover:underline flex items-center gap-1"
             >

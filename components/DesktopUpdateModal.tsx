@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Download, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { getDesktopInfo, compareVersions } from '@/lib/desktop';
 
-const TARGET_VERSION = '0.1.0';
-const TARGET_DISPLAY_VERSION = '0.1';
-const INSTALLER_URL = '/releases/Teader-Workspace-Web-Setup.exe';
+const TARGET_VERSION = '1.0.0';
+const TARGET_DISPLAY_VERSION = '1.0.0';
+const INSTALLER_URL = '/releases/Teader-Workspace-Setup.exe';
 
 export const DesktopUpdateModal: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -86,7 +86,7 @@ export const DesktopUpdateModal: React.FC = () => {
       const blobUrl = URL.createObjectURL(blob);
       const downloadLink = document.createElement('a');
       downloadLink.href = blobUrl;
-      downloadLink.download = 'Teader-Workspace-Web-Setup.exe';
+      downloadLink.download = 'Teader-Workspace-Setup.exe';
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);

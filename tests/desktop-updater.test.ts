@@ -55,7 +55,7 @@ describe('Desktop Updater & Version Utilities', () => {
     expect(compareVersions(info.version!, '0.0.2')).toBeLessThan(0);
   });
 
-  it('triggers update to 0.1 when running Electron version 0.0.2', () => {
+  it('triggers update to 1.0.0 when running Electron version below 1.0.0', () => {
     (global as any).window.teaderDesktop = {
       isDesktop: true,
       version: '0.0.2',
@@ -67,8 +67,10 @@ describe('Desktop Updater & Version Utilities', () => {
     const info = getDesktopInfo();
     expect(info.isDesktop).toBe(true);
     expect(info.version).toBe('0.0.2');
-    const TARGET_VERSION = '0.1.0';
+    const TARGET_VERSION = '1.0.0';
     expect(compareVersions(info.version!, TARGET_VERSION)).toBeLessThan(0);
+    expect(compareVersions('0.1.0', TARGET_VERSION)).toBeLessThan(0);
+    expect(compareVersions('1.0.0', TARGET_VERSION)).toBe(0);
   });
 
   it('detects desktop environment from userAgent when window.teaderDesktop is not present', () => {

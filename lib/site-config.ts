@@ -46,7 +46,7 @@ export const siteConfig = {
   publisher: 'Teader',
   locale: 'en_US',
   links: {
-    download: 'https://teader.vedipocketpc.online/releases/Teader-Workspace-Web-Setup.exe',
+    download: 'https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe',
   },
   googleSiteVerification:
     process.env.GOOGLE_SITE_VERIFICATION ||
