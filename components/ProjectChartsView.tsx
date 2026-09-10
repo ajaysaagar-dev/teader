@@ -265,6 +265,20 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     }
   }, [isSnapMenuOpen]);
 
+  // Marquee / Area Multi-selection box state
+  const [selectionBox, setSelectionBox] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+  const selectionBoxStartRef = useRef<{
+    x: number;
+    y: number;
+    shiftKey: boolean;
+    baseSelectedIds: string[];
+  } | null>(null);
+
   // Helper to compute smart snapping to nearby elements and invisible grid
   const calculateElementSnap = useCallback(
     (
@@ -1379,13 +1393,18 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     [pushHistory, syncLocalChanges]
   );
 
-  // Global mouseup listener to ensure connection snapping and pan release complete reliably
+  // Global mouseup listener to ensure connection snapping, box select, and pan release complete reliably
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isPanningRef.current) {
         isPanningRef.current = false;
         setIsPanning(false);
       }
+      if (selectionBoxStartRef.current) {
+        selectionBoxStartRef.current = null;
+        setSelectionBox(null);
+      }
+      setActiveGuideLines([]);
       if (linkingStateRef.current) {
         if (linkingStateRef.current.snappedTarget) {
           completeLink(
@@ -1403,27 +1422,55 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [completeLink]);
 
-  // ── Canvas Mouse Down (Selection, Pan on Empty Canvas, Deselect) ──
+  // ── Canvas Mouse Down (Right-click or Middle-click to Pan, Left-click on Empty Canvas to Box Select) ──
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
-    // Left-click (0) or middle-click (1) on empty canvas area initiates drag-to-pan
-    if (e.button !== 0 && e.button !== 1) return;
-
-    if (editingElementIdRef.current) {
-      commitCurrentEditingText();
+    // 1. Right-click (2) or Middle-click (1) on empty canvas initiates drag-to-pan
+    // Also Left-click (0) initiates pan IF activeTool === 'pan'
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && activeTool === 'pan')) {
+      if (editingElementIdRef.current) {
+        commitCurrentEditingText();
+      }
+      isPanningRef.current = true;
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - viewport.x, y: e.clientY - viewport.y };
+      return;
     }
 
-    setSelectedElementIds([]);
-    setSelectedConnectionId(null);
+    // 2. Left-click (0) on empty canvas area initiates Box / Marquee Multi-Selection
+    if (e.button === 0 && canvasRef.current) {
+      if (editingElementIdRef.current) {
+        commitCurrentEditingText();
+      }
+      setSelectedConnectionId(null);
 
-    // Click & hold on any empty area of the canvas allows drag to pan
-    isPanningRef.current = true;
-    setIsPanning(true);
-    panStartRef.current = { x: e.clientX - viewport.x, y: e.clientY - viewport.y };
+      const rect = canvasRef.current.getBoundingClientRect();
+      const worldX = (e.clientX - rect.left - viewport.x) / viewport.zoom;
+      const worldY = (e.clientY - rect.top - viewport.y) / viewport.zoom;
+
+      const baseSelected = e.shiftKey ? [...selectedElementIds] : [];
+      if (!e.shiftKey) {
+        setSelectedElementIds([]);
+      }
+
+      selectionBoxStartRef.current = {
+        x: worldX,
+        y: worldY,
+        shiftKey: e.shiftKey,
+        baseSelectedIds: baseSelected,
+      };
+
+      setSelectionBox({
+        startX: worldX,
+        startY: worldY,
+        currentX: worldX,
+        currentY: worldY,
+      });
+    }
   };
 
-  // ── Canvas Mouse Move (Dragging elements, panning, linking preview, resizing) ──
+  // ── Canvas Mouse Move (Dragging elements, panning, box multi-select, linking preview, resizing) ──
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
-    // 1. Panning
+    // 1. Panning (via right-click hold, middle-click hold, or pan tool)
     if (isPanningRef.current) {
       const nextX = e.clientX - panStartRef.current.x;
       const nextY = e.clientY - panStartRef.current.y;
@@ -1432,6 +1479,45 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
         syncLocalChanges(elementsRef.current, connectionsRef.current, next);
         return next;
       });
+      return;
+    }
+
+    // 2. Box / Area Multi-Selection
+    if (selectionBoxStartRef.current && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const currentWorldX = (e.clientX - rect.left - viewport.x) / viewport.zoom;
+      const currentWorldY = (e.clientY - rect.top - viewport.y) / viewport.zoom;
+
+      setSelectionBox({
+        startX: selectionBoxStartRef.current.x,
+        startY: selectionBoxStartRef.current.y,
+        currentX: currentWorldX,
+        currentY: currentWorldY,
+      });
+
+      const boxLeft = Math.min(selectionBoxStartRef.current.x, currentWorldX);
+      const boxRight = Math.max(selectionBoxStartRef.current.x, currentWorldX);
+      const boxTop = Math.min(selectionBoxStartRef.current.y, currentWorldY);
+      const boxBottom = Math.max(selectionBoxStartRef.current.y, currentWorldY);
+
+      // Check which elements intersect with the selection box
+      const newlySelected = elements
+        .filter((elem) => {
+          const elemRight = elem.x + elem.width;
+          const elemBottom = elem.y + elem.height;
+          return !(
+            elem.x > boxRight ||
+            elemRight < boxLeft ||
+            elem.y > boxBottom ||
+            elemBottom < boxTop
+          );
+        })
+        .map((elem) => elem.id);
+
+      const combined = Array.from(
+        new Set([...selectionBoxStartRef.current.baseSelectedIds, ...newlySelected])
+      );
+      setSelectedElementIds(combined);
       return;
     }
 
@@ -1593,6 +1679,11 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   const handleCanvasMouseUp = () => {
     setActiveGuideLines([]);
 
+    if (selectionBoxStartRef.current) {
+      selectionBoxStartRef.current = null;
+      setSelectionBox(null);
+    }
+
     if (isPanningRef.current) {
       isPanningRef.current = false;
       setIsPanning(false);
@@ -1689,6 +1780,19 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
   // ── Element Drag Start ──
   const handleElementMouseDown = (e: React.MouseEvent, elemId: string) => {
+    // If middle-click (1) or right-click (2), initiate pan across canvas instead of dragging element
+    if (e.button === 1 || e.button === 2) {
+      if (editingElementIdRef.current) {
+        commitCurrentEditingText();
+      }
+      isPanningRef.current = true;
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - viewport.x, y: e.clientY - viewport.y };
+      return;
+    }
+
+    if (e.button !== 0) return;
+
     if (editingElementIdRef.current && editingElementIdRef.current !== elemId) {
       commitCurrentEditingText();
     }
@@ -1722,24 +1826,27 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       }
     }
 
-    // Selection
+    // Selection handling: preserve multi-selection when clicking on any element in the group
+    let currentSelected = selectedElementIds;
     if (e.shiftKey) {
-      setSelectedElementIds((prev) =>
-        prev.includes(elemId) ? prev.filter((id) => id !== elemId) : [...prev, elemId]
-      );
+      currentSelected = currentSelected.includes(elemId)
+        ? currentSelected.filter((id) => id !== elemId)
+        : [...currentSelected, elemId];
+      setSelectedElementIds(currentSelected);
     } else {
-      if (!selectedElementIds.includes(elemId)) {
+      if (!currentSelected.includes(elemId)) {
+        currentSelected = [elemId];
         setSelectedElementIds([elemId]);
       }
     }
     setSelectedConnectionId(null);
 
-    // Prepare drag movement
+    // Prepare drag movement for all currently selected elements
     isDraggingElementRef.current = true;
     dragStartRef.current.x = e.clientX;
     dragStartRef.current.y = e.clientY;
     const initialPositions: Record<string, { x: number; y: number }> = {};
-    const idsToMove = selectedElementIds.includes(elemId) ? selectedElementIds : [elemId];
+    const idsToMove = currentSelected.includes(elemId) ? currentSelected : [elemId];
     elements.forEach((el) => {
       if (idsToMove.includes(el.id)) {
         initialPositions[el.id] = { x: el.x, y: el.y };
@@ -2456,8 +2563,9 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             onTouchCancel={handleCanvasTouchEnd}
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleCanvasDrop}
+            onContextMenu={(e) => e.preventDefault()}
             className={`flex-1 w-full h-full relative overflow-hidden bg-[#1e1e1e] touch-none overscroll-none select-none ${
-              isPanning ? 'cursor-grabbing' : 'cursor-grab'
+              isPanning ? 'cursor-grabbing' : selectionBox ? 'cursor-crosshair' : activeTool === 'pan' ? 'cursor-grab' : 'cursor-default'
             }`}
             style={{
               touchAction: 'none',
@@ -2482,6 +2590,21 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                 pointerEvents: 'none',
               }}
             >
+              {/* ── Area / Marquee Multi-Selection Box ── */}
+              {selectionBox && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${Math.min(selectionBox.startX, selectionBox.currentX)}px`,
+                    top: `${Math.min(selectionBox.startY, selectionBox.currentY)}px`,
+                    width: `${Math.abs(selectionBox.currentX - selectionBox.startX)}px`,
+                    height: `${Math.abs(selectionBox.currentY - selectionBox.startY)}px`,
+                    pointerEvents: 'none',
+                  }}
+                  className="border border-[#DCB001] bg-[#DCB001]/15 rounded-sm z-50 border-dashed pointer-events-none"
+                />
+              )}
+
               {/* ── SVG Connection Layer ── */}
               <svg
                 id="chart-svg-layer"
@@ -2742,6 +2865,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   <div
                     key={elem.id}
                     onMouseDown={(e) => handleElementMouseDown(e, elem.id)}
+                    onContextMenu={(e) => e.preventDefault()}
                     onTouchStart={(e) => {
                       e.stopPropagation();
                       setSelectedElementIds([elem.id]);
