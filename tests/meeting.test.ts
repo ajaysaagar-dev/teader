@@ -164,9 +164,10 @@ describe('Project Audio Meeting Operations & State Logic', () => {
   });
 
   it('validates screen sharing resolution, fps, and bitrate quality tier matrix', async () => {
-    const { RESOLUTION_CONFIG, BITRATE_QUALITY_OPTIONS } = await import('@/components/ProjectMeetingView');
+    const { RESOLUTION_CONFIG, BITRATE_QUALITY_OPTIONS, CONTENT_MODE_CONFIG } = await import('@/components/ProjectMeetingView');
     expect(RESOLUTION_CONFIG).toBeDefined();
     expect(BITRATE_QUALITY_OPTIONS).toBeDefined();
+    expect(CONTENT_MODE_CONFIG).toBeDefined();
 
     // Check resolutions
     expect(RESOLUTION_CONFIG['720']).toEqual(expect.objectContaining({ width: 1280, height: 720 }));
@@ -176,6 +177,16 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     // Check quality tier labels exist
     const qualityValues = BITRATE_QUALITY_OPTIONS.map((o: any) => o.value);
     expect(qualityValues).toEqual(['low', 'medium', 'high', 'ultra']);
+
+    // Check content mode configs
+    expect(CONTENT_MODE_CONFIG['detail']).toEqual(expect.objectContaining({
+      contentHint: 'detail',
+      degradationPreference: 'maintain-resolution',
+    }));
+    expect(CONTENT_MODE_CONFIG['motion']).toEqual(expect.objectContaining({
+      contentHint: 'motion',
+      degradationPreference: 'maintain-framerate',
+    }));
 
     // Check FPS options for each resolution: 24, 30, 48, 60
     const fpsList = [24, 30, 48, 60] as const;

@@ -12,6 +12,9 @@ import {
   LocalVideoTrack,
   ConnectionState,
   ConnectionQuality,
+  BackupCodecPolicy,
+  ScreenSharePresets,
+  VideoPreset,
 } from 'livekit-client';
 import {
   Mic,
@@ -42,6 +45,7 @@ import {
   X,
   GripHorizontal,
   Users,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
@@ -108,6 +112,41 @@ export const RESOLUTION_CONFIG: Record<
       48: { low: 5_000_000, medium: 9_000_000, high: 14_000_000, ultra: 22_000_000 },
       60: { low: 6_000_000, medium: 11_000_000, high: 16_000_000, ultra: 25_000_000 },
     },
+  },
+};
+
+// ─── Content Mode: Detail (crisp text/code) vs Motion (smooth video/animation) ──
+// Sets WebRTC contentHint and degradationPreference for optimal encoder behavior.
+// 'detail' = maintain-resolution (never blur text, drop FPS instead)
+// 'motion' = maintain-framerate (keep smooth motion, may reduce resolution)
+export type ContentMode = 'detail' | 'motion';
+
+export const CONTENT_MODE_CONFIG: Record<
+  ContentMode,
+  {
+    label: string;
+    desc: string;
+    contentHint: string;
+    degradationPreference: RTCDegradationPreference;
+    icon: string;
+    recommendedFps: ScreenFps;
+  }
+> = {
+  detail: {
+    label: 'Text & Clarity',
+    desc: 'Crisp text, code, docs — never blurs',
+    contentHint: 'detail',
+    degradationPreference: 'maintain-resolution',
+    icon: 'monitor',
+    recommendedFps: 30,
+  },
+  motion: {
+    label: 'Smooth Motion',
+    desc: 'Videos, games, animations — fluid FPS',
+    contentHint: 'motion',
+    degradationPreference: 'maintain-framerate',
+    icon: 'zap',
+    recommendedFps: 60,
   },
 };
 
@@ -402,6 +441,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const [selectedResolution, setSelectedResolution] = useState<ScreenResolution>('1080');
   const [selectedFps, setSelectedFps] = useState<ScreenFps>(30);
   const [selectedBitrateQuality, setSelectedBitrateQuality] = useState<BitrateQuality>('high');
+  const [selectedContentMode, setSelectedContentMode] = useState<ContentMode>('detail');
   const [includeScreenAudio, setIncludeScreenAudio] = useState(true);
   const [activeStreamQuality, setActiveStreamQuality] = useState<{ res: string; fps: number } | null>(null);
   const activeStreamQualityRef = useRef<{ res: string; fps: number } | null>(null);
@@ -797,7 +837,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         await roomRef.current.disconnect();
       }
 
-      // 3. Initialize LiveKit Room instance with audio and 1080p 60fps video capabilities
+      // 3. Initialize LiveKit Room instance with audio and 1080p 30fps video capabilities
+      // Uses AV1 codec for 30-50% better compression (auto VP8 fallback for older browsers)
       // noiseSuppression initial value matches the current noise suppression mode setting
       const initialNoiseConfig = NOISE_SUPPRESSION_CONFIG[noiseSuppressionModeRef.current];
       const room = new Room({
@@ -815,6 +856,26 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             height: 1080,
             frameRate: 30,
           },
+        },
+        publishDefaults: {
+          // AV1 delivers 30-50% better quality at the same bitrate vs VP8/H.264
+          // Fallback to VP8 automatically for Safari, older browsers, and mobile
+          videoCodec: 'av1',
+          backupCodec: true,
+          backupCodecPolicy: BackupCodecPolicy.REGRESSION,
+          // Screen share: maintain-resolution so text is never blurred
+          screenShareEncoding: {
+            maxBitrate: 6_000_000,
+            maxFramerate: 30,
+            priority: 'high',
+          },
+          degradationPreference: 'maintain-resolution',
+          // Simulcast: publish multiple quality layers so viewers with slow connections
+          // get a lower-res stream without lagging or degrading the host's quality
+          screenShareSimulcastLayers: [
+            ScreenSharePresets.h720fps15,
+            ScreenSharePresets.h1080fps30,
+          ],
         },
       });
       roomRef.current = room;
@@ -1120,11 +1181,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     }
   }, [syncParticipants]);
 
-  // ── Start Screen Sharing (with Custom Resolution 720/1080/1440, FPS 24/30/48/60, Bitrate Quality, Audio) ──
+  // ── Start Screen Sharing (with Resolution, FPS, Bitrate Quality, Content Mode, Codec, Simulcast) ──
   const handleStartScreenShare = async (config?: {
     resolution?: ScreenResolution;
     fps?: ScreenFps;
     bitrateQuality?: BitrateQuality;
+    contentMode?: ContentMode;
     includeAudio?: boolean;
   }) => {
     const room = roomRef.current;
@@ -1143,12 +1205,25 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     const targetRes = config?.resolution ?? selectedResolution;
     const targetFps = config?.fps ?? selectedFps;
     const targetQuality = config?.bitrateQuality ?? selectedBitrateQuality;
+    const targetContentMode = config?.contentMode ?? selectedContentMode;
     // On mobile devices, system audio in screen capture is unsupported and causes getDisplayMedia to throw NotSupportedError
     const targetAudio = isMobile ? false : (config?.includeAudio ?? includeScreenAudio);
 
     const resConfig = RESOLUTION_CONFIG[targetRes];
     const maxBitrate = resConfig.bitrates[targetFps]?.[targetQuality] || resConfig.bitrates[targetFps]?.['high'] || 6_000_000;
     const qualityLabel = BITRATE_QUALITY_OPTIONS.find((o) => o.value === targetQuality)?.label || targetQuality;
+    const modeConfig = CONTENT_MODE_CONFIG[targetContentMode];
+
+    // Build dynamic simulcast layers based on target resolution
+    // Provides lower-quality layers for viewers on slow connections without degrading host quality
+    const simulcastLayers: VideoPreset[] = [];
+    if (targetRes === '1440') {
+      simulcastLayers.push(ScreenSharePresets.h720fps15, ScreenSharePresets.h1080fps30);
+    } else if (targetRes === '1080') {
+      simulcastLayers.push(ScreenSharePresets.h360fps15, ScreenSharePresets.h720fps15);
+    } else {
+      simulcastLayers.push(ScreenSharePresets.h360fps15);
+    }
 
     setShowScreenShareModal(false);
     toast.info(`Starting ${targetRes}p ${targetFps}fps screen stream…`);
@@ -1163,6 +1238,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           true,
           {
             audio: targetAudio,
+            // contentHint tells the browser encoder to optimize for text/detail or smooth motion
+            contentHint: modeConfig.contentHint as any,
             resolution: isMobile
               ? undefined
               : {
@@ -1175,10 +1252,28 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             videoEncoding: {
               maxBitrate,
               maxFramerate: targetFps,
+              priority: 'high',
             },
+            // degradationPreference controls what the encoder sacrifices when bandwidth drops:
+            // 'maintain-resolution' = keep text crisp, drop FPS (ideal for docs/code)
+            // 'maintain-framerate' = keep smooth motion, may reduce resolution (ideal for video)
+            degradationPreference: modeConfig.degradationPreference,
+            videoCodec: 'av1',
+            backupCodec: true,
+            simulcast: true,
+            screenShareSimulcastLayers: simulcastLayers,
           }
         );
         sharedSuccessfully = true;
+
+        // Apply contentHint directly to the MediaStreamTrack for maximum encoder effect
+        try {
+          const screenPub = room.localParticipant.getTrackPublication(Track.Source.ScreenShare);
+          const mediaTrack = screenPub?.track?.mediaStreamTrack;
+          if (mediaTrack && 'contentHint' in mediaTrack) {
+            mediaTrack.contentHint = modeConfig.contentHint;
+          }
+        } catch {}
       } catch (lkErr: any) {
         if (lkErr?.name === 'NotAllowedError' || lkErr?.message?.includes('Permission denied')) {
           throw lkErr;
@@ -1200,6 +1295,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           throw new Error('No screen video track was acquired');
         }
 
+        // Apply contentHint to the raw MediaStreamTrack before publishing
+        // This instructs the browser's WebRTC encoder to optimize for the content type
+        if ('contentHint' in videoTrack) {
+          videoTrack.contentHint = modeConfig.contentHint;
+        }
+
         const localVideoTrack = new LocalVideoTrack(videoTrack, undefined, false);
         localVideoTrack.source = Track.Source.ScreenShare;
 
@@ -1212,7 +1313,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           videoEncoding: {
             maxBitrate,
             maxFramerate: targetFps,
+            priority: 'high',
           },
+          degradationPreference: modeConfig.degradationPreference,
+          videoCodec: 'av1',
+          backupCodec: true,
+          simulcast: true,
+          screenShareSimulcastLayers: simulcastLayers,
         });
 
         customScreenTrackRef.current = localVideoTrack;
@@ -2355,6 +2462,54 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               </p>
             </div>
 
+            {/* Content Mode Options */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-white/90 flex items-center justify-between">
+                <span>Content Mode</span>
+                <span className="text-[10px] text-[#A0A5B0] font-normal">Optimizes encoder for your content type</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['detail', 'motion'] as ContentMode[]).map((mode) => {
+                  const cfg = CONTENT_MODE_CONFIG[mode];
+                  const isSelected = selectedContentMode === mode;
+                  const isRecommended = mode === 'detail';
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setSelectedContentMode(mode);
+                        // Auto-suggest recommended FPS when switching content mode
+                        if (cfg.recommendedFps !== selectedFps) {
+                          setSelectedFps(cfg.recommendedFps);
+                        }
+                      }}
+                      className={`relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#DCB001]/10 border-[#DCB001] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
+                          : 'bg-[#181920] border-[#2B2D37] text-[#9BA1A6] hover:bg-[#1E2028] hover:text-white'
+                      }`}
+                    >
+                      {isRecommended && (
+                        <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full bg-[#DCB001] text-black text-[8px] font-bold uppercase tracking-wider">
+                          Recommended
+                        </span>
+                      )}
+                      <div className={`p-2 rounded-lg shrink-0 ${
+                        isSelected ? 'bg-[#DCB001]/20 text-[#DCB001]' : 'bg-[#22242B] text-[#787C83]'
+                      }`}>
+                        {mode === 'detail' ? <Monitor size={18} /> : <Zap size={18} />}
+                      </div>
+                      <div>
+                        <span className={`text-xs font-bold block ${isSelected ? 'text-[#DCB001]' : ''}`}>{cfg.label}</span>
+                        <span className="text-[9px] text-[#787C83] leading-snug block mt-0.5">{cfg.desc}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Screen Audio Toggle */}
             <div className="pt-2 border-t border-[#20222B]">
               {typeof navigator !== 'undefined' &&
@@ -2423,7 +2578,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 className="flex items-center gap-2 px-5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-[#DCB001] to-[#E6BA0A] hover:brightness-110 text-black shadow-lg shadow-[#DCB001]/20 transition-all cursor-pointer"
               >
                 <ScreenShare size={15} />
-                <span>Start Stream ({selectedResolution}p {selectedFps}fps · {BITRATE_QUALITY_OPTIONS.find((o) => o.value === selectedBitrateQuality)?.label})</span>
+                <span>Start Stream ({selectedResolution}p {selectedFps}fps · {BITRATE_QUALITY_OPTIONS.find((o) => o.value === selectedBitrateQuality)?.label} · {CONTENT_MODE_CONFIG[selectedContentMode].label})</span>
               </button>
             </div>
           </div>
