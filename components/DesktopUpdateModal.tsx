@@ -46,64 +46,28 @@ export const DesktopUpdateModal: React.FC = () => {
           });
         }
 
-        await window.teaderDesktop.downloadAndInstallUpdate(INSTALLER_URL);
+        const fullUrl = new URL(INSTALLER_URL, window.location.origin).href;
+        await window.teaderDesktop.downloadAndInstallUpdate(fullUrl);
         setProgress(100);
         setStatus('completed');
         return;
       }
 
-      // Fallback Path: For existing installations without the new IPC handler
-      const res = await fetch(INSTALLER_URL);
-      if (!res.ok) {
-        throw new Error(`Failed to download installer (HTTP ${res.status})`);
-      }
-
-      const contentLength = res.headers.get('content-length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-      if (!res.body) {
-        throw new Error('ReadableStream not supported');
-      }
-
-      const reader = res.body.getReader();
-      let receivedBytes = 0;
-      const chunks: any[] = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        if (value) {
-          chunks.push(value);
-          receivedBytes += value.length;
-          if (totalBytes > 0) {
-            const percent = Math.min(98, Math.round((receivedBytes / totalBytes) * 100));
-            setProgress(percent);
-          }
-        }
-      }
-
-      const blob = new Blob(chunks, { type: 'application/octet-stream' });
-      const blobUrl = URL.createObjectURL(blob);
-      const downloadLink = document.createElement('a');
-      downloadLink.href = blobUrl;
-      downloadLink.download = 'Teader-Workspace-Setup.exe';
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-
+      // Secondary Path: Trigger download URL directly (Electron will-download intercepts without Save As dialog and auto-starts)
+      window.location.assign(INSTALLER_URL);
       setProgress(100);
       setStatus('completed');
-
-      // Automatically close the Electron application after a short delay so user can proceed with installer
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.electronWindow?.close) {
-          window.electronWindow.close();
-        }
-      }, 2500);
     } catch (err: any) {
-      console.error('Update failed:', err);
-      setStatus('error');
-      setErrorMessage(err.message || 'Failed to download installer');
+      console.warn('Native IPC failed, attempting direct download stream:', err);
+      try {
+        window.location.assign(INSTALLER_URL);
+        setProgress(100);
+        setStatus('completed');
+      } catch (fallbackErr: any) {
+        console.error('Update failed:', fallbackErr);
+        setStatus('error');
+        setErrorMessage(err.message || fallbackErr.message || 'Failed to download installer');
+      }
     }
   };
 
