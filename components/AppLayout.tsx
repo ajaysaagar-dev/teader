@@ -178,7 +178,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       if (cached) setCurrentUser(JSON.parse(cached));
     } catch {}
 
-    fetch("/api/auth/me")
+    const authTimeout = setTimeout(() => {
+      setIsCheckingAuth(false);
+    }, 4500);
+
+    const signal = typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(5000)
+      : undefined;
+
+    fetch("/api/auth/me", { signal })
       .then((res) => res.json())
       .then((data) => {
         if (data.user) {
@@ -205,8 +213,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         }
       })
       .finally(() => {
+        clearTimeout(authTimeout);
         setIsCheckingAuth(false);
       });
+
+    return () => clearTimeout(authTimeout);
   }, [pathname, router]);
 
   // Fetch data for command palette

@@ -536,14 +536,18 @@ export default function SingleProjectPage() {
     isFetchingRef.current = true;
 
     try {
+      const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(6000)
+        : undefined;
+
       // Step 1: Verify User Session
       setSplashStep(1);
       setSplashMessage('Verifying user authentication...');
       let sessionUser: any = null;
-      const meRes = await fetch('/api/auth/me');
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        if (meData.user) {
+      const meRes = await fetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
+      if (meRes && meRes.ok) {
+        const meData = await meRes.json().catch(() => null);
+        if (meData?.user) {
           sessionUser = meData.user;
           setCurrentUser(meData.user);
         } else {
@@ -559,18 +563,18 @@ export default function SingleProjectPage() {
       setSplashStep(2);
       setSplashMessage('Verifying project permissions & membership...');
       const [projRes, issueRes] = await Promise.all([
-        fetch('/api/projects', { cache: 'no-store' }),
-        fetch('/api/issues', { cache: 'no-store' }),
+        fetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        fetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
       ]);
 
-      if (projRes.status === 401 || issueRes.status === 401) {
+      if (projRes?.status === 401 || issueRes?.status === 401) {
         router.push('/login');
         return;
       }
 
       let foundProj: ProjectItem | null = null;
-      if (projRes.ok) {
-        const projData = await projRes.json();
+      if (projRes && projRes.ok) {
+        const projData = await projRes.json().catch(() => null);
         if (Array.isArray(projData)) {
           foundProj =
             projData.find(
@@ -600,17 +604,17 @@ export default function SingleProjectPage() {
       setSplashMessage('Loading workspace issues & architecture...');
       if (foundProj && foundProj.id) {
         const [memRes, permRes] = await Promise.all([
-          fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store' }),
-          fetch(`/api/projects/${foundProj.id}/permissions`, { cache: 'no-store' }).catch(() => null),
+          fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+          fetch(`/api/projects/${foundProj.id}/permissions`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
         ]);
 
-        if (memRes.ok) {
-          const memData = await memRes.json();
+        if (memRes && memRes.ok) {
+          const memData = await memRes.json().catch(() => null);
           if (Array.isArray(memData)) setJoinedMembers(memData);
         }
 
         if (permRes && permRes.ok) {
-          const permData = await permRes.json();
+          const permData = await permRes.json().catch(() => null);
           if (Array.isArray(permData) && sessionUser) {
             const myPerm = permData.find((p: any) => String(p.userId) === String(sessionUser.id));
             if (myPerm) setUserPermissions(myPerm);
@@ -618,8 +622,8 @@ export default function SingleProjectPage() {
         }
       }
 
-      if (issueRes.ok) {
-        const issueData = await issueRes.json();
+      if (issueRes && issueRes.ok) {
+        const issueData = await issueRes.json().catch(() => null);
         if (Array.isArray(issueData)) {
           setIssues((prev) => {
             const next = reconcileIssues(prev, issueData);
@@ -650,6 +654,11 @@ export default function SingleProjectPage() {
   // Smart polling: every 30s only when tab is visible
   useEffect(() => {
     fetchProjectData();
+    const safetySplashTimer = setTimeout(() => {
+      setIsInitialLoading(false);
+      setLoading(false);
+    }, 4500);
+
     const POLL_INTERVAL = 30_000;
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -677,6 +686,7 @@ export default function SingleProjectPage() {
     startPolling();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      clearTimeout(safetySplashTimer);
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibility);
     };

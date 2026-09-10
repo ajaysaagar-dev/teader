@@ -94,28 +94,36 @@ export default function ProjectsPage() {
   // Fetch Current Session & Projects Data
   const fetchDataFromDB = useCallback(async () => {
     try {
+      const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(6000)
+        : undefined;
       const [meRes, projRes, issueRes] = await Promise.all([
-        fetch('/api/auth/me', { cache: 'no-store' }).catch(() => null),
-        fetch('/api/projects', { cache: 'no-store' }).catch(() => null),
-        fetch('/api/issues', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/auth/me', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        fetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        fetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
       ]);
 
+      if (meRes?.status === 401 || projRes?.status === 401) {
+        router.push('/login');
+        return;
+      }
+
       if (meRes && meRes.ok) {
-        const meData = await meRes.json();
-        if (meData.user) {
+        const meData = await meRes.json().catch(() => null);
+        if (meData?.user) {
           setCurrentUser(meData.user);
         }
       }
 
       if (projRes && projRes.ok) {
-        const projData = await projRes.json();
+        const projData = await projRes.json().catch(() => null);
         if (Array.isArray(projData)) {
           setProjects(projData);
         }
       }
 
       if (issueRes && issueRes.ok) {
-        const issueData = await issueRes.json();
+        const issueData = await issueRes.json().catch(() => null);
         if (Array.isArray(issueData)) setIssues(issueData);
       }
     } catch (err) {
@@ -123,11 +131,15 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
 
   useEffect(() => {
     fetchDataFromDB();
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4500);
+
     const POLL_INTERVAL = 30_000; // 30s — only poll when tab is visible
     let intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -146,7 +158,11 @@ export default function ProjectsPage() {
 
     startPolling();
     document.addEventListener('visibilitychange', onVisibility);
-    return () => { stopPolling(); document.removeEventListener('visibilitychange', onVisibility); };
+    return () => {
+      clearTimeout(safetyTimer);
+      stopPolling();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [fetchDataFromDB]);
 
   const handleOpenCreateModal = () => {

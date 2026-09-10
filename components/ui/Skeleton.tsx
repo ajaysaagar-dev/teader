@@ -6,7 +6,7 @@ import React from 'react';
 export function Shimmer({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-[var(--border-primary)] rounded ${className}`}
+      className={`animate-pulse bg-[#2A2C30] bg-[var(--border-primary)] rounded ${className}`}
       aria-hidden="true"
     />
   );
