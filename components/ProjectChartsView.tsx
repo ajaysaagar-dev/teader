@@ -28,6 +28,7 @@ import {
   Save,
   Layers,
   FileCode,
+  Magnet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -93,6 +94,24 @@ export interface ChartFile {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SnapSettings {
+  enabled: boolean;
+  snapToGrid: boolean;
+  snapToElements: boolean;
+  gridSize: number;
+  showGrid: boolean;
+  showGuideLines: boolean;
+}
+
+export interface SnapGuideLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  type: 'vertical' | 'horizontal';
+  color?: string;
 }
 
 interface ProjectChartsViewProps {
@@ -209,6 +228,185 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
     initialElemX: number;
     initialElemY: number;
   } | null>(null);
+
+  // ── Snap to Grid & Nearby Elements Options ──
+  const [snapSettings, setSnapSettings] = useState<SnapSettings>(() => {
+    return getLocalCache<SnapSettings>('charts_snap_settings', {
+      enabled: true,
+      snapToGrid: true,
+      snapToElements: true,
+      gridSize: 20,
+      showGrid: false,
+      showGuideLines: true,
+    });
+  });
+
+  const [isSnapMenuOpen, setIsSnapMenuOpen] = useState(false);
+  const snapMenuRef = useRef<HTMLDivElement>(null);
+  const [activeGuideLines, setActiveGuideLines] = useState<SnapGuideLine[]>([]);
+
+  const updateSnapSettings = useCallback((partial: Partial<SnapSettings>) => {
+    setSnapSettings((prev) => {
+      const next = { ...prev, ...partial };
+      setLocalCache('charts_snap_settings', next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (snapMenuRef.current && !snapMenuRef.current.contains(e.target as Node)) {
+        setIsSnapMenuOpen(false);
+      }
+    };
+    if (isSnapMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isSnapMenuOpen]);
+
+  // Helper to compute smart snapping to nearby elements and invisible grid
+  const calculateElementSnap = useCallback(
+    (
+      targetElem: { x: number; y: number; width: number; height: number },
+      otherElements: ChartElement[],
+      settings: SnapSettings,
+      zoom: number,
+      bypassSnap: boolean = false
+    ): { x: number; y: number; guides: SnapGuideLine[] } => {
+      if (!settings.enabled || bypassSnap) {
+        return { x: targetElem.x, y: targetElem.y, guides: [] };
+      }
+
+      let finalX = targetElem.x;
+      let finalY = targetElem.y;
+      const guides: SnapGuideLine[] = [];
+      const SNAP_THRESHOLD = Math.max(6, 10 / zoom);
+
+      let snappedX = false;
+      let snappedY = false;
+
+      // 1. Nearby / other elements snapping
+      if (settings.snapToElements && otherElements.length > 0) {
+        const left = targetElem.x;
+        const right = targetElem.x + targetElem.width;
+        const centerX = targetElem.x + targetElem.width / 2;
+
+        const top = targetElem.y;
+        const bottom = targetElem.y + targetElem.height;
+        const centerY = targetElem.y + targetElem.height / 2;
+
+        let closestDistX = SNAP_THRESHOLD;
+        let bestSnapX = finalX;
+        let guideXCoord = 0;
+        let guideYRange: [number, number] = [top, bottom];
+
+        let closestDistY = SNAP_THRESHOLD;
+        let bestSnapY = finalY;
+        let guideYCoord = 0;
+        let guideXRange: [number, number] = [left, right];
+
+        for (const other of otherElements) {
+          const oLeft = other.x;
+          const oRight = other.x + other.width;
+          const oCenterX = other.x + other.width / 2;
+
+          const oTop = other.y;
+          const oBottom = other.y + other.height;
+          const oCenterY = other.y + other.height / 2;
+
+          // X alignment checks: [targetPoint, otherPoint, newXOffset, guideLineX]
+          const xChecks: [number, number, number, number][] = [
+            [left, oLeft, oLeft, oLeft],
+            [left, oRight, oRight, oRight],
+            [right, oLeft, oLeft - targetElem.width, oLeft],
+            [right, oRight, oRight - targetElem.width, oRight],
+            [centerX, oCenterX, oCenterX - targetElem.width / 2, oCenterX],
+            [centerX, oLeft, oLeft - targetElem.width / 2, oLeft],
+            [centerX, oRight, oRight - targetElem.width / 2, oRight],
+          ];
+
+          for (const [tX, oX, candX, gX] of xChecks) {
+            const dist = Math.abs(tX - oX);
+            if (dist < closestDistX) {
+              closestDistX = dist;
+              bestSnapX = candX;
+              guideXCoord = gX;
+              const minY = Math.min(top, oTop) - 40;
+              const maxY = Math.max(bottom, oBottom) + 40;
+              guideYRange = [minY, maxY];
+              snappedX = true;
+            }
+          }
+
+          // Y alignment checks: [targetPoint, otherPoint, newYOffset, guideLineY]
+          const yChecks: [number, number, number, number][] = [
+            [top, oTop, oTop, oTop],
+            [top, oBottom, oBottom, oBottom],
+            [bottom, oTop, oTop - targetElem.height, oTop],
+            [bottom, oBottom, oBottom - targetElem.height, oBottom],
+            [centerY, oCenterY, oCenterY - targetElem.height / 2, oCenterY],
+            [centerY, oTop, oTop - targetElem.height / 2, oTop],
+            [centerY, oBottom, oBottom - targetElem.height / 2, oBottom],
+          ];
+
+          for (const [tY, oY, candY, gY] of yChecks) {
+            const dist = Math.abs(tY - oY);
+            if (dist < closestDistY) {
+              closestDistY = dist;
+              bestSnapY = candY;
+              guideYCoord = gY;
+              const minX = Math.min(left, oLeft) - 40;
+              const maxX = Math.max(right, oRight) + 40;
+              guideXRange = [minX, maxX];
+              snappedY = true;
+            }
+          }
+        }
+
+        if (snappedX) {
+          finalX = bestSnapX;
+          guides.push({
+            x1: guideXCoord,
+            y1: guideYRange[0],
+            x2: guideXCoord,
+            y2: guideYRange[1],
+            type: 'vertical',
+            color: '#06B6D4',
+          });
+        }
+
+        if (snappedY) {
+          finalY = bestSnapY;
+          guides.push({
+            x1: guideXRange[0],
+            y1: guideYCoord,
+            x2: guideXRange[1],
+            y2: guideYCoord,
+            type: 'horizontal',
+            color: '#06B6D4',
+          });
+        }
+      }
+
+      // 2. Snap to Grid (if not snapped to element on that axis)
+      if (settings.snapToGrid && settings.gridSize > 0) {
+        if (!snappedX) {
+          finalX = Math.round(finalX / settings.gridSize) * settings.gridSize;
+        }
+        if (!snappedY) {
+          finalY = Math.round(finalY / settings.gridSize) * settings.gridSize;
+        }
+      }
+
+      return {
+        x: Math.round(finalX),
+        y: Math.round(finalY),
+        guides,
+      };
+    },
+    []
+  );
 
   // Dynamic link dragging state with magnetic snapping
   const [linkingState, setLinkingState] = useState<{
@@ -913,6 +1111,11 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       }
     }
 
+    if (snapSettings.enabled && snapSettings.snapToGrid && snapSettings.gridSize > 0) {
+      posX = Math.round(posX / snapSettings.gridSize) * snapSettings.gridSize;
+      posY = Math.round(posY / snapSettings.gridSize) * snapSettings.gridSize;
+    }
+
     const newElement: ChartElement = {
       id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       type,
@@ -1259,6 +1462,13 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             newH = potentialH;
           }
 
+          if (snapSettings.enabled && snapSettings.snapToGrid && snapSettings.gridSize > 0 && !e.altKey) {
+            newW = Math.max(40, Math.round(newW / snapSettings.gridSize) * snapSettings.gridSize);
+            newH = Math.max(30, Math.round(newH / snapSettings.gridSize) * snapSettings.gridSize);
+            newX = Math.round(newX / snapSettings.gridSize) * snapSettings.gridSize;
+            newY = Math.round(newY / snapSettings.gridSize) * snapSettings.gridSize;
+          }
+
           return { ...elem, width: Math.round(newW), height: Math.round(newH), x: Math.round(newX), y: Math.round(newY) };
         })
       );
@@ -1324,10 +1534,44 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       return;
     }
 
-    // 4. Dragging elements
+    // 4. Dragging elements with smart nearby elements and grid snapping
     if (isDraggingElementRef.current) {
-      const dx = (e.clientX - dragStartRef.current.x) / viewport.zoom;
-      const dy = (e.clientY - dragStartRef.current.y) / viewport.zoom;
+      const rawDx = (e.clientX - dragStartRef.current.x) / viewport.zoom;
+      const rawDy = (e.clientY - dragStartRef.current.y) / viewport.zoom;
+
+      const draggedIds = Object.keys(dragStartRef.current.initialPositions);
+      if (draggedIds.length === 0) return;
+
+      const primaryId = selectedElementIds.find((id) => draggedIds.includes(id)) || draggedIds[0];
+      const primaryInit = dragStartRef.current.initialPositions[primaryId];
+      const primaryElem = elements.find((el) => el.id === primaryId);
+
+      let effectiveDx = rawDx;
+      let effectiveDy = rawDy;
+
+      if (primaryInit && primaryElem) {
+        const proposedElem = {
+          x: primaryInit.x + rawDx,
+          y: primaryInit.y + rawDy,
+          width: primaryElem.width,
+          height: primaryElem.height,
+        };
+
+        const otherElements = elements.filter((el) => !draggedIds.includes(el.id));
+        const snap = calculateElementSnap(
+          proposedElem,
+          otherElements,
+          snapSettings,
+          viewport.zoom,
+          e.altKey
+        );
+
+        effectiveDx = snap.x - primaryInit.x;
+        effectiveDy = snap.y - primaryInit.y;
+        setActiveGuideLines(snap.guides);
+      } else {
+        setActiveGuideLines([]);
+      }
 
       setElements((prev) =>
         prev.map((elem) => {
@@ -1335,8 +1579,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           if (init) {
             return {
               ...elem,
-              x: Math.round(init.x + dx),
-              y: Math.round(init.y + dy),
+              x: Math.round(init.x + effectiveDx),
+              y: Math.round(init.y + effectiveDy),
             };
           }
           return elem;
@@ -1347,6 +1591,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
   // ── Canvas Mouse Up ──
   const handleCanvasMouseUp = () => {
+    setActiveGuideLines([]);
+
     if (isPanningRef.current) {
       isPanningRef.current = false;
       setIsPanning(false);
@@ -1980,6 +2226,153 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               <div className="text-xs font-bold uppercase">Pan</div>
             </button>
 
+            {/* Snap to Grid & Elements Options Button */}
+            <div className="relative" ref={snapMenuRef}>
+              <button
+                onClick={() => setIsSnapMenuOpen((prev) => !prev)}
+                className={`p-2 rounded-lg transition-all flex items-center gap-1.5 ${
+                  snapSettings.enabled
+                    ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/50 font-semibold shadow-sm'
+                    : 'text-[#8E939D] hover:text-white hover:bg-[#22242B] border border-transparent'
+                }`}
+                title="Snap Options (Snap to Grid & Nearby Elements)"
+              >
+                <Magnet size={15} />
+                <span className="text-[11px] font-medium hidden md:inline">
+                  {snapSettings.enabled ? `Snap: ${snapSettings.gridSize}px` : 'Snap: Off'}
+                </span>
+              </button>
+
+              {/* Snap Options Popover */}
+              <AnimatePresence>
+                {isSnapMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.95 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute top-full left-0 mt-2 w-72 bg-[#17181C] border border-[#2B2D33] rounded-xl shadow-2xl p-3 space-y-3 z-50 text-white select-none pointer-events-auto"
+                  >
+                    <div className="flex items-center justify-between pb-2 border-b border-[#252830]">
+                      <div className="flex items-center gap-2">
+                        <Magnet size={15} className="text-[#DCB001]" />
+                        <span className="text-xs font-bold tracking-tight">Snap & Alignment</span>
+                      </div>
+                      <button
+                        onClick={() => updateSnapSettings({ enabled: !snapSettings.enabled })}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                          snapSettings.enabled
+                            ? 'bg-[#DCB001] text-black'
+                            : 'bg-[#252830] text-[#8E939D] hover:text-white'
+                        }`}
+                      >
+                        {snapSettings.enabled ? 'ON' : 'OFF'}
+                      </button>
+                    </div>
+
+                    {/* Snap to Nearby Elements */}
+                    <label className="flex items-center justify-between cursor-pointer group py-0.5">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                          Snap to Nearby Elements
+                        </span>
+                        <span className="text-[10px] text-[#8E939D] block">
+                          Align edges & centers with other shapes
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={snapSettings.snapToElements}
+                        onChange={(e) => updateSnapSettings({ snapToElements: e.target.checked })}
+                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Snap to Grid */}
+                    <label className="flex items-center justify-between cursor-pointer group py-0.5">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                          Snap to Invisible Grid
+                        </span>
+                        <span className="text-[10px] text-[#8E939D] block">
+                          Lock coordinates to grid intervals
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={snapSettings.snapToGrid}
+                        onChange={(e) => updateSnapSettings({ snapToGrid: e.target.checked })}
+                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Grid Size Selection */}
+                    <div className="space-y-1.5 pt-1 border-t border-[#252830]">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-[#8E939D]">Grid Step Size</span>
+                        <span className="font-mono text-[#DCB001] font-bold">{snapSettings.gridSize}px</span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1">
+                        {[10, 16, 20, 24, 32].map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => updateSnapSettings({ gridSize: size })}
+                            className={`py-1 text-xs font-mono rounded transition-colors ${
+                              snapSettings.gridSize === size
+                                ? 'bg-[#DCB001] text-black font-bold shadow-sm'
+                                : 'bg-[#1F2127] text-[#9A9FA9] hover:bg-[#2A2D35] hover:text-white'
+                            }`}
+                          >
+                            {size}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Smart Alignment Guides */}
+                    <label className="flex items-center justify-between cursor-pointer group py-0.5 pt-1 border-t border-[#252830]">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                          Alignment Guide Lines
+                        </span>
+                        <span className="text-[10px] text-[#8E939D] block">
+                          Display cyan snap lines while dragging
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={snapSettings.showGuideLines}
+                        onChange={(e) => updateSnapSettings({ showGuideLines: e.target.checked })}
+                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                      />
+                    </label>
+
+                    {/* Show Background Grid (Default: false, "no need to the grid to be visible") */}
+                    <label className="flex items-center justify-between cursor-pointer group py-0.5">
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                          Show Background Grid
+                        </span>
+                        <span className="text-[10px] text-[#8E939D] block">
+                          Off by default (invisible grid)
+                        </span>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={snapSettings.showGrid}
+                        onChange={(e) => updateSnapSettings({ showGrid: e.target.checked })}
+                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                      />
+                    </label>
+
+                    <div className="text-[10px] text-[#717680] pt-1 border-t border-[#252830] italic flex items-center gap-1">
+                      <span>Tip: Hold <kbd className="font-mono px-1 py-0.2 bg-[#252830] rounded text-white not-italic">Alt</kbd> while dragging to bypass snapping.</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <div className="w-[1px] h-6 bg-[#2B2D33] mx-1" />
 
             {/* Draggable Shape Items */}
@@ -2069,8 +2462,10 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             style={{
               touchAction: 'none',
               overscrollBehavior: 'none',
-              backgroundImage: 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px)',
-              backgroundSize: `${24 * viewport.zoom}px ${24 * viewport.zoom}px`,
+              backgroundImage: snapSettings.showGrid
+                ? 'radial-gradient(circle, rgba(255, 255, 255, 0.12) 1px, transparent 1px)'
+                : 'none',
+              backgroundSize: `${snapSettings.gridSize * viewport.zoom}px ${snapSettings.gridSize * viewport.zoom}px`,
               backgroundPosition: `${viewport.x}px ${viewport.y}px`,
             }}
           >
@@ -2114,6 +2509,22 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     <polygon points="0 0, 10 3.5, 0 7" fill="#DCB001" />
                   </marker>
                 </defs>
+
+                {/* ── Dynamic Snap Alignment Guide Lines ── */}
+                {snapSettings.showGuideLines &&
+                  activeGuideLines.map((guide, idx) => (
+                    <line
+                      key={`guide_line_${idx}`}
+                      x1={guide.x1}
+                      y1={guide.y1}
+                      x2={guide.x2}
+                      y2={guide.y2}
+                      stroke={guide.color || '#06B6D4'}
+                      strokeWidth={1.5 / viewport.zoom}
+                      strokeDasharray={`${5 / viewport.zoom} ${5 / viewport.zoom}`}
+                      opacity={0.85}
+                    />
+                  ))}
 
                 {/* Render Links / Connections */}
                 {connections.map((conn) => {
