@@ -41,8 +41,14 @@ export function getDesktopInfo(): {
  * Compare semantic versions: returns negative if v1 < v2, positive if v1 > v2, 0 if equal.
  */
 export function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.replace(/^[vV]/, '').split('.').map(n => parseInt(n, 10) || 0);
-  const parts2 = v2.replace(/^[vV]/, '').split('.').map(n => parseInt(n, 10) || 0);
+  const parseParts = (v: string) =>
+    v
+      .replace(/^[vV]/, '')
+      .split('.')
+      .map((n) => parseInt(n.replace(/[^0-9].*$/, ''), 10) || 0);
+
+  const parts1 = parseParts(v1);
+  const parts2 = parseParts(v2);
   const maxLen = Math.max(parts1.length, parts2.length);
 
   for (let i = 0; i < maxLen; i++) {

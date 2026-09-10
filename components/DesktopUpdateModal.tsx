@@ -5,7 +5,7 @@ import { Download, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { getDesktopInfo, compareVersions } from '@/lib/desktop';
 
 const TARGET_VERSION = '1.0.0';
-const TARGET_DISPLAY_VERSION = '1.0.0';
+const TARGET_DISPLAY_VERSION = '1.0.0 Alpha';
 const INSTALLER_URL = '/releases/Teader-Workspace-Setup.exe';
 
 export const DesktopUpdateModal: React.FC = () => {
@@ -135,10 +135,11 @@ export const DesktopUpdateModal: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
             What&apos;s new in v{TARGET_DISPLAY_VERSION}:
           </div>
-          <p className="text-[#9BA1A6] pl-4">• Hardware GPU-accelerated voice denoise & extreme neural spectral isolation.</p>
+          <p className="text-[#9BA1A6] pl-4">• Stable desktop rendering with native DirectWrite typography.</p>
+          <p className="text-[#9BA1A6] pl-4">• AI voice denoise & extreme neural spectral isolation.</p>
           <p className="text-[#9BA1A6] pl-4">• Unthrottled background meeting audio during multitasking and screen sharing.</p>
           <p className="text-[#9BA1A6] pl-4">• Direct webview support and external framing restriction bypass.</p>
-          <p className="text-[#9BA1A6] pl-4">• One-click automatic download and installation engine.</p>
+          <p className="text-[#9BA1A6] pl-4">• Automatic download and installation engine.</p>
         </div>
 
         {/* Progress Bar / Status during download */}
@@ -193,7 +194,7 @@ export const DesktopUpdateModal: React.FC = () => {
               className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-[#DCB001] hover:bg-[#E5B800] active:scale-[0.98] rounded-xl shadow-lg transition-all cursor-pointer"
             >
               <Download className="w-4 h-4" />
-              Update Now to Enter
+              Update Now to v{TARGET_DISPLAY_VERSION}
             </button>
           )}
 
