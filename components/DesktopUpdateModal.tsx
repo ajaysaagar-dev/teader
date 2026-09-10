@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Download, CheckCircle2, AlertCircle, RefreshCw, X } from 'lucide-react';
+import { Download, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import { getDesktopInfo, compareVersions } from '@/lib/desktop';
 
 const TARGET_VERSION = '0.1.0';
@@ -114,20 +114,8 @@ export const DesktopUpdateModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-200 select-none">
       <div className="w-full max-w-md bg-[#141518] border border-[#2A2C30] rounded-2xl p-6 shadow-2xl relative text-left">
-        {/* Close / Dismiss button */}
-        {status !== 'downloading' && (
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="absolute top-4 right-4 text-[#787C83] hover:text-white transition-colors"
-            aria-label="Dismiss"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-
         {/* Header Icon */}
         <div className="w-12 h-12 rounded-xl bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001] mb-4">
           <Download className="w-6 h-6 animate-bounce" />
@@ -135,10 +123,10 @@ export const DesktopUpdateModal: React.FC = () => {
 
         {/* Title */}
         <h2 className="text-lg font-bold text-white tracking-tight mb-1">
-          Desktop Update Available
+          Update Required to Enter
         </h2>
         <p className="text-xs text-[#9BA1A6] mb-4">
-          Teader Workspace <span className="text-[#DCB001] font-semibold">v{TARGET_DISPLAY_VERSION}</span> is ready to install. (Currently running v{currentVersion})
+          Teader Workspace <span className="text-[#DCB001] font-semibold">v{TARGET_DISPLAY_VERSION}</span> is required to enter. Please update to proceed. (Currently running v{currentVersion})
         </p>
 
         {/* Release details card */}
@@ -196,31 +184,22 @@ export const DesktopUpdateModal: React.FC = () => {
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 justify-end pt-2">
+        {/* Action Buttons - Only Update Now is shown, no Later button */}
+        <div className="pt-2">
           {status === 'idle' && (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-[#787C83] hover:text-white transition-colors"
-              >
-                Later
-              </button>
-              <button
-                type="button"
-                onClick={handleStartUpdate}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-[#DCB001] hover:bg-[#E5B800] active:scale-[0.98] rounded-xl shadow-lg transition-all"
-              >
-                <Download className="w-4 h-4" />
-                Update Now
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleStartUpdate}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-[#DCB001] hover:bg-[#E5B800] active:scale-[0.98] rounded-xl shadow-lg transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              Update Now to Enter
+            </button>
           )}
 
           {status === 'downloading' && (
-            <div className="text-xs text-[#787C83] italic">
-              Please wait while update downloads...
+            <div className="text-center text-xs text-[#787C83] italic py-2">
+              Please wait while update downloads and installs...
             </div>
           )}
 
@@ -228,30 +207,21 @@ export const DesktopUpdateModal: React.FC = () => {
             <button
               type="button"
               onClick={handleCloseElectron}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-[#C0393B] hover:bg-[#A82E30] rounded-xl shadow-lg transition-all"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-white bg-[#C0393B] hover:bg-[#A82E30] rounded-xl shadow-lg transition-all cursor-pointer"
             >
               Close Teader Now
             </button>
           )}
 
           {status === 'error' && (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                className="px-4 py-2 text-xs font-medium text-[#787C83] hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleStartUpdate}
-                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-[#DCB001] hover:bg-[#E5B800] rounded-xl shadow-lg transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Retry
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleStartUpdate}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-[#DCB001] hover:bg-[#E5B800] rounded-xl shadow-lg transition-all cursor-pointer"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry Update Now
+            </button>
           )}
         </div>
       </div>
