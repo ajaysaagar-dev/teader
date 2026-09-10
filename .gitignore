@@ -43,3 +43,6 @@ next-env.d.ts
 # scripts
 /scripts
 
+# large release archives
+public/releases/*.7z
+

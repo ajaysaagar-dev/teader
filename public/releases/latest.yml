@@ -1,14 +1,14 @@
-version: 0.0.2
+version: 0.1.0
 files:
-  - url: Teader Workspace Web Setup 0.0.2.exe
-    sha512: bl7K428/3DIO8p3o3BNBGMVQii8KgT/75TzM1v+KLqtlnWrmjuipM+uTNQHeTwwxTpnmA/ztxkUplzY/gtszlw==
-path: Teader Workspace Web Setup 0.0.2.exe
-sha512: bl7K428/3DIO8p3o3BNBGMVQii8KgT/75TzM1v+KLqtlnWrmjuipM+uTNQHeTwwxTpnmA/ztxkUplzY/gtszlw==
+  - url: Teader Workspace Web Setup 0.1.0.exe
+    sha512: sdslXtFPPZmfFfFvoWoW/TNBosgcrr7OkZ78Z/3Q8/b39U4YYAXMmO/N1q6vCX1XDWWxDw1+ufPyWqMynYIqng==
+path: Teader Workspace Web Setup 0.1.0.exe
+sha512: sdslXtFPPZmfFfFvoWoW/TNBosgcrr7OkZ78Z/3Q8/b39U4YYAXMmO/N1q6vCX1XDWWxDw1+ufPyWqMynYIqng==
 packages:
   x64:
-    size: 80956983
-    sha512: ra9xqvnJprPC7nv8IKJup1kpdVPc3YFdRA9Rfxl1SFh93/JJ8ujQ0px8/Ra9uAduw4hSQ/czySra+BsoBA3L5Q==
-    blockMapSize: 86301
-    path: teader-electron-0.0.2-x64.nsis.7z
-    file: teader-electron-0.0.2-x64.nsis.7z
-releaseDate: '2026-09-07T01:53:01.787Z'
+    size: 80957684
+    sha512: yTe9hAS59N2erVro9vR6r0y1u9D6/ZuL+4+60NZ4H5sOlsF81LlMyN7DUrTf1H1vOGGJVMVf16jlb2p4pPKYHw==
+    blockMapSize: 86305
+    path: teader-electron-0.1.0-x64.nsis.7z
+    file: teader-electron-0.1.0-x64.nsis.7z
+releaseDate: '2026-09-10T13:29:09.603Z'
