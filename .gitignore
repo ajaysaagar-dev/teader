@@ -45,4 +45,5 @@ next-env.d.ts
 
 # large release archives
 public/releases/*.7z
+public/releases/Teader Workspace Setup *.exe
 
