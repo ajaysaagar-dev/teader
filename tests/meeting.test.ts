@@ -315,5 +315,30 @@ describe('Project Audio Meeting Operations & State Logic', () => {
     handleLeaveMeeting();
     expect(activeMeeting).toBeNull();
   });
+
+  it('configures 4-tier noise suppression with Extreme Voice-Only Isolation', async () => {
+    const {
+      NOISE_SUPPRESSION_MODES,
+      NOISE_SUPPRESSION_CONFIG,
+      nextNoiseSuppressionMode,
+    } = await import('@/lib/noise-suppression');
+
+    expect(NOISE_SUPPRESSION_MODES).toEqual(['off', 'standard', 'high', 'extreme']);
+
+    // Check Extreme Voice-Only Isolation configuration
+    const extremeConfig = NOISE_SUPPRESSION_CONFIG['extreme'];
+    expect(extremeConfig).toBeDefined();
+    expect(extremeConfig.useVoiceIsolation).toBe(true);
+    expect(extremeConfig.useKrisp).toBe(true);
+    expect(extremeConfig.webrtcNoiseSuppression).toBe(true);
+    expect(extremeConfig.label).toContain('Extreme');
+
+    // Check cycle transitions: off -> standard -> high -> extreme -> off
+    expect(nextNoiseSuppressionMode('off')).toBe('standard');
+    expect(nextNoiseSuppressionMode('standard')).toBe('high');
+    expect(nextNoiseSuppressionMode('high')).toBe('extreme');
+    expect(nextNoiseSuppressionMode('extreme')).toBe('off');
+  });
 });
+
 

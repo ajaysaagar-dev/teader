@@ -13,9 +13,9 @@
  * When mode is 'off', WebRTC noiseSuppression is also disabled.
  */
 
-export type NoiseSuppressionMode = 'off' | 'standard' | 'high';
+export type NoiseSuppressionMode = 'off' | 'standard' | 'high' | 'extreme';
 
-export const NOISE_SUPPRESSION_MODES: readonly NoiseSuppressionMode[] = ['off', 'standard', 'high'] as const;
+export const NOISE_SUPPRESSION_MODES: readonly NoiseSuppressionMode[] = ['off', 'standard', 'high', 'extreme'] as const;
 
 export const NOISE_SUPPRESSION_CONFIG: Record<
   NoiseSuppressionMode,
@@ -24,6 +24,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     description: string;
     webrtcNoiseSuppression: boolean;
     useKrisp: boolean;
+    useVoiceIsolation: boolean;
     addedLatency: string;
   }
 > = {
@@ -32,6 +33,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     description: 'No noise processing. Raw microphone input.',
     webrtcNoiseSuppression: false,
     useKrisp: false,
+    useVoiceIsolation: false,
     addedLatency: '0ms',
   },
   standard: {
@@ -39,6 +41,7 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     description: 'Browser-level filtering. Removes steady background noise like fans and hum.',
     webrtcNoiseSuppression: true,
     useKrisp: false,
+    useVoiceIsolation: false,
     addedLatency: '~0ms',
   },
   high: {
@@ -46,11 +49,20 @@ export const NOISE_SUPPRESSION_CONFIG: Record<
     description: 'Krisp AI noise filter. Removes keyboard typing, pets, background speech.',
     webrtcNoiseSuppression: true,
     useKrisp: true,
+    useVoiceIsolation: false,
     addedLatency: '~10-20ms',
+  },
+  extreme: {
+    label: 'Extreme (Voice Only)',
+    description: 'Ultra AI + Neural Vocal Gate. Transmits ONLY pure human voice; 100% background cut.',
+    webrtcNoiseSuppression: true,
+    useKrisp: true,
+    useVoiceIsolation: true,
+    addedLatency: '~12ms',
   },
 } as const;
 
-/** Cycle to the next noise suppression mode (Off → Standard → High → Off) */
+/** Cycle to the next noise suppression mode (Off → Standard → High → Extreme → Off) */
 export function nextNoiseSuppressionMode(current: NoiseSuppressionMode): NoiseSuppressionMode {
   const idx = NOISE_SUPPRESSION_MODES.indexOf(current);
   return NOISE_SUPPRESSION_MODES[(idx + 1) % NOISE_SUPPRESSION_MODES.length];

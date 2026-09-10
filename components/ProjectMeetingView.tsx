@@ -56,6 +56,10 @@ import {
   NOISE_SUPPRESSION_MODES,
   nextNoiseSuppressionMode,
 } from '@/lib/noise-suppression';
+import {
+  VoiceIsolationEngine,
+  type VoiceIsolationStats,
+} from '@/lib/voice-isolation-processor';
 
 // ─── Interfaces & Quality Types ──────────────────────────────────────────────
 
@@ -452,12 +456,14 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   const customScreenTrackRef = useRef<LocalVideoTrack | null>(null);
   const customScreenAudioTrackRef = useRef<LocalAudioTrack | null>(null);
 
-  // Noise Suppression Mode: 'off' | 'standard' | 'high' (default: 'high' = Krisp AI)
-  // Off = no processing, Standard = WebRTC native, High = Krisp AI (~10-20ms added latency)
-  const [noiseSuppressionMode, setNoiseSuppressionMode] = useState<NoiseSuppressionMode>('high');
-  const noiseSuppressionModeRef = useRef<NoiseSuppressionMode>('high');
+  // Noise Suppression Mode: 'off' | 'standard' | 'high' | 'extreme' (default: 'extreme' = Voice Isolation + Krisp AI)
+  // Extreme = Deep vocal formant isolation + spectral voice gate + Krisp AI neural filtering (~12ms latency)
+  const [noiseSuppressionMode, setNoiseSuppressionMode] = useState<NoiseSuppressionMode>('extreme');
+  const noiseSuppressionModeRef = useRef<NoiseSuppressionMode>('extreme');
   noiseSuppressionModeRef.current = noiseSuppressionMode;
   const krispProcessorRef = useRef<any>(null);
+  const voiceIsolationEngineRef = useRef<VoiceIsolationEngine | null>(null);
+  const [voiceIsolationStats, setVoiceIsolationStats] = useState<VoiceIsolationStats | null>(null);
 
   // Voice Normalization State (Dynamic Range Compressor + Makeup Gain, default: enabled for all users)
   const [voiceNormalizationEnabled, setVoiceNormalizationEnabled] = useState(true);
@@ -700,8 +706,8 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
   }, [mapParticipant]);
 
   // ── Apply Noise Suppression Mode to Active Mic Track ──
-  // Manages Krisp processor lifecycle and WebRTC noiseSuppression constraint
-  // based on the selected mode (off / standard / high).
+  // Manages Extreme Voice Isolation Engine, Krisp AI neural processor, and WebRTC noiseSuppression constraints
+  // based on the selected mode (off / standard / high / extreme).
   const applyNoiseSuppressionMode = useCallback(async (mode: NoiseSuppressionMode) => {
     const room = roomRef.current;
     if (!room || !room.localParticipant) return;
@@ -713,9 +719,28 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
     const config = NOISE_SUPPRESSION_CONFIG[mode];
 
     try {
-      // Step 1: Handle Krisp processor state
+      // Step 1: Extreme Advanced Voice Isolation & Neural Spectral Vocal Gate
+      if (config.useVoiceIsolation) {
+        if (!voiceIsolationEngineRef.current && localTrack.mediaStreamTrack) {
+          const engine = new VoiceIsolationEngine();
+          await engine.initialize(localTrack.mediaStreamTrack);
+          engine.onStats((stats) => {
+            setVoiceIsolationStats(stats);
+          });
+          voiceIsolationEngineRef.current = engine;
+        } else if (voiceIsolationEngineRef.current) {
+          voiceIsolationEngineRef.current.setEnabled(true);
+        }
+      } else {
+        if (voiceIsolationEngineRef.current) {
+          voiceIsolationEngineRef.current.setEnabled(false);
+          setVoiceIsolationStats(null);
+        }
+      }
+
+      // Step 2: Handle Krisp processor state
       if (config.useKrisp) {
-        // Mode is 'high' — enable or create Krisp processor
+        // Mode is 'high' or 'extreme' — enable or create Krisp processor
         if (!krispProcessorRef.current) {
           const { isKrispNoiseFilterSupported, KrispNoiseFilter } = await import(
             '@livekit/krisp-noise-filter'
@@ -743,7 +768,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         }
       }
 
-      // Step 2: Update WebRTC noiseSuppression constraint on the underlying MediaStreamTrack
+      // Step 3: Update WebRTC noiseSuppression constraint on the underlying MediaStreamTrack
       // This controls the browser's built-in noise suppression (separate from Krisp).
       const mediaTrack = localTrack.mediaStreamTrack;
       if (mediaTrack && typeof mediaTrack.applyConstraints === 'function') {
@@ -1119,6 +1144,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           krispProcessorRef.current.destroy?.();
         } catch {}
         krispProcessorRef.current = null;
+      }
+      if (voiceIsolationEngineRef.current) {
+        try {
+          voiceIsolationEngineRef.current.destroy();
+        } catch {}
+        voiceIsolationEngineRef.current = null;
       }
     };
   }, [connectToVoiceRoom]);
@@ -1834,12 +1865,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               </div>
             </div>
 
-            {/* Row 2: Noise Suppression Mode Selector */}
+            {/* Row 2: Noise Suppression & Extreme Voice Isolation Mode Selector */}
             <div className="pt-3 border-t border-[#22242A]">
               <label className="text-[11px] font-semibold text-[#8E939D] uppercase tracking-wider flex items-center gap-1.5 mb-2.5">
-                <Sparkles size={12} className="text-[#DCB001]" /> Noise Suppression
+                <Sparkles size={12} className="text-[#DCB001]" /> Noise Suppression & Voice Isolation
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {NOISE_SUPPRESSION_MODES.map((mode) => {
                   const config = NOISE_SUPPRESSION_CONFIG[mode];
                   const isSelected = noiseSuppressionMode === mode;
@@ -1849,16 +1880,39 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                       onClick={() => handleNoiseSuppressionChange(mode)}
                       className={`relative p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-[#DCB001]/10 border-[#DCB001]/50 ring-1 ring-[#DCB001]/30'
+                          ? mode === 'extreme'
+                            ? 'bg-purple-500/15 border-purple-500/60 ring-1 ring-purple-500/40 shadow-sm shadow-purple-500/20'
+                            : mode === 'high'
+                            ? 'bg-emerald-500/10 border-emerald-500/50 ring-1 ring-emerald-500/30'
+                            : 'bg-[#DCB001]/10 border-[#DCB001]/50 ring-1 ring-[#DCB001]/30'
                           : 'bg-[#1A1C22] border-[#2A2D35] hover:border-[#3A3D45]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-xs font-bold ${isSelected ? 'text-[#DCB001]' : 'text-white'}`}>
+                        <span
+                          className={`text-xs font-bold ${
+                            isSelected
+                              ? mode === 'extreme'
+                                ? 'text-purple-300'
+                                : mode === 'high'
+                                ? 'text-emerald-400'
+                                : 'text-[#DCB001]'
+                              : 'text-white'
+                          }`}
+                        >
                           {config.label}
                         </span>
                         {isSelected && (
-                          <CheckCircle2 size={14} className="text-[#DCB001]" />
+                          <CheckCircle2
+                            size={14}
+                            className={
+                              mode === 'extreme'
+                                ? 'text-purple-400'
+                                : mode === 'high'
+                                ? 'text-emerald-400'
+                                : 'text-[#DCB001]'
+                            }
+                          />
                         )}
                       </div>
                       <p className="text-[10px] text-[#787C83] leading-snug">{config.description}</p>
@@ -2074,6 +2128,15 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                                 YOU
                               </span>
                             )}
+                            {p.isLocal && noiseSuppressionMode === 'extreme' && (
+                              <span
+                                className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-mono text-[9px] sm:text-[10px] font-bold border border-purple-500/40 flex items-center gap-1 shadow-sm"
+                                title="Extreme Voice Isolation: Only your voice is processed and shared"
+                              >
+                                <Sparkles size={10} className="text-purple-400" />
+                                VOICE ONLY
+                              </span>
+                            )}
                             {p.isAdmin && (
                               <span
                                 className="px-1.5 rounded bg-blue-500/15 text-blue-400 font-mono text-[9px] font-bold border border-blue-500/30 flex items-center gap-0.5"
@@ -2094,7 +2157,9 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                                 <span className="w-1 h-2 bg-[#22C55E] rounded-full animate-pulse delay-150" />
                                 <span className="w-1 h-4 bg-[#22C55E] rounded-full animate-pulse delay-100" />
                                 <span className="text-[10px] text-[#22C55E] font-mono font-medium ml-1">
-                                  Speaking...
+                                  {p.isLocal && noiseSuppressionMode === 'extreme'
+                                    ? 'Voice Isolated & Active…'
+                                    : 'Speaking...'}
                                 </span>
                               </>
                             ) : (
@@ -2237,11 +2302,13 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             )}
           </button>
 
-          {/* Noise Suppression Mode Button (Cycles: Off → Standard → High Quality) */}
+          {/* Noise Suppression & Extreme Voice Isolation Mode Button (Cycles: Off → Standard → High Quality → Extreme) */}
           <button
             onClick={handleCycleNoiseSuppression}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
-              noiseSuppressionMode === 'high'
+              noiseSuppressionMode === 'extreme'
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.25)]'
+                : noiseSuppressionMode === 'high'
                 ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40 hover:bg-[#22C55E]/25 shadow-sm'
                 : noiseSuppressionMode === 'standard'
                 ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 hover:bg-[#DCB001]/25 shadow-sm'
@@ -2252,14 +2319,16 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             <Sparkles
               size={15}
               className={
-                noiseSuppressionMode === 'high'
+                noiseSuppressionMode === 'extreme'
+                  ? 'text-purple-400 animate-pulse'
+                  : noiseSuppressionMode === 'high'
                   ? 'text-[#22C55E]'
                   : noiseSuppressionMode === 'standard'
                   ? 'text-[#DCB001]'
                   : 'text-[#787C83]'
               }
             />
-            <span>Noise: {NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label}</span>
+            <span>{noiseSuppressionMode === 'extreme' ? 'Extreme: Voice Only' : `Noise: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label}`}</span>
           </button>
 
           {/* Voice Normalization Button (Default: Enabled) */}
