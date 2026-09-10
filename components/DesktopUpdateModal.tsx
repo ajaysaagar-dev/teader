@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Download, CheckCircle2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { getDesktopInfo, compareVersions } from '@/lib/desktop';
 
-const TARGET_VERSION = '0.0.2';
+const TARGET_VERSION = '0.1.0';
+const TARGET_DISPLAY_VERSION = '0.1';
 const INSTALLER_URL = '/releases/Teader-Workspace-Web-Setup.exe';
 
 export const DesktopUpdateModal: React.FC = () => {
@@ -137,18 +138,19 @@ export const DesktopUpdateModal: React.FC = () => {
           Desktop Update Available
         </h2>
         <p className="text-xs text-[#9BA1A6] mb-4">
-          Teader Workspace <span className="text-[#DCB001] font-semibold">v{TARGET_VERSION}</span> is ready to install. (Currently running v{currentVersion})
+          Teader Workspace <span className="text-[#DCB001] font-semibold">v{TARGET_DISPLAY_VERSION}</span> is ready to install. (Currently running v{currentVersion})
         </p>
 
         {/* Release details card */}
         <div className="bg-[#0E0F12] border border-[#232529] rounded-xl p-3 mb-5 text-xs space-y-1.5 text-[#CFD4DD]">
           <div className="flex items-center gap-2 text-white font-medium">
             <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
-            What&apos;s new in v{TARGET_VERSION}:
+            What&apos;s new in v{TARGET_DISPLAY_VERSION}:
           </div>
-          <p className="text-[#9BA1A6] pl-4">• Resolves external website framing restrictions (X-Frame-Options bypass).</p>
-          <p className="text-[#9BA1A6] pl-4">• Direct webview support for apps and 3D viewports.</p>
-          <p className="text-[#9BA1A6] pl-4">• Integrated one-click auto update mechanism.</p>
+          <p className="text-[#9BA1A6] pl-4">• Hardware GPU-accelerated voice denoise & extreme neural spectral isolation.</p>
+          <p className="text-[#9BA1A6] pl-4">• Unthrottled background meeting audio during multitasking and screen sharing.</p>
+          <p className="text-[#9BA1A6] pl-4">• Direct webview support and external framing restriction bypass.</p>
+          <p className="text-[#9BA1A6] pl-4">• One-click automatic download and installation engine.</p>
         </div>
 
         {/* Progress Bar / Status during download */}
