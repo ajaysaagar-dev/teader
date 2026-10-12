@@ -102,6 +102,31 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   const [activeTitle, setActiveTitle] = useState<string>('');
   const [savedTitle, setSavedTitle] = useState<string>('');
   const [viewMode, setViewMode] = useState<'editor' | 'split' | 'preview'>('preview');
+  const [previewZoom, setPreviewZoom] = useState<number>(1);
+
+  // Initialize preview zoom from localStorage on client
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('teader_docs_preview_zoom');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.5) {
+          setPreviewZoom(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const updatePreviewZoom = useCallback((updater: number | ((prev: number) => number)) => {
+    setPreviewZoom((prev) => {
+      const target = typeof updater === 'function' ? updater(prev) : updater;
+      const clamped = Math.min(2.5, Math.max(0.5, Number(target.toFixed(2))));
+      try {
+        localStorage.setItem('teader_docs_preview_zoom', String(clamped));
+      } catch {}
+      return clamped;
+    });
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -324,6 +349,27 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       behavior: 'smooth',
     });
   }, []);
+
+  // Control + Mouse Wheel Zoom In / Out on Preview Doc (in Preview Mode & Split Mode)
+  useEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el || (viewMode !== 'preview' && viewMode !== 'split')) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Negative deltaY: wheel up (zoom in); Positive deltaY: wheel down (zoom out)
+        const step = e.deltaY < 0 ? 0.08 : -0.08;
+        updatePreviewZoom((prev) => prev + step);
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, [viewMode, selectedDocId, updatePreviewZoom]);
 
   const [cursorPos, setCursorPos] = useState<ActiveCursorInfo>({
     lineIndex: 0,
@@ -1594,11 +1640,28 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         }
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && (viewMode === 'preview' || viewMode === 'split')) {
+        if (e.key === '0' || e.code === 'Numpad0') {
+          e.preventDefault();
+          updatePreviewZoom(1);
+          return;
+        }
+        if (e.key === '=' || e.key === '+' || e.code === 'NumpadAdd') {
+          e.preventDefault();
+          updatePreviewZoom((prev) => prev + 0.1);
+          return;
+        }
+        if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+          e.preventDefault();
+          updatePreviewZoom((prev) => prev - 0.1);
+          return;
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [performManualSave, handleUndo, handleRedo, handleCloseTab]);
+  }, [performManualSave, handleUndo, handleRedo, handleCloseTab, viewMode, updatePreviewZoom]);
 
   // Handle Delete Doc
   const handleDeleteDoc = async (docId: string, docFileName: string, e: React.MouseEvent) => {
@@ -2074,7 +2137,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 tabsContainerRef.current.scrollLeft += e.deltaY;
               }
             }}
-            className="bg-[#000000] border-b border-[#141414] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
+            className="bg-[var(--bg-main)] border-b border-[#141414] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
           >
             {openDocIds.length === 0 ? (
               <div className="flex items-center gap-2 px-2 text-xs text-[var(--text-muted)] font-mono">
@@ -2225,44 +2288,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           {selectedDoc ? (
             <>
               {/* Document Header & Mode Controls */}
-              <div className="h-14 px-6 border-b border-[#141414] bg-[#101010] flex items-center justify-between gap-4 shrink-0">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-lg bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white shrink-0">
-                    <FileCode2 size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <input
-                      type="text"
-                      value={activeTitle}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      placeholder="Untitled Document..."
-                      className="w-full bg-transparent border-b border-transparent hover:border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-sm sm:text-base font-bold text-white outline-none font-prompt transition-colors truncate"
-                      title="Click to rename document title"
-                    />
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] truncate">
-                      <span>{selectedDoc.folder || DEFAULT_FOLDER} / {selectedDoc.fileName}</span>
-                      <span>•</span>
-                      <span className="font-mono text-[11px]">Ln {cursorPos.lineIndex + 1}, Col {cursorPos.col || 1} ({cursorPos.offset || 0} ch)</span>
-                      <span>•</span>
-                      <span>{isAutoSaving ? 'Saving...' : hasUnsavedChanges ? 'Unsaved' : 'Synced'}</span>
-                      <span>•</span>
-                      <RealtimeBadge />
-                    </div>
-                  </div>
-                </div>
+              <div className="h-14 px-6 border-b border-[#141414] flex items-center justify-between gap-4 shrink-0">
 
                 {/* Top Action Buttons: Save & View Mode */}
                 <div className="flex items-center gap-2.5">
-                  {/* Manual Save Button */}
-                  <button
-                    onClick={() => performManualSave()}
-                    disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#E5E5E5] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-medium text-xs transition-colors shadow-sm cursor-pointer disabled:cursor-default"
-                    title="Manual Save (Ctrl + S)"
-                  >
-                    <Save size={13} />
-                    <span>{isSaving ? 'Saving...' : isJustSaved ? 'Saved' : 'Save'}</span>
-                  </button>
 
                   {/* View Mode Toggle */}
                   <div className="flex items-center bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg p-0.5 text-xs">
@@ -2326,9 +2355,12 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 {(viewMode === 'preview' || viewMode === 'split') && (
                   <div
                     ref={previewContainerRef}
-                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#000000] custom-scrollbar scroll-smooth"
+                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#1e1e1e50] custom-scrollbar scroll-smooth relative"
                   >
-                    <div className="max-w-3xl mx-auto space-y-4 text-[var(--text-secondary)] font-sans">
+                    <div
+                      className="max-w-3xl mx-auto space-y-4 text-[var(--text-secondary)] font-sans origin-top transition-all duration-75"
+                      style={{ zoom: previewZoom }}
+                    >
                       {viewMode === 'split' && (
                         <div className="flex items-center justify-between pb-2 text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)] mb-4">
                           <div className="flex items-center gap-2">
@@ -2359,6 +2391,33 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           <p className="text-xs text-[var(--text-muted)] italic">Start typing in the editor to see real-time preview...</p>
                         )}
                       </div>
+                    </div>
+
+                    {/* Floating Zoom Indicator & Controls Pill */}
+                    <div className="sticky bottom-4 right-4 ml-auto w-fit flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#181818]/90 backdrop-blur-md border border-[var(--border-primary)] shadow-2xl text-xs font-mono select-none z-30">
+                      <button
+                        onClick={() => updatePreviewZoom((z) => z - 0.1)}
+                        className="p-1 rounded text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Zoom Out (Ctrl + Wheel Down or Ctrl + -)"
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <button
+                        onClick={() => updatePreviewZoom(1)}
+                        className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
+                          previewZoom !== 1 ? 'text-[#CCA5FD] hover:text-white hover:bg-white/5' : 'text-white hover:bg-white/5'
+                        }`}
+                        title="Reset Zoom to 100% (Click or Ctrl + 0)"
+                      >
+                        {Math.round(previewZoom * 100)}%
+                      </button>
+                      <button
+                        onClick={() => updatePreviewZoom((z) => z + 0.1)}
+                        className="p-1 rounded text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                        title="Zoom In (Ctrl + Wheel Up or Ctrl + +)"
+                      >
+                        <Plus size={11} />
+                      </button>
                     </div>
                   </div>
                 )}

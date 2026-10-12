@@ -1798,89 +1798,63 @@ export default function SingleProjectPage() {
 
         {/* 2. 4 Primary Tabs Bar (Overview, Tasks, Docs, Settings) + Sub-views / Tasks Toolbar */}
         <div className="h-10 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none gap-3">
-          {/* Left: 4 Primary Tabs */}
-          <div className="flex items-center gap-2 h-full">
-            <button
-              onClick={() => handleTabSwitch('overview')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'overview'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => handleTabSwitch('tasks')}
-              className={`flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative ${
-                activeTab === 'tasks'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              <span>Tasks</span>
-              <span className="font-mono text-[10px] text-[var(--text-muted)]">({projectIssues.length})</span>
-            </button>
-            <button
-              onClick={() => handleTabSwitch('docs')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'docs'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Docs
-            </button>
-            <button
-              onClick={() => handleTabSwitch('charts')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'charts'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Charts
-            </button>
-            <button
-              onClick={() => handleTabSwitch('chats')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'chats'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Conversations
-            </button>
-            <button
-              onClick={() => handleTabSwitch('meeting')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'meeting'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Meetings
-            </button>
-            <button
-              onClick={() => handleTabSwitch('history')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'history'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              History
-            </button>
-            <button
-              onClick={() => handleTabSwitch('settings')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'settings'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Settings
-            </button>
+          {/* Left: Primary Tabs */}
+          <div className="flex items-center gap-1.5 h-full">
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'tasks', label: 'Tasks', badge: projectIssues.length },
+              { id: 'docs', label: 'Docs' },
+              { id: 'charts', label: 'Charts' },
+              { id: 'chats', label: 'Conversations' },
+              { id: 'meeting', label: 'Meetings' },
+              { id: 'history', label: 'History' },
+              { id: 'settings', label: 'Settings' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabSwitch(tab.id as ProjectTab)}
+                  className={`group flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative cursor-pointer ${
+                    isActive
+                      ? 'text-white font-medium'
+                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {/* Subtle ambient glow behind active tab */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabGlow"
+                      className="absolute inset-0 bg-gradient-to-b from-[#8400FF]/15 via-[#FF0051]/5 to-transparent pointer-events-none rounded-t-sm"
+                      transition={{ type: 'tween', ease: 'easeInOut', duration: 0.25 }}
+                    />
+                  )}
+
+                  <span className="relative z-10">{tab.label}</span>
+
+                  {typeof tab.badge !== 'undefined' && (
+                    <span
+                      className={`relative z-10 font-mono text-[10px] px-1.5 py-0.5 rounded-full border transition-all ${
+                        isActive
+                          ? 'bg-gradient-to-r from-[#8400FF]/30 to-[#FF0051]/30 text-white border-[#8400FF]/50 shadow-[0_0_8px_rgba(132,0,255,0.35)]'
+                          : 'bg-white/5 text-[var(--text-muted)] border-white/10 group-hover:border-[#8400FF]/30 group-hover:text-white'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+
+                  {/* Luminous Logo Accent Gradient Underline */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabUnderline"
+                      className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#8400FF] to-[#FF0051] shadow-[0_0_12px_rgba(132,0,255,0.7),0_0_6px_rgba(255,0,81,0.6)] pointer-events-none rounded-full z-20"
+                      transition={{ type: 'tween', ease: 'easeInOut', duration: 0.25 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Right: Contextual Toolbar depending on activeTab */}
@@ -1935,36 +1909,36 @@ export default function SingleProjectPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setOverviewSubView('summary')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   overviewSubView === 'summary'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Summary
               </button>
               <button
                 onClick={() => setOverviewSubView('activity')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   overviewSubView === 'activity'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Activity
               </button>
               <button
                 onClick={() => handleTabSwitch('meeting')}
-                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-white/5 transition-colors cursor-pointer"
               >
-                <Radio size={11} />
+                <Radio size={11} className="text-[#FF0051]" />
                 <span>Meeting</span>
               </button>
               <button
                 onClick={() => setIsChatOpen((prev) => !prev)}
-                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-white/5 transition-colors cursor-pointer"
               >
-                <MessageSquare size={11} />
+                <MessageSquare size={11} className="text-[#8400FF]" />
                 <span>Chat</span>
               </button>
             </div>
@@ -1974,20 +1948,20 @@ export default function SingleProjectPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setDocsSubView('docs')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   docsSubView === 'docs'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Docs
               </button>
               <button
                 onClick={() => setDocsSubView('charts')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   docsSubView === 'charts'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Charts
@@ -1999,39 +1973,39 @@ export default function SingleProjectPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSettingsSubView('general')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   settingsSubView === 'general'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 General
               </button>
               <button
                 onClick={() => setSettingsSubView('apps')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   settingsSubView === 'apps'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Apps & Integrations
               </button>
               <button
                 onClick={() => setSettingsSubView('plugins')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
                   settingsSubView === 'plugins'
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
-                    : 'text-[var(--text-muted)] hover:text-white'
+                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
                 }`}
               >
                 Plugins
               </button>
               <button
                 onClick={() => setIsAutomationsModalOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-white/5 transition-colors cursor-pointer"
               >
-                <Zap size={11} />
+                <Zap size={11} className="text-[#8400FF]" />
                 <span>Automations</span>
               </button>
             </div>
@@ -2091,15 +2065,7 @@ export default function SingleProjectPage() {
                   projectKey={project?.key}
                 />
               </div>
-            ) : activeTab === 'meeting' ? (
-              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-                <ProjectMeetingView
-                  projectId={project?.id || projectIdParam || 1}
-                  projectName={project?.name || ''}
-                  currentUser={currentUser}
-                />
-              </div>
-            ) : activeTab === 'chats' ? (
+            ) : activeTab === 'meeting' ? null : activeTab === 'chats' ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
                 <ProjectConversationView
                   projectId={project?.id || projectIdParam || 1}

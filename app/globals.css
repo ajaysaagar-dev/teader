@@ -132,6 +132,12 @@
   --accent-muted: rgba(187, 134, 252, 0.24);
   --accent-glow: rgba(187, 134, 252, 0.35);
 
+  /* ===== Teader Logo Brand Accent Tokens ===== */
+  --logo-purple: #8400FF;
+  --logo-pink: #FF0051;
+  --logo-gradient: linear-gradient(90deg, #8400FF 0%, #FF0051 100%);
+  --logo-glow: 0 0 12px rgba(132, 0, 255, 0.6), 0 0 8px rgba(255, 0, 81, 0.5);
+
   /* ===== Semantic Status Tokens ===== */
   --status-todo: var(--theme-text-secondary);
   --status-inprogress: var(--theme-accent);

@@ -1687,12 +1687,6 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                   LIVE
                 </span>
               )}
-              {currentUserIsAdmin && (
-                <span className="px-2 py-0.5 rounded-full bg-white/15 text-white text-[10px] font-mono font-bold border border-[var(--border-secondary)] flex items-center gap-1">
-                  <Shield size={10} />
-                  ADMIN
-                </span>
-              )}
             </div>
             <p className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
               <span>{participants.length} in call</span>
@@ -1755,7 +1749,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 e.stopPropagation();
                 handleAdminCloseCall();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-black hover:bg-neutral-200 text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-[#222222] hover:bg-[#2D2D2D] text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
               title="Close meeting for all participants and return to overview"
             >
               <PowerOff size={14} />
@@ -2262,7 +2256,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         </div>
 
         {/* ── Bottom Controls Dock ── */}
-        <div className="h-20 border-t border-[#1F1F1F] bg-[#000000]/95 backdrop-blur-xl flex items-center justify-center gap-3 px-6 z-30 shadow-2xl flex-wrap">
+        <div className="h-20 border-t border-[#1F1F1F] bg-[#1e1e1e] backdrop-blur-xl flex items-center justify-center gap-3 px-6 z-30 shadow-2xl flex-wrap">
           {/* Mute Button */}
           <button
             onClick={handleToggleMute}
@@ -2426,7 +2420,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {currentUserIsAdmin && (
             <button
               onClick={handleAdminCloseCall}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-white text-black hover:bg-neutral-200 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer border border-[var(--border-secondary)]"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-[#222222] hover:bg-[#2D2D2D] text-white transition-all shadow-lg cursor-pointer border border-[var(--border-secondary)]"
               title="Close meeting for everyone and return to overview"
             >
               <PowerOff size={16} />

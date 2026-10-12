@@ -311,91 +311,10 @@ export default function MyWorkPage() {
                           {issue.title}
                         </Link>
                       </div>
-
-                      {/* Right Action: Set Focus Mode / Inspect */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => {
-                            setFocusIssue(issue);
-                            setPomodoroSeconds(25 * 60);
-                            setIsPomodoroRunning(true);
-                            toast.info(`Focus session started for ${issue.key}`);
-                          }}
-                          className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm ${
-                            isCurrentFocus
-                              ? 'bg-white text-black'
-                              : 'bg-[var(--bg-canvas)] hover:bg-[#222222] text-[var(--text-secondary)] border border-[var(--border-primary)]'
-                          }`}
-                        >
-                          <Play size={12} />
-                          <span>{isCurrentFocus ? 'Focusing' : 'Focus'}</span>
-                        </button>
-                      </div>
                     </div>
                   );
                 })
               )}
-            </div>
-          </div>
-
-          {/* Right Column: Pomodoro Focus Timer (§11.2) */}
-          <div className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="p-6 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl space-y-5 shadow-xl text-center">
-              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
-                <div className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Flame size={16} className="text-[#FFFFFF]" />
-                  <span>Pomodoro Focus Timer</span>
-                </div>
-                <span className="text-xs text-[var(--text-secondary)]">25m Work / 5m Break</span>
-              </div>
-
-              {/* Active Focus Target */}
-              {focusIssue ? (
-                <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl text-left space-y-1">
-                  <span className="text-xs text-white font-bold">Active Focus Target</span>
-                  <div className="text-xs font-bold text-white truncate">{focusIssue.key}: {focusIssue.title}</div>
-                </div>
-              ) : (
-                <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl text-sm text-[var(--text-secondary)] italic">
-                  Select a task from your list to anchor this focus session.
-                </div>
-              )}
-
-              {/* Countdown Display */}
-              <div className="py-4">
-                <div className="text-4xl sm:text-5xl font-mono font-black text-white tracking-widest">
-                  {formatPomodoro(pomodoroSeconds)}
-                </div>
-                <span className="text-xs text-[var(--text-secondary)] mt-1 block">
-                  {isPomodoroRunning ? '⚡ Deep Focus Mode Active' : 'Paused / Ready'}
-                </span>
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center justify-center gap-3">
-                <button
-                  onClick={() => setIsPomodoroRunning((prev) => !prev)}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer ${
-                    isPomodoroRunning
-                      ? 'bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)]'
-                      : 'bg-[var(--accent)] text-black hover:bg-[var(--accent-hover)]'
-                  }`}
-                >
-                  {isPomodoroRunning ? <Square size={13} /> : <Play size={13} />}
-                  <span>{isPomodoroRunning ? 'Pause' : 'Start Focus'}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsPomodoroRunning(false);
-                    setPomodoroSeconds(25 * 60);
-                  }}
-                  className="p-2.5 bg-[var(--bg-canvas)] hover:bg-[#222222] border border-[var(--border-primary)] rounded-xl text-[var(--text-secondary)] hover:text-white transition-colors"
-                  title="Reset Timer"
-                >
-                  <RotateCcw size={14} />
-                </button>
-              </div>
             </div>
           </div>
         </div>
