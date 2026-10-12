@@ -112,25 +112,25 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
       id: 'todo',
       title: 'Todo',
       count: filteredIssues.filter((i) => i.status === 'todo').length,
-      color: 'var(--status-todo, #787C83)',
+      color: 'var(--status-todo, #666666)',
     },
     {
       id: 'in_progress',
       title: 'In Progress',
       count: filteredIssues.filter((i) => i.status === 'in_progress').length,
-      color: 'var(--status-inprogress, #DCB001)',
+      color: 'var(--status-inprogress, #FFFFFF)',
     },
     {
       id: 'needs_review',
       title: 'Needs Review',
       count: filteredIssues.filter((i) => i.status === 'needs_review').length,
-      color: 'var(--status-review, #A855F7)',
+      color: 'var(--status-review, #FFFFFF)',
     },
     {
       id: 'done',
       title: 'Done',
       count: filteredIssues.filter((i) => i.status === 'done').length,
-      color: 'var(--status-done, #22C55E)',
+      color: 'var(--status-done, #FFFFFF)',
     },
   ], [filteredIssues]);
 

@@ -93,7 +93,7 @@ export function parseInlineMarkdown(
       tokens.push(
         <kbd
           key={`kbd_${keyIdx++}`}
-          className="px-1.5 py-0.5 mx-0.5 bg-[#1B1C1F] border border-[#2E3138] text-[#CFD4DD] font-mono text-[10px] rounded shadow-sm inline-block font-semibold"
+          className="px-1.5 py-0.5 mx-0.5 bg-[var(--bg-panel)] border border-[#222222] text-[var(--text-secondary)] font-mono text-[10px] rounded shadow-sm inline-block font-semibold"
         >
           {parseInlineMarkdown(kbdMatch[1])}
         </kbd>
@@ -108,7 +108,7 @@ export function parseInlineMarkdown(
       tokens.push(
         <code
           key={`hcode_${keyIdx++}`}
-          className="px-1.5 py-0.5 mx-0.5 bg-[#202226] border border-[#2F333A] text-[#DCB001] font-mono text-[11px] rounded-md font-medium"
+          className="px-1.5 py-0.5 mx-0.5 bg-[#141414] border border-[#343434] text-white font-mono text-[11px] rounded-md font-medium"
         >
           {htmlCodeMatch[1]}
         </code>
@@ -123,7 +123,7 @@ export function parseInlineMarkdown(
       tokens.push(
         <code
           key={`code_${keyIdx++}`}
-          className="px-1.5 py-0.5 mx-0.5 bg-[#202226] border border-[#2F333A] text-[#DCB001] font-mono text-[11px] rounded-md font-medium"
+          className="px-1.5 py-0.5 mx-0.5 bg-[#141414] border border-[#343434] text-white font-mono text-[11px] rounded-md font-medium"
         >
           {codeMatch[1]}
         </code>
@@ -139,7 +139,7 @@ export function parseInlineMarkdown(
       tokens.push(
         <span
           key={`task_tag_${keyIdx++}`}
-          className="inline-flex items-center px-1.5 py-0.2 mx-0.5 font-mono text-[11px] font-bold text-[#38BDF8] bg-[#38BDF8]/15 border border-[#38BDF8]/30 rounded cursor-pointer hover:bg-[#38BDF8]/25 hover:underline"
+          className="inline-flex items-center px-1.5 py-0.2 mx-0.5 font-mono text-[11px] font-bold text-white bg-[var(--ramp-3)]/15 border border-[var(--border-secondary)] rounded cursor-pointer hover:bg-[var(--ramp-3)]/25 hover:underline"
           title={`Tagged Task Reference: @${tagLabel}`}
         >
           @{tagLabel}
@@ -189,7 +189,7 @@ export function parseInlineMarkdown(
     const emHtmlMatch = remaining.match(/^<(i|em)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>/i);
     if (emHtmlMatch) {
       tokens.push(
-        <em key={`em_html_${keyIdx++}`} className="italic text-[#E6EDF3]">
+        <em key={`em_html_${keyIdx++}`} className="italic text-[#EDEDED]">
           {parseInlineMarkdown(emHtmlMatch[2])}
         </em>
       );
@@ -201,7 +201,7 @@ export function parseInlineMarkdown(
     const italicMatch = remaining.match(/^(\*|_)([^*_]+)\1/);
     if (italicMatch) {
       tokens.push(
-        <em key={`i_${keyIdx++}`} className="italic text-[#E6EDF3]">
+        <em key={`i_${keyIdx++}`} className="italic text-[#EDEDED]">
           {parseInlineMarkdown(italicMatch[2])}
         </em>
       );
@@ -213,7 +213,7 @@ export function parseInlineMarkdown(
     const delHtmlMatch = remaining.match(/^<(del|s|strike)(?:\s+[^>]*)?>([\s\S]*?)<\/\1>/i);
     if (delHtmlMatch) {
       tokens.push(
-        <del key={`del_html_${keyIdx++}`} className="line-through text-[#787C83]">
+        <del key={`del_html_${keyIdx++}`} className="line-through text-[var(--text-muted)]">
           {parseInlineMarkdown(delHtmlMatch[2])}
         </del>
       );
@@ -225,7 +225,7 @@ export function parseInlineMarkdown(
     const strikeMatch = remaining.match(/^~~(.+?)~~/);
     if (strikeMatch) {
       tokens.push(
-        <del key={`s_${keyIdx++}`} className="line-through text-[#787C83]">
+        <del key={`s_${keyIdx++}`} className="line-through text-[var(--text-muted)]">
           {parseInlineMarkdown(strikeMatch[1])}
         </del>
       );
@@ -249,7 +249,7 @@ export function parseInlineMarkdown(
     const supMatch = remaining.match(/^<sup>([\s\S]*?)<\/sup>/i);
     if (supMatch) {
       tokens.push(
-        <sup key={`sup_${keyIdx++}`} className="text-[10px] text-[#DCB001]">
+        <sup key={`sup_${keyIdx++}`} className="text-[10px] text-white">
           {parseInlineMarkdown(supMatch[1])}
         </sup>
       );
@@ -259,7 +259,7 @@ export function parseInlineMarkdown(
     const subMatch = remaining.match(/^<sub>([\s\S]*?)<\/sub>/i);
     if (subMatch) {
       tokens.push(
-        <sub key={`sub_${keyIdx++}`} className="text-[10px] text-[#8E939D]">
+        <sub key={`sub_${keyIdx++}`} className="text-[10px] text-[var(--text-secondary)]">
           {parseInlineMarkdown(subMatch[1])}
         </sub>
       );
@@ -283,7 +283,7 @@ export function parseInlineMarkdown(
             id={idMatch ? idMatch[1] : undefined}
             target={hrefMatch[1].startsWith('#') ? undefined : '_blank'}
             rel={hrefMatch[1].startsWith('#') ? undefined : 'noopener noreferrer'}
-            className="text-[#58A6FF] hover:underline inline-flex items-center gap-0.5 font-medium"
+            className="text-[#FFFFFF] hover:underline inline-flex items-center gap-0.5 font-medium"
           >
             <span>{parseInlineMarkdown(inner)}</span>
             {!hrefMatch[1].startsWith('#') && <ExternalLink size={10} className="opacity-70 inline" />}
@@ -312,7 +312,7 @@ export function parseInlineMarkdown(
           href={linkMatch[2]}
           target={isAnchor ? undefined : '_blank'}
           rel={isAnchor ? undefined : 'noopener noreferrer'}
-          className="text-[#58A6FF] hover:underline inline-flex items-center gap-0.5 font-medium"
+          className="text-[#FFFFFF] hover:underline inline-flex items-center gap-0.5 font-medium"
         >
           <span>{parseInlineMarkdown(linkMatch[1])}</span>
           {!isAnchor && <ExternalLink size={10} className="opacity-70 inline" />}
@@ -342,7 +342,7 @@ export function parseInlineMarkdown(
               width: widthMatch ? widthMatch[1] : undefined,
               height: heightMatch ? heightMatch[1] : undefined,
             }}
-            className="my-2 rounded-lg border border-[#2A2C30] inline-block shadow-sm"
+            className="my-2 rounded-lg border border-[var(--border-primary)] inline-block shadow-sm"
           />
         );
       }
@@ -358,7 +358,7 @@ export function parseInlineMarkdown(
           key={`img_${keyIdx++}`}
           src={mdImgMatch[2]}
           alt={mdImgMatch[1] || 'Image'}
-          className="my-2 max-w-full rounded-lg border border-[#2A2C30] shadow-sm inline-block"
+          className="my-2 max-w-full rounded-lg border border-[var(--border-primary)] shadow-sm inline-block"
         />
       );
       remaining = remaining.slice(mdImgMatch[0].length);
@@ -427,26 +427,26 @@ export function CollapsibleDetails({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="my-3 rounded-xl border border-[#2A2C30] bg-[#111215] overflow-hidden shadow-sm transition-all">
+    <div className="my-3 rounded-xl border border-[var(--border-primary)] bg-[#141414] overflow-hidden shadow-sm transition-all">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 bg-[#16181D] hover:bg-[#1C1E23] flex items-center justify-between text-left transition-colors border-b border-[#2A2C30]/50"
+        className="w-full px-4 py-3 bg-[#191919] hover:bg-[#1F1F1F] flex items-center justify-between text-left transition-colors border-b border-[var(--border-primary)]"
       >
         <div className="flex items-center gap-2.5 font-semibold text-white text-xs sm:text-sm">
           {isOpen ? (
-            <ChevronDown size={15} className="text-[#DCB001] shrink-0" />
+            <ChevronDown size={15} className="text-white shrink-0" />
           ) : (
-            <ChevronRight size={15} className="text-[#8E939D] shrink-0" />
+            <ChevronRight size={15} className="text-[var(--text-secondary)] shrink-0" />
           )}
           <span>{summaryContent}</span>
         </div>
-        <span className="text-[10px] font-mono uppercase text-[#787C83] px-2 py-0.5 rounded bg-[#0E0F12] border border-[#2A2C30]">
+        <span className="text-[10px] font-mono uppercase text-[var(--text-muted)] px-2 py-0.5 rounded bg-[#000000] border border-[var(--border-primary)]">
           {isOpen ? 'Collapse' : 'Expand'}
         </span>
       </button>
 
-      {isOpen && <div className="p-4 bg-[#0F1012] overflow-x-auto space-y-2">{children}</div>}
+      {isOpen && <div className="p-4 bg-[#101010] overflow-x-auto space-y-2">{children}</div>}
     </div>
   );
 }
@@ -509,9 +509,9 @@ export function renderGithubMarkdown(
       const codeString = codeLines.join('\n');
 
       elements.push(
-        <div key={`codeblock_${i}`} className="my-4 rounded-xl bg-[#0E1012] border border-[#2A2C30] overflow-hidden shadow-md">
-          <div className="px-3.5 py-1.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between text-[11px] font-mono text-[#787C83]">
-            <span className="font-semibold uppercase tracking-wider text-[#DCB001]">{lang}</span>
+        <div key={`codeblock_${i}`} className="my-4 rounded-xl bg-[#101010] border border-[var(--border-primary)] overflow-hidden shadow-md">
+          <div className="px-3.5 py-1.5 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
+            <span className="font-semibold uppercase tracking-wider text-white">{lang}</span>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(codeString);
@@ -523,7 +523,7 @@ export function renderGithubMarkdown(
               <span>Copy</span>
             </button>
           </div>
-          <pre className="p-4 text-xs font-mono text-[#E6EDF3] overflow-x-auto leading-relaxed selection:bg-[#DCB001]/30">
+          <pre className="p-4 text-xs font-mono text-[#EDEDED] overflow-x-auto leading-relaxed selection:bg-white text-black/30">
             <code>{codeString}</code>
           </pre>
         </div>
@@ -542,34 +542,34 @@ export function renderGithubMarkdown(
         i++;
       }
 
-      let borderColor = 'border-[#3B82F6]';
-      let bgColor = 'bg-[#1E293B]/40';
-      let textColor = 'text-[#60A5FA]';
+      let borderColor = 'border-[#FFFFFF]';
+      let bgColor = 'bg-[#2B2B2B]/40';
+      let textColor = 'text-[#FFFFFF]';
       let title = 'Note';
       let IconComponent = Info;
 
       if (alertType === 'TIP') {
-        borderColor = 'border-[#10B981]';
-        bgColor = 'bg-[#064E3B]/30';
-        textColor = 'text-[#34D399]';
+        borderColor = 'border-[#FFFFFF]';
+        bgColor = 'bg-[#1E1E1E]/30';
+        textColor = 'text-[#FFFFFF]';
         title = 'Tip';
         IconComponent = Check;
       } else if (alertType === 'IMPORTANT') {
-        borderColor = 'border-[#A855F7]';
-        bgColor = 'bg-[#581C87]/30';
-        textColor = 'text-[#C084FC]';
+        borderColor = 'border-[var(--border-secondary)]';
+        bgColor = 'bg-[#141414]/30';
+        textColor = 'text-[#FFFFFF]';
         title = 'Important';
         IconComponent = AlertCircle;
       } else if (alertType === 'WARNING') {
-        borderColor = 'border-[#F59E0B]';
-        bgColor = 'bg-[#78350F]/30';
-        textColor = 'text-[#FBBF24]';
+        borderColor = 'border-[#FFFFFF]';
+        bgColor = 'bg-[#1E1E1E]/30';
+        textColor = 'text-[#FFFFFF]';
         title = 'Warning';
         IconComponent = AlertTriangle;
       } else if (alertType === 'CAUTION') {
-        borderColor = 'border-[#EF4444]';
-        bgColor = 'bg-[#7F1D1D]/30';
-        textColor = 'text-[#F87171]';
+        borderColor = 'border-[var(--border-secondary)]';
+        bgColor = 'bg-[#141414]/30';
+        textColor = 'text-white';
         title = 'Caution';
         IconComponent = AlertCircle;
       }
@@ -580,7 +580,7 @@ export function renderGithubMarkdown(
             <IconComponent size={15} />
             <span>{title}</span>
           </div>
-          <div className="text-xs text-[#CFD4DD] leading-relaxed">
+          <div className="text-xs text-[var(--text-secondary)] leading-relaxed">
             {alertLines.map((al, alIdx) => (
               <p key={alIdx} className="my-0.5">{parseInlineMarkdown(al, lineHighlight, lineCursors)}</p>
             ))}
@@ -636,7 +636,7 @@ export function renderGithubMarkdown(
       }
 
       elements.push(
-        <div key={`html_table_${i}`} className="my-4 overflow-x-auto rounded-xl border border-[#2A2C30] bg-[#111215]">
+        <div key={`html_table_${i}`} className="my-4 overflow-x-auto rounded-xl border border-[var(--border-primary)] bg-[#141414]">
           <div className="p-3 text-xs" dangerouslySetInnerHTML={{ __html: tableLines.join('\n') }} />
         </div>
       );
@@ -656,10 +656,10 @@ export function renderGithubMarkdown(
         const bodyRows = tableLines.slice(2).map((r) => r.split('|').slice(1, -1).map((s) => s.trim()));
 
         elements.push(
-          <div key={`md_table_${i}`} className="my-4 overflow-x-auto rounded-xl border border-[#2A2C30] bg-[#111215] shadow-sm">
+          <div key={`md_table_${i}`} className="my-4 overflow-x-auto rounded-xl border border-[var(--border-primary)] bg-[#141414] shadow-sm">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#2A2C30] bg-[#17181C]">
+                <tr className="border-b border-[var(--border-primary)] bg-[#191919]">
                   {headerCols.map((h, colIdx) => (
                     <th key={colIdx} className="px-4 py-2.5 font-semibold text-white">
                       {parseInlineMarkdown(h, lineHighlight, lineCursors)}
@@ -667,12 +667,12 @@ export function renderGithubMarkdown(
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#222428]">
+              <tbody className="divide-y divide-[#141414]">
                 {bodyRows.map((row, rowIdx) => {
                   return (
-                    <tr key={rowIdx} className="hover:bg-[#16181D]/60 transition-colors">
+                    <tr key={rowIdx} className="hover:bg-[#191919]/60 transition-colors">
                       {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="px-4 py-2.5 text-[#CFD4DD]">
+                        <td key={cIdx} className="px-4 py-2.5 text-[var(--text-secondary)]">
                           {parseInlineMarkdown(cell, lineHighlight, lineCursors)}
                         </td>
                       ))}
@@ -689,7 +689,7 @@ export function renderGithubMarkdown(
 
     // 6. Horizontal Rule: ---, ***, ___, <hr>, <hr/>
     if (trimmed === '---' || trimmed === '***' || trimmed === '___' || /^<hr\s*\/?>/i.test(trimmed)) {
-      elements.push(<hr key={`hr_${i}`} className="my-6 border-t border-[#2A2C30]" />);
+      elements.push(<hr key={`hr_${i}`} className="my-6 border-t border-[var(--border-primary)]" />);
       i++;
       continue;
     }
@@ -701,25 +701,25 @@ export function renderGithubMarkdown(
       const content = hHtmlMatch[2];
       if (tag === 'h1') {
         elements.push(
-          <h1 key={`h1_html_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
+          <h1 key={`h1_html_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[var(--border-primary)] tracking-tight">
             {parseInlineMarkdown(content, lineHighlight, lineCursors)}
           </h1>
         );
       } else if (tag === 'h2') {
         elements.push(
-          <h2 key={`h2_html_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
+          <h2 key={`h2_html_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[var(--border-primary)] tracking-tight">
             {parseInlineMarkdown(content, lineHighlight, lineCursors)}
           </h2>
         );
       } else if (tag === 'h3') {
         elements.push(
-          <h3 key={`h3_html_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
+          <h3 key={`h3_html_${i}`} className="text-base sm:text-lg font-bold text-white mb-2 mt-5 tracking-tight">
             {parseInlineMarkdown(content, lineHighlight, lineCursors)}
           </h3>
         );
       } else {
         elements.push(
-          <h4 key={`h4_html_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
+          <h4 key={`h4_html_${i}`} className="text-sm sm:text-base font-semibold text-[var(--text-secondary)] mb-1.5 mt-4">
             {parseInlineMarkdown(content, lineHighlight, lineCursors)}
           </h4>
         );
@@ -731,7 +731,7 @@ export function renderGithubMarkdown(
     // 8. Markdown Headings
     if (trimmed.startsWith('# ')) {
       elements.push(
-        <h1 key={`h1_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[#2A2C30] tracking-tight">
+        <h1 key={`h1_${i}`} className="text-2xl sm:text-3xl font-extrabold text-white pb-2.5 mb-4 mt-7 border-b border-[var(--border-primary)] tracking-tight">
           {parseInlineMarkdown(trimmed.slice(2), lineHighlight, lineCursors)}
         </h1>
       );
@@ -740,7 +740,7 @@ export function renderGithubMarkdown(
     }
     if (trimmed.startsWith('## ')) {
       elements.push(
-        <h2 key={`h2_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[#2A2C30]/60 tracking-tight">
+        <h2 key={`h2_${i}`} className="text-xl sm:text-2xl font-bold text-white pb-2 mb-3 mt-6 border-b border-[var(--border-primary)] tracking-tight">
           {parseInlineMarkdown(trimmed.slice(3), lineHighlight, lineCursors)}
         </h2>
       );
@@ -749,7 +749,7 @@ export function renderGithubMarkdown(
     }
     if (trimmed.startsWith('### ')) {
       elements.push(
-        <h3 key={`h3_${i}`} className="text-base sm:text-lg font-bold text-[#DCB001] mb-2 mt-5 tracking-tight">
+        <h3 key={`h3_${i}`} className="text-base sm:text-lg font-bold text-white mb-2 mt-5 tracking-tight">
           {parseInlineMarkdown(trimmed.slice(4), lineHighlight, lineCursors)}
         </h3>
       );
@@ -758,7 +758,7 @@ export function renderGithubMarkdown(
     }
     if (trimmed.startsWith('#### ')) {
       elements.push(
-        <h4 key={`h4_${i}`} className="text-sm sm:text-base font-semibold text-[#CFD4DD] mb-1.5 mt-4">
+        <h4 key={`h4_${i}`} className="text-sm sm:text-base font-semibold text-[var(--text-secondary)] mb-1.5 mt-4">
           {parseInlineMarkdown(trimmed.slice(5), lineHighlight, lineCursors)}
         </h4>
       );
@@ -802,7 +802,7 @@ export function renderGithubMarkdown(
       elements.push(
         <blockquote
           key={`quote_${i}`}
-          className="my-3 pl-4 py-2 border-l-4 border-[#DCB001] bg-[#1B1C1F]/60 rounded-r-xl text-xs sm:text-sm text-[#CFD4DD] italic leading-relaxed"
+          className="my-3 pl-4 py-2 border-l-4 border-[var(--border-secondary)] bg-[var(--bg-panel)]/60 rounded-r-xl text-xs sm:text-sm text-[var(--text-secondary)] italic leading-relaxed"
         >
           {quoteLines.map((q, idx) => (
             <p key={idx} className="my-0.5">{parseInlineMarkdown(q, lineHighlight, lineCursors)}</p>
@@ -822,9 +822,9 @@ export function renderGithubMarkdown(
             type="checkbox"
             checked={isChecked}
             readOnly
-            className="mt-1 w-3.5 h-3.5 rounded accent-[#DCB001] bg-[#1B1C1F] border-[#2A2C30] cursor-default"
+            className="mt-1 w-3.5 h-3.5 rounded accent-[#FFFFFF] bg-[var(--bg-panel)] border-[var(--border-primary)] cursor-default"
           />
-          <span className={isChecked ? 'line-through text-[#787C83]' : 'text-[#CFD4DD]'}>
+          <span className={isChecked ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-secondary)]'}>
             {parseInlineMarkdown(taskText, lineHighlight, lineCursors)}
           </span>
         </div>
@@ -837,8 +837,8 @@ export function renderGithubMarkdown(
     if (/^[-*+]\s+/.test(trimmed)) {
       const listText = trimmed.replace(/^[-*+]\s+/, '');
       elements.push(
-        <div key={`ul_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
-          <span className="text-[#DCB001] font-bold text-sm leading-none mt-1.5">•</span>
+        <div key={`ul_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[var(--text-secondary)]">
+          <span className="text-white font-bold text-sm leading-none mt-1.5">•</span>
           <span className="flex-1 leading-relaxed">{parseInlineMarkdown(listText, lineHighlight, lineCursors)}</span>
         </div>
       );
@@ -850,8 +850,8 @@ export function renderGithubMarkdown(
     const numMatch = trimmed.match(/^(\d+)\.\s+(.+)/);
     if (numMatch) {
       elements.push(
-        <div key={`ol_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[#CFD4DD]">
-          <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0 mt-0.5">{numMatch[1]}.</span>
+        <div key={`ol_${i}`} className="flex items-start gap-2 my-1 pl-3 text-xs sm:text-sm text-[var(--text-secondary)]">
+          <span className="font-mono text-[11px] font-bold text-white shrink-0 mt-0.5">{numMatch[1]}.</span>
           <span className="flex-1 leading-relaxed">{parseInlineMarkdown(numMatch[2], lineHighlight, lineCursors)}</span>
         </div>
       );
@@ -882,7 +882,7 @@ export function renderGithubMarkdown(
 
     // 16. Paragraph
     elements.push(
-      <p key={`p_${i}`} className="my-1.5 text-xs sm:text-sm text-[#CFD4DD] leading-relaxed">
+      <p key={`p_${i}`} className="my-1.5 text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
         {parseInlineMarkdown(line, lineHighlight, lineCursors)}
       </p>
     );
@@ -904,7 +904,7 @@ export function MarkdownRenderer({
   className?: string;
 }) {
   if (!content || !content.trim()) {
-    return <p className="text-xs text-[#787C83] italic">No description provided.</p>;
+    return <p className="text-xs text-[var(--text-muted)] italic">No description provided.</p>;
   }
 
   return (

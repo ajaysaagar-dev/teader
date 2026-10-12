@@ -388,17 +388,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
         {/* Active Meeting Widget in App Header (For other pages/tabs) */}
         {activeMeeting && !isFullMeetingView && (
-          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#14161F] border border-[#2B2D38] shadow-sm select-none">
+          <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#181818] border border-[#303030] shadow-sm select-none">
             <div
               onClick={handleOpenMeeting}
               className="flex items-center gap-2 cursor-pointer group"
               title="Click to open full meeting"
             >
               <div className="relative flex items-center justify-center">
-                <div className="w-6 h-6 rounded-full bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 flex items-center justify-center">
-                  <Radio size={14} className="text-[#22C55E] animate-pulse" />
+                <div className="w-6 h-6 rounded-full bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)] flex items-center justify-center">
+                  <Radio size={14} className="text-white animate-pulse" />
                 </div>
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#22C55E] animate-ping" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--ramp-3)] animate-ping" />
               </div>
 
               <div className="flex flex-col min-w-0">
@@ -406,25 +406,25 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <span className="text-sm font-bold text-white group-hover:text-[var(--accent-yellow)] transition-colors truncate max-w-[110px] sm:max-w-[150px]">
                     {activeMeeting.projectName}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] font-mono text-xs font-bold border border-[#22C55E]/30 shrink-0">
+                  <span className="px-1.5 py-0.5 rounded bg-[var(--ramp-3)]/15 text-white font-mono text-xs font-bold border border-[var(--border-secondary)] shrink-0">
                     LIVE
                   </span>
                 </div>
-                <span className="text-xs font-mono text-[#9CA3AF] leading-none">
+                <span className="text-xs font-mono text-[var(--text-secondary)] leading-none">
                   {activeMeeting.duration || "00:00"}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 border-l border-[#242634] pl-2 ml-1">
+            <div className="flex items-center gap-1 border-l border-[#2A2A2A] pl-2 ml-1">
               {/* Mic Toggle */}
               <button
                 type="button"
                 onClick={handleToggleMeetingMute}
                 className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                   activeMeeting.isMuted
-                    ? "bg-red-500/15 text-red-400 border-red-500/35 hover:bg-red-500/25"
-                    : "bg-[#181A22] text-[#22C55E] border-[#2B2D38] hover:bg-[#222430]"
+                    ? "bg-[var(--ramp-2)] text-white border-[var(--border-secondary)] hover:bg-[var(--ramp-2)]"
+                    : "bg-[#1C1C1C] text-white border-[#303030] hover:bg-[#272727]"
                 }`}
                 title={
                   activeMeeting.isMuted
@@ -443,7 +443,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <button
                 type="button"
                 onClick={handleOpenMeeting}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#DCB001]/15 hover:bg-[#DCB001]/25 text-[#DCB001] border border-[#DCB001]/35 text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white text-black/15 hover:bg-white text-black/25 text-white border border-[var(--border-secondary)] text-xs font-semibold transition-all cursor-pointer"
                 title="Open Meeting"
               >
                 <Maximize2 size={14} />
@@ -454,7 +454,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <button
                 type="button"
                 onClick={handleLeaveMeeting}
-                className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 border border-red-500/35 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-[var(--ramp-2)] hover:bg-[var(--ramp-2)] text-white hover:text-white border border-[var(--border-secondary)] transition-colors cursor-pointer"
                 title="Leave Meeting"
               >
                 <PhoneOff size={14} />
@@ -500,18 +500,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
       {/* ─── Main Content Canvas Area (Only shown if logged in) ──────── */}
       {isCheckingAuth && !currentUser ? (
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#0A0B0D] space-y-4 select-none">
+        <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg-canvas)] space-y-4 select-none">
           <div className="text-center space-y-2">
-            <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#DCB001] via-[#FDE047] to-[#F59E0B] font-prompt tracking-tight drop-shadow-[0_0_35px_rgba(220,176,1,0.35)]">
+            <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#FFFFFF] via-[#FFFFFF] to-[#FFFFFF] font-prompt tracking-tight drop-shadow-[0_0_35px_rgba(220,176,1,0.35)]">
               teader
             </h1>
-            <p className="text-sm sm:text-base font-semibold text-[#8E939D] tracking-[0.4em] uppercase font-prompt">
+            <p className="text-sm sm:text-base font-semibold text-[var(--text-secondary)] tracking-[0.4em] uppercase font-prompt">
               workspace
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs font-mono text-[#787C83] pt-2">
-            <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+          <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] pt-2">
+            <Loader2 size={14} className="animate-spin text-white" />
             <span>Verifying workspace session...</span>
           </div>
         </div>
@@ -529,26 +529,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md bg-[#16181B] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+              className="w-full max-w-md bg-[#181818] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2C30] bg-[#111215]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)] bg-[#141414]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#06B6D4]/15 text-[#06B6D4] flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--ramp-3)]/15 text-white flex items-center justify-center font-bold">
                     <User size={16} />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white tracking-tight">
                       Account & Profile
                     </h3>
-                    <p className="text-[11px] font-mono text-[#787C83]">
+                    <p className="text-[11px] font-mono text-[var(--text-muted)]">
                       Active Session Credentials
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsAccountModalOpen(false)}
-                  className="text-[#787C83] hover:text-white transition-colors"
+                  className="text-[var(--text-muted)] hover:text-white transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -557,7 +557,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               {/* Profile Body */}
               <div className="p-6 space-y-4">
                 {/* User Info Card */}
-                <div className="p-4 rounded-xl bg-[#101114] border border-[#24262B] flex items-center justify-between gap-4">
+                <div className="p-4 rounded-xl bg-[#000000] border border-[#272727] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-0">
                     <div
                       className="relative group cursor-pointer"

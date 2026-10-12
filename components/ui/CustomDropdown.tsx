@@ -185,7 +185,7 @@ export function CustomDropdown<T extends string | number = string>({
             disabled ? 'opacity-40 cursor-not-allowed' : ''
           } ${sizeClasses} ${
             triggerClassName ||
-            'bg-[#16171A] hover:bg-[#1C1E22] text-[#CFD4DD] hover:text-white border border-[#2A2C30] hover:border-[#3A3C42] focus:border-[#DCB001]/60'
+            'bg-[#141414] hover:bg-[#1F1F1F] text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] hover:border-[#3D3D3D] focus:border-[var(--border-secondary)]'
           }`}
         >
           <span className="flex items-center gap-2 truncate flex-1">
@@ -196,7 +196,7 @@ export function CustomDropdown<T extends string | number = string>({
           {showChevron && (
             <ChevronDown
               size={chevronSizes}
-              className={`shrink-0 text-[#9CA3AF] transition-transform duration-200 ${
+              className={`shrink-0 text-[var(--text-secondary)] transition-transform duration-200 ${
                 isOpen ? 'rotate-180 text-white' : ''
               }`}
             />
@@ -208,13 +208,13 @@ export function CustomDropdown<T extends string | number = string>({
         <div
           role="listbox"
           aria-activedescendant={selectedOption ? `${selectId}-opt-${selectedOption.value}` : undefined}
-          className={`absolute z-[100] min-w-full min-w-[150px] w-max max-h-60 overflow-y-auto bg-[#141518] border border-[#2A2C30] rounded-lg shadow-2xl py-1 text-sm custom-scrollbar ${
+          className={`absolute z-[100] min-w-full min-w-[150px] w-max max-h-60 overflow-y-auto bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg shadow-2xl py-1 text-sm custom-scrollbar ${
             align === 'right' ? 'right-0' : 'left-0'
           } ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'} ${menuClassName}`}
           onClick={(e) => e.stopPropagation()}
         >
           {options.length === 0 ? (
-            <div className="px-3 py-2 text-[#9CA3AF] italic text-center">No options</div>
+            <div className="px-3 py-2 text-[var(--text-secondary)] italic text-center">No options</div>
           ) : (
             options.map((option) => {
               const isSelected = option.value === value;
@@ -229,10 +229,10 @@ export function CustomDropdown<T extends string | number = string>({
                   onClick={(e) => handleSelect(option, e)}
                   className={`w-full px-3 py-2 flex items-center justify-between gap-3 text-left transition-colors ${
                     option.disabled
-                      ? 'opacity-40 cursor-not-allowed text-[#9CA3AF]'
+                      ? 'opacity-40 cursor-not-allowed text-[var(--text-secondary)]'
                       : isSelected
-                      ? 'bg-[#DCB001]/10 text-[#DCB001] font-semibold hover:bg-[#DCB001]/15'
-                      : 'text-[#E5E7EB] hover:bg-[#1F2126] hover:text-white cursor-pointer'
+                      ? 'bg-white text-black/10 text-white font-semibold hover:bg-white text-black/15'
+                      : 'text-[#EDEDED] hover:bg-[#222222] hover:text-white cursor-pointer'
                   } ${optionClassName} ${option.className || ''}`}
                 >
                   <div className="flex items-center gap-2 truncate flex-1">
@@ -240,7 +240,7 @@ export function CustomDropdown<T extends string | number = string>({
                     <div className="truncate">
                       <div className="truncate">{option.label}</div>
                       {option.description && (
-                        <div className="text-xs text-[#9CA3AF] font-normal truncate">
+                        <div className="text-xs text-[var(--text-secondary)] font-normal truncate">
                           {option.description}
                         </div>
                       )}
@@ -248,7 +248,7 @@ export function CustomDropdown<T extends string | number = string>({
                   </div>
 
                   {showCheckmark && isSelected && (
-                    <Check size={13} className="text-[#DCB001] shrink-0 ml-1.5" />
+                    <Check size={13} className="text-white shrink-0 ml-1.5" />
                   )}
                 </button>
               );

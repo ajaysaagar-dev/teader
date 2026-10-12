@@ -64,26 +64,26 @@ export function RandomLoadingText({
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'fact':
-        return <Lightbulb size={11} className="text-[#DCB001]" />;
+        return <Lightbulb size={11} className="text-white" />;
       case 'tip':
-        return <Sparkles size={11} className="text-[#3B82F6]" />;
+        return <Sparkles size={11} className="text-white" />;
       case 'dev':
-        return <Terminal size={11} className="text-[#A855F7]" />;
+        return <Terminal size={11} className="text-white" />;
       default:
-        return <Cpu size={11} className="text-[#22C55E]" />;
+        return <Cpu size={11} className="text-white" />;
     }
   };
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
       case 'fact':
-        return 'bg-[#DCB001]/10 text-[#DCB001] border-[#DCB001]/30';
+        return 'bg-white text-black/10 text-white border-[var(--border-secondary)]';
       case 'tip':
-        return 'bg-[#3B82F6]/10 text-[#3B82F6] border-[#3B82F6]/30';
+        return 'bg-[#FFFFFF]/10 text-white border-[#FFFFFF]/30';
       case 'dev':
-        return 'bg-[#A855F7]/10 text-[#A855F7] border-[#A855F7]/30';
+        return 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]';
       default:
-        return 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30';
+        return 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]';
     }
   };
 
@@ -103,7 +103,7 @@ export function RandomLoadingText({
           <span>{current.category}</span>
         </span>
       )}
-      <span className="text-[#9BA1A6] font-medium tracking-tight truncate max-w-[85vw] sm:max-w-[480px]">
+      <span className="text-[var(--text-secondary)] font-medium tracking-tight truncate max-w-[85vw] sm:max-w-[480px]">
         {current.text}
       </span>
     </div>

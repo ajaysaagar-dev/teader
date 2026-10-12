@@ -113,15 +113,15 @@ export const ImportTasksModal: React.FC<ImportTasksModalProps> = ({
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
-          className="w-full max-w-lg bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="w-full max-w-lg bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A2C30] bg-[#17181A]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]">
             <div className="flex items-center gap-2">
-              <Upload size={16} className="text-[#DCB001]" />
+              <Upload size={16} className="text-white" />
               <h2 className="text-sm font-bold text-white tracking-tight">Import Tasks (CSV / JSON)</h2>
             </div>
-            <button onClick={onClose} className="text-[#787C83] hover:text-white p-1 rounded-lg">
+            <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white p-1 rounded-lg">
               <X size={16} />
             </button>
           </div>
@@ -129,12 +129,12 @@ export const ImportTasksModal: React.FC<ImportTasksModalProps> = ({
           {/* Body */}
           <div className="p-5 space-y-4 text-xs font-sans">
             {/* File Upload Zone */}
-            <label className="border-2 border-dashed border-[#2A2C30] hover:border-[#DCB001]/50 rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-[#131415] hover:bg-[#161719] transition-colors">
-              <Upload size={24} className="text-[#DCB001]" />
+            <label className="border-2 border-dashed border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-[var(--bg-canvas)] hover:bg-[#171717] transition-colors">
+              <Upload size={24} className="text-white" />
               <span className="font-semibold text-white">
                 {file ? file.name : 'Click or drop CSV / JSON project export file'}
               </span>
-              <span className="text-[10px] font-mono text-[#787C83]">
+              <span className="text-[10px] font-mono text-[var(--text-muted)]">
                 Supports Teader JSON export or standard CSV spreadsheets
               </span>
               <input
@@ -148,17 +148,17 @@ export const ImportTasksModal: React.FC<ImportTasksModalProps> = ({
             {/* Parsed Preview */}
             {parsedPreview.length > 0 && (
               <div className="space-y-2">
-                <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block">
+                <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">
                   Preview ({parsedPreview.length} items ready to import)
                 </span>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
                   {parsedPreview.map((t, idx) => (
                     <div
                       key={idx}
-                      className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg flex items-center justify-between text-xs"
+                      className="p-2 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg flex items-center justify-between text-xs"
                     >
                       <span className="text-white truncate font-medium">{t.title}</span>
-                      <span className="text-[10px] font-mono text-[#DCB001] uppercase px-1.5 py-0.5 rounded bg-[#1B1C1F]">
+                      <span className="text-[10px] font-mono text-white uppercase px-1.5 py-0.5 rounded bg-[var(--bg-panel)]">
                         {t.priority || 'medium'}
                       </span>
                     </div>
@@ -168,18 +168,18 @@ export const ImportTasksModal: React.FC<ImportTasksModalProps> = ({
             )}
 
             {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#2A2C30]">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-primary)]">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-[#17181A] hover:bg-[#222427] text-[#787C83] hover:text-white rounded-xl font-semibold"
+                className="px-4 py-2 bg-[var(--bg-panel)] hover:bg-[#242424] text-[var(--text-muted)] hover:text-white rounded-xl font-semibold"
               >
                 Cancel
               </button>
               <button
                 onClick={handleExecuteImport}
                 disabled={isImporting || parsedPreview.length === 0}
-                className="px-5 py-2 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-xl font-bold transition-all disabled:opacity-50"
+                className="px-5 py-2 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-xl font-bold transition-all disabled:opacity-50"
               >
                 {isImporting ? 'Importing...' : `Import ${parsedPreview.length} Tasks`}
               </button>

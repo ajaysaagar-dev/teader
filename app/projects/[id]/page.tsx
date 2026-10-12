@@ -1723,56 +1723,56 @@ export default function SingleProjectPage() {
 
       {/* Access Denied Guard if user does not own and is not joined in this project */}
       {!isInitialLoading && !project ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[#131415] text-[#CFD4DD]">
-          <div className="w-14 h-14 rounded-2xl bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444]">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[var(--bg-canvas)] text-[var(--text-secondary)]">
+          <div className="w-14 h-14 rounded-2xl bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Lock size={28} />
           </div>
           <h2 className="text-lg font-bold text-white">Access Denied or Project Not Found</h2>
-          <p className="text-xs text-[#787C83] max-w-md">
+          <p className="text-xs text-[var(--text-muted)] max-w-md">
             You do not have access to this project. Only project owners and joined members can access this workspace.
           </p>
           <div className="flex items-center gap-3 pt-2">
             <button
               onClick={() => router.push('/projects')}
-              className="px-4 py-2 bg-[#DCB001] text-[#0F1011] text-xs font-bold rounded-xl hover:bg-[#c49c00] transition-colors"
+              className="px-4 py-2 bg-white text-black text-[#000000] text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors"
             >
               Back to My Projects
             </button>
           </div>
         </div>
       ) : project?.joinStatus === 'pending' ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[#131415] text-[#CFD4DD]">
-          <div className="w-14 h-14 rounded-2xl bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[var(--bg-canvas)] text-[var(--text-secondary)]">
+          <div className="w-14 h-14 rounded-2xl bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Clock size={28} />
           </div>
           <h2 className="text-lg font-bold text-white">Joining Request Pending Approval</h2>
-          <p className="text-xs text-[#787C83] max-w-md">
-            Your request to join <span className="text-[#CFD4DD] font-semibold">{project.name}</span> has been sent to the project owner. You will get workspace access once it is approved.
+          <p className="text-xs text-[var(--text-muted)] max-w-md">
+            Your request to join <span className="text-[var(--text-secondary)] font-semibold">{project.name}</span> has been sent to the project owner. You will get workspace access once it is approved.
           </p>
           <div className="flex items-center gap-3 pt-2">
-            <button onClick={() => router.push('/projects')} className="px-4 py-2 border border-[#2A2C30] text-[#CFD4DD] text-xs font-bold rounded-xl hover:bg-[#1B1C1F] transition-colors">Back to My Projects</button>
-            <button onClick={handleCancelJoinRequest} className="px-4 py-2 bg-[#C0393B] text-white text-xs font-bold rounded-xl hover:bg-[#A32D2F] transition-colors">Cancel Request</button>
+            <button onClick={() => router.push('/projects')} className="px-4 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs font-bold rounded-xl hover:bg-[var(--bg-panel)] transition-colors">Back to My Projects</button>
+            <button onClick={handleCancelJoinRequest} className="px-4 py-2 bg-[#FFFFFF] text-white text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors">Cancel Request</button>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[#131415] text-[#CFD4DD] font-sans">
+        <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans">
         {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
-        <div className="h-13 px-4 bg-[#1B1C1F] border-b border-[#2A2C30] flex items-center justify-between shrink-0 select-none">
+        <div className="h-13 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none">
           {/* Left: Breadcrumbs & Project Identity */}
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               onClick={() => router.push('/projects')}
-              className="text-sm text-[#9CA3AF] hover:text-[#CFD4DD] flex items-center gap-1 transition-colors shrink-0"
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-secondary)] flex items-center gap-1 transition-colors shrink-0"
               title="Back to Projects"
             >
               <ArrowLeft size={13} />
               <span>Projects</span>
             </button>
-            <span className="text-[#3B3D41]">/</span>
+            <span className="text-[#3E3E3E]">/</span>
 
             <div className="flex items-center gap-1.5 min-w-0">
-              <FolderKanban size={14} className="text-[#DCB001] shrink-0" />
-              <span className="text-sm font-bold text-[#CFD4DD] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
+              <FolderKanban size={14} className="text-white shrink-0" />
+              <span className="text-sm font-bold text-[var(--text-secondary)] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
                 {project?.name}
               </span>
 
@@ -1786,7 +1786,7 @@ export default function SingleProjectPage() {
                         setIsEditProjectModalOpen(true);
                       }
                     }}
-                    className="p-1 text-[#9CA3AF] hover:text-[#DCB001] hover:bg-[#131415] rounded transition-colors"
+                    className="p-1 text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-canvas)] rounded transition-colors"
                     title="Edit Project Details (Creator Only)"
                   >
                     <Pencil size={12} />
@@ -1800,7 +1800,7 @@ export default function SingleProjectPage() {
                         setIsDeleteProjectModalOpen(true);
                       }
                     }}
-                    className="p-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#131415] rounded transition-colors"
+                    className="p-1 text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-canvas)] rounded transition-colors"
                     title="Delete Project (Creator Only)"
                   >
                     <Trash2 size={12} />
@@ -1814,15 +1814,15 @@ export default function SingleProjectPage() {
             {project && (
               <button
                 onClick={handleCopyProjectKey}
-                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded text-xs font-mono text-[#DCB001] transition-all group shrink-0"
+                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded text-xs font-mono text-white transition-all group shrink-0"
                 title={`Click to copy Project Key: ${project.key}`}
               >
-                <Key size={10} className="text-[#9CA3AF] group-hover:text-[#DCB001]" />
+                <Key size={10} className="text-[var(--text-secondary)] group-hover:text-white" />
                 <span className="font-bold truncate max-w-[90px] md:max-w-[120px]">{project.key}</span>
                 {copiedKey ? (
-                  <Check size={11} className="text-[#22C55E]" />
+                  <Check size={11} className="text-white" />
                 ) : (
-                  <Copy size={10} className="text-[#9CA3AF] group-hover:text-white" />
+                  <Copy size={10} className="text-[var(--text-secondary)] group-hover:text-white" />
                 )}
               </button>
             )}
@@ -1831,10 +1831,10 @@ export default function SingleProjectPage() {
           {/* Right: Creator, Stacked Members, Sync Pulse & Action Buttons */}
           <div className="flex items-center gap-2 text-xs shrink-0">
             {/* Project Creator Pill */}
-            <div className="hidden lg:flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md px-2 py-0.5 text-xs">
-              <Crown size={11} className={isCreator ? 'text-[#22C55E]' : 'text-[#9CA3AF]'} />
-              <span className="text-[#9CA3AF]">by</span>
-              <span className="font-semibold text-[#CFD4DD] truncate max-w-[70px]">{project?.ownerName || 'karri'}</span>
+            <div className="hidden lg:flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md px-2 py-0.5 text-xs">
+              <Crown size={11} className={isCreator ? 'text-white' : 'text-[var(--text-secondary)]'} />
+              <span className="text-[var(--text-secondary)]">by</span>
+              <span className="font-semibold text-[var(--text-secondary)] truncate max-w-[70px]">{project?.ownerName || 'karri'}</span>
             </div>
 
             {/* Stacked Project Members */}
@@ -1844,12 +1844,12 @@ export default function SingleProjectPage() {
                 title={`Joined Members (${joinedMembers.length}): ${joinedMembers.map((m) => m.name).join(', ')}`}
               >
                 {joinedMembers.slice(0, 3).map((m) => (
-                  <div key={m.id} className="ring-1 ring-[#1B1C1F] rounded-full">
+                  <div key={m.id} className="ring-1 ring-[#141414] rounded-full">
                     <Avatar user={{ id: String(m.id), name: m.name, avatar: m.avatar, email: m.email, role: '' }} size="xs" />
                   </div>
                 ))}
                 {joinedMembers.length > 3 && (
-                  <div className="w-5 h-5 rounded-full bg-[#2A2C30] border border-[#1B1C1F] flex items-center justify-center text-[9px] font-mono text-[#CFD4DD]">
+                  <div className="w-5 h-5 rounded-full bg-[#222222] border border-[#141414] flex items-center justify-center text-[9px] font-mono text-[var(--text-secondary)]">
                     +{joinedMembers.length - 3}
                   </div>
                 )}
@@ -1864,7 +1864,7 @@ export default function SingleProjectPage() {
             {/* Import Tasks Button */}
             <button
               onClick={() => setIsImportTasksModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-xs text-[#9CA3AF] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-all"
               title="Import Tasks from CSV / JSON"
             >
               <Upload size={12} />
@@ -1874,7 +1874,7 @@ export default function SingleProjectPage() {
             {/* Export Project Button */}
             <button
               onClick={handleExportProject}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[#131415] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-md text-xs text-[#9CA3AF] hover:text-[#CFD4DD] transition-all"
+              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-all"
               title="Export Encrypted Project Dump (.teaderdumpfile)"
             >
               <Download size={12} />
@@ -1884,14 +1884,14 @@ export default function SingleProjectPage() {
         </div>
 
         {/* 2. 4-Page Primary Navigation Bar (Overview | Tasks | Docs | Settings + Chat Drawer Toggle) */}
-        <div className="h-12 px-4 bg-[#141517] border-b border-[#2A2C30] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
-          <div className="flex items-center gap-1 bg-[#101113] p-1 rounded-xl border border-[#222428]">
+        <div className="h-12 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
+          <div className="flex items-center gap-1 bg-[#111111] p-1 rounded-xl border border-[#141414]">
             <button
               onClick={() => handleTabSwitch('overview')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'overview'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Overview & Analytics"
             >
@@ -1903,8 +1903,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('tasks')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'tasks'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Tasks & Views (Board, List, Tree, Timeline, Dependencies)"
             >
@@ -1917,8 +1917,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('docs')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'docs'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Wiki & Specs"
             >
@@ -1930,8 +1930,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('charts')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'charts'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Diagrams, Flowcharts & Architecture Canvases"
             >
@@ -1943,10 +1943,10 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('meeting')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'meeting'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
+                  ? 'bg-[#222222] text-white shadow-sm'
                   : isInMeeting
-                  ? 'text-[#22C55E] bg-[#22C55E]/10 hover:bg-[#22C55E]/20'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'text-white bg-[var(--ramp-3)]/10 hover:bg-[var(--ramp-3)]/20'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Group Audio Meeting & Voice Call"
             >
@@ -1954,13 +1954,13 @@ export default function SingleProjectPage() {
                 size={13}
                 className={
                   activeTab === 'meeting' || isInMeeting
-                    ? 'text-[#22C55E] animate-pulse'
+                    ? 'text-white animate-pulse'
                     : ''
                 }
               />
               <span>Meeting</span>
               {isInMeeting && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-ping" />
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ramp-3)] animate-ping" />
               )}
             </button>
 
@@ -1968,8 +1968,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('chats')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'chats'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Team Conversations & Chat Channels"
             >
@@ -1981,8 +1981,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('apps')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'apps'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project External Apps, Tools & Web Integrations"
             >
@@ -1994,8 +1994,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('history')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'history'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Activity History & Audit Log"
             >
@@ -2007,8 +2007,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('settings')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'settings'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Settings & Danger Zone"
             >
@@ -2020,8 +2020,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('plugins')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
                 activeTab === 'plugins'
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
               title="Project Plugins & Version Control Tools"
             >
@@ -2035,12 +2035,12 @@ export default function SingleProjectPage() {
             onClick={() => setIsChatOpen((prev) => !prev)}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-xl border transition-all ${
               isChatOpen
-                ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/40 shadow-sm'
-                : 'bg-[#101113] text-[#787C83] hover:text-[#CFD4DD] border-[#222428]'
+                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)] shadow-sm'
+                : 'bg-[#111111] text-[var(--text-muted)] hover:text-[var(--text-secondary)] border-[#141414]'
             }`}
             title="Toggle Team Conversation Drawer"
           >
-            <MessageSquare size={13} className={isChatOpen ? 'text-[#DCB001]' : ''} />
+            <MessageSquare size={13} className={isChatOpen ? 'text-white' : ''} />
             <span>Chat</span>
           </button>
         </div>
@@ -2142,14 +2142,14 @@ export default function SingleProjectPage() {
             /* Tasks Page (5 View Modes: Structure | Board | Timeline | List | Dependencies) */
             <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
               {/* Secondary Task View Mode Segmented Switcher (Structure | Board | Timeline | List | Dependencies) */}
-              <div className="px-4 py-2 border-b border-[#222428] bg-[#121316] flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center bg-[#181A1F] p-0.5 rounded-lg border border-[#2A2C30] text-sm">
+              <div className="px-4 py-2 border-b border-[#141414] bg-[var(--bg-panel)] flex items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center bg-[#141414] p-0.5 rounded-lg border border-[var(--border-primary)] text-sm">
                   <button
                     onClick={() => handleTaskModeSwitch('structure')}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'structure'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                        ? 'bg-[#222222] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                     }`}
                     title="Hierarchical Project Structure & Tree Explorer"
                   >
@@ -2161,8 +2161,8 @@ export default function SingleProjectPage() {
                     onClick={() => handleTaskModeSwitch('board')}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'board'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                        ? 'bg-[#222222] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                     }`}
                     title="Kanban Board View"
                   >
@@ -2174,8 +2174,8 @@ export default function SingleProjectPage() {
                     onClick={() => handleTaskModeSwitch('timeline')}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'timeline'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                        ? 'bg-[#222222] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                     }`}
                     title="Timeline & Calendar View"
                   >
@@ -2187,8 +2187,8 @@ export default function SingleProjectPage() {
                     onClick={() => handleTaskModeSwitch('list')}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'list'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                        ? 'bg-[#222222] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                     }`}
                     title="Compact List View"
                   >
@@ -2200,8 +2200,8 @@ export default function SingleProjectPage() {
                     onClick={() => handleTaskModeSwitch('dependencies')}
                     className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
                       taskViewMode === 'dependencies'
-                        ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                        ? 'bg-[#222222] text-white shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                     }`}
                     title="DAG Dependency Graph View"
                   >
@@ -2210,7 +2210,7 @@ export default function SingleProjectPage() {
                   </button>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-2 text-xs text-[#9CA3AF] font-mono">
+                <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--text-secondary)] font-mono">
                   <span>{projectIssues.length} tasks</span>
                 </div>
               </div>
@@ -2320,15 +2320,15 @@ export default function SingleProjectPage() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.96, y: 10 }}
                 transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="bg-[#121316] border border-[#2A2C30] w-full max-w-5xl h-[90vh] max-h-[880px] rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none"
+                className="bg-[var(--bg-panel)] border border-[var(--border-primary)] w-full max-w-5xl h-[90vh] max-h-[880px] rounded-2xl shadow-2xl flex flex-col overflow-hidden select-none"
               >
                 {/* Task Details View Header Bar */}
-                <div className="h-12 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between shrink-0">
+                <div className="h-12 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-sm font-mono font-bold px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 shrink-0">
+                    <span className="text-sm font-mono font-bold px-2 py-0.5 rounded bg-white text-black/15 text-white border border-[var(--border-secondary)] shrink-0">
                       {getTaskShortId(selectedIssue, issues)}
                     </span>
-                    <span className="text-sm font-mono text-[#9CA3AF] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
+                    <span className="text-sm font-mono text-[var(--text-secondary)] bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
                       {selectedIssue.key}
                     </span>
                     <span className="text-sm font-semibold text-white truncate max-w-[420px]">
@@ -2339,7 +2339,7 @@ export default function SingleProjectPage() {
                   <div className="flex items-center gap-3 shrink-0">
                     {/* Status Dropdown */}
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-[#9CA3AF] font-mono">Status:</span>
+                      <span className="text-xs text-[var(--text-secondary)] font-mono">Status:</span>
                       <CustomDropdown<Status>
                         value={selectedIssue.status}
                         onChange={(val) => handleUpdateStatus(selectedIssue.id, val)}
@@ -2355,7 +2355,7 @@ export default function SingleProjectPage() {
                           { value: 'blocked', label: 'Blocked' },
                           { value: 'cancelled', label: 'Cancelled' },
                         ]}
-                        triggerClassName="bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1 text-xs text-[#DCB001] font-semibold hover:border-[#DCB001]/50"
+                        triggerClassName="bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1 text-xs text-white font-semibold hover:border-[var(--border-secondary)]"
                         size="xs"
                       />
                     </div>
@@ -2363,7 +2363,7 @@ export default function SingleProjectPage() {
                     {/* Close Button with X Icon */}
                     <button
                       onClick={() => handleSelectIssue(null)}
-                      className="p-1.5 rounded-lg bg-[#1F2023] hover:bg-[#2A2C30] text-[#9BA1A6] hover:text-white transition-colors border border-[#2A2C30] cursor-pointer flex items-center justify-center"
+                      className="p-1.5 rounded-lg bg-[#212121] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-white transition-colors border border-[var(--border-primary)] cursor-pointer flex items-center justify-center"
                       title="Close Task View (Esc)"
                       aria-label="Close Task View"
                     >
@@ -2431,58 +2431,58 @@ export default function SingleProjectPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="w-full max-w-md bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col"
+                className="w-full max-w-md bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl shadow-2xl overflow-hidden flex flex-col"
               >
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-                  <h3 className="text-sm font-bold text-[#CFD4DD] uppercase tracking-wider flex items-center gap-2">
-                    <Pencil size={15} className="text-[#DCB001]" />
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)]">
+                  <h3 className="text-sm font-bold text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-2">
+                    <Pencil size={15} className="text-white" />
                     Edit Project
                   </h3>
-                  <button onClick={() => setIsEditProjectModalOpen(false)} className="text-[#9CA3AF] hover:text-white">
+                  <button onClick={() => setIsEditProjectModalOpen(false)} className="text-[var(--text-secondary)] hover:text-white">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveProjectEdit} className="p-5 space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
-                      Project Name <span className="text-[#C0393B]">*</span>
+                    <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1">
+                      Project Name <span className="text-[#FFFFFF]">*</span>
                     </label>
                     <input
                       type="text"
                       autoFocus
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001]"
+                      className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg p-3 text-sm text-[var(--text-secondary)] outline-none focus:border-[var(--border-secondary)]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-[#CFD4DD] mb-1">
+                    <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-1">
                       Description
                     </label>
                     <textarea
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       rows={3}
-                      className="w-full bg-[#131415] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#DCB001] resize-none"
+                      className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg p-3 text-sm text-[var(--text-secondary)] outline-none focus:border-[var(--border-secondary)] resize-none"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-xs text-[#9CA3AF]">Saves to MySQL DB in real-time</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-[var(--border-primary)]">
+                    <span className="text-xs text-[var(--text-secondary)]">Saves to MySQL DB in real-time</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsEditProjectModalOpen(false)}
-                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg hover:bg-[#242424]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-4 py-2 text-sm font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg shadow-sm disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-semibold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-50"
                       >
                         Save Changes
                       </button>
@@ -2500,16 +2500,16 @@ export default function SingleProjectPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="w-full max-w-md bg-[#1B1C1F] border border-[#EF4444]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                className="w-full max-w-md bg-[var(--bg-panel)] border border-[var(--border-secondary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               >
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1112]">
-                  <h3 className="text-sm font-bold text-[#EF4444] uppercase tracking-wider flex items-center gap-2">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-primary)] bg-[#141414]">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                     <AlertTriangle size={16} />
                     Delete Project Confirmation
                   </h3>
                   <button
                     onClick={() => setIsDeleteProjectModalOpen(false)}
-                    className="text-[#9CA3AF] hover:text-white"
+                    className="text-[var(--text-secondary)] hover:text-white"
                   >
                     <X size={16} />
                   </button>
@@ -2517,17 +2517,17 @@ export default function SingleProjectPage() {
 
                 <form onSubmit={handleDeleteProjectConfirmed} className="p-5 space-y-4">
                   <div className="space-y-1.5 text-sm">
-                    <p className="text-[#CFD4DD]">
+                    <p className="text-[var(--text-secondary)]">
                       Are you sure you want to permanently delete project <strong className="text-white">{project.name}</strong>?
                     </p>
-                    <p className="text-xs text-[#EF4444]/80">
+                    <p className="text-xs text-white/80">
                       ⚠️ This will permanently remove all tasks, subtasks, channel conversations, docs, and member associations.
                     </p>
                   </div>
 
-                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] space-y-3">
+                  <div className="p-3 bg-[var(--bg-canvas)] rounded-xl border border-[var(--border-primary)] space-y-3">
                     <div>
-                      <label className="block text-xs text-[#9CA3AF] mb-1">
+                      <label className="block text-xs text-[var(--text-secondary)] mb-1">
                         Type Project Name to confirm: <span className="text-white font-semibold">{project.name}</span>
                       </label>
                       <input
@@ -2536,31 +2536,31 @@ export default function SingleProjectPage() {
                         value={confirmDeleteName}
                         onChange={(e) => setConfirmDeleteName(e.target.value)}
                         placeholder={project.name}
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#EF4444]"
+                        className="w-full bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-3 text-sm text-[var(--text-secondary)] outline-none focus:border-[var(--border-secondary)]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-[#9CA3AF] mb-1">
-                        Type Project Key to confirm: <span className="text-[#DCB001] font-mono text-[10px] font-bold block truncate">{project.key}</span>
+                      <label className="block text-xs text-[var(--text-secondary)] mb-1">
+                        Type Project Key to confirm: <span className="text-white font-mono text-[10px] font-bold block truncate">{project.key}</span>
                       </label>
                       <input
                         type="text"
                         value={confirmDeleteKey}
                         onChange={(e) => setConfirmDeleteKey(e.target.value)}
                         placeholder="Paste or type project key"
-                        className="w-full bg-[#1A1B1D] border border-[#2A2C30] rounded-lg p-3 text-sm text-[#CFD4DD] outline-none focus:border-[#EF4444] font-mono uppercase"
+                        className="w-full bg-[var(--bg-card)] border border-[var(--border-primary)] rounded-lg p-3 text-sm text-[var(--text-secondary)] outline-none focus:border-[var(--border-secondary)] font-mono uppercase"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-xs text-[#9CA3AF]">Requires exact match</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-[var(--border-primary)]">
+                    <span className="text-xs text-[var(--text-secondary)]">Requires exact match</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsDeleteProjectModalOpen(false)}
-                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg hover:bg-[#242424]"
                       >
                         Cancel
                       </button>
@@ -2571,7 +2571,7 @@ export default function SingleProjectPage() {
                           confirmDeleteKey.trim().toUpperCase() !== project.key.toUpperCase() ||
                           isDeletingProject
                         }
-                        className="px-4 py-2 text-sm font-semibold text-white bg-[#EF4444] hover:bg-[#DC2626] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[var(--ramp-3)] hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         {isDeletingProject ? 'Deleting...' : 'Permanently Delete'}
                       </button>
@@ -2589,16 +2589,16 @@ export default function SingleProjectPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="w-full max-w-md bg-[#1B1C1F] border border-[#F97316]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                className="w-full max-w-md bg-[var(--bg-panel)] border border-[#FFFFFF]/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               >
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#1A1412]">
-                  <h3 className="text-sm font-bold text-[#F97316] uppercase tracking-wider flex items-center gap-2">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-primary)] bg-[#151515]">
+                  <h3 className="text-sm font-bold text-[#FFFFFF] uppercase tracking-wider flex items-center gap-2">
                     <AlertTriangle size={16} />
                     Leave Project Confirmation
                   </h3>
                   <button
                     onClick={() => setIsLeaveProjectModalOpen(false)}
-                    className="text-[#9CA3AF] hover:text-white"
+                    className="text-[var(--text-secondary)] hover:text-white"
                   >
                     <X size={16} />
                   </button>
@@ -2606,33 +2606,33 @@ export default function SingleProjectPage() {
 
                 <form onSubmit={handleLeaveProjectConfirmed} className="p-5 space-y-4">
                   <div className="space-y-2 text-sm">
-                    <p className="text-[#CFD4DD]">
+                    <p className="text-[var(--text-secondary)]">
                       Are you sure you want to leave <strong className="text-white">{project.name}</strong>?
                     </p>
-                    <p className="text-xs text-[#A89488] leading-relaxed">
+                    <p className="text-xs text-[#979797] leading-relaxed">
                       You will be removed as a member and this project will no longer appear in your dashboard. You can rejoin at any time using the Project Key.
                     </p>
                   </div>
 
-                  <div className="p-3 bg-[#131415] rounded-xl border border-[#2A2C30] flex items-center gap-2 font-mono text-sm text-[#DCB001]">
-                    <span className="text-[#9CA3AF]">Project:</span>
+                  <div className="p-3 bg-[var(--bg-canvas)] rounded-xl border border-[var(--border-primary)] flex items-center gap-2 font-mono text-sm text-white">
+                    <span className="text-[var(--text-secondary)]">Project:</span>
                     <span className="font-bold truncate">{project.name} ({project.key})</span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-3 border-t border-[#2A2C30]">
-                    <span className="text-xs text-[#9CA3AF]">Rejoin anytime with key</span>
+                  <div className="flex items-center justify-between pt-3 border-t border-[var(--border-primary)]">
+                    <span className="text-xs text-[var(--text-secondary)]">Rejoin anytime with key</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsLeaveProjectModalOpen(false)}
-                        className="px-4 py-2 text-sm text-[#9499A0] hover:text-white rounded-lg hover:bg-[#222427]"
+                        className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg hover:bg-[#242424]"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={isLeavingProject}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[#FFFFFF] hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         {isLeavingProject ? 'Leaving...' : 'Confirm & Leave'}
                       </button>
@@ -2653,22 +2653,22 @@ export default function SingleProjectPage() {
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="w-full max-w-lg bg-[#181A1D] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+                className="w-full max-w-lg bg-[#1A1A1A] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2C30] bg-[#111215]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)] bg-[#141414]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-white text-black/15 text-white flex items-center justify-center font-bold">
                       <Lock size={16} />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white tracking-tight">Export Project Package</h3>
-                      <p className="text-xs font-mono text-[#9CA3AF]">AES-256-GCM Military Grade Encrypted Dump</p>
+                      <p className="text-xs font-mono text-[var(--text-secondary)]">AES-256-GCM Military Grade Encrypted Dump</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setIsExportModalOpen(false)}
-                    className="text-[#9CA3AF] hover:text-white transition-colors"
+                    className="text-[var(--text-secondary)] hover:text-white transition-colors"
                   >
                     <X size={18} />
                   </button>
@@ -2677,20 +2677,20 @@ export default function SingleProjectPage() {
                 {/* Body Content */}
                 <div className="p-6 space-y-5">
                   {/* File Target Info */}
-                  <div className="p-3.5 rounded-xl bg-[#111214] border border-[#24262B] flex items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727] flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001] shrink-0">
+                      <div className="w-9 h-9 rounded-lg bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white shrink-0">
                         <FileText size={18} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-white font-mono truncate">{exportFileName}</p>
-                        <p className="text-xs text-[#9CA3AF] font-mono">
+                        <p className="text-xs text-[var(--text-secondary)] font-mono">
                           {exportFileSize ? `Size: ${exportFileSize} • ` : ''}Format: .teaderdumpfile
                         </p>
                       </div>
                     </div>
 
-                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30 shrink-0">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)] shrink-0">
                       Encrypted
                     </span>
                   </div>
@@ -2698,53 +2698,53 @@ export default function SingleProjectPage() {
                   {/* Progress Bar & Status Text */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs font-mono">
-                      <span className="text-[#9BA1A6] flex items-center gap-1.5">
-                        {exportStep !== 'ready' && <Loader2 size={13} className="animate-spin text-[#DCB001]" />}
-                        {exportStep === 'ready' && <CheckCircle2 size={14} className="text-[#22C55E]" />}
+                      <span className="text-[var(--text-secondary)] flex items-center gap-1.5">
+                        {exportStep !== 'ready' && <Loader2 size={13} className="animate-spin text-white" />}
+                        {exportStep === 'ready' && <CheckCircle2 size={14} className="text-white" />}
                         <span>{exportStatusText}</span>
                       </span>
-                      <span className="text-[#DCB001] font-bold">{exportProgress}%</span>
+                      <span className="text-white font-bold">{exportProgress}%</span>
                     </div>
 
                     {/* Animated Progress Bar */}
-                    <div className="w-full h-2 bg-[#101113] rounded-full overflow-hidden border border-[#2A2C30]">
+                    <div className="w-full h-2 bg-[#111111] rounded-full overflow-hidden border border-[var(--border-primary)]">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${exportProgress}%` }}
                         transition={{ duration: 0.3 }}
                         className={`h-full rounded-full ${
-                          exportStep === 'ready' ? 'bg-[#22C55E]' : 'bg-[#DCB001]'
+                          exportStep === 'ready' ? 'bg-[var(--ramp-3)]' : 'bg-white text-black'
                         }`}
                       />
                     </div>
                   </div>
 
                   {/* Feature Checklist inside dump */}
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[#8E939D] pt-1">
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono text-[var(--text-secondary)] pt-1">
                     <div className="flex items-center gap-1.5">
-                      <Check size={12} className="text-[#22C55E]" />
+                      <Check size={12} className="text-white" />
                       <span>{projectIssues.length} Tasks & Subtasks</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Check size={12} className="text-[#22C55E]" />
+                      <Check size={12} className="text-white" />
                       <span>Technical .md Docs</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Check size={12} className="text-[#22C55E]" />
+                      <Check size={12} className="text-white" />
                       <span>Dependency DAG Branches</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Check size={12} className="text-[#22C55E]" />
+                      <Check size={12} className="text-white" />
                       <span>SHA-256 Checksum Verified</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="px-6 py-4 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
+                <div className="px-6 py-4 border-t border-[var(--border-primary)] bg-[#141414] flex items-center justify-between">
                   <button
                     onClick={() => setIsExportModalOpen(false)}
-                    className="px-4 py-2 text-sm font-medium text-[#9BA1A6] hover:text-white rounded-xl transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-white rounded-xl transition-colors"
                   >
                     Close
                   </button>
@@ -2752,7 +2752,7 @@ export default function SingleProjectPage() {
                   <button
                     onClick={handleTriggerDownload}
                     disabled={exportStep !== 'ready' || !exportBlobUrl}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
                   >
                     <Download size={15} className="stroke-[2.5]" />
                     <span>Download Teader Dump File</span>

@@ -112,32 +112,32 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans select-none overflow-hidden">
       {/* Calendar Top Toolbar */}
-      <div className="h-11 px-4 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+      <div className="h-11 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-            <CalendarIcon size={15} className="text-[#DCB001]" />
+            <CalendarIcon size={15} className="text-white" />
             <span>{monthNames[month]} {year}</span>
           </div>
 
-          <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-md p-0.5">
+          <div className="flex items-center bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md p-0.5">
             <button
               onClick={handlePrevMonth}
-              className="p-1 text-[#787C83] hover:text-white rounded transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-white rounded transition-colors"
               title="Previous Month"
             >
               <ChevronLeft size={13} />
             </button>
             <button
               onClick={handleToday}
-              className="px-2 py-0.5 text-[10px] font-mono text-[#CFD4DD] hover:text-white rounded transition-colors"
+              className="px-2 py-0.5 text-[10px] font-mono text-[var(--text-secondary)] hover:text-white rounded transition-colors"
             >
               Today
             </button>
             <button
               onClick={handleNextMonth}
-              className="p-1 text-[#787C83] hover:text-white rounded transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-white rounded transition-colors"
               title="Next Month"
             >
               <ChevronRight size={13} />
@@ -148,7 +148,7 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
         {onOpenNewIssue && (
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-2.5 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-md text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-md text-xs font-bold shadow-sm transition-all"
           >
             <Plus size={13} />
             <span>New Task</span>
@@ -157,14 +157,14 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
       </div>
 
       {/* Days Header */}
-      <div className="grid grid-cols-7 border-b border-[#2A2C30] bg-[#17181A] text-[10px] font-mono text-[#787C83] uppercase tracking-wider py-1.5 text-center shrink-0">
+      <div className="grid grid-cols-7 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider py-1.5 text-center shrink-0">
         {daysOfWeek.map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-5 lg:grid-rows-6 gap-[1px] bg-[#2A2C30] overflow-y-auto">
+      <div className="flex-1 grid grid-cols-7 grid-rows-5 lg:grid-rows-6 gap-[1px] bg-[#222222] overflow-y-auto">
         {calendarDays.map((cd, index) => {
           const formattedDate = `${cd.date.getFullYear()}-${String(cd.date.getMonth() + 1).padStart(2, '0')}-${String(cd.date.getDate()).padStart(2, '0')}`;
           const isToday = formattedDate === todayStr;
@@ -174,7 +174,7 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
             <div
               key={index}
               className={`min-h-[90px] p-2 flex flex-col justify-between transition-colors ${
-                cd.isCurrentMonth ? 'bg-[#131415] hover:bg-[#161719]' : 'bg-[#0E0F10] opacity-40'
+                cd.isCurrentMonth ? 'bg-[var(--bg-canvas)] hover:bg-[#171717]' : 'bg-[#0F0F0F] opacity-40'
               }`}
             >
               {/* Date Header */}
@@ -182,15 +182,15 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
                 <span
                   className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded-full ${
                     isToday
-                      ? 'bg-[#DCB001] text-[#0F1011] font-bold'
-                      : 'text-[#787C83]'
+                      ? 'bg-white text-black text-[#000000] font-bold'
+                      : 'text-[var(--text-muted)]'
                   }`}
                 >
                   {cd.dayNumber}
                 </span>
 
                 {dayIssues.length > 0 && (
-                  <span className="text-[9px] font-mono text-[#787C83]">
+                  <span className="text-[9px] font-mono text-[var(--text-muted)]">
                     {dayIssues.length} {dayIssues.length === 1 ? 'task' : 'tasks'}
                   </span>
                 )}
@@ -203,13 +203,13 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
                     key={issue.id}
                     onClick={() => onSelectIssue(issue.id)}
                     title={`${issue.key}: ${issue.title}${issue.createdAt ? ` • ${formatExactDateTime(issue.createdAt)} (${formatAddedTiming(issue.createdAt)})` : ''}`}
-                    className="w-full text-left p-1 rounded bg-[#1B1C1F] hover:bg-[#222427] border border-[#2A2C30] hover:border-[#DCB001]/50 text-[10px] flex items-center justify-between gap-1 group transition-all"
+                    className="w-full text-left p-1 rounded bg-[var(--bg-panel)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[10px] flex items-center justify-between gap-1 group transition-all"
                   >
                     <div className="flex items-center gap-1 truncate">
-                      <span className="font-mono text-[#DCB001] font-bold shrink-0">
+                      <span className="font-mono text-white font-bold shrink-0">
                         {issue.key}
                       </span>
-                      <span className="truncate text-[#CFD4DD] group-hover:text-white">
+                      <span className="truncate text-[var(--text-secondary)] group-hover:text-white">
                         {issue.title}
                       </span>
                     </div>
@@ -217,10 +217,10 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
                     <span
                       className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                         issue.status === 'done'
-                          ? 'bg-[#22C55E]'
+                          ? 'bg-[var(--ramp-3)]'
                           : issue.priority === 'critical'
-                          ? 'bg-[#EF4444]'
-                          : 'bg-[#DCB001]'
+                          ? 'bg-[var(--ramp-3)]'
+                          : 'bg-white text-black'
                       }`}
                     />
                   </button>

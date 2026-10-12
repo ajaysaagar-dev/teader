@@ -42,22 +42,22 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="flex-1 flex items-center justify-center bg-[#131415] p-8">
-          <div className="max-w-sm w-full bg-[#1B1C1F] border border-[#C0393B]/30 rounded-xl p-6 text-center space-y-4">
+        <div className="flex-1 flex items-center justify-center bg-[var(--bg-canvas)] p-8">
+          <div className="max-w-sm w-full bg-[var(--bg-panel)] border border-[#FFFFFF]/30 rounded-xl p-6 text-center space-y-4">
             <div className="flex justify-center">
-              <AlertTriangle size={32} className="text-[#C0393B]" />
+              <AlertTriangle size={32} className="text-[#FFFFFF]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#CFD4DD]">Something went wrong</h3>
+              <h3 className="text-sm font-bold text-[var(--text-secondary)]">Something went wrong</h3>
               {this.state.error && (
-                <p className="text-xs text-[#787C83] mt-1 font-mono break-all">
+                <p className="text-xs text-[var(--text-muted)] mt-1 font-mono break-all">
                   {this.state.error.message}
                 </p>
               )}
             </div>
             <button
               onClick={this.handleRetry}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#0F1011] bg-[#DCB001] hover:bg-[#c49c00] rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg transition-colors"
             >
               <RefreshCw size={13} />
               Try again

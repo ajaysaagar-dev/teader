@@ -167,74 +167,74 @@ export function ProjectHistoryView({
   const getActionBadge = (action: string) => {
     switch (action) {
       case 'task_created':
-        return { label: 'Task Created', bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        return { label: 'Task Created', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'folder_created':
-        return { label: 'Folder Created', bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        return { label: 'Folder Created', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'doc_created':
-        return { label: 'Doc Created', bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        return { label: 'Doc Created', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'subtask_created':
-        return { label: 'Subtask Added', bg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' };
+        return { label: 'Subtask Added', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'task_updated':
-        return { label: 'Task Updated', bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+        return { label: 'Task Updated', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'folder_updated':
-        return { label: 'Folder Renamed/Moved', bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+        return { label: 'Folder Renamed/Moved', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'doc_updated':
-        return { label: 'Doc Updated', bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+        return { label: 'Doc Updated', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'subtask_updated':
-        return { label: 'Subtask Updated', bg: 'bg-blue-500/15 text-blue-400 border-blue-500/30' };
+        return { label: 'Subtask Updated', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'task_deleted':
-        return { label: 'Task Deleted', bg: 'bg-red-500/15 text-red-400 border-red-500/30' };
+        return { label: 'Task Deleted', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'folder_deleted':
-        return { label: 'Folder Deleted', bg: 'bg-red-500/15 text-red-400 border-red-500/30' };
+        return { label: 'Folder Deleted', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'doc_deleted':
-        return { label: 'Doc Deleted', bg: 'bg-red-500/15 text-red-400 border-red-500/30' };
+        return { label: 'Doc Deleted', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'member_removed':
-        return { label: 'Member Removed', bg: 'bg-red-500/15 text-red-400 border-red-500/30' };
+        return { label: 'Member Removed', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'date_edited':
-        return { label: 'Created Date Edited', bg: 'bg-amber-500/15 text-amber-400 border-amber-500/30' };
+        return { label: 'Created Date Edited', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'member_permissions_updated':
-        return { label: 'Permissions Updated', bg: 'bg-purple-500/15 text-purple-400 border-purple-500/30' };
+        return { label: 'Permissions Updated', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       case 'tasks_reordered':
-        return { label: 'Tasks Reordered', bg: 'bg-amber-500/15 text-yellow-400 border-yellow-500/30' };
+        return { label: 'Tasks Reordered', bg: 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]' };
       default:
-        return { label: action.replace(/_/g, ' '), bg: 'bg-[#222428] text-[#9499A0] border-[#31343A]' };
+        return { label: action.replace(/_/g, ' '), bg: 'bg-[var(--bg-card)] text-[var(--text-secondary)] border-[#353535]' };
     }
   };
 
   const getEntityIcon = (entityType: string) => {
     switch (entityType) {
       case 'task':
-        return <CheckCircle2 size={14} className="text-[#38BDF8]" />;
+        return <CheckCircle2 size={14} className="text-white" />;
       case 'folder':
-        return <FolderKanban size={14} className="text-[#DCB001]" />;
+        return <FolderKanban size={14} className="text-white" />;
       case 'doc':
-        return <FileText size={14} className="text-[#A78BFA]" />;
+        return <FileText size={14} className="text-[#FFFFFF]" />;
       case 'member':
-        return <Users size={14} className="text-[#F472B6]" />;
+        return <Users size={14} className="text-[#FFFFFF]" />;
       case 'subtask':
-        return <Layers size={14} className="text-[#34D399]" />;
+        return <Layers size={14} className="text-[#FFFFFF]" />;
       default:
-        return <Clock size={14} className="text-[#9499A0]" />;
+        return <Clock size={14} className="text-[var(--text-secondary)]" />;
     }
   };
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#0E0F12] text-[#CFD4DD] p-4 lg:p-8 select-none">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#000000] text-[var(--text-secondary)] p-4 lg:p-8 select-none">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header Title */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#222428] gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#141414] gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#17181C] border border-[#2A2C30] flex items-center justify-center text-[#DCB001]">
+            <div className="w-10 h-10 rounded-xl bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white">
               <Clock size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white tracking-tight">Project History</h2>
-                <span className="text-[11px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-2 py-0.5 rounded border border-[#DCB001]/25">
+                <span className="text-[11px] font-mono text-white bg-white text-black/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
                   {projectKey}
                 </span>
               </div>
-              <p className="text-xs text-[#787C83]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Comprehensive audit trail tracking every task, folder, documentation, permission and team action.
               </p>
             </div>
@@ -244,26 +244,26 @@ export function ProjectHistoryView({
             <button
               onClick={() => fetchHistory(true)}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#18191E] hover:bg-[#22242A] text-xs font-semibold text-white border border-[#2A2C30] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1A1A] hover:bg-[#252525] text-xs font-semibold text-white border border-[var(--border-primary)] transition-colors disabled:opacity-50"
               title="Refresh History Audit Trail"
             >
-              <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#DCB001]' : ''} />
+              <RefreshCw size={13} className={refreshing ? 'animate-spin text-white' : ''} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[#141518] border border-[#222428]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[var(--bg-panel)] border border-[#141414]">
           {/* Search */}
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#787C83]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="Search history actions or entities..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#101114] border border-[#25272D] focus:border-[#DCB001] rounded-lg text-xs text-white placeholder-[#5A5E66] outline-none transition-colors"
+              className="w-full pl-9 pr-3 py-1.5 bg-[#000000] border border-[#282828] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white placeholder-[#5F5F5F] outline-none transition-colors"
             />
           </div>
 
@@ -280,7 +280,7 @@ export function ProjectHistoryView({
               { value: 'member', label: 'Members & Permissions' },
             ]}
             className="w-full"
-            triggerClassName="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] hover:border-[#DCB001]/50 text-xs text-white rounded-lg"
+            triggerClassName="w-full px-3 py-1.5 bg-[#000000] border border-[#282828] hover:border-[var(--border-secondary)] text-xs text-white rounded-lg"
             size="sm"
           />
 
@@ -304,7 +304,7 @@ export function ProjectHistoryView({
               { value: 'tasks_reordered', label: 'Tasks Reordered' },
             ]}
             className="w-full"
-            triggerClassName="w-full px-3 py-1.5 bg-[#101114] border border-[#25272D] hover:border-[#DCB001]/50 text-xs text-white rounded-lg"
+            triggerClassName="w-full px-3 py-1.5 bg-[#000000] border border-[#282828] hover:border-[var(--border-secondary)] text-xs text-white rounded-lg"
             size="sm"
           />
         </div>
@@ -312,14 +312,14 @@ export function ProjectHistoryView({
         {/* Audit Log Timeline */}
         {loading ? (
           <div className="flex flex-col items-center justify-center p-16 space-y-3">
-            <RefreshCw size={24} className="animate-spin text-[#DCB001]" />
-            <p className="text-xs text-[#787C83]">Loading project audit log entries...</p>
+            <RefreshCw size={24} className="animate-spin text-white" />
+            <p className="text-xs text-[var(--text-muted)]">Loading project audit log entries...</p>
           </div>
         ) : filteredHistory.length === 0 ? (
-          <div className="p-12 text-center rounded-2xl bg-[#141518] border border-[#222428] space-y-3">
-            <Clock size={32} className="mx-auto text-[#555962]" />
+          <div className="p-12 text-center rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-3">
+            <Clock size={32} className="mx-auto text-[#5B5B5B]" />
             <h3 className="text-sm font-bold text-white">No history records found</h3>
-            <p className="text-xs text-[#787C83] max-w-sm mx-auto">
+            <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
               Actions such as task creation, status updates, folder management, and documentation revisions will appear here automatically.
             </p>
           </div>
@@ -343,7 +343,7 @@ export function ProjectHistoryView({
               return (
                 <div
                   key={entry.id}
-                  className="p-4 rounded-xl bg-[#141518] border border-[#222428] hover:border-[#2F3238] transition-all space-y-3"
+                  className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[#141414] hover:border-[#333333] transition-all space-y-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     {/* Left: Avatar + Details */}
@@ -361,14 +361,14 @@ export function ProjectHistoryView({
                           >
                             {badge.label}
                           </span>
-                          <span className="text-[10px] text-[#787C83] font-mono">
+                          <span className="text-[10px] text-[var(--text-muted)] font-mono">
                             {formattedDate} • {formattedTime}
                           </span>
                         </div>
 
                         {/* Action Description */}
-                        <div className="flex items-center gap-2 text-xs text-[#CFD4DD] flex-wrap">
-                          <span className="flex items-center gap-1 text-[#9499A0]">
+                        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] flex-wrap">
+                          <span className="flex items-center gap-1 text-[var(--text-secondary)]">
                             {getEntityIcon(entry.entityType)}
                             <span className="capitalize font-medium">{entry.entityType}:</span>
                           </span>
@@ -376,7 +376,7 @@ export function ProjectHistoryView({
                             {entry.entityTitle || entry.entityId || 'Item'}
                           </span>
                           {entry.details?.key && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1D1F24] text-[#DCB001] border border-[#2B2D33]">
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#202020] text-white border border-[#2E2E2E]">
                               {entry.details.key}
                             </span>
                           )}
@@ -389,7 +389,7 @@ export function ProjectHistoryView({
                       {entry.details && Object.keys(entry.details).length > 0 && (
                         <button
                           onClick={() => toggleDetails(entry.id)}
-                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#18191E] hover:bg-[#202228] text-[11px] font-mono text-[#9499A0] hover:text-white border border-[#282A30] transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1A1A1A] hover:bg-[#232323] text-[11px] font-mono text-[var(--text-secondary)] hover:text-white border border-[#2B2B2B] transition-colors"
                           title="View change details"
                         >
                           {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
@@ -401,7 +401,7 @@ export function ProjectHistoryView({
                         <button
                           disabled={isDeleting}
                           onClick={(e) => handleDeleteEntry(entry.id, e)}
-                          className="p-1.5 rounded-lg bg-[#201414] hover:bg-[#341616] text-[#EF4444] hover:text-white border border-[#EF4444]/30 transition-colors disabled:opacity-50"
+                          className="p-1.5 rounded-lg bg-[#181818] hover:bg-[#202020] text-white hover:text-white border border-[var(--border-secondary)] transition-colors disabled:opacity-50"
                           title="Delete history log record"
                         >
                           <Trash2 size={13} />
@@ -412,11 +412,11 @@ export function ProjectHistoryView({
 
                   {/* Expandable JSON / Change Details */}
                   {isExpanded && entry.details && (
-                    <div className="mt-2 p-3 rounded-lg bg-[#0F1013] border border-[#202227] text-xs font-mono space-y-1.5">
-                      <div className="text-[10px] uppercase tracking-wider text-[#787C83]">
+                    <div className="mt-2 p-3 rounded-lg bg-[#111111] border border-[#232323] text-xs font-mono space-y-1.5">
+                      <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
                         Audit Payload / Metadata:
                       </div>
-                      <pre className="text-[11px] text-[#A4A9B3] overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                      <pre className="text-[11px] text-[#ABABAB] overflow-x-auto whitespace-pre-wrap leading-relaxed">
                         {JSON.stringify(entry.details, null, 2)}
                       </pre>
                     </div>

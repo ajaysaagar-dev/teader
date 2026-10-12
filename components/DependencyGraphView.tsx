@@ -71,20 +71,20 @@ interface TimelineEdge {
 
 // ─── Vibrant Palette for User Branch & Completer Curves ──────────────────────
 const USER_BRANCH_COLORS = [
-  '#06B6D4', // Vibrant Cyan
-  '#10B981', // Emerald Green
-  '#A855F7', // Electric Purple
-  '#F59E0B', // Golden Amber
-  '#F43F5E', // Rose / Coral
-  '#3B82F6', // Royal Blue
-  '#84CC16', // Lime
-  '#EC4899', // Pink
-  '#14B8A6', // Teal
-  '#EAB308', // Yellow
+  '#FFFFFF', // Vibrant Cyan
+  '#FFFFFF', // Emerald Green
+  '#FFFFFF', // Electric Purple
+  '#FFFFFF', // Golden Amber
+  '#FFFFFF', // Rose / Coral
+  '#FFFFFF', // Royal Blue
+  '#FFFFFF', // Lime
+  '#FFFFFF', // Pink
+  '#FFFFFF', // Teal
+  '#FFFFFF', // Yellow
 ];
 
 function getUserColor(userName: string): string {
-  if (!userName || userName === 'Unassigned') return '#787C83';
+  if (!userName || userName === 'Unassigned') return '#666666';
   let hash = 0;
   for (let i = 0; i < userName.length; i++) {
     hash = (hash << 5) - hash + userName.charCodeAt(i);
@@ -637,7 +637,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               fromNode,
               toNode,
               completerName: toNode.completerName,
-              color: '#EF4444',
+              color: '#FFFFFF',
               isCrossCreator: fromNode.creatorName !== toNode.creatorName,
               isCompleted: toNode.isDone,
             });
@@ -685,31 +685,31 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
   }, [edges, selectedCompleterFilter]);
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#0B0C0E] text-[#CFD4DD] font-sans select-none overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-full min-h-0 w-full bg-[#000000] text-[var(--text-secondary)] font-sans select-none overflow-hidden relative">
       {/* Top Toolbar */}
-      <div className="h-13 px-4 bg-[#121316] border-b border-[#222428] flex items-center justify-between gap-3 shrink-0 z-40">
+      <div className="h-13 px-4 bg-[var(--bg-panel)] border-b border-[#141414] flex items-center justify-between gap-3 shrink-0 z-40">
         {/* Left: Brand & Axis Legend */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[#DCB001]/15 border border-[#DCB001]/40 flex items-center justify-center text-[#DCB001]">
+            <div className="w-6 h-6 rounded-lg bg-white text-black/15 border border-[var(--border-secondary)] flex items-center justify-center text-white">
               <GitFork size={14} className="stroke-[2.5]" />
             </div>
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold text-white tracking-tight">
                 <span>Task Execution & Creator Matrix</span>
-                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#1B1C1F] border border-[#2A2C30] text-[#DCB001] rounded">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[var(--bg-panel)] border border-[var(--border-primary)] text-white rounded">
                   X: Date & Time Assigned • Y: Task Creators
                 </span>
               </div>
             </div>
           </div>
 
-          <span className="w-px h-4 bg-[#222428] mx-1 hidden sm:inline" />
+          <span className="w-px h-4 bg-[var(--bg-card)] mx-1 hidden sm:inline" />
 
           {/* Completer User Legend Pills (Shows who completed which tasks) */}
           <div className="hidden md:flex items-center gap-1.5 overflow-x-auto max-w-[38vw] custom-scrollbar py-1">
-            <span className="text-[10px] font-mono text-[#787C83] mr-1 flex items-center gap-1">
-              <UserCheck size={11} className="text-[#22C55E]" /> WORK DONE BY:
+            <span className="text-[10px] font-mono text-[var(--text-muted)] mr-1 flex items-center gap-1">
+              <UserCheck size={11} className="text-white" /> WORK DONE BY:
             </span>
             {completerList.map((u) => {
               const isSelected = selectedCompleterFilter === u.name;
@@ -720,7 +720,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono transition-all shrink-0 border ${
                     isSelected
                       ? 'bg-white/10 text-white border-white/40 shadow-sm'
-                      : 'bg-[#16171A] hover:bg-[#1E2024] text-[#9BA1A6] border-[#2A2C30]'
+                      : 'bg-[#141414] hover:bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-primary)]'
                   }`}
                   style={{ borderLeftColor: u.color, borderLeftWidth: 3 }}
                   title={`Completed ${u.completedCount} of ${u.count} tasks`}
@@ -738,7 +738,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             {selectedCompleterFilter && (
               <button
                 onClick={() => setSelectedCompleterFilter(null)}
-                className="text-[10px] text-[#DCB001] hover:underline font-mono px-1.5 shrink-0"
+                className="text-[10px] text-white hover:underline font-mono px-1.5 shrink-0"
               >
                 Clear
               </button>
@@ -753,8 +753,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             onClick={() => setShowCompleterCurves((v) => !v)}
             className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono border transition-all ${
               showCompleterCurves
-                ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/40'
-                : 'bg-[#16171A] text-[#787C83] border-[#222428] hover:text-white'
+                ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)]'
+                : 'bg-[#141414] text-[var(--text-muted)] border-[#141414] hover:text-white'
             }`}
             title="Toggle dynamic work-done curves for each user"
           >
@@ -763,23 +763,23 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           </button>
 
           {/* Linear Horizontal Scroll Navigation */}
-          <div className="flex items-center bg-[#16171A] border border-[#222428] rounded-lg p-0.5 text-xs">
+          <div className="flex items-center bg-[#141414] border border-[#141414] rounded-lg p-0.5 text-xs">
             <button
               type="button"
               onClick={() => smoothScrollBy(-320, 250)}
-              className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] rounded transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)] rounded transition-colors"
               title="Pan Left"
             >
               <ChevronLeft size={13} />
             </button>
-            <div className="flex items-center gap-1 px-1.5 text-[10px] font-mono text-[#787C83] border-x border-[#222428]">
-              <MoveHorizontal size={11} className="text-[#DCB001]" />
+            <div className="flex items-center gap-1 px-1.5 text-[10px] font-mono text-[var(--text-muted)] border-x border-[#141414]">
+              <MoveHorizontal size={11} className="text-white" />
               <span className="hidden sm:inline">PAN</span>
             </div>
             <button
               type="button"
               onClick={() => smoothScrollBy(320, 250)}
-              className="p-1 text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] rounded transition-colors"
+              className="p-1 text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)] rounded transition-colors"
               title="Pan Right"
             >
               <ChevronRight size={13} />
@@ -787,20 +787,20 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           </div>
 
           {/* Zoom Controls */}
-          <div className="flex items-center bg-[#16171A] border border-[#222428] rounded-lg p-0.5 text-xs">
+          <div className="flex items-center bg-[#141414] border border-[#141414] rounded-lg p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setScale((s) => Math.max(0.5, s - 0.1))}
-              className="p-1 text-[#787C83] hover:text-white rounded"
+              className="p-1 text-[var(--text-muted)] hover:text-white rounded"
               title="Zoom Out"
             >
               <ZoomOut size={13} />
             </button>
-            <span className="px-1.5 text-[10px] font-mono text-[#CFD4DD]">{Math.round(scale * 100)}%</span>
+            <span className="px-1.5 text-[10px] font-mono text-[var(--text-secondary)]">{Math.round(scale * 100)}%</span>
             <button
               type="button"
               onClick={() => setScale((s) => Math.min(1.5, s + 0.1))}
-              className="p-1 text-[#787C83] hover:text-white rounded"
+              className="p-1 text-[var(--text-muted)] hover:text-white rounded"
               title="Zoom In"
             >
               <ZoomIn size={13} />
@@ -808,7 +808,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
             <button
               type="button"
               onClick={() => setScale(1)}
-              className="p-1 text-[#787C83] hover:text-white rounded ml-1 border-l border-[#222428]"
+              className="p-1 text-[var(--text-muted)] hover:text-white rounded ml-1 border-l border-[#141414]"
               title="Reset Zoom"
             >
               <RotateCcw size={12} />
@@ -826,7 +826,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
           onMouseLeave={handleMouseUpOrLeave}
-          className={`flex-1 overflow-x-auto overflow-y-hidden bg-[#0A0B0D] relative graph-scrollbar custom-scrollbar select-none h-full ${
+          className={`flex-1 overflow-x-auto overflow-y-hidden bg-[var(--bg-canvas)] relative graph-scrollbar custom-scrollbar select-none h-full ${
             isGrabbing ? 'cursor-grabbing' : 'cursor-grab'
           }`}
         >
@@ -854,7 +854,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     y1={52}
                     x2={hdr.x + 125}
                     y2={canvasHeight - 12}
-                    stroke="#16171A"
+                    stroke="#141414"
                     strokeWidth={1}
                     strokeDasharray="4 4"
                   />
@@ -869,7 +869,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     y1={track.centerY}
                     x2={canvasWidth - 30}
                     y2={track.centerY}
-                    stroke="#18191D"
+                    stroke="#1A1A1A"
                     strokeWidth={1.5}
                   />
                   {/* Creator Lane Header Label */}
@@ -898,7 +898,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   markerHeight="6"
                   orient="auto-start-reverse"
                 >
-                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#22C55E" />
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#FFFFFF" />
                 </marker>
                 <marker
                   id="arrow-dep-red"
@@ -909,7 +909,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   markerHeight="6"
                   orient="auto-start-reverse"
                 >
-                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#EF4444" />
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#FFFFFF" />
                 </marker>
               </defs>
 
@@ -1030,8 +1030,8 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                         onMouseMove={handleLineMouseMove}
                         onMouseLeave={handleLineMouseLeave}
                       >
-                        <circle cx={10} cy={10} r={9} fill="#0A0B0D" stroke={strokeColor} strokeWidth={isHovered ? 2.5 : 1.5} />
-                        <path d="M 6 10 L 9 13 L 14 7" fill="none" stroke="#22C55E" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx={10} cy={10} r={9} fill="#000000" stroke={strokeColor} strokeWidth={isHovered ? 2.5 : 1.5} />
+                        <path d="M 6 10 L 9 13 L 14 7" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                       </g>
                     )}
 
@@ -1041,7 +1041,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       cy={startY}
                       r={isHovered ? 5 : 3.5}
                       fill={strokeColor}
-                      stroke="#0A0B0D"
+                      stroke="#000000"
                       strokeWidth={1.5}
                     />
                     <circle
@@ -1049,7 +1049,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       cy={endY}
                       r={isHovered ? 5 : 3.5}
                       fill={strokeColor}
-                      stroke="#0A0B0D"
+                      stroke="#000000"
                       strokeWidth={1.5}
                     />
                   </g>
@@ -1063,10 +1063,10 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                 <div
                   key={`hdr_slot_${hdr.slot}`}
                   style={{ position: 'absolute', left: hdr.x + 20 }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#131417] border border-[#222428] text-xs font-mono text-white shadow-md pointer-events-auto"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#151515] border border-[#141414] text-xs font-mono text-white shadow-md pointer-events-auto"
                 >
-                  <Calendar size={11} className="text-[#DCB001]" />
-                  <Clock size={10} className="text-[#787C83]" />
+                  <Calendar size={11} className="text-white" />
+                  <Clock size={10} className="text-[var(--text-muted)]" />
                   <span className="font-bold">{hdr.label}</span>
                 </div>
               ))}
@@ -1077,14 +1077,14 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
               <div
                 key={`creator_label_${track.name}`}
                 style={{ position: 'absolute', left: 20, top: track.centerY - 13 }}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#121316]/95 border border-[#222428] text-xs font-mono shadow-md pointer-events-auto z-20"
+                className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--bg-panel)]/95 border border-[#141414] text-xs font-mono shadow-md pointer-events-auto z-20"
               >
                 <div
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: track.color }}
                 />
                 <span className="font-bold text-white truncate max-w-[110px]">{track.name}</span>
-                <span className="text-[9px] text-[#DCB001] px-1 py-0.2 bg-[#DCB001]/10 rounded border border-[#DCB001]/20 shrink-0">Creator</span>
+                <span className="text-[9px] text-white px-1 py-0.2 bg-white text-black/10 rounded border border-[var(--border-secondary)] shrink-0">Creator</span>
               </div>
             ))}
 
@@ -1105,20 +1105,20 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     top: node.y,
                     width: node.width,
                     height: node.height,
-                    borderLeftColor: node.isDone ? '#22C55E' : node.completerColor,
+                    borderLeftColor: node.isDone ? '#FFFFFF' : node.completerColor,
                     borderLeftWidth: 4,
                   }}
                   className={`p-2.5 rounded-xl border transition-all cursor-pointer shadow-lg flex flex-col justify-between group ${
                     isHovered
-                      ? 'bg-[#1C1D21] border-[#DCB001] ring-2 ring-[#DCB001]/30 z-30 scale-105 shadow-2xl'
-                      : 'bg-[#121316] border-[#222428] hover:border-[#3E4149] z-10'
+                      ? 'bg-[#141414] border-[var(--border-secondary)] ring-2 ring-[#FFFFFF]/30 z-30 scale-105 shadow-2xl'
+                      : 'bg-[var(--bg-panel)] border-[#141414] hover:border-[#434343] z-10'
                   }`}
                 >
                   {/* Top Row: Key + Creator / Completer Badges */}
                   <div className="flex items-center justify-between gap-1">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span
-                        className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border bg-[#0C0D0F] border-[#222428]"
+                        className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded border bg-[#000000] border-[#141414]"
                         style={{ color: node.creatorColor }}
                       >
                         {node.issue.key}
@@ -1128,15 +1128,15 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       <div
                         className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono truncate max-w-[140px] border ${
                           node.isDone
-                            ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30 font-bold'
-                            : 'bg-white/5 text-[#9BA1A6] border-white/10'
+                            ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)] font-bold'
+                            : 'bg-white/5 text-[var(--text-secondary)] border-white/10'
                         }`}
                         title={node.isDone ? `Ticked as Completed by ${node.completerName} ${node.completedAtLabel ? `at ${node.completedAtLabel}` : ''}` : `Assigned to ${node.completerName}`}
                       >
                         {node.isDone ? (
-                          <CheckCircle2 size={10} className="text-[#22C55E] shrink-0" />
+                          <CheckCircle2 size={10} className="text-white shrink-0" />
                         ) : (
-                          <Clock size={10} className="text-[#DCB001] shrink-0" />
+                          <Clock size={10} className="text-white shrink-0" />
                         )}
                         <span className="truncate">
                           {node.isDone ? `✓ Ticked: ${node.completerName}` : node.completerName}
@@ -1147,7 +1147,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     {/* Status Dot */}
                     <div className="flex items-center gap-1">
                       {isBlocked && (
-                        <span className="flex items-center gap-0.5 text-[8px] font-mono text-[#EF4444] bg-[#EF4444]/15 px-1 py-0.2 rounded border border-[#EF4444]/30">
+                        <span className="flex items-center gap-0.5 text-[8px] font-mono text-white bg-[var(--ramp-3)]/15 px-1 py-0.2 rounded border border-[var(--border-secondary)]">
                           <ShieldAlert size={8} />
                         </span>
                       )}
@@ -1155,27 +1155,27 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${
                           node.isDone
-                            ? 'bg-[#22C55E]'
+                            ? 'bg-[var(--ramp-3)]'
                             : node.issue.priority === 'critical'
-                            ? 'bg-[#EF4444] animate-pulse'
-                            : 'bg-[#DCB001]'
+                            ? 'bg-[var(--ramp-3)] animate-pulse'
+                            : 'bg-white text-black'
                         }`}
                       />
                     </div>
                   </div>
 
                   {/* Task Title */}
-                  <div className="text-xs font-semibold text-white truncate group-hover:text-[#DCB001] transition-colors leading-tight">
+                  <div className="text-xs font-semibold text-white truncate group-hover:text-white transition-colors leading-tight">
                     {node.issue.title}
                   </div>
 
                   {/* Footer: Date & Time Assigned + Creator Note */}
-                  <div className="flex items-center justify-between text-[9px] font-mono text-[#787C83] pt-0.5 border-t border-[#1C1D20]">
-                    <span className="capitalize text-[#9BA1A6] flex items-center gap-1">
-                      <UserPlus size={9} className="text-[#787C83]" />
+                  <div className="flex items-center justify-between text-[9px] font-mono text-[var(--text-muted)] pt-0.5 border-t border-[#1E1E1E]">
+                    <span className="capitalize text-[var(--text-secondary)] flex items-center gap-1">
+                      <UserPlus size={9} className="text-[var(--text-muted)]" />
                       Created by <strong className="text-white font-normal">{node.creatorName}</strong>
                     </span>
-                    <span className="text-[#DCB001]">{node.dateTimeAssignedLabel}</span>
+                    <span className="text-white">{node.dateTimeAssignedLabel}</span>
                   </div>
                 </div>
               );
@@ -1192,9 +1192,9 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   pointerEvents: 'none',
                   zIndex: 100,
                 }}
-                className="bg-[#121316]/95 border border-[#2A2C30] text-white px-3 py-2 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[210px] max-w-[300px] backdrop-blur-md transition-all duration-75 select-none"
+                className="bg-[var(--bg-panel)]/95 border border-[var(--border-primary)] text-white px-3 py-2 rounded-xl shadow-2xl flex flex-col gap-1 min-w-[210px] max-w-[300px] backdrop-blur-md transition-all duration-75 select-none"
               >
-                <div className="flex items-center justify-between gap-2 border-b border-[#222428] pb-1.5">
+                <div className="flex items-center justify-between gap-2 border-b border-[#141414] pb-1.5">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
@@ -1207,21 +1207,21 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   <span
                     className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
                       hoveredEdge.isCompleted
-                        ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30'
-                        : 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
+                        ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)]'
+                        : 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
                     }`}
                   >
                     {hoveredEdge.isCompleted ? '✓ Completed' : 'In Progress'}
                   </span>
                 </div>
 
-                <div className="text-[10px] font-mono text-[#9BA1A6] flex items-center justify-between gap-1 pt-0.5">
-                  <span className="text-[#DCB001] font-bold">{hoveredEdge.fromKey}</span>
-                  <span className="text-[#787C83]">────────►</span>
-                  <span className="text-[#DCB001] font-bold">{hoveredEdge.toKey}</span>
+                <div className="text-[10px] font-mono text-[var(--text-secondary)] flex items-center justify-between gap-1 pt-0.5">
+                  <span className="text-white font-bold">{hoveredEdge.fromKey}</span>
+                  <span className="text-[var(--text-muted)]">────────►</span>
+                  <span className="text-white font-bold">{hoveredEdge.toKey}</span>
                 </div>
 
-                <div className="text-[10px] text-[#787C83] truncate">
+                <div className="text-[10px] text-[var(--text-muted)] truncate">
                   {hoveredEdge.fromTitle} → {hoveredEdge.toTitle}
                 </div>
               </div>

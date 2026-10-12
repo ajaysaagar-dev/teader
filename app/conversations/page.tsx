@@ -406,13 +406,13 @@ export default function ConversationsPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex h-full min-h-0 w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
+      <div className="flex-1 flex h-full min-h-0 w-full overflow-hidden bg-[#0F0F0F] text-[var(--text-secondary)]">
         {/* ─── Left Sidebar: Projects & Channels ─────────────────────── */}
-        <aside className="w-64 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between h-full min-h-0 select-none">
+        <aside className="w-64 shrink-0 bg-[#141414] border-r border-[#141414] flex flex-col justify-between h-full min-h-0 select-none">
           <div>
             {/* Project Switcher Header */}
-            <div className="p-3 border-b border-[#222428]">
-              <label className="text-xs font-medium uppercase tracking-wider text-[#9CA3AF] block mb-1.5">
+            <div className="p-3 border-b border-[#141414]">
+              <label className="text-xs font-medium uppercase tracking-wider text-[var(--text-secondary)] block mb-1.5">
                 Active Project
               </label>
               <CustomDropdown<number>
@@ -423,7 +423,7 @@ export default function ConversationsPage() {
                   label: `${p.name} (${p.key})`,
                 }))}
                 className="w-full"
-                triggerClassName="w-full bg-[#17181C] border border-[#2A2C30] text-white text-xs font-semibold rounded-lg px-3 py-2 hover:border-[#DCB001]/50 focus:border-[#DCB001]"
+                triggerClassName="w-full bg-[#191919] border border-[var(--border-primary)] text-white text-xs font-semibold rounded-lg px-3 py-2 hover:border-[var(--border-secondary)] focus:border-[var(--border-secondary)]"
                 placeholder="Select project..."
               />
             </div>
@@ -431,16 +431,16 @@ export default function ConversationsPage() {
             {/* Channels Navigation */}
             <div className="p-3 space-y-1">
               <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-xs font-medium uppercase tracking-wider text-[#9CA3AF]">
+                <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-secondary)]">
                   Channels
                 </span>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-[#6B7280]">({channels.length})</span>
+                  <span className="text-xs text-[var(--text-muted)]">({channels.length})</span>
                   {/* Admin-only Add Channel Button */}
                   {isUserAdmin && (
                     <button
                       onClick={() => setIsNewChannelModalOpen(true)}
-                      className="p-1 rounded text-[#9CA3AF] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors"
+                      className="p-1 rounded text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)] transition-colors"
                       title="Create New Channel (Admin Only)"
                     >
                       <Plus size={13} />
@@ -463,12 +463,12 @@ export default function ConversationsPage() {
                         onClick={() => setActiveChannel(ch.name)}
                         className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left truncate ${
                           isActive
-                            ? 'bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 font-semibold shadow-sm'
-                            : 'text-[#8E939D] hover:text-white hover:bg-[#16171B]'
+                            ? 'bg-white text-black/15 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
+                            : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#181818]'
                         }`}
                         title={ch.desc || ch.name}
                       >
-                        <Hash size={14} className={isActive ? 'text-[#DCB001] shrink-0' : 'text-[#6B7280] shrink-0'} />
+                        <Hash size={14} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
                         <span className="truncate">{ch.name}</span>
                       </button>
 
@@ -479,7 +479,7 @@ export default function ConversationsPage() {
                             e.stopPropagation();
                             setChannelToDelete(ch.name);
                           }}
-                          className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[#9CA3AF] hover:text-[#EF4444] hover:bg-[#1F2026] rounded transition-all"
+                          className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[var(--text-secondary)] hover:text-white hover:bg-[#222222] rounded transition-all"
                           title={`Delete #${ch.name} (Admin Only)`}
                         >
                           <Trash2 size={12} />
@@ -493,10 +493,10 @@ export default function ConversationsPage() {
           </div>
 
           {/* Quick Info Footer */}
-          <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/60">
-            <div className="flex items-center justify-between text-sm text-[#9CA3AF]">
+          <div className="p-3 border-t border-[#141414] bg-[#000000]/60">
+            <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-white text-black animate-pulse" />
                 <span>Live Sync Active</span>
               </span>
               <span className="font-mono text-xs">{members.length} joined</span>
@@ -505,23 +505,23 @@ export default function ConversationsPage() {
         </aside>
 
         {/* ─── Center: Main Conversation Feed ────────────────────────── */}
-        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#0E0F12]">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#000000]">
           {/* Channel Top Header */}
-          <div className="h-13 px-5 border-b border-[#222428] bg-[#111215]/80 backdrop-blur flex items-center justify-between shrink-0">
+          <div className="h-13 px-5 border-b border-[#141414] bg-[#141414]/80 backdrop-blur flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#191A1E] border border-[#2A2C30] flex items-center justify-center text-[#DCB001] shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-[#1B1B1B] border border-[var(--border-primary)] flex items-center justify-center text-white shrink-0">
                 <Hash size={16} />
               </div>
               <div className="truncate">
                 <h2 className="text-sm font-bold text-white flex items-center gap-2">
                   <span>{activeChannelObj.name}</span>
                   {activeChannelObj.desc && (
-                    <span className="text-xs font-normal text-[#9CA3AF] hidden sm:inline truncate">
+                    <span className="text-xs font-normal text-[var(--text-secondary)] hidden sm:inline truncate">
                       — {activeChannelObj.desc}
                     </span>
                   )}
                 </h2>
-                <p className="text-xs text-[#8E939D] truncate">
+                <p className="text-xs text-[var(--text-secondary)] truncate">
                   {selectedProject?.name} ({selectedProject?.key})
                 </p>
               </div>
@@ -529,7 +529,7 @@ export default function ConversationsPage() {
 
             <div className="flex items-center gap-2">
               {isUserAdmin && (
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-white text-black/15 text-white border border-[var(--border-secondary)]">
                   ADMIN ACCESS
                 </span>
               )}
@@ -540,7 +540,7 @@ export default function ConversationsPage() {
                     toast.success(`Copied Project Key: ${selectedProject.key}`);
                   }
                 }}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#18191D] hover:bg-[#202126] text-[#CFD4DD] hover:text-white border border-[#2B2D33] text-xs font-mono transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1A1A1A] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-white border border-[#2E2E2E] text-xs font-mono transition-colors"
                 title="Copy Project Key"
               >
                 <Copy size={12} />
@@ -552,19 +552,19 @@ export default function ConversationsPage() {
           {/* Messages Feed Area */}
           <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-full text-sm font-mono text-[#9CA3AF] space-y-2">
-                <div className="w-6 h-6 border-2 border-[#DCB001] border-t-transparent rounded-full animate-spin" />
+              <div className="flex flex-col items-center justify-center h-full text-sm font-mono text-[var(--text-secondary)] space-y-2">
+                <div className="w-6 h-6 border-2 border-[var(--border-secondary)] border-t-transparent rounded-full animate-spin" />
                 <span>Loading channel messages...</span>
               </div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-16 select-none">
-                <div className="w-12 h-12 rounded-2xl bg-[#191A1E] border border-[#2A2C30] flex items-center justify-center text-[#DCB001] shadow-lg">
+                <div className="w-12 h-12 rounded-2xl bg-[#1B1B1B] border border-[var(--border-primary)] flex items-center justify-center text-white shadow-lg">
                   <MessageSquare size={22} />
                 </div>
                 <div className="max-w-sm space-y-1">
                   <h3 className="text-sm font-bold text-white">Welcome to #{activeChannelObj.name}!</h3>
-                  <p className="text-sm text-[#9CA3AF]">
-                    This is the start of the <span className="text-[#DCB001]">#{activeChannelObj.name}</span> channel for {selectedProject?.name}. Anyone can send messages!
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    This is the start of the <span className="text-white">#{activeChannelObj.name}</span> channel for {selectedProject?.name}. Anyone can send messages!
                   </p>
                 </div>
               </div>
@@ -584,7 +584,7 @@ export default function ConversationsPage() {
                   <React.Fragment key={`msg_frag_${msg.id ?? 'opt'}_${idx}`}>
                     {showDateSeparator && (
                       <div className="flex items-center justify-center my-3 select-none">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#17181C] border border-[#26282E] text-sm font-mono text-[#9CA3AF]">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#191919] border border-[#292929] text-sm font-mono text-[var(--text-secondary)]">
                           {currentDateLabel}
                         </span>
                       </div>
@@ -600,29 +600,29 @@ export default function ConversationsPage() {
                           avatar: isMe ? (msg.userAvatar || currentUser?.avatar) : msg.userAvatar,
                         }}
                         size="sm"
-                        className={`rounded-lg mt-0.5 shrink-0 ${isMe ? 'ring-1 ring-[#DCB001]/40' : ''}`}
+                        className={`rounded-lg mt-0.5 shrink-0 ${isMe ? 'ring-1 ring-[#FFFFFF]/40' : ''}`}
                       />
 
                       {/* Message Bubble Container */}
                       <div className="flex flex-col min-w-0 max-w-[88%] sm:max-w-[80%] items-start">
                         <div className="flex items-center gap-1.5 px-1 mb-1 select-none">
-                          <span className={`text-xs font-bold truncate ${isMe ? 'text-[#DCB001]' : 'text-white'}`}>
+                          <span className={`text-xs font-bold truncate ${isMe ? 'text-white' : 'text-white'}`}>
                             {isMe ? `${currentUser?.name || msg.userName} (You)` : msg.userName}
                           </span>
 
                           {isOwner && (
-                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-white text-black/15 text-white border border-[var(--border-secondary)]">
                               OWNER
                             </span>
                           )}
 
                           {isAdmin && (
-                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]">
                               ADMIN
                             </span>
                           )}
 
-                          <span className="text-[11px] font-mono text-[#6A6E75]">
+                          <span className="text-[11px] font-mono text-[#6F6F6F]">
                             {msg.createdAt
                               ? new Date(msg.createdAt).toLocaleTimeString([], {
                                   hour: '2-digit',
@@ -635,21 +635,21 @@ export default function ConversationsPage() {
                         <div
                           className={`relative px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                             isMe
-                              ? 'bg-[#DCB001]/10 text-white border border-[#DCB001]/30 rounded-tl-xs'
-                              : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-tl-xs'
+                              ? 'bg-white text-black/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
+                              : 'bg-[#181818] text-[var(--text-secondary)] border border-[#292929] rounded-tl-xs'
                           }`}
                         >
                           {msg.content}
 
                           <div
-                            className="absolute top-1 left-full ml-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#111215]/95 border border-[#2A2C30] rounded-lg p-0.5 shadow-md z-10"
+                            className="absolute top-1 left-full ml-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#141414]/95 border border-[var(--border-primary)] rounded-lg p-0.5 shadow-md z-10"
                           >
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(msg.content);
                                 toast.success('Copied message text');
                               }}
-                              className="p-1 rounded hover:bg-[#202227] text-[#9CA3AF] hover:text-white transition-colors cursor-pointer"
+                              className="p-1 rounded hover:bg-[#232323] text-[var(--text-secondary)] hover:text-white transition-colors cursor-pointer"
                               title="Copy text"
                             >
                               <Copy size={11} />
@@ -658,7 +658,7 @@ export default function ConversationsPage() {
                             {canDelete && (
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
-                                className="p-1 rounded hover:bg-[#202227] text-[#9CA3AF] hover:text-[#EF4444] transition-colors cursor-pointer"
+                                className="p-1 rounded hover:bg-[#232323] text-[var(--text-secondary)] hover:text-white transition-colors cursor-pointer"
                                 title={isUserAdmin && !isMe ? 'Delete (Admin)' : 'Delete'}
                               >
                                 <Trash2 size={11} />
@@ -676,10 +676,10 @@ export default function ConversationsPage() {
           </div>
 
           {/* Bottom Chat Input Bar */}
-          <div className="p-4 border-t border-[#222428] bg-[#111215]/90 shrink-0">
+          <div className="p-4 border-t border-[#141414] bg-[#141414]/90 shrink-0">
             {/* Quick Emoji Bar */}
             {showEmojiPicker && (
-              <div className="flex items-center gap-1.5 mb-2.5 p-2 bg-[#17181C] border border-[#2A2C30] rounded-xl select-none">
+              <div className="flex items-center gap-1.5 mb-2.5 p-2 bg-[#191919] border border-[var(--border-primary)] rounded-xl select-none">
                 {EMOJIS.map((emoji) => (
                   <button
                     key={emoji}
@@ -688,7 +688,7 @@ export default function ConversationsPage() {
                       setShowEmojiPicker(false);
                       inputRef.current?.focus();
                     }}
-                    className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#24262B] rounded-lg transition-transform hover:scale-125"
+                    className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#272727] rounded-lg transition-transform hover:scale-125"
                   >
                     {emoji}
                   </button>
@@ -696,7 +696,7 @@ export default function ConversationsPage() {
               </div>
             )}
 
-            <div className="flex items-end gap-2 bg-[#17181C] border border-[#2A2C30] focus-within:border-[#DCB001] rounded-xl p-2 transition-colors">
+            <div className="flex items-end gap-2 bg-[#191919] border border-[var(--border-primary)] focus-within:border-[var(--border-secondary)] rounded-xl p-2 transition-colors">
               <textarea
                 ref={inputRef}
                 value={inputValue}
@@ -704,7 +704,7 @@ export default function ConversationsPage() {
                 onKeyDown={handleKeyDown}
                 placeholder={`Message #${activeChannelObj.name}... (Enter to send, Shift+Enter for new line)`}
                 rows={1}
-                className="flex-1 bg-transparent text-sm text-white placeholder-[#686C74] focus:outline-none resize-none max-h-32 min-h-[36px] py-2 px-1"
+                className="flex-1 bg-transparent text-sm text-white placeholder-[#6D6D6D] focus:outline-none resize-none max-h-32 min-h-[36px] py-2 px-1"
               />
 
               <div className="flex items-center gap-1 shrink-0 pb-1">
@@ -713,8 +713,8 @@ export default function ConversationsPage() {
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className={`p-1.5 rounded-lg transition-colors ${
                     showEmojiPicker
-                      ? 'bg-[#DCB001]/20 text-[#DCB001]'
-                      : 'text-[#9CA3AF] hover:text-white hover:bg-[#222428]'
+                      ? 'bg-white text-black/20 text-white'
+                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
                   }`}
                   title="Add emoji"
                 >
@@ -725,7 +725,7 @@ export default function ConversationsPage() {
                   type="button"
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isSending}
-                  className="p-2 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] disabled:bg-[#222428] text-[#0A0B0D] disabled:text-[#6B7280] font-bold transition-all shadow-md"
+                  className="p-2 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] text-[#000000] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md"
                   title="Send message (Enter)"
                 >
                   <Send size={14} />
@@ -736,28 +736,28 @@ export default function ConversationsPage() {
         </main>
 
         {/* ─── Right Sidebar: Joined Persons in this Project ─────────── */}
-        <aside className="w-72 shrink-0 bg-[#111215] border-l border-[#222428] hidden lg:flex flex-col h-full min-h-0 select-none">
+        <aside className="w-72 shrink-0 bg-[#141414] border-l border-[#141414] hidden lg:flex flex-col h-full min-h-0 select-none">
           {/* Header */}
-          <div className="p-3.5 border-b border-[#222428] space-y-2.5">
+          <div className="p-3.5 border-b border-[#141414] space-y-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users size={15} className="text-[#DCB001]" />
+                <Users size={15} className="text-white" />
                 <h3 className="text-sm font-bold text-white tracking-tight">Joined Persons</h3>
               </div>
-              <span className="px-1.5 py-0.5 rounded text-xs font-mono bg-[#1E2024] text-[#DCB001] border border-[#2B2D33]">
+              <span className="px-1.5 py-0.5 rounded text-xs font-mono bg-[var(--bg-card)] text-white border border-[#2E2E2E]">
                 {members.length}
               </span>
             </div>
 
             {/* Member Search */}
             <div className="relative">
-              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#7B8290]" />
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#848484]" />
               <input
                 type="text"
                 value={searchMember}
                 onChange={(e) => setSearchMember(e.target.value)}
                 placeholder="Search joined members..."
-                className="w-full bg-[#17181C] border border-[#25272C] text-white text-xs rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[#DCB001] placeholder-[#585C60]"
+                className="w-full bg-[#191919] border border-[#282828] text-white text-xs rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[var(--border-secondary)] placeholder-[#666666]"
               />
             </div>
           </div>
@@ -765,7 +765,7 @@ export default function ConversationsPage() {
           {/* Members List */}
           <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
             {filteredMembers.length === 0 ? (
-              <div className="text-center py-8 text-xs font-mono text-[#7B8290]">
+              <div className="text-center py-8 text-xs font-mono text-[#848484]">
                 No members match search
               </div>
             ) : (
@@ -776,7 +776,7 @@ export default function ConversationsPage() {
                 return (
                   <div
                     key={`member_${m.userId || m.id}_${idx}`}
-                    className="flex items-center gap-3 p-2 rounded-xl bg-[#16171B] border border-[#222428] hover:border-[#2C2E35] transition-colors"
+                    className="flex items-center gap-3 p-2 rounded-xl bg-[#181818] border border-[#141414] hover:border-[#303030] transition-colors"
                   >
                     <div className="relative shrink-0">
                       <Avatar
@@ -784,7 +784,7 @@ export default function ConversationsPage() {
                         size="md"
                         className="rounded-lg"
                       />
-                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#16171B] rounded-full" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-white text-black border-2 border-[#181818] rounded-full" />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -795,16 +795,16 @@ export default function ConversationsPage() {
                         <span
                           className={`text-[11px] font-mono uppercase font-bold px-1.5 py-0.2 rounded border ${
                             isOwner
-                              ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
+                              ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
                               : isAdmin
-                              ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                              : 'bg-[#202227] text-[#8E939D] border-[#2D3036]'
+                              ? 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]'
+                              : 'bg-[#232323] text-[var(--text-secondary)] border-[#313131]'
                           }`}
                         >
                           {m.role || 'member'}
                         </span>
                       </div>
-                      <p className="text-xs font-mono text-[#7B8290] truncate">
+                      <p className="text-xs font-mono text-[#848484] truncate">
                         {m.userEmail}
                       </p>
                     </div>
@@ -815,10 +815,10 @@ export default function ConversationsPage() {
           </div>
 
           {/* Project Details Bottom Card */}
-          <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/80 space-y-1.5">
+          <div className="p-3 border-t border-[#141414] bg-[#000000]/80 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-white">Project Key</span>
-              <span className="font-mono text-[#9CA3AF]">Share to join</span>
+              <span className="font-mono text-[var(--text-secondary)]">Share to join</span>
             </div>
             <div
               onClick={() => {
@@ -827,10 +827,10 @@ export default function ConversationsPage() {
                   toast.success(`Copied Project Key: ${selectedProject.key}`);
                 }
               }}
-              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#16171B] border border-[#27292F] hover:border-[#DCB001]/40 text-xs font-mono text-[#DCB001] cursor-pointer transition-colors"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#181818] border border-[#2A2A2A] hover:border-[var(--border-secondary)] text-xs font-mono text-white cursor-pointer transition-colors"
             >
               <span className="truncate">{selectedProject?.key || 'PRJ...'}</span>
-              <Copy size={13} className="shrink-0 text-[#8E939D]" />
+              <Copy size={13} className="shrink-0 text-[var(--text-secondary)]" />
             </div>
           </div>
         </aside>
@@ -838,20 +838,20 @@ export default function ConversationsPage() {
         {/* ─── Admin Modal: Create New Channel ───────────────────────── */}
         {isNewChannelModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md bg-[#16171A] border border-[#2A2C30] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-3 border-b border-[#2A2C30]">
+            <div className="w-full max-w-md bg-[#141414] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-white text-black/15 text-white flex items-center justify-center">
                     <Hash size={16} />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">Create New Channel</h3>
-                    <p className="text-sm text-[#9CA3AF]">Admins can create project channels for topic discussions.</p>
+                    <p className="text-sm text-[var(--text-secondary)]">Admins can create project channels for topic discussions.</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsNewChannelModalOpen(false)}
-                  className="p-1 rounded-lg text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
+                  className="p-1 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#141414] transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -859,29 +859,29 @@ export default function ConversationsPage() {
 
               <form onSubmit={handleCreateChannel} className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-[#CFD4DD]">Channel Name</label>
-                  <div className="flex items-center gap-1.5 bg-[#101113] border border-[#2A2C30] focus-within:border-[#DCB001] rounded-xl px-3 py-2">
-                    <span className="text-sm font-mono text-[#9CA3AF]">#</span>
+                  <label className="text-sm font-semibold text-[var(--text-secondary)]">Channel Name</label>
+                  <div className="flex items-center gap-1.5 bg-[#111111] border border-[var(--border-primary)] focus-within:border-[var(--border-secondary)] rounded-xl px-3 py-2">
+                    <span className="text-sm font-mono text-[var(--text-secondary)]">#</span>
                     <input
                       type="text"
                       required
                       value={newChannelName}
                       onChange={(e) => setNewChannelName(e.target.value)}
                       placeholder="e.g. backend-api, release-v2"
-                      className="w-full bg-transparent text-sm text-white placeholder-[#585C60] outline-none"
+                      className="w-full bg-transparent text-sm text-white placeholder-[#666666] outline-none"
                       autoFocus
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-[#CFD4DD]">Description (Optional)</label>
+                  <label className="text-sm font-semibold text-[var(--text-secondary)]">Description (Optional)</label>
                   <textarea
                     value={newChannelDesc}
                     onChange={(e) => setNewChannelDesc(e.target.value)}
                     placeholder="What is this channel for?"
                     rows={2}
-                    className="w-full bg-[#101113] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl p-3 text-sm text-white placeholder-[#585C60] outline-none resize-none"
+                    className="w-full bg-[#111111] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-xl p-3 text-sm text-white placeholder-[#666666] outline-none resize-none"
                   />
                 </div>
 
@@ -889,14 +889,14 @@ export default function ConversationsPage() {
                   <button
                     type="button"
                     onClick={() => setIsNewChannelModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-white hover:bg-[#141414] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!newChannelName.trim() || isCreatingChannel}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[#DCB001] hover:bg-[#c49c00] disabled:bg-[#2A2C30] text-[#0F1011] disabled:text-[#6B7280] rounded-xl text-sm font-bold shadow-md transition-all"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] text-[#000000] disabled:text-[var(--text-muted)] rounded-xl text-sm font-bold shadow-md transition-all"
                   >
                     {isCreatingChannel ? (
                       <>
@@ -916,14 +916,14 @@ export default function ConversationsPage() {
         {/* ─── Admin Modal: Delete Channel Confirmation ──────────────── */}
         {channelToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-sm bg-[#16171A] border border-[#EF4444]/40 rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-full max-w-sm bg-[#141414] border border-[var(--border-secondary)] rounded-2xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#EF4444]/15 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-[var(--ramp-3)]/15 border border-[var(--border-secondary)] flex items-center justify-center text-white shrink-0">
                   <AlertTriangle size={20} />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Delete Channel #{channelToDelete}?</h3>
-                  <p className="text-sm text-[#9CA3AF]">All messages in this channel will be permanently removed.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">All messages in this channel will be permanently removed.</p>
                 </div>
               </div>
 
@@ -931,7 +931,7 @@ export default function ConversationsPage() {
                 <button
                   type="button"
                   onClick={() => setChannelToDelete(null)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[#9CA3AF] hover:text-white hover:bg-[#202226] transition-colors"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-[var(--text-secondary)] hover:text-white hover:bg-[#141414] transition-colors"
                 >
                   Cancel
                 </button>
@@ -939,7 +939,7 @@ export default function ConversationsPage() {
                   type="button"
                   disabled={isDeletingChannel}
                   onClick={() => handleDeleteChannel(channelToDelete)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-xl text-sm font-bold shadow-md transition-all"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white rounded-xl text-sm font-bold shadow-md transition-all"
                 >
                   {isDeletingChannel ? (
                     <>

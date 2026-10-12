@@ -79,9 +79,9 @@ export const DesktopUpdateModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-200 select-none">
-      <div className="w-full max-w-md bg-[#141518] border border-[#2A2C30] rounded-2xl p-6 shadow-2xl relative text-left">
+      <div className="w-full max-w-md bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl relative text-left">
         {/* Header Icon */}
-        <div className="w-12 h-12 rounded-xl bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001] mb-4">
+        <div className="w-12 h-12 rounded-xl bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white mb-4">
           <Download className="w-6 h-6 animate-bounce" />
         </div>
 
@@ -89,36 +89,36 @@ export const DesktopUpdateModal: React.FC = () => {
         <h2 className="text-lg font-bold text-white tracking-tight mb-1">
           Update Required to Enter
         </h2>
-        <p className="text-xs text-[#9BA1A6] mb-4">
-          Teader Workspace <span className="text-[#DCB001] font-semibold">v{TARGET_DISPLAY_VERSION}</span> is required to enter. Please update to proceed. (Currently running v{currentVersion})
+        <p className="text-xs text-[var(--text-secondary)] mb-4">
+          Teader Workspace <span className="text-white font-semibold">v{TARGET_DISPLAY_VERSION}</span> is required to enter. Please update to proceed. (Currently running v{currentVersion})
         </p>
 
         {/* Release details card */}
-        <div className="bg-[#0E0F12] border border-[#232529] rounded-xl p-3 mb-5 text-xs space-y-1.5 text-[#CFD4DD]">
+        <div className="bg-[#000000] border border-[#262626] rounded-xl p-3 mb-5 text-xs space-y-1.5 text-[var(--text-secondary)]">
           <div className="flex items-center gap-2 text-white font-medium">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
+            <span className="w-2 h-2 rounded-full bg-[var(--ramp-3)]" />
             What&apos;s new in v{TARGET_DISPLAY_VERSION}:
           </div>
-          <p className="text-[#9BA1A6] pl-4">• Stable desktop rendering with native DirectWrite typography.</p>
-          <p className="text-[#9BA1A6] pl-4">• AI voice denoise & extreme neural spectral isolation.</p>
-          <p className="text-[#9BA1A6] pl-4">• Unthrottled background meeting audio during multitasking and screen sharing.</p>
-          <p className="text-[#9BA1A6] pl-4">• Direct webview support and external framing restriction bypass.</p>
-          <p className="text-[#9BA1A6] pl-4">• Automatic download and installation engine.</p>
+          <p className="text-[var(--text-secondary)] pl-4">• Stable desktop rendering with native DirectWrite typography.</p>
+          <p className="text-[var(--text-secondary)] pl-4">• AI voice denoise & extreme neural spectral isolation.</p>
+          <p className="text-[var(--text-secondary)] pl-4">• Unthrottled background meeting audio during multitasking and screen sharing.</p>
+          <p className="text-[var(--text-secondary)] pl-4">• Direct webview support and external framing restriction bypass.</p>
+          <p className="text-[var(--text-secondary)] pl-4">• Automatic download and installation engine.</p>
         </div>
 
         {/* Progress Bar / Status during download */}
         {status === 'downloading' && (
           <div className="mb-5 space-y-2">
-            <div className="flex justify-between items-center text-xs text-[#9BA1A6]">
+            <div className="flex justify-between items-center text-xs text-[var(--text-secondary)]">
               <span className="flex items-center gap-1.5 text-white">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#DCB001]" />
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
                 Downloading installer...
               </span>
-              <span className="font-mono text-[#DCB001]">{progress}%</span>
+              <span className="font-mono text-white">{progress}%</span>
             </div>
-            <div className="w-full bg-[#232529] rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-[#262626] rounded-full h-2 overflow-hidden">
               <div
-                className="bg-[#DCB001] h-full transition-all duration-300 ease-out rounded-full"
+                className="bg-white text-black h-full transition-all duration-300 ease-out rounded-full"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -127,11 +127,11 @@ export const DesktopUpdateModal: React.FC = () => {
 
         {/* Completion Notice */}
         {status === 'completed' && (
-          <div className="mb-5 p-3 rounded-xl bg-[#22C55E]/10 border border-[#22C55E]/30 text-xs text-[#22C55E] flex items-start gap-2.5">
+          <div className="mb-5 p-3 rounded-xl bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] text-xs text-white flex items-start gap-2.5">
             <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold text-white">Installer Downloaded!</p>
-              <p className="text-[#9BA1A6] mt-0.5">
+              <p className="text-[var(--text-secondary)] mt-0.5">
                 Launching installer now. Closing Teader to finish update...
               </p>
             </div>
@@ -140,11 +140,11 @@ export const DesktopUpdateModal: React.FC = () => {
 
         {/* Error Notice */}
         {status === 'error' && (
-          <div className="mb-5 p-3 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/30 text-xs text-[#EF4444] flex items-start gap-2.5">
+          <div className="mb-5 p-3 rounded-xl bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] text-xs text-white flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <div>
               <p className="font-semibold text-white">Update Error</p>
-              <p className="text-[#EF4444] mt-0.5">{errorMessage}</p>
+              <p className="text-white mt-0.5">{errorMessage}</p>
             </div>
           </div>
         )}
@@ -155,7 +155,7 @@ export const DesktopUpdateModal: React.FC = () => {
             <button
               type="button"
               onClick={handleStartUpdate}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-[#DCB001] hover:bg-[#E5B800] active:scale-[0.98] rounded-xl shadow-lg transition-all cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-white text-black hover:bg-[#FFFFFF] active:scale-[0.98] rounded-xl shadow-lg transition-all cursor-pointer"
             >
               <Download className="w-4 h-4" />
               Update Now to v{TARGET_DISPLAY_VERSION}
@@ -163,7 +163,7 @@ export const DesktopUpdateModal: React.FC = () => {
           )}
 
           {status === 'downloading' && (
-            <div className="text-center text-xs text-[#787C83] italic py-2">
+            <div className="text-center text-xs text-[var(--text-muted)] italic py-2">
               Please wait while update downloads and installs...
             </div>
           )}
@@ -172,7 +172,7 @@ export const DesktopUpdateModal: React.FC = () => {
             <button
               type="button"
               onClick={handleCloseElectron}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-white bg-[#C0393B] hover:bg-[#A82E30] rounded-xl shadow-lg transition-all cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-white bg-[#FFFFFF] hover:bg-[#FFFFFF] rounded-xl shadow-lg transition-all cursor-pointer"
             >
               Close Teader Now
             </button>
@@ -182,7 +182,7 @@ export const DesktopUpdateModal: React.FC = () => {
             <button
               type="button"
               onClick={handleStartUpdate}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-[#DCB001] hover:bg-[#E5B800] rounded-xl shadow-lg transition-all cursor-pointer"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 text-sm font-bold text-black bg-white text-black hover:bg-[#FFFFFF] rounded-xl shadow-lg transition-all cursor-pointer"
             >
               <RefreshCw className="w-4 h-4" />
               Retry Update Now

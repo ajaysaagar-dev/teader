@@ -128,25 +128,25 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
     : 0;
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[#131415] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
+    <div className="flex-1 h-full min-h-0 w-full overflow-hidden bg-[var(--bg-canvas)] p-3 flex flex-col space-y-2.5 select-none font-sans text-xs">
       {/* Top Filter & Hierarchy Control Bar */}
-      <div className="flex items-center justify-between gap-2.5 bg-[#1B1C1F] px-3 py-2 rounded-lg border border-[#2A2C30] shrink-0">
+      <div className="flex items-center justify-between gap-2.5 bg-[var(--bg-panel)] px-3 py-2 rounded-lg border border-[var(--border-primary)] shrink-0">
         {/* Left Controls: Search & Grouping */}
         <div className="flex items-center gap-2 flex-1 max-w-xl">
           {/* Search Box */}
           <div className="relative flex-1 min-w-[140px]">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#787C83]" />
+            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="Filter tasks or folders..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-7 py-1 bg-[#131415] border border-[#2A2C30] rounded-md text-xs text-[#CFD4DD] placeholder-[#787C83] focus:border-[#DCB001] outline-none"
+              className="w-full pl-7 pr-7 py-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md text-xs text-[var(--text-secondary)] placeholder-[#666666] focus:border-[var(--border-secondary)] outline-none"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#787C83] hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white"
               >
                 <X size={12} />
               </button>
@@ -154,9 +154,9 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
           </div>
 
           {/* Group By Selector */}
-          <div className="flex items-center gap-1.5 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded-md shrink-0">
-            <Layers size={12} className="text-[#DCB001]" />
-            <span className="text-[10px] text-[#787C83] uppercase font-mono font-bold">Group:</span>
+          <div className="flex items-center gap-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded-md shrink-0">
+            <Layers size={12} className="text-white" />
+            <span className="text-[10px] text-[var(--text-muted)] uppercase font-mono font-bold">Group:</span>
             <CustomDropdown<GroupByMode>
               value={groupBy}
               onChange={(val) => setGroupBy(val)}
@@ -166,7 +166,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                 { value: 'assignee', label: 'Assignee' },
                 { value: 'flat', label: 'Flat List' },
               ]}
-              triggerClassName="bg-transparent border-0 text-xs text-[#CFD4DD] font-medium p-0 hover:text-white"
+              triggerClassName="bg-transparent border-0 text-xs text-[var(--text-secondary)] font-medium p-0 hover:text-white"
               size="xs"
             />
           </div>
@@ -182,17 +182,17 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
               { value: 'medium', label: 'Medium' },
               { value: 'low', label: 'Low' },
             ]}
-            triggerClassName="bg-[#131415] border border-[#2A2C30] text-xs text-[#CFD4DD] px-2 py-1 rounded-md hover:border-[#DCB001]/50"
+            triggerClassName="bg-[var(--bg-canvas)] border border-[var(--border-primary)] text-xs text-[var(--text-secondary)] px-2 py-1 rounded-md hover:border-[var(--border-secondary)]"
             size="xs"
           />
         </div>
 
         {/* Right Controls: Expand / Collapse All & New Task Button */}
         <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] rounded-md p-0.5 text-xs text-[#787C83]">
+          <div className="flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md p-0.5 text-xs text-[var(--text-muted)]">
             <button
               onClick={handleExpandAll}
-              className="px-2 py-0.5 hover:text-white hover:bg-[#1B1C1F] rounded transition-colors flex items-center gap-1"
+              className="px-2 py-0.5 hover:text-white hover:bg-[var(--bg-panel)] rounded transition-colors flex items-center gap-1"
               title="Expand All"
             >
               <Maximize2 size={11} />
@@ -200,7 +200,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
             </button>
             <button
               onClick={handleCollapseAll}
-              className="px-2 py-0.5 hover:text-white hover:bg-[#1B1C1F] rounded transition-colors flex items-center gap-1"
+              className="px-2 py-0.5 hover:text-white hover:bg-[var(--bg-panel)] rounded transition-colors flex items-center gap-1"
               title="Collapse All"
             >
               <Minimize2 size={11} />
@@ -211,7 +211,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
           {/* New Task Button */}
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1.5 px-3 py-1 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-md font-bold text-xs transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-md font-bold text-xs transition-colors shadow-sm"
           >
             <Plus size={13} className="stroke-[2.5]" />
             <span>New Task</span>
@@ -222,10 +222,10 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
       {/* Main Hierarchical Tree Body */}
       <div className="flex-1 min-h-0 w-full overflow-y-auto space-y-2 pr-0.5 custom-scrollbar">
         {groups.length === 0 ? (
-          <div className="h-48 flex flex-col items-center justify-center text-center p-6 bg-[#1B1C1F] rounded-xl border border-[#2A2C30]">
-            <Layers size={28} className="text-[#787C83] mb-2 stroke-[1.5]" />
+          <div className="h-48 flex flex-col items-center justify-center text-center p-6 bg-[var(--bg-panel)] rounded-xl border border-[var(--border-primary)]">
+            <Layers size={28} className="text-[var(--text-muted)] mb-2 stroke-[1.5]" />
             <p className="text-sm font-semibold text-white">No tasks match your search filter</p>
-            <p className="text-xs text-[#787C83] mt-1">Try changing the search keyword or priority filters.</p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">Try changing the search keyword or priority filters.</p>
           </div>
         ) : (
           groups.map((group) => {
@@ -237,24 +237,24 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
             const isPartiallyDone = group.issues.length > 0 && completedCount > 0 && completedCount < group.issues.length;
             const isAllDone = group.issues.length > 0 && completedCount === group.issues.length;
 
-            let headerBg = 'bg-[#16171A] hover:bg-[#1C1D21] border-[#2A2C30]/70';
-            let iconBox = 'bg-[#DCB001]/10 border-[#DCB001]/30 text-[#DCB001]';
+            let headerBg = 'bg-[#141414] hover:bg-[#141414] border-[var(--border-primary)]';
+            let iconBox = 'bg-white text-black/10 border-[var(--border-secondary)] text-white';
 
             if (isNoneDone) {
-              headerBg = 'bg-[#16130D] hover:bg-[#1C1810] border-[#F59E0B]/40 shadow-[inset_3px_0_0_#F59E0B]';
-              iconBox = 'bg-[#F59E0B]/15 border-[#F59E0B]/35 text-[#F59E0B]';
+              headerBg = 'bg-[#121212] hover:bg-[#171717] border-[#FFFFFF]/40 shadow-[inset_3px_0_0_#FFFFFF]';
+              iconBox = 'bg-white text-black/15 border-[#FFFFFF]/35 text-white';
             } else if (isPartiallyDone) {
-              headerBg = 'bg-[#0B141D] hover:bg-[#0E1A26] border-[#0EA5E9]/45 shadow-[inset_3px_0_0_#0EA5E9]';
-              iconBox = 'bg-[#0EA5E9]/15 border-[#0EA5E9]/40 text-[#38BDF8]';
+              headerBg = 'bg-[#141414] hover:bg-[#1A1A1A] border-[#FFFFFF]/45 shadow-[inset_3px_0_0_#FFFFFF]';
+              iconBox = 'bg-[#FFFFFF]/15 border-[#FFFFFF]/40 text-white';
             } else if (isAllDone) {
-              headerBg = 'bg-[#0A160F] hover:bg-[#0D1E14] border-[#22C55E]/40 shadow-[inset_3px_0_0_#22C55E]';
-              iconBox = 'bg-[#22C55E]/15 border-[#22C55E]/40 text-[#22C55E]';
+              headerBg = 'bg-[#101010] hover:bg-[#151515] border-[var(--border-secondary)] shadow-[inset_3px_0_0_#FFFFFF]';
+              iconBox = 'bg-[var(--ramp-3)]/15 border-[var(--border-secondary)] text-white';
             }
 
             return (
               <div
                 key={group.id}
-                className="bg-[#1B1C1F] border border-[#2A2C30] rounded-xl overflow-hidden shadow-sm transition-all"
+                className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl overflow-hidden shadow-sm transition-all"
               >
                 {/* Level 1: Folder / Group Header */}
                 <div
@@ -268,7 +268,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                         e.stopPropagation();
                         toggleGroupCollapse(group.id);
                       }}
-                      className="text-[#787C83] hover:text-white p-0.5"
+                      className="text-[var(--text-muted)] hover:text-white p-0.5"
                     >
                       {isGroupCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                     </button>
@@ -282,7 +282,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                         {group.title}
                       </span>
                       {group.subtitle && (
-                        <span className="ml-2 text-[10px] font-mono text-[#787C83] hidden sm:inline">
+                        <span className="ml-2 text-[10px] font-mono text-[var(--text-muted)] hidden sm:inline">
                           ({group.subtitle})
                         </span>
                       )}
@@ -292,27 +292,27 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                   {/* Right: Progress Meter & Stats */}
                   <div className="flex items-center gap-3 shrink-0">
                     {isNoneDone ? (
-                      <span className="text-[10px] font-mono font-bold text-[#F59E0B] bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/35 flex items-center gap-1">
+                      <span className="text-[10px] font-mono font-bold text-white bg-white text-black/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/35 flex items-center gap-1">
                         0/{group.issues.length} Done (Pending)
                       </span>
                     ) : isPartiallyDone ? (
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold text-[#38BDF8] bg-[#0EA5E9]/15 px-2 py-0.5 rounded-full border border-[#0EA5E9]/40 flex items-center gap-1">
+                        <span className="text-[10px] font-mono font-bold text-white bg-[#FFFFFF]/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/40 flex items-center gap-1">
                           {completedCount}/{group.issues.length} Done ({progress}%)
                         </span>
-                        <div className="w-16 h-1.5 rounded-full bg-[#142334] overflow-hidden hidden sm:block border border-[#0EA5E9]/30">
+                        <div className="w-16 h-1.5 rounded-full bg-[#242424] overflow-hidden hidden sm:block border border-[#FFFFFF]/30">
                           <div
-                            className="h-full bg-[#38BDF8] transition-all duration-300 rounded-full"
+                            className="h-full bg-[var(--ramp-3)] transition-all duration-300 rounded-full"
                             style={{ width: `${progress}%` }}
                           />
                         </div>
                       </div>
                     ) : isAllDone ? (
-                      <span className="text-[10px] font-mono font-bold text-[#22C55E] bg-[#22C55E]/15 px-2 py-0.5 rounded-full border border-[#22C55E]/40 flex items-center gap-1">
+                      <span className="text-[10px] font-mono font-bold text-white bg-[var(--ramp-3)]/15 px-2 py-0.5 rounded-full border border-[var(--border-secondary)] flex items-center gap-1">
                         {completedCount}/{group.issues.length} Done (100%)
                       </span>
                     ) : (
-                      <span className="text-[10px] font-mono text-[#787C83] bg-[#111214] px-2 py-0.5 rounded-full border border-[#2A2C30]">
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[#121212] px-2 py-0.5 rounded-full border border-[var(--border-primary)]">
                         0 tasks (Empty)
                       </span>
                     )}
@@ -321,9 +321,9 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
 
                 {/* Level 2: Tasks List Inside Folder */}
                 {!isGroupCollapsed && (
-                  <div className="divide-y divide-[#2A2C30]/40">
+                  <div className="divide-y divide-[var(--border-primary)]">
                     {group.issues.length === 0 && (
-                      <div className="px-6 py-4 text-center text-xs text-[#787C83] italic">
+                      <div className="px-6 py-4 text-center text-xs text-[var(--text-muted)] italic">
                         No tasks inside this folder.
                       </div>
                     )}
@@ -343,17 +343,17 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                           {/* Level 2: Task Row */}
                           <div
                             onClick={() => onSelectIssue(issue.id)}
-                            className="px-4 py-2.5 flex items-center justify-between hover:bg-[#131415] cursor-pointer transition-colors text-xs relative z-10"
+                            className="px-4 py-2.5 flex items-center justify-between hover:bg-[var(--bg-canvas)] cursor-pointer transition-colors text-xs relative z-10"
                           >
                             {/* Left: Key, Title */}
                             <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
                               {/* Task Key */}
-                              <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0">
+                              <span className="font-mono text-[11px] font-bold text-white shrink-0">
                                 {issue.key}
                               </span>
 
                               {/* Task Title */}
-                              <span className="font-medium text-[#CFD4DD] group-hover/task:text-white truncate">
+                              <span className="font-medium text-[var(--text-secondary)] group-hover/task:text-white truncate">
                                 {issue.title}
                               </span>
                             </div>
@@ -372,12 +372,12 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                                 ]}
                                 triggerClassName={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border ${
                                   issue.status === 'done'
-                                    ? 'bg-[#22C55E]/15 text-[#22C55E] border-[#22C55E]/30'
+                                    ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)]'
                                     : issue.status === 'in_progress'
-                                    ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
+                                    ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
                                     : issue.status === 'needs_review'
-                                    ? 'bg-[#3B82F6]/15 text-[#3B82F6] border-[#3B82F6]/30'
-                                    : 'bg-[#2A2C30] text-[#787C83] border-[#2A2C30]'
+                                    ? 'bg-[#FFFFFF]/15 text-white border-[#FFFFFF]/30'
+                                    : 'bg-[#222222] text-[var(--text-muted)] border-[var(--border-primary)]'
                                 }`}
                                 size="xs"
                                 showChevron={false}
@@ -388,10 +388,10 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                               <span
                                 className={`text-[9px] font-mono uppercase font-semibold px-1.5 py-0.5 rounded ${
                                   issue.priority === 'critical'
-                                    ? 'bg-[#C0393B]/20 text-[#C0393B]'
+                                    ? 'bg-[#FFFFFF]/20 text-[#FFFFFF]'
                                     : issue.priority === 'high'
-                                    ? 'bg-[#DCB001]/20 text-[#DCB001]'
-                                    : 'bg-[#2A2C30] text-[#787C83]'
+                                    ? 'bg-white text-black/20 text-white'
+                                    : 'bg-[#222222] text-[var(--text-muted)]'
                                 }`}
                               >
                                 {issue.priority}
@@ -400,7 +400,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                               {/* Assignee Avatar */}
                               <div className="flex items-center gap-1.5 min-w-[70px]">
                                 <Avatar user={assigneeUser} size="xs" />
-                                <span className="text-[10px] text-[#787C83] font-mono truncate max-w-[65px]">
+                                <span className="text-[10px] text-[var(--text-muted)] font-mono truncate max-w-[65px]">
                                   {assigneeUser.name}
                                 </span>
                               </div>

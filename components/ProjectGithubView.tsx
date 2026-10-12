@@ -83,24 +83,24 @@ interface ProjectGithubViewProps {
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
-  TypeScript: '#3178C6',
-  JavaScript: '#F7DF1E',
-  Python: '#3776AB',
-  Rust: '#DEA584',
-  Go: '#00ADD8',
-  Java: '#B07219',
-  'C++': '#F34B7D',
+  TypeScript: '#FFFFFF',
+  JavaScript: '#FFFFFF',
+  Python: '#FFFFFF',
+  Rust: '#FFFFFF',
+  Go: '#FFFFFF',
+  Java: '#FFFFFF',
+  'C++': '#FFFFFF',
   C: '#555555',
-  'C#': '#178600',
-  PHP: '#4F5D95',
-  Ruby: '#701516',
-  Swift: '#F05138',
-  Kotlin: '#A97BFF',
-  Dart: '#00B4AB',
-  HTML: '#E34C26',
-  CSS: '#563D7C',
-  Shell: '#89E051',
-  Vue: '#41B883',
+  'C#': '#1E1E1E',
+  PHP: '#FFFFFF',
+  Ruby: '#1E1E1E',
+  Swift: '#FFFFFF',
+  Kotlin: '#FFFFFF',
+  Dart: '#FFFFFF',
+  HTML: '#FFFFFF',
+  CSS: '#1E1E1E',
+  Shell: '#FFFFFF',
+  Vue: '#FFFFFF',
 };
 
 function getIframeSrc(url: string): string {
@@ -465,23 +465,23 @@ export function ProjectGithubView({
   // If in embedded browser view
   if (embeddedUrl) {
     return (
-      <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0E0F12] text-[#CFD4DD] overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-h-0 bg-[#000000] text-[var(--text-secondary)] overflow-hidden">
         {/* Top Browser Bar */}
-        <div className="h-12 border-b border-[#2A2C30] bg-[#141518] px-3 flex items-center justify-between gap-3 shrink-0">
+        <div className="h-12 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] px-3 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setEmbeddedUrl(null)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] transition-colors cursor-pointer"
               title="Back to Repository List"
             >
               <ArrowLeft size={14} />
               <span>Repos</span>
             </button>
-            <div className="h-4 w-px bg-[#2A2C30]" />
+            <div className="h-4 w-px bg-[#222222]" />
             <span className="text-xs font-bold text-white tracking-tight">{embeddedTitle || 'GitHub'}</span>
           </div>
 
-          <div className="flex-1 max-w-xl min-w-0 bg-[#0E0F12] border border-[#2A2C30] rounded-lg px-3 py-1 text-xs text-[#787C83] font-mono truncate">
+          <div className="flex-1 max-w-xl min-w-0 bg-[#000000] border border-[var(--border-primary)] rounded-lg px-3 py-1 text-xs text-[var(--text-muted)] font-mono truncate">
             {embeddedUrl}
           </div>
 
@@ -491,14 +491,14 @@ export function ProjectGithubView({
                 setIsLoadingIframe(true);
                 setIframeKey((k) => k + 1);
               }}
-              className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
               title="Reload"
             >
-              <RotateCw size={14} className={isLoadingIframe ? 'animate-spin text-[#DCB001]' : ''} />
+              <RotateCw size={14} className={isLoadingIframe ? 'animate-spin text-white' : ''} />
             </button>
             <button
               onClick={() => window.open(embeddedUrl, '_blank')}
-              className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
               title="Open in New Tab"
             >
               <ExternalLink size={14} />
@@ -507,11 +507,11 @@ export function ProjectGithubView({
         </div>
 
         {/* Embedded Iframe */}
-        <div className="flex-1 w-full h-full min-h-0 relative bg-[#0D0E11] overflow-hidden">
+        <div className="flex-1 w-full h-full min-h-0 relative bg-[#0F0F0F] overflow-hidden">
           {isLoadingIframe && (
-            <div className="absolute inset-0 bg-[#141518]/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 pointer-events-none">
-              <div className="w-8 h-8 rounded-full border-2 border-[#2A2C30] border-t-[#DCB001] animate-spin mb-2" />
-              <span className="text-xs text-[#787C83] font-medium">Loading GitHub...</span>
+            <div className="absolute inset-0 bg-[var(--bg-panel)]/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 pointer-events-none">
+              <div className="w-8 h-8 rounded-full border-2 border-[var(--border-primary)] border-t-[#FFFFFF] animate-spin mb-2" />
+              <span className="text-xs text-[var(--text-muted)] font-medium">Loading GitHub...</span>
             </div>
           )}
           <iframe
@@ -528,24 +528,24 @@ export function ProjectGithubView({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0E0F12] text-[#CFD4DD] overflow-hidden select-none">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#000000] text-[var(--text-secondary)] overflow-hidden select-none">
       {/* ───────────────────────────────────────────────────────────── */}
       {/* TOP BAR: Back + Title + Linked Count + Add Button             */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-[#2A2C30] bg-[#141518] px-6 flex items-center justify-between gap-3 shrink-0">
+      <div className="h-14 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] px-6 flex items-center justify-between gap-3 shrink-0">
         {/* Left: Back Button & GitHub Branding */}
         <div className="flex items-center gap-3 shrink-0">
           {(onBackToPlugins || onBackToApps || onBack) && (
             <>
               <button
                 onClick={handleBackNavigation}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] transition-colors cursor-pointer"
                 title={`Back to ${backLabel}`}
               >
                 <ArrowLeft size={14} />
                 <span>{backLabel}</span>
               </button>
-              <div className="h-4 w-px bg-[#2A2C30]" />
+              <div className="h-4 w-px bg-[#222222]" />
             </>
           )}
 
@@ -558,11 +558,11 @@ export function ProjectGithubView({
                 <span className="text-sm font-bold text-white tracking-tight">
                   GitHub Repositories
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2A2C30] text-[#DCB001] font-mono font-medium">
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#222222] text-white font-mono font-medium">
                   {projectRepos.length}
                 </span>
               </div>
-              <p className="text-[11px] text-[#787C83]">
+              <p className="text-[11px] text-[var(--text-muted)]">
                 {projectName ? `${projectName} repositories` : 'Connected project repositories'}
               </p>
             </div>
@@ -572,12 +572,12 @@ export function ProjectGithubView({
         {/* Right: Connected Account Info & Prominent "Add" Button */}
         <div className="flex items-center gap-3 shrink-0">
           {token && githubUser && (
-            <div className="flex items-center gap-2 bg-[#1B1C20] border border-[#2A2C30] px-2.5 py-1 rounded-xl">
+            <div className="flex items-center gap-2 bg-[#1D1D1D] border border-[var(--border-primary)] px-2.5 py-1 rounded-xl">
               {githubUser.avatar_url && (
                 <img
                   src={githubUser.avatar_url}
                   alt={githubUser.login}
-                  className="w-5 h-5 rounded-full object-cover border border-[#2A2C30]"
+                  className="w-5 h-5 rounded-full object-cover border border-[var(--border-primary)]"
                 />
               )}
               <span className="text-xs font-medium text-white tracking-tight">
@@ -585,7 +585,7 @@ export function ProjectGithubView({
               </span>
               <button
                 onClick={handleDisconnect}
-                className="text-[#787C83] hover:text-[#EF4444] transition-colors p-0.5 ml-1 cursor-pointer"
+                className="text-[var(--text-muted)] hover:text-white transition-colors p-0.5 ml-1 cursor-pointer"
                 title="Disconnect GitHub Account"
               >
                 <LogOut size={12} />
@@ -596,7 +596,7 @@ export function ProjectGithubView({
           {/* Top Right Button called "Add" */}
           <button
             onClick={handleHeaderAddClick}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#DCB001] hover:bg-[#E5B800] text-black text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-black hover:bg-[#FFFFFF] text-black text-xs font-bold rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
             title="Add repository to this project"
           >
             <Plus size={14} className="stroke-[3]" />
@@ -608,30 +608,30 @@ export function ProjectGithubView({
       {/* ───────────────────────────────────────────────────────────── */}
       {/* CONTROLS BAR: Filter Linked Repositories                      */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="h-12 border-b border-[#2A2C30] bg-[#141518]/60 px-6 flex items-center justify-between gap-3 shrink-0">
+      <div className="h-12 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]/60 px-6 flex items-center justify-between gap-3 shrink-0">
         {/* Search within page list */}
         <div className="relative flex-1 max-w-md">
-          <Search size={13} className="absolute left-3 top-2.5 text-[#787C83]" />
+          <Search size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search connected repositories..."
-            className="w-full bg-[#1B1C20] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-lg pl-8 pr-3 py-1.5 focus:outline-none transition-colors"
+            className="w-full bg-[#1D1D1D] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-xs text-white placeholder-[#666666] rounded-lg pl-8 pr-3 py-1.5 focus:outline-none transition-colors"
           />
         </div>
 
         {/* Filter Pills & Refresh */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-[#1B1C20] p-0.5 rounded-lg border border-[#2A2C30] text-xs">
+          <div className="flex items-center bg-[#1D1D1D] p-0.5 rounded-lg border border-[var(--border-primary)] text-xs">
             {(['all', 'public', 'private'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setVisibilityFilter(mode)}
                 className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer capitalize ${
                   visibilityFilter === mode
-                    ? 'bg-[#2A2C30] text-white'
-                    : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    ? 'bg-[#222222] text-white'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
                 {mode}
@@ -641,12 +641,12 @@ export function ProjectGithubView({
 
           <button
             onClick={() => fetchProjectRepositories()}
-            className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
             title="Refresh List"
           >
             <RefreshCw
               size={13}
-              className={isLoadingProjectRepos ? 'animate-spin text-[#DCB001]' : ''}
+              className={isLoadingProjectRepos ? 'animate-spin text-white' : ''}
             />
           </button>
         </div>
@@ -657,27 +657,27 @@ export function ProjectGithubView({
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto p-6 min-h-0 custom-scrollbar">
         {isLoadingProjectRepos ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-2 text-xs text-[#787C83]">
-            <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+          <div className="flex flex-col items-center justify-center h-64 gap-2 text-xs text-[var(--text-muted)]">
+            <RefreshCw size={20} className="animate-spin text-white" />
             <span>Loading repositories...</span>
           </div>
         ) : filteredProjectRepos.length === 0 ? (
           /* Clean Empty State */
           <div className="flex flex-col items-center justify-center h-80 max-w-md mx-auto text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1B1C20] border border-[#2A2C30] flex items-center justify-center text-[#787C83] mb-4 shadow-inner">
+            <div className="w-16 h-16 rounded-2xl bg-[#1D1D1D] border border-[var(--border-primary)] flex items-center justify-center text-[var(--text-muted)] mb-4 shadow-inner">
               <FolderGit2 size={32} />
             </div>
             <h4 className="text-base font-bold text-white mb-1">
               {searchQuery ? 'No matching repositories' : 'No Repositories Added Yet'}
             </h4>
-            <p className="text-xs text-[#9BA1A6] mb-6 leading-relaxed max-w-sm">
+            <p className="text-xs text-[var(--text-secondary)] mb-6 leading-relaxed max-w-sm">
               {searchQuery
                 ? 'Try clearing or changing your search filter to find repositories.'
                 : 'Connect your GitHub repositories to this project to track branches, open code, and collaborate.'}
             </p>
             <button
               onClick={handleHeaderAddClick}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#DCB001] hover:bg-[#E5B800] text-black text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer hover:scale-105"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] text-black text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer hover:scale-105"
             >
               <Plus size={15} className="stroke-[3]" />
               <span>Add Repository</span>
@@ -689,17 +689,17 @@ export function ProjectGithubView({
             {filteredProjectRepos.map((repo) => (
               <div
                 key={repo.id || repo.fullName}
-                className="bg-[#141518] hover:bg-[#18191D] border border-[#2A2C30] hover:border-[#DCB001]/40 rounded-2xl p-4 flex flex-col justify-between transition-all duration-150 shadow-md group"
+                className="bg-[var(--bg-panel)] hover:bg-[#1A1A1A] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-2xl p-4 flex flex-col justify-between transition-all duration-150 shadow-md group"
               >
                 <div>
                   {/* Card Header: Repo name + Badges */}
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[#DCB001] shrink-0">
+                      <span className="text-white shrink-0">
                         <Code2 size={16} />
                       </span>
                       <h4
-                        className="text-xs font-bold text-white hover:text-[#DCB001] transition-colors truncate cursor-pointer"
+                        className="text-xs font-bold text-white hover:text-white transition-colors truncate cursor-pointer"
                         onClick={() => handleOpenRepo(repo)}
                         title={repo.fullName}
                       >
@@ -710,8 +710,8 @@ export function ProjectGithubView({
                     <span
                       className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md shrink-0 border ${
                         repo.isPrivate
-                          ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20'
-                          : 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20'
+                          ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
+                          : 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
                       }`}
                     >
                       {repo.isPrivate ? <Lock size={10} /> : <Globe size={10} />}
@@ -720,23 +720,23 @@ export function ProjectGithubView({
                   </div>
 
                   {/* Full Name / Namespace */}
-                  <p className="text-[11px] text-[#787C83] font-mono mb-2 truncate">
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono mb-2 truncate">
                     {repo.fullName}
                   </p>
 
                   {/* Description */}
-                  <p className="text-xs text-[#9BA1A6] line-clamp-2 mb-3 min-h-[32px]">
+                  <p className="text-xs text-[var(--text-secondary)] line-clamp-2 mb-3 min-h-[32px]">
                     {repo.description || 'No description provided.'}
                   </p>
 
                   {/* Metadata Chips */}
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#787C83] mb-4">
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--text-muted)] mb-4">
                     {repo.language && (
                       <div className="flex items-center gap-1.5">
                         <span
                           className="w-2.5 h-2.5 rounded-full"
                           style={{
-                            backgroundColor: LANGUAGE_COLORS[repo.language] || '#8B949E',
+                            backgroundColor: LANGUAGE_COLORS[repo.language] || '#949494',
                           }}
                         />
                         <span>{repo.language}</span>
@@ -752,7 +752,7 @@ export function ProjectGithubView({
 
                     {typeof repo.starsCount === 'number' && (
                       <div className="flex items-center gap-1">
-                        <Star size={11} className="text-[#DCB001]" />
+                        <Star size={11} className="text-white" />
                         <span>{repo.starsCount}</span>
                       </div>
                     )}
@@ -767,11 +767,11 @@ export function ProjectGithubView({
                 </div>
 
                 {/* Card Footer Actions */}
-                <div className="pt-3 border-t border-[#2A2C30] flex items-center justify-between gap-2">
+                <div className="pt-3 border-t border-[var(--border-primary)] flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleOpenRepo(repo)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-[#222428] hover:bg-[#2A2C30] text-[#CFD4DD] hover:text-white rounded-lg transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-[var(--bg-card)] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-white rounded-lg transition-colors cursor-pointer"
                       title="Open repository"
                     >
                       <span>Open</span>
@@ -780,7 +780,7 @@ export function ProjectGithubView({
 
                     <button
                       onClick={() => handleCopyClone(repo.htmlUrl)}
-                      className="p-1.5 text-[#787C83] hover:text-white hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[var(--text-muted)] hover:text-white hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
                       title="Copy clone URL"
                     >
                       <Copy size={13} />
@@ -789,7 +789,7 @@ export function ProjectGithubView({
 
                   <button
                     onClick={() => handleDeleteRepo(repo.fullName)}
-                    className="p-1.5 text-[#787C83] hover:text-[#EF4444] hover:bg-[#EF4444]/10 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-3)]/10 rounded-lg transition-colors cursor-pointer"
                     title="Remove from project"
                   >
                     <Trash2 size={13} />
@@ -806,10 +806,10 @@ export function ProjectGithubView({
       {/* ───────────────────────────────────────────────────────────── */}
       {showTokenPromptModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="max-w-md w-full bg-[#141518] border border-[#2A2C30] rounded-2xl p-6 shadow-2xl relative text-left">
+          <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl relative text-left">
             <button
               onClick={() => setShowTokenPromptModal(false)}
-              className="absolute top-4 right-4 text-[#787C83] hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -821,14 +821,14 @@ export function ProjectGithubView({
             <h3 className="text-base font-bold text-white tracking-tight mb-1">
               GitHub Access Token Required
             </h3>
-            <p className="text-xs text-[#9BA1A6] mb-5 leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary)] mb-5 leading-relaxed">
               To browse and add repositories to this project, please provide your GitHub Personal Access Token.
             </p>
 
             <form onSubmit={handleConfirmTokenAndProceed} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#CFD4DD] mb-1.5 flex items-center gap-1.5">
-                  <Key size={13} className="text-[#DCB001]" />
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5 flex items-center gap-1.5">
+                  <Key size={13} className="text-white" />
                   <span>Personal Access Token</span>
                 </label>
 
@@ -838,25 +838,25 @@ export function ProjectGithubView({
                     value={tokenInput}
                     onChange={(e) => setTokenInput(e.target.value)}
                     placeholder="ghp_xxxxxxxxxxxxxxxxxxxx or github_pat_..."
-                    className="w-full bg-[#0E0F12] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-xl px-3 py-2.5 pr-10 focus:outline-none transition-colors font-mono"
+                    className="w-full bg-[#000000] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-xs text-white placeholder-[#666666] rounded-xl px-3 py-2.5 pr-10 focus:outline-none transition-colors font-mono"
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowTokenText(!showTokenText)}
-                    className="absolute right-3 text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                    className="absolute right-3 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                   >
                     {showTokenText ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between mt-2 text-[11px] text-[#787C83]">
-                  <span>Requires <code className="text-[#DCB001] bg-[#1B1C20] px-1 py-0.5 rounded">repo</code> scope</span>
+                <div className="flex items-center justify-between mt-2 text-[11px] text-[var(--text-muted)]">
+                  <span>Requires <code className="text-white bg-[#1D1D1D] px-1 py-0.5 rounded">repo</code> scope</span>
                   <a
                     href="https://github.com/settings/tokens/new?scopes=repo&description=Teader%20Workspace"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#DCB001] hover:underline flex items-center gap-1"
+                    className="text-white hover:underline flex items-center gap-1"
                   >
                     <span>Generate token</span>
                     <ExternalLink size={10} />
@@ -868,14 +868,14 @@ export function ProjectGithubView({
                 <button
                   type="button"
                   onClick={() => setShowTokenPromptModal(false)}
-                  className="px-4 py-2 text-xs font-medium text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isVerifyingToken || !tokenInput.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-[#DCB001] hover:bg-[#E5B800] disabled:opacity-50 rounded-xl shadow-lg transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-white text-black hover:bg-[#FFFFFF] disabled:opacity-50 rounded-xl shadow-lg transition-all cursor-pointer"
                 >
                   {isVerifyingToken ? (
                     <>
@@ -897,9 +897,9 @@ export function ProjectGithubView({
       {/* ───────────────────────────────────────────────────────────── */}
       {showAddReposModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="max-w-2xl w-full bg-[#141518] border border-[#2A2C30] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden text-left">
+          <div className="max-w-2xl w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl flex flex-col max-h-[85vh] overflow-hidden text-left">
             {/* Modal Header */}
-            <div className="p-5 border-b border-[#2A2C30] flex items-center justify-between shrink-0 bg-[#17181D]">
+            <div className="p-5 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[#191919]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white">
                   <GithubIcon size={18} />
@@ -908,7 +908,7 @@ export function ProjectGithubView({
                   <h3 className="text-sm font-bold text-white tracking-tight">
                     Add Repositories to Project
                   </h3>
-                  <p className="text-xs text-[#787C83]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Select repositories from your GitHub account to link to this project
                   </p>
                 </div>
@@ -919,36 +919,36 @@ export function ProjectGithubView({
                   setShowAddReposModal(false);
                   setSelectedRepoFullNames(new Set());
                 }}
-                className="text-[#787C83] hover:text-white p-1 rounded-lg hover:bg-[#2A2C30] transition-colors cursor-pointer"
+                className="text-[var(--text-muted)] hover:text-white p-1 rounded-lg hover:bg-[#222222] transition-colors cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
             {/* Modal Search & Filter Controls */}
-            <div className="px-5 py-3 border-b border-[#2A2C30] bg-[#141518] flex items-center justify-between gap-3 shrink-0">
+            <div className="px-5 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] flex items-center justify-between gap-3 shrink-0">
               <div className="relative flex-1">
-                <Search size={13} className="absolute left-3 top-2.5 text-[#787C83]" />
+                <Search size={13} className="absolute left-3 top-2.5 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   value={modalSearchQuery}
                   onChange={(e) => setModalSearchQuery(e.target.value)}
                   placeholder="Search your GitHub repositories..."
-                  className="w-full bg-[#0E0F12] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-lg pl-8 pr-3 py-1.5 focus:outline-none transition-colors"
+                  className="w-full bg-[#000000] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-xs text-white placeholder-[#666666] rounded-lg pl-8 pr-3 py-1.5 focus:outline-none transition-colors"
                   autoFocus
                 />
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-[#0E0F12] p-0.5 rounded-lg border border-[#2A2C30] text-xs">
+                <div className="flex items-center bg-[#000000] p-0.5 rounded-lg border border-[var(--border-primary)] text-xs">
                   {(['all', 'public', 'private'] as const).map((mode) => (
                     <button
                       key={mode}
                       onClick={() => setModalVisibilityFilter(mode)}
                       className={`px-2 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer capitalize ${
                         modalVisibilityFilter === mode
-                          ? 'bg-[#2A2C30] text-white'
-                          : 'text-[#787C83] hover:text-[#CFD4DD]'
+                          ? 'bg-[#222222] text-white'
+                          : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                       }`}
                     >
                       {mode}
@@ -959,7 +959,7 @@ export function ProjectGithubView({
                 <button
                   type="button"
                   onClick={toggleSelectAll}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-[#DCB001] hover:bg-[#DCB001]/10 rounded-lg transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white text-black/10 rounded-lg transition-colors cursor-pointer"
                 >
                   {selectedRepoFullNames.size > 0 ? 'Clear All' : 'Select All'}
                 </button>
@@ -969,12 +969,12 @@ export function ProjectGithubView({
             {/* Modal Repos List */}
             <div className="flex-1 overflow-y-auto p-5 min-h-[250px] space-y-2 custom-scrollbar">
               {isLoadingAllRepos ? (
-                <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[#787C83]">
-                  <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+                <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[var(--text-muted)]">
+                  <RefreshCw size={20} className="animate-spin text-white" />
                   <span>Fetching repositories from GitHub...</span>
                 </div>
               ) : filteredModalRepos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-48 text-center text-[#787C83]">
+                <div className="flex flex-col items-center justify-center h-48 text-center text-[var(--text-muted)]">
                   <FolderGit2 size={28} className="mb-2 opacity-50" />
                   <p className="text-xs font-semibold text-white">No repositories found</p>
                   <p className="text-[11px]">No repositories matched your search criteria</p>
@@ -992,24 +992,24 @@ export function ProjectGithubView({
                       }}
                       className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all select-none ${
                         isAdded
-                          ? 'bg-[#18191D]/50 border-[#2A2C30]/50 opacity-60 cursor-not-allowed'
+                          ? 'bg-[#1A1A1A]/50 border-[var(--border-primary)] opacity-60 cursor-not-allowed'
                           : isSelected
-                          ? 'bg-[#DCB001]/10 border-[#DCB001] cursor-pointer'
-                          : 'bg-[#18191D] hover:bg-[#202227] border-[#2A2C30] cursor-pointer'
+                          ? 'bg-white text-black/10 border-[var(--border-secondary)] cursor-pointer'
+                          : 'bg-[#1A1A1A] hover:bg-[#232323] border-[var(--border-primary)] cursor-pointer'
                       }`}
                     >
                       {/* Checkbox / Added Indicator */}
                       <div className="pt-0.5 shrink-0">
                         {isAdded ? (
-                          <div className="w-4 h-4 rounded bg-[#22C55E]/20 text-[#22C55E] flex items-center justify-center">
+                          <div className="w-4 h-4 rounded bg-[var(--ramp-3)]/20 text-white flex items-center justify-center">
                             <Check size={11} className="stroke-[3]" />
                           </div>
                         ) : (
                           <div
                             className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
                               isSelected
-                                ? 'bg-[#DCB001] border-[#DCB001] text-black'
-                                : 'border-[#4E5158] bg-[#0E0F12]'
+                                ? 'bg-white text-black border-[var(--border-secondary)] text-black'
+                                : 'border-[#525252] bg-[#000000]'
                             }`}
                           >
                             {isSelected && <Check size={11} className="stroke-[3]" />}
@@ -1027,8 +1027,8 @@ export function ProjectGithubView({
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded border ${
                               repo.isPrivate
-                                ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20'
-                                : 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20'
+                                ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
+                                : 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
                             }`}
                           >
                             {repo.isPrivate ? <Lock size={9} /> : <Globe size={9} />}
@@ -1036,29 +1036,29 @@ export function ProjectGithubView({
                           </span>
 
                           {isAdded && (
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#22C55E]/20 text-[#22C55E] font-medium ml-auto shrink-0">
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--ramp-3)]/20 text-white font-medium ml-auto shrink-0">
                               Added
                             </span>
                           )}
                         </div>
 
-                        <p className="text-[11px] text-[#787C83] font-mono truncate mb-1">
+                        <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mb-1">
                           {repo.fullName}
                         </p>
 
                         {repo.description && (
-                          <p className="text-xs text-[#9BA1A6] line-clamp-1 mb-2">
+                          <p className="text-xs text-[var(--text-secondary)] line-clamp-1 mb-2">
                             {repo.description}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-3 text-[11px] text-[#787C83]">
+                        <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
                           {repo.language && (
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="w-2 h-2 rounded-full"
                                 style={{
-                                  backgroundColor: LANGUAGE_COLORS[repo.language] || '#8B949E',
+                                  backgroundColor: LANGUAGE_COLORS[repo.language] || '#949494',
                                 }}
                               />
                               <span>{repo.language}</span>
@@ -1074,7 +1074,7 @@ export function ProjectGithubView({
 
                           {typeof repo.starsCount === 'number' && (
                             <div className="flex items-center gap-1">
-                              <Star size={10} className="text-[#DCB001]" />
+                              <Star size={10} className="text-white" />
                               <span>{repo.starsCount}</span>
                             </div>
                           )}
@@ -1087,8 +1087,8 @@ export function ProjectGithubView({
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-[#2A2C30] bg-[#17181D] flex items-center justify-between shrink-0">
-              <span className="text-xs text-[#787C83]">
+            <div className="p-4 border-t border-[var(--border-primary)] bg-[#191919] flex items-center justify-between shrink-0">
+              <span className="text-xs text-[var(--text-muted)]">
                 {selectedRepoFullNames.size === 0
                   ? 'Select repositories to add'
                   : `${selectedRepoFullNames.size} repositor${
@@ -1103,7 +1103,7 @@ export function ProjectGithubView({
                     setShowAddReposModal(false);
                     setSelectedRepoFullNames(new Set());
                   }}
-                  className="px-4 py-2 text-xs font-semibold text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1112,7 +1112,7 @@ export function ProjectGithubView({
                   type="button"
                   onClick={handleAddSelectedRepos}
                   disabled={selectedRepoFullNames.size === 0 || isAddingRepos}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 bg-[#DCB001] hover:bg-[#E5B800] disabled:opacity-50 text-black text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 bg-white text-black hover:bg-[#FFFFFF] disabled:opacity-50 text-black text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
                 >
                   {isAddingRepos ? (
                     <>

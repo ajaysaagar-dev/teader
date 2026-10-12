@@ -81,17 +81,17 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
   const top = Math.min(position.y, screenHeight - menuHeight - 10);
 
   const statuses: { id: Status; label: string; color: string }[] = [
-    { id: 'todo', label: 'Todo', color: 'var(--status-todo, #787C83)' },
-    { id: 'in_progress', label: 'In Progress', color: 'var(--status-inprogress, #DCB001)' },
-    { id: 'needs_review', label: 'Needs Review', color: 'var(--status-review, #A855F7)' },
-    { id: 'done', label: 'Done', color: 'var(--status-done, #22C55E)' },
+    { id: 'todo', label: 'Todo', color: 'var(--status-todo, #666666)' },
+    { id: 'in_progress', label: 'In Progress', color: 'var(--status-inprogress, #FFFFFF)' },
+    { id: 'needs_review', label: 'Needs Review', color: 'var(--status-review, #FFFFFF)' },
+    { id: 'done', label: 'Done', color: 'var(--status-done, #FFFFFF)' },
   ];
 
   const priorities: { id: Priority; label: string; color: string }[] = [
-    { id: 'critical', label: 'Critical (P0)', color: 'var(--priority-critical, #EF4444)' },
-    { id: 'high', label: 'High (P1)', color: 'var(--priority-high, #F97316)' },
-    { id: 'medium', label: 'Medium (P2)', color: 'var(--priority-medium, #3B82F6)' },
-    { id: 'low', label: 'Low (P3)', color: 'var(--priority-low, #9499A0)' },
+    { id: 'critical', label: 'Critical (P0)', color: 'var(--priority-critical, #FFFFFF)' },
+    { id: 'high', label: 'High (P1)', color: 'var(--priority-high, #FFFFFF)' },
+    { id: 'medium', label: 'Medium (P2)', color: 'var(--priority-medium, #FFFFFF)' },
+    { id: 'low', label: 'Low (P3)', color: 'var(--priority-low, #A0A0A0)' },
   ];
 
   const handleCopyKey = () => {

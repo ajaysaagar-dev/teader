@@ -24,10 +24,10 @@ export const DesktopVersionIndicator: React.FC = () => {
       <button
         type="button"
         onClick={handleCopy}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#0E0F12]/95 backdrop-blur-md border border-[#2A2C30] hover:border-[#DCB001]/60 text-mono text-[#9BA1A6] hover:text-white tracking-wide shadow-2xl transition-all cursor-pointer"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#000000]/95 backdrop-blur-md border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-mono text-[var(--text-secondary)] hover:text-white tracking-wide shadow-2xl transition-all cursor-pointer"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_6px_#22C55E]" />
-        <span className="text-[#DCB001] font-bold text-[10px] tracking-wider uppercase">BUILD:</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-[var(--ramp-3)] animate-pulse shadow-[0_0_6px_#FFFFFF]" />
+        <span className="text-white font-bold text-[10px] tracking-wider uppercase">BUILD:</span>
         <span className="font-semibold text-white text-[11px] tracking-tight">
           {copied ? 'COPIED!' : BUILD_NUMBER}
         </span>

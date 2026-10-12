@@ -14,19 +14,19 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, onSelectIssu
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
-    <div className="flex-1 h-full bg-[#131415] text-[#CFD4DD] p-6 flex flex-col space-y-4 overflow-hidden select-none font-sans">
-      <div className="flex items-center justify-between bg-[#1B1C1F] p-3 rounded-xl border border-[#2A2C30] shrink-0">
+    <div className="flex-1 h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] p-6 flex flex-col space-y-4 overflow-hidden select-none font-sans">
+      <div className="flex items-center justify-between bg-[var(--bg-panel)] p-3 rounded-xl border border-[var(--border-primary)] shrink-0">
         <div className="flex items-center gap-2">
-          <Calendar size={16} className="text-[#DCB001]" />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#CFD4DD]">
+          <Calendar size={16} className="text-white" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
             Sprint Roadmap Timeline
           </h2>
         </div>
-        <span className="text-xs font-mono text-[#787C83]">{issues.length} active tasks</span>
+        <span className="text-xs font-mono text-[var(--text-muted)]">{issues.length} active tasks</span>
       </div>
 
-      <div className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-xl flex flex-col overflow-hidden">
-        <div className="grid grid-cols-12 gap-2 p-3 border-b border-[#2A2C30] text-xs font-semibold text-[#787C83] bg-[#17181A]">
+      <div className="flex-1 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl flex flex-col overflow-hidden">
+        <div className="grid grid-cols-12 gap-2 p-3 border-b border-[var(--border-primary)] text-xs font-semibold text-[var(--text-muted)] bg-[var(--bg-panel)]">
           <div className="col-span-4">Issue Key & Title</div>
           <div className="col-span-7 grid grid-cols-7 text-center">
             {days.map((d) => (
@@ -36,7 +36,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, onSelectIssu
           <div className="col-span-1 text-right">Assignee</div>
         </div>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-[#2A2C30]">
+        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-primary)]">
           {issues.map((issue, idx) => {
             const startCol = (idx * 2) % 7;
             const spanCols = Math.min(3, 7 - startCol);
@@ -52,22 +52,22 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, onSelectIssu
               <div
                 key={issue.id}
                 onClick={() => onSelectIssue(issue.id)}
-                className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-[#222427] cursor-pointer text-xs transition-colors"
+                className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-[#242424] cursor-pointer text-xs transition-colors"
               >
                 <div className="col-span-4 flex items-center gap-2 truncate">
-                  <span className="font-mono text-[11px] font-bold text-[#DCB001] shrink-0">
+                  <span className="font-mono text-[11px] font-bold text-white shrink-0">
                     {issue.key}
                   </span>
-                  <span className="truncate text-[#CFD4DD]">{issue.title}</span>
+                  <span className="truncate text-[var(--text-secondary)]">{issue.title}</span>
                 </div>
 
                 <div className="col-span-7 relative flex items-center">
-                  <div className="w-full grid grid-cols-7 absolute inset-0 opacity-10 border-b border-dashed border-[#787C83]" />
+                  <div className="w-full grid grid-cols-7 absolute inset-0 opacity-10 border-b border-dashed border-[#666666]" />
                   <div
                     className={`h-5 rounded-md px-2.5 flex items-center text-[10px] font-medium shadow-sm transition-all ${
                       issue.status === 'done'
-                        ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/40'
-                        : 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/40'
+                        ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)]'
+                        : 'bg-white text-black/20 text-white border border-[var(--border-secondary)]'
                     }`}
                     style={{
                       marginLeft: `${(startCol / 7) * 100}%`,

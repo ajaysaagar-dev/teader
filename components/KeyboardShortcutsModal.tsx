@@ -43,16 +43,16 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.96 }}
-          className="w-full max-w-lg bg-[#1B1C1F] border border-[#2A2C30] rounded-xl shadow-2xl overflow-hidden flex flex-col"
+          className="w-full max-w-lg bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl shadow-2xl overflow-hidden flex flex-col"
         >
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#2A2C30] bg-[#0F1011]">
-            <div className="flex items-center gap-2 text-lg font-bold text-[#E5E7EB]">
-              <Keyboard size={16} className="text-[#DCB001]" />
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)]">
+            <div className="flex items-center gap-2 text-lg font-bold text-[#EDEDED]">
+              <Keyboard size={16} className="text-white" />
               <span>Keyboard Shortcuts</span>
             </div>
             <button
               onClick={onClose}
-              className="p-1 text-[#9CA3AF] hover:text-white rounded hover:bg-[#222427] transition-colors"
+              className="p-1 text-[var(--text-secondary)] hover:text-white rounded hover:bg-[#242424] transition-colors"
             >
               <X size={16} />
             </button>
@@ -61,18 +61,18 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
           <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
             {shortcutGroups.map((group, gIdx) => (
               <div key={gIdx} className="space-y-2">
-                <h4 className="text-sm font-semibold uppercase tracking-wider text-[#9CA3AF]">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                   {group.title}
                 </h4>
-                <div className="divide-y divide-[#2A2C30] border border-[#2A2C30] rounded-lg bg-[#0F1011] overflow-hidden">
+                <div className="divide-y divide-[var(--border-primary)] border border-[var(--border-primary)] rounded-lg bg-[var(--bg-canvas)] overflow-hidden">
                   {group.shortcuts.map((sc, sIdx) => (
                     <div key={sIdx} className="flex items-center justify-between px-3.5 py-2.5 text-sm">
-                      <span className="text-[#9499A0]">{sc.label}</span>
+                      <span className="text-[var(--text-secondary)]">{sc.label}</span>
                       <div className="flex items-center gap-1">
                         {sc.keys.map((k, kIdx) => (
                           <kbd
                             key={kIdx}
-                            className="px-2 py-1 bg-[#2A2C30] border border-[#3B3D41] rounded font-mono text-xs text-[#E5E7EB] shadow-sm"
+                            className="px-2 py-1 bg-[#222222] border border-[#3E3E3E] rounded font-mono text-xs text-[#EDEDED] shadow-sm"
                           >
                             {k}
                           </kbd>
@@ -85,7 +85,7 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
             ))}
           </div>
 
-          <div className="px-5 py-3 border-t border-[#2A2C30] bg-[#0F1011] text-center text-sm text-[#9CA3AF]">
+          <div className="px-5 py-3 border-t border-[var(--border-primary)] bg-[var(--bg-canvas)] text-center text-sm text-[var(--text-secondary)]">
             Teader is engineered for power users with sub-millisecond keyboard navigation.
           </div>
         </motion.div>

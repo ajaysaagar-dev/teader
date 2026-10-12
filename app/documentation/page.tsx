@@ -273,17 +273,17 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
 
   return (
     <div className="relative group my-4">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#16181D] border border-[#2A2C30] rounded-t-xl text-[11px] font-mono text-[#8E939D]">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#191919] border border-[var(--border-primary)] rounded-t-xl text-[11px] font-mono text-[var(--text-secondary)]">
         <span>{language}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 px-2 py-1 bg-[#1F2126] hover:bg-[#2A2C30] text-[#CFD4DD] hover:text-white rounded border border-[#2E3138] transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 bg-[#222222] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-white rounded border border-[#222222] transition-colors"
           title="Copy code"
         >
           {copied ? (
             <>
-              <Check size={12} className="text-[#22C55E]" />
-              <span className="text-[#22C55E]">Copied!</span>
+              <Check size={12} className="text-white" />
+              <span className="text-white">Copied!</span>
             </>
           ) : (
             <>
@@ -293,7 +293,7 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
           )}
         </button>
       </div>
-      <pre className="bg-[#0D0E11] border-x border-b border-[#2A2C30] rounded-b-xl p-4 text-xs font-mono text-[#06B6D4] overflow-x-auto leading-relaxed">
+      <pre className="bg-[#0F0F0F] border-x border-b border-[var(--border-primary)] rounded-b-xl p-4 text-xs font-mono text-white overflow-x-auto leading-relaxed">
         <code>{code}</code>
       </pre>
     </div>
@@ -302,8 +302,8 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
 
 function NoteCallout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 bg-[#DCB001]/10 border border-[#DCB001]/30 rounded-xl p-4 flex gap-3 text-xs text-[#E5E7EB] leading-relaxed">
-      <Info size={16} className="text-[#DCB001] shrink-0 mt-0.5" />
+    <div className="my-4 bg-white text-black/10 border border-[var(--border-secondary)] rounded-xl p-4 flex gap-3 text-xs text-[#EDEDED] leading-relaxed">
+      <Info size={16} className="text-white shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
   );
@@ -311,8 +311,8 @@ function NoteCallout({ children }: { children: React.ReactNode }) {
 
 function WarningCallout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-xl p-4 flex gap-3 text-xs text-[#FCA5A5] leading-relaxed">
-      <AlertTriangle size={16} className="text-[#EF4444] shrink-0 mt-0.5" />
+    <div className="my-4 bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] rounded-xl p-4 flex gap-3 text-xs text-[#FFFFFF] leading-relaxed">
+      <AlertTriangle size={16} className="text-white shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
   );
@@ -388,20 +388,20 @@ export default function DocumentationPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001]">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white text-black/30 selection:text-white">
       {/* ─── Top Header ────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0B0D]/90 border-b border-[#222428]">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[var(--bg-canvas)]/90 border-b border-[#141414]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-2 group" aria-label="Teader Home">
               <span className="font-extrabold text-xl text-white tracking-tight flex items-center gap-1.5 font-prompt">
                 teader
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-[#1F2126] text-[#DCB001] rounded border border-[#2E3138]">
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 bg-[#222222] text-white rounded border border-[#222222]">
                   {BUILD_NUMBER}
                 </span>
               </span>
             </Link>
-            <span className="text-xs font-mono text-[#787C83] hidden sm:inline-block">/</span>
+            <span className="text-xs font-mono text-[var(--text-muted)] hidden sm:inline-block">/</span>
             <span className="text-xs font-semibold text-white font-mono hidden sm:inline-block">
               PLATFORM DOCUMENTATION & USER MANUAL
             </span>
@@ -410,15 +410,15 @@ export default function DocumentationPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#16181C] hover:bg-[#1E2025] text-[#CFD4DD] hover:text-white border border-[#2A2C30] text-xs font-medium transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#191919] hover:bg-[#141414] text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] text-xs font-medium transition-colors"
             >
-              <Home size={13} className="text-[#06B6D4]" />
+              <Home size={13} className="text-white" />
               <span>Back to Home</span>
             </Link>
 
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs transition-all shadow-sm"
             >
               <span>Launch App</span>
               <ArrowRight size={13} />
@@ -426,7 +426,7 @@ export default function DocumentationPage() {
 
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-[#8E939D] hover:text-white rounded-lg bg-[#16181C] border border-[#2A2C30]"
+              className="lg:hidden p-2 text-[var(--text-secondary)] hover:text-white rounded-lg bg-[#191919] border border-[var(--border-primary)]"
               aria-label="Toggle Navigation"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
@@ -440,19 +440,19 @@ export default function DocumentationPage() {
         {/* ─── Left Sidebar Navigation ─────────────────────────── */}
         <aside
           className={`
-            fixed lg:sticky top-16 z-40 w-72 h-[calc(100vh-64px)] overflow-y-auto shrink-0 bg-[#0F1011] lg:bg-transparent border-r border-[#222428] py-6 pr-4 pl-2 transition-transform duration-200
-            ${mobileMenuOpen ? 'translate-x-0 left-0 shadow-2xl bg-[#0F1011]' : '-translate-x-full lg:translate-x-0'}
+            fixed lg:sticky top-16 z-40 w-72 h-[calc(100vh-64px)] overflow-y-auto shrink-0 bg-[var(--bg-canvas)] lg:bg-transparent border-r border-[#141414] py-6 pr-4 pl-2 transition-transform duration-200
+            ${mobileMenuOpen ? 'translate-x-0 left-0 shadow-2xl bg-[var(--bg-canvas)]' : '-translate-x-full lg:translate-x-0'}
           `}
         >
           {/* Search Box */}
           <div className="relative mb-5 px-2">
-            <Search size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-[#787C83]" />
+            <Search size={14} className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search documentation..."
-              className="w-full pl-9 pr-3 py-2 bg-[#16181D] border border-[#2A2C30] focus:border-[#DCB001]/50 rounded-xl text-xs text-white placeholder-[#787C83] outline-none transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-[#191919] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-xl text-xs text-white placeholder-[#666666] outline-none transition-all"
             />
           </div>
 
@@ -466,17 +466,17 @@ export default function DocumentationPage() {
                 <div key={category.id} className="space-y-1">
                   <button
                     onClick={() => toggleCategory(category.id)}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-mono font-bold text-[#8E939D] hover:text-white uppercase tracking-wider rounded-lg transition-colors group"
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-mono font-bold text-[var(--text-secondary)] hover:text-white uppercase tracking-wider rounded-lg transition-colors group"
                   >
                     <div className="flex items-center gap-2">
-                      <Icon size={13} className="text-[#DCB001] group-hover:scale-110 transition-transform" />
+                      <Icon size={13} className="text-white group-hover:scale-110 transition-transform" />
                       <span>{category.title}</span>
                     </div>
                     {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                   </button>
 
                   {isOpen && (
-                    <div className="pl-6 space-y-0.5 border-l border-[#222428] ml-3.5 my-1">
+                    <div className="pl-6 space-y-0.5 border-l border-[#141414] ml-3.5 my-1">
                       {category.items.map((item) => {
                         const isActive = activeSection === item.id;
                         return (
@@ -487,8 +487,8 @@ export default function DocumentationPage() {
                               w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between
                               ${
                                 isActive
-                                  ? 'bg-[#DCB001]/15 text-[#DCB001] font-semibold border-l-2 border-[#DCB001]'
-                                  : 'text-[#8E939D] hover:text-[#CFD4DD] hover:bg-[#16181D]'
+                                  ? 'bg-white text-black/15 text-white font-semibold border-l-2 border-[var(--border-secondary)]'
+                                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#191919]'
                               }
                             `}
                           >
@@ -507,16 +507,16 @@ export default function DocumentationPage() {
         {/* ─── Right Content Area ──────────────────────────────── */}
         <main className="flex-1 min-w-0 py-8 lg:pl-10 max-w-4xl">
           {/* Header Banner */}
-          <div className="mb-12 p-8 rounded-2xl bg-gradient-to-br from-[#16181D] via-[#111215] to-[#0D0E11] border border-[#2A2C30] relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-64 h-64 bg-[#DCB001]/5 blur-[80px] rounded-full pointer-events-none" />
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1F2126] border border-[#2E3138] text-[11px] text-[#DCB001] font-mono mb-4">
+          <div className="mb-12 p-8 rounded-2xl bg-gradient-to-br from-[#191919] via-[#141414] to-[#0F0F0F] border border-[var(--border-primary)] relative overflow-hidden">
+            <div className="absolute -right-10 -top-10 w-64 h-64 bg-white text-black/5 blur-[80px] rounded-full pointer-events-none" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#222222] border border-[#222222] text-[11px] text-white font-mono mb-4">
               <Sparkles size={12} />
               <span>Official Step-by-Step Technical Manual</span>
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight font-prompt mb-3">
               Teader Platform Documentation
             </h1>
-            <p className="text-sm text-[#8E939D] leading-relaxed max-w-2xl">
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-2xl">
               Welcome to the official developer manual for Teader. Learn how to configure workspaces, manage high-velocity Kanban boards, inspect Unity VCS branch explorer graphs, write real-time Markdown docs, and interact with the REST API.
             </p>
           </div>
@@ -526,34 +526,34 @@ export default function DocumentationPage() {
           ══════════════════════════════════════════════════════════════ */}
           <div className="space-y-16">
             <section data-doc-id="what-is-teader" id="what-is-teader" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Sparkles size={14} />
                 <span>1. Getting Started</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">What is Teader?</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Teader is an AI-native, high-velocity project management platform engineered specifically for software engineering teams and autonomous AI coding agents. Unlike conventional ticketing systems, Teader delivers <strong>0ms perceived UI latency</strong> through optimistic mutations, in-memory client caches, and instant visual feedback.
               </p>
-              <p className="text-sm text-[#8E939D] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 It combines the fluidity of modern issue boards with deep developer workflows: Unity VCS-style branch dependency graphs, infinite recursive task trees, developer workstation Git generators, and live Markdown technical specifications.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-4 rounded-xl bg-[#141519] border border-[#24262B] space-y-2">
-                  <div className="flex items-center gap-2 text-[#DCB001] font-semibold text-xs font-mono">
+                <div className="p-4 rounded-xl bg-[#161616] border border-[#272727] space-y-2">
+                  <div className="flex items-center gap-2 text-white font-semibold text-xs font-mono">
                     <Zap size={14} />
                     <span>0ms Optimistic UI</span>
                   </div>
-                  <p className="text-xs text-[#8E939D] leading-relaxed">
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                     Mutations apply to the local DOM immediately with referential equality caching, syncing with the PostgreSQL database in the background.
                   </p>
                 </div>
-                <div className="p-4 rounded-xl bg-[#141519] border border-[#24262B] space-y-2">
-                  <div className="flex items-center gap-2 text-[#06B6D4] font-semibold text-xs font-mono">
+                <div className="p-4 rounded-xl bg-[#161616] border border-[#272727] space-y-2">
+                  <div className="flex items-center gap-2 text-white font-semibold text-xs font-mono">
                     <GitFork size={14} />
                     <span>Unity VCS Graph</span>
                   </div>
-                  <p className="text-xs text-[#8E939D] leading-relaxed">
+                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                     Cubic Bezier curve engine visually plots branch timelines, task dependencies, merge points, and blocking links in real time.
                   </p>
                 </div>
@@ -562,7 +562,7 @@ export default function DocumentationPage() {
 
             <section data-doc-id="quick-start" id="quick-start" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Quick Start Guide</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Getting started with Teader takes less than two minutes. Follow this step-by-step sequence to clone, configure, seed, and launch your local instance:
               </p>
 
@@ -585,42 +585,42 @@ npm run db:setup
 npm run dev`}
               />
 
-              <p className="text-xs text-[#8E939D]">
-                Once running, visit <code className="text-[#DCB001]">http://localhost:3000</code> in your browser.
+              <p className="text-xs text-[var(--text-secondary)]">
+                Once running, visit <code className="text-white">http://localhost:3000</code> in your browser.
               </p>
             </section>
 
             <section data-doc-id="system-requirements" id="system-requirements" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">System Requirements</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse border border-[#24262B] rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse border border-[#272727] rounded-xl overflow-hidden">
                   <thead>
-                    <tr className="bg-[#16181D] text-[#8E939D] border-b border-[#24262B]">
+                    <tr className="bg-[#191919] text-[var(--text-secondary)] border-b border-[#272727]">
                       <th className="p-3 font-mono">Requirement</th>
                       <th className="p-3 font-mono">Minimum Version</th>
                       <th className="p-3 font-mono">Recommended</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#24262B] bg-[#111215] text-[#CFD4DD]">
+                  <tbody className="divide-y divide-[#272727] bg-[#141414] text-[var(--text-secondary)]">
                     <tr>
                       <td className="p-3 font-semibold text-white">Node.js Runtime</td>
-                      <td className="p-3 font-mono text-[#06B6D4]">v20.10.0 LTS</td>
-                      <td className="p-3 font-mono text-[#DCB001]">v22.x LTS</td>
+                      <td className="p-3 font-mono text-white">v20.10.0 LTS</td>
+                      <td className="p-3 font-mono text-white">v22.x LTS</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-semibold text-white">Database Engine</td>
-                      <td className="p-3 font-mono text-[#06B6D4]">PostgreSQL 14+ / MySQL 8+</td>
-                      <td className="p-3 font-mono text-[#DCB001]">PostgreSQL 16</td>
+                      <td className="p-3 font-mono text-white">PostgreSQL 14+ / MySQL 8+</td>
+                      <td className="p-3 font-mono text-white">PostgreSQL 16</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-semibold text-white">Package Manager</td>
-                      <td className="p-3 font-mono text-[#06B6D4]">npm v10+</td>
-                      <td className="p-3 font-mono text-[#DCB001]">npm v10+ / pnpm v9+</td>
+                      <td className="p-3 font-mono text-white">npm v10+</td>
+                      <td className="p-3 font-mono text-white">npm v10+ / pnpm v9+</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-semibold text-white">Web Browser</td>
-                      <td className="p-3 font-mono text-[#06B6D4]">Chromium 110+, Firefox 115+, Safari 17+</td>
-                      <td className="p-3 font-mono text-[#DCB001]">Latest Chromium / Desktop App</td>
+                      <td className="p-3 font-mono text-white">Chromium 110+, Firefox 115+, Safari 17+</td>
+                      <td className="p-3 font-mono text-white">Latest Chromium / Desktop App</td>
                     </tr>
                   </tbody>
                 </table>
@@ -629,62 +629,62 @@ npm run dev`}
 
             <section data-doc-id="installation" id="installation" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Installation & Setup</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Generate a cryptographically secure 64-byte random secret for JWT token signing before starting the server:
               </p>
               <CodeBlock
                 language="bash"
                 code={`node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`}
               />
-              <p className="text-sm text-[#8E939D] leading-relaxed">
-                Paste the resulting string into your <code className="text-[#06B6D4]">.env</code> file under the <code className="text-[#DCB001]">JWT_SECRET</code> key.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Paste the resulting string into your <code className="text-white">.env</code> file under the <code className="text-white">JWT_SECRET</code> key.
               </p>
             </section>
 
             <section data-doc-id="demo-credentials" id="demo-credentials" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Demo Credentials</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                When you run <code className="text-[#06B6D4]">npm run db:setup</code>, the database seeds the following sample accounts for immediate testing:
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                When you run <code className="text-white">npm run db:setup</code>, the database seeds the following sample accounts for immediate testing:
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#141519] border border-[#24262B] space-y-1.5 font-mono text-xs">
-                  <div className="text-[#DCB001] font-bold">Admin Account</div>
-                  <div className="text-white">Email: <span className="text-[#06B6D4]">ajaysaagar@teader.io</span></div>
-                  <div className="text-white">Password: <span className="text-[#06B6D4]">password123</span></div>
-                  <div className="text-[#787C83] text-[10px]">Full owner permissions across demo projects.</div>
+                <div className="p-4 rounded-xl bg-[#161616] border border-[#272727] space-y-1.5 font-mono text-xs">
+                  <div className="text-white font-bold">Admin Account</div>
+                  <div className="text-white">Email: <span className="text-white">ajaysaagar@teader.io</span></div>
+                  <div className="text-white">Password: <span className="text-white">password123</span></div>
+                  <div className="text-[var(--text-muted)] text-[10px]">Full owner permissions across demo projects.</div>
                 </div>
-                <div className="p-4 rounded-xl bg-[#141519] border border-[#24262B] space-y-1.5 font-mono text-xs">
-                  <div className="text-[#DCB001] font-bold">Developer Account</div>
-                  <div className="text-white">Email: <span className="text-[#06B6D4]">karri@teader.io</span></div>
-                  <div className="text-white">Password: <span className="text-[#06B6D4]">password123</span></div>
-                  <div className="text-[#787C83] text-[10px]">Member contributor role with task edit rights.</div>
+                <div className="p-4 rounded-xl bg-[#161616] border border-[#272727] space-y-1.5 font-mono text-xs">
+                  <div className="text-white font-bold">Developer Account</div>
+                  <div className="text-white">Email: <span className="text-white">karri@teader.io</span></div>
+                  <div className="text-white">Password: <span className="text-white">password123</span></div>
+                  <div className="text-[var(--text-muted)] text-[10px]">Member contributor role with task edit rights.</div>
                 </div>
               </div>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 2: AUTHENTICATION & SECURITY
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="auth-overview" id="auth-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <ShieldCheck size={14} />
                 <span>2. Authentication & Security</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Authentication Architecture</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Teader enforces enterprise-grade security primitives across all endpoints. Authentication is entirely stateless and handled via JSON Web Tokens signed with HMAC-SHA256, sealed inside secure, SameSite cookies.
               </p>
             </section>
 
             <section data-doc-id="jwt-sessions" id="jwt-sessions" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">JWT & HttpOnly Cookies</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Upon successful login via <code className="text-[#06B6D4]">/api/auth/login</code>, the server responds with a signed cookie named <code className="text-[#DCB001]">teader_session</code> configured with:
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Upon successful login via <code className="text-white">/api/auth/login</code>, the server responds with a signed cookie named <code className="text-white">teader_session</code> configured with:
               </p>
-              <ul className="list-disc pl-5 text-xs text-[#8E939D] space-y-1.5">
+              <ul className="list-disc pl-5 text-xs text-[var(--text-secondary)] space-y-1.5">
                 <li><strong className="text-white">HttpOnly: true</strong> — Immune to client-side XSS cookie extraction.</li>
                 <li><strong className="text-white">SameSite: Lax</strong> — Protects against Cross-Site Request Forgery (CSRF).</li>
                 <li><strong className="text-white">Max-Age: 7 Days</strong> — Persistent session validity with seamless refresh.</li>
@@ -693,14 +693,14 @@ npm run dev`}
 
             <section data-doc-id="password-hashing" id="password-hashing" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Password Hashing & Bcrypt</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 All user passwords are encrypted using Bcrypt with a work factor of <strong>12 rounds</strong>. During authentication, legacy SHA-256 password records are transparently migrated to Bcrypt on first successful login without disrupting user sessions.
               </p>
             </section>
 
             <section data-doc-id="rate-limiting" id="rate-limiting" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Rate Limiting Protection</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 To prevent brute-force credential stuffing, authentication routes employ an in-memory sliding window rate limiter:
               </p>
               <NoteCallout>
@@ -708,79 +708,79 @@ npm run dev`}
               </NoteCallout>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 3: WORKSPACE DASHBOARD
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="dashboard-overview" id="dashboard-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <LayoutGrid size={14} />
                 <span>3. Workspace Dashboard</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Dashboard Overview</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                The Dashboard (<code className="text-[#06B6D4]">/dashboard</code>) is your operational command center. It aggregates real-time metrics across all active projects, highlighting urgent blockers, recent commits, personal assignments, and sprint velocity.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                The Dashboard (<code className="text-white">/dashboard</code>) is your operational command center. It aggregates real-time metrics across all active projects, highlighting urgent blockers, recent commits, personal assignments, and sprint velocity.
               </p>
             </section>
 
             <section data-doc-id="velocity-metrics" id="velocity-metrics" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Sprint & Velocity Metrics</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 The dashboard automatically computes:
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div className="p-3.5 bg-[#141519] border border-[#24262B] rounded-xl text-center space-y-1">
-                  <div className="text-[10px] font-mono text-[#787C83] uppercase">Cycle Velocity</div>
-                  <div className="text-xl font-bold text-[#22C55E]">94.2%</div>
-                  <div className="text-[10px] text-[#8E939D]">Sprint on-time completion</div>
+                <div className="p-3.5 bg-[#161616] border border-[#272727] rounded-xl text-center space-y-1">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Cycle Velocity</div>
+                  <div className="text-xl font-bold text-white">94.2%</div>
+                  <div className="text-[10px] text-[var(--text-secondary)]">Sprint on-time completion</div>
                 </div>
-                <div className="p-3.5 bg-[#141519] border border-[#24262B] rounded-xl text-center space-y-1">
-                  <div className="text-[10px] font-mono text-[#787C83] uppercase">Active Issues</div>
-                  <div className="text-xl font-bold text-[#DCB001]">38 Tasks</div>
-                  <div className="text-[10px] text-[#8E939D]">Across 4 repositories</div>
+                <div className="p-3.5 bg-[#161616] border border-[#272727] rounded-xl text-center space-y-1">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Active Issues</div>
+                  <div className="text-xl font-bold text-white">38 Tasks</div>
+                  <div className="text-[10px] text-[var(--text-secondary)]">Across 4 repositories</div>
                 </div>
-                <div className="p-3.5 bg-[#141519] border border-[#24262B] rounded-xl text-center space-y-1">
-                  <div className="text-[10px] font-mono text-[#787C83] uppercase">Blocked Nodes</div>
-                  <div className="text-xl font-bold text-[#EF4444]">2 Critical</div>
-                  <div className="text-[10px] text-[#8E939D]">Awaiting upstream merge</div>
+                <div className="p-3.5 bg-[#161616] border border-[#272727] rounded-xl text-center space-y-1">
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Blocked Nodes</div>
+                  <div className="text-xl font-bold text-white">2 Critical</div>
+                  <div className="text-[10px] text-[var(--text-secondary)]">Awaiting upstream merge</div>
                 </div>
               </div>
             </section>
 
             <section data-doc-id="workspace-navigation" id="workspace-navigation" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Workspace Navigation</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Press <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[#1B1C1F] border border-[#2A2C30] rounded text-[#CFD4DD]">⌘K</kbd> or <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[#1B1C1F] border border-[#2A2C30] rounded text-[#CFD4DD]">Ctrl+K</kbd> anywhere in the application to launch Quick Search and jump directly to any project, task key, or Markdown doc.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Press <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">⌘K</kbd> or <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">Ctrl+K</kbd> anywhere in the application to launch Quick Search and jump directly to any project, task key, or Markdown doc.
               </p>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 4: PROJECTS & WORKSPACES
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="create-project" id="create-project" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <FolderKanban size={14} />
                 <span>4. Projects & Workspaces</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Creating a Project</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                To create a new workspace project, navigate to <code className="text-[#06B6D4]">/projects</code> and click <strong>+ New Project</strong>. Provide a project name, description, and key prefix.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                To create a new workspace project, navigate to <code className="text-white">/projects</code> and click <strong>+ New Project</strong>. Provide a project name, description, and key prefix.
               </p>
             </section>
 
             <section data-doc-id="project-keys" id="project-keys" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Project Keys & Unique IDs</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Every project generates a unique uppercase key (e.g. <code className="text-[#DCB001]">TED</code>, <code className="text-[#DCB001]">CORE</code>, <code className="text-[#DCB001]">GRAPH</code>). All child tasks inherit this key prefix followed by an auto-incrementing serial number (e.g., <code className="text-[#06B6D4]">TED-104</code>).
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Every project generates a unique uppercase key (e.g. <code className="text-white">TED</code>, <code className="text-white">CORE</code>, <code className="text-white">GRAPH</code>). All child tasks inherit this key prefix followed by an auto-incrementing serial number (e.g., <code className="text-white">TED-104</code>).
               </p>
             </section>
 
             <section data-doc-id="joining-projects" id="joining-projects" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Joining via Project Key</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Teammates can join any existing workspace without invitation links by entering the Project Key in the <strong>Join Project</strong> modal. Once verified, the project immediately appears on their dashboard.
               </p>
             </section>
@@ -788,27 +788,27 @@ npm run dev`}
             <section data-doc-id="member-roles" id="member-roles" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Member Roles & Permissions</h3>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border border-[#24262B] rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border border-[#272727] rounded-xl overflow-hidden">
                   <thead>
-                    <tr className="bg-[#16181D] text-[#8E939D] border-b border-[#24262B]">
+                    <tr className="bg-[#191919] text-[var(--text-secondary)] border-b border-[#272727]">
                       <th className="p-3 font-mono">Role</th>
                       <th className="p-3 font-mono">Create Tasks</th>
                       <th className="p-3 font-mono">Move to Done</th>
                       <th className="p-3 font-mono">Delete Project</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#24262B] bg-[#111215] text-[#CFD4DD]">
+                  <tbody className="divide-y divide-[#272727] bg-[#141414] text-[var(--text-secondary)]">
                     <tr>
-                      <td className="p-3 font-semibold text-[#DCB001]">Owner / Creator</td>
-                      <td className="p-3 text-[#22C55E]">✓ Allowed</td>
-                      <td className="p-3 text-[#22C55E]">✓ Allowed</td>
-                      <td className="p-3 text-[#22C55E]">✓ Allowed</td>
+                      <td className="p-3 font-semibold text-white">Owner / Creator</td>
+                      <td className="p-3 text-white">✓ Allowed</td>
+                      <td className="p-3 text-white">✓ Allowed</td>
+                      <td className="p-3 text-white">✓ Allowed</td>
                     </tr>
                     <tr>
                       <td className="p-3 font-semibold text-white">Joined Member</td>
-                      <td className="p-3 text-[#22C55E]">✓ Allowed</td>
-                      <td className="p-3 text-[#EF4444]">✗ Creator Only</td>
-                      <td className="p-3 text-[#EF4444]">✗ Creator Only</td>
+                      <td className="p-3 text-white">✓ Allowed</td>
+                      <td className="p-3 text-white">✗ Creator Only</td>
+                      <td className="p-3 text-white">✗ Creator Only</td>
                     </tr>
                   </tbody>
                 </table>
@@ -817,55 +817,55 @@ npm run dev`}
 
             <section data-doc-id="project-exports" id="project-exports" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Encrypted Project Dumps (.teaderdumpfile)</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Export an entire workspace including all tasks, subtask hierarchies, Markdown specs, and member mappings into an encrypted binary bundle with AES-256-GCM cipher and SHA-256 integrity checksums.
               </p>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 5: KANBAN BOARD VIEW
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="kanban-overview" id="kanban-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Layers size={14} />
                 <span>5. Kanban Board View</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Board Columns & States</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 The Kanban Board organizes work across four progressive lifecycle states:
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-                <div className="p-3 bg-[#16181D] border border-[#2A2C30] rounded-xl text-center">
-                  <div className="text-[#8E939D]">1. TODO</div>
-                  <div className="text-[10px] text-[#787C83]">Backlog items</div>
+                <div className="p-3 bg-[#191919] border border-[var(--border-primary)] rounded-xl text-center">
+                  <div className="text-[var(--text-secondary)]">1. TODO</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Backlog items</div>
                 </div>
-                <div className="p-3 bg-[#16181D] border border-[#2A2C30] rounded-xl text-center">
-                  <div className="text-[#06B6D4]">2. IN PROGRESS</div>
-                  <div className="text-[10px] text-[#787C83]">Active development</div>
+                <div className="p-3 bg-[#191919] border border-[var(--border-primary)] rounded-xl text-center">
+                  <div className="text-white">2. IN PROGRESS</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Active development</div>
                 </div>
-                <div className="p-3 bg-[#16181D] border border-[#2A2C30] rounded-xl text-center">
-                  <div className="text-[#A855F7]">3. IN REVIEW</div>
-                  <div className="text-[10px] text-[#787C83]">Code review & QA</div>
+                <div className="p-3 bg-[#191919] border border-[var(--border-primary)] rounded-xl text-center">
+                  <div className="text-white">3. IN REVIEW</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Code review & QA</div>
                 </div>
-                <div className="p-3 bg-[#16181D] border border-[#2A2C30] rounded-xl text-center">
-                  <div className="text-[#22C55E]">4. DONE</div>
-                  <div className="text-[10px] text-[#787C83]">Verified & shipped</div>
+                <div className="p-3 bg-[#191919] border border-[var(--border-primary)] rounded-xl text-center">
+                  <div className="text-white">4. DONE</div>
+                  <div className="text-[10px] text-[var(--text-muted)]">Verified & shipped</div>
                 </div>
               </div>
             </section>
 
             <section data-doc-id="drag-and-drop" id="drag-and-drop" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Drag & Drop Reordering</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Cards support smooth drag-and-drop using hardware-accelerated pointer events. Moving a card immediately calculates the new sequence index and dispatches a bulk reorder payload to <code className="text-[#06B6D4]">/api/issues/reorder</code> in the background.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Cards support smooth drag-and-drop using hardware-accelerated pointer events. Moving a card immediately calculates the new sequence index and dispatches a bulk reorder payload to <code className="text-white">/api/issues/reorder</code> in the background.
               </p>
             </section>
 
             <section data-doc-id="optimistic-board" id="optimistic-board" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">0ms Optimistic Mutations</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 When you drag a task between columns, the UI reparents the DOM element instantaneously (0ms lag). If a network failure occurs, the state engine rolls back to the cached snapshot and displays a notification.
               </p>
             </section>
@@ -877,60 +877,60 @@ npm run dev`}
               </WarningCallout>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 8: BRANCH EXPLORER GRAPH
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="branch-overview" id="branch-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <GitFork size={14} />
                 <span>8. Branch Explorer Graph</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Unity VCS Graph Concept</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 The Branch Explorer is a visual version control timeline modeled after Unity Version Control (Plastic SCM). It plots branches as horizontal subway-style lines that diverge from the main branch and converge upon merge completion.
               </p>
             </section>
 
             <section data-doc-id="bezier-splines" id="bezier-splines" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Cubic Bezier Spline Engine</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Connections between parent tasks, child branches, and dependency nodes are drawn using SVG cubic Bezier curves (<code className="text-[#06B6D4]">M x1 y1 C cx1 cy1, cx2 cy2, x2 y2</code>) with ease-in-ease-out smoothing.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Connections between parent tasks, child branches, and dependency nodes are drawn using SVG cubic Bezier curves (<code className="text-white">M x1 y1 C cx1 cy1, cx2 cy2, x2 y2</code>) with ease-in-ease-out smoothing.
               </p>
             </section>
 
             <section data-doc-id="graph-controls" id="graph-controls" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Drag-to-Pan & Scroll Controls</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Navigate massive dependency graphs effortlessly:
               </p>
-              <ul className="list-disc pl-5 text-xs text-[#8E939D] space-y-1">
+              <ul className="list-disc pl-5 text-xs text-[var(--text-secondary)] space-y-1">
                 <li><strong>Click & Drag Canvas:</strong> Pan the graph horizontally and vertically.</li>
                 <li><strong>Trackpad Two-Finger Swipe:</strong> Smooth momentum panning.</li>
                 <li><strong>Pan Buttons:</strong> Dedicated left and right navigation buttons on the graph toolbar.</li>
               </ul>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 9: DEV STREAM WORKSTATION
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="devstream-overview" id="devstream-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Terminal size={14} />
                 <span>9. Dev Stream Workstation</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Developer Workstation Mode</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Dev Stream transforms Teader into a focused workstation HUD for active coding. Selecting any task displays generated Git terminal commands, branch suggestions, and checklist steps.
               </p>
             </section>
 
             <section data-doc-id="git-command-generator" id="git-command-generator" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Automated Git Command Generator</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 With a single click, copy standard Git commands formatted with the active task key and title slug:
               </p>
               <CodeBlock
@@ -943,152 +943,152 @@ git push origin feature/TED-104-add-oauth2-provider`}
               />
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 14: LIVE MARKDOWN PROJECT DOCS
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="docs-overview" id="docs-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <FileText size={14} />
                 <span>14. Live Markdown Specs</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Live Technical Documentation</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Teader features a built-in technical wiki for architecture specs, RFCs, and API documentation directly within each workspace.
               </p>
             </section>
 
             <section data-doc-id="markdown-editor" id="markdown-editor" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Split-Screen Markdown Editor</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Write in GitHub-flavored Markdown with support for code syntax highlighting, tables, task lists, and mathematical notation. Preview changes side-by-side in real time.
               </p>
             </section>
 
             <section data-doc-id="autosave" id="autosave" className="scroll-mt-24 space-y-4">
               <h3 className="text-xl font-bold text-white">Instant Ctrl+S Persistence</h3>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Press <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[#1B1C1F] border border-[#2A2C30] rounded text-[#CFD4DD]">Ctrl+S</kbd> to persist changes immediately to PostgreSQL. A floating indicator confirms database synchronization status.
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Press <kbd className="px-2 py-0.5 text-[10px] font-mono bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">Ctrl+S</kbd> to persist changes immediately to PostgreSQL. A floating indicator confirms database synchronization status.
               </p>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 18: REAL-TIME SYNCHRONIZATION
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="sse-architecture" id="sse-architecture" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Zap size={14} />
                 <span>18. Real-Time Synchronization</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Server-Sent Events (SSE)</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
-                Teader establishes an HTTP persistent stream over <code className="text-[#06B6D4]">/api/realtime/stream</code>. Team updates dispatch event payloads including:
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                Teader establishes an HTTP persistent stream over <code className="text-white">/api/realtime/stream</code>. Team updates dispatch event payloads including:
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-[11px]">
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#06B6D4]">TASK_CREATED</div>
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#22C55E]">TASK_UPDATED</div>
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#DCB001]">TASKS_REORDERED</div>
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#EF4444]">TASK_DELETED</div>
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#A855F7]">SUBTASK_UPDATED</div>
-                <div className="p-2.5 bg-[#16181D] border border-[#2A2C30] rounded-lg text-[#3B82F6]">PROJECT_UPDATED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">TASK_CREATED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">TASK_UPDATED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">TASKS_REORDERED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">TASK_DELETED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">SUBTASK_UPDATED</div>
+                <div className="p-2.5 bg-[#191919] border border-[var(--border-primary)] rounded-lg text-white">PROJECT_UPDATED</div>
               </div>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 19: REST API & OPENAPI
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="api-overview" id="api-overview" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Database size={14} />
                 <span>19. REST API & OpenAPI</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">REST API & Endpoints</h2>
-              <p className="text-sm text-[#CFD4DD] leading-relaxed">
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                 Teader provides a comprehensive REST API for automation, CI/CD pipelines, and autonomous AI agents to manage projects, tasks, comments, and real-time state.
               </p>
 
               <div className="space-y-3 pt-2">
-                <div className="p-3 rounded-xl bg-[#141519] border border-[#24262B] font-mono text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-[#161616] border border-[#272727] font-mono text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#22C55E]/15 text-[#22C55E] font-bold">GET</span>
+                    <span className="px-2 py-0.5 rounded bg-[var(--ramp-3)]/15 text-white font-bold">GET</span>
                     <span className="text-white">/api/projects</span>
                   </div>
-                  <span className="text-[#787C83] text-[11px]">List user projects</span>
+                  <span className="text-[var(--text-muted)] text-[11px]">List user projects</span>
                 </div>
-                <div className="p-3 rounded-xl bg-[#141519] border border-[#24262B] font-mono text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-[#161616] border border-[#272727] font-mono text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#3B82F6]/15 text-[#3B82F6] font-bold">POST</span>
+                    <span className="px-2 py-0.5 rounded bg-[#FFFFFF]/15 text-white font-bold">POST</span>
                     <span className="text-white">/api/issues</span>
                   </div>
-                  <span className="text-[#787C83] text-[11px]">Create new task</span>
+                  <span className="text-[var(--text-muted)] text-[11px]">Create new task</span>
                 </div>
-                <div className="p-3 rounded-xl bg-[#141519] border border-[#24262B] font-mono text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-[#161616] border border-[#272727] font-mono text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#DCB001]/15 text-[#DCB001] font-bold">PATCH</span>
+                    <span className="px-2 py-0.5 rounded bg-white text-black/15 text-white font-bold">PATCH</span>
                     <span className="text-white">/api/issues/:id</span>
                   </div>
-                  <span className="text-[#787C83] text-[11px]">Update task fields</span>
+                  <span className="text-[var(--text-muted)] text-[11px]">Update task fields</span>
                 </div>
-                <div className="p-3 rounded-xl bg-[#141519] border border-[#24262B] font-mono text-xs flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-[#161616] border border-[#272727] font-mono text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#EF4444]/15 text-[#EF4444] font-bold">DELETE</span>
+                    <span className="px-2 py-0.5 rounded bg-[var(--ramp-3)]/15 text-white font-bold">DELETE</span>
                     <span className="text-white">/api/issues/:id</span>
                   </div>
-                  <span className="text-[#787C83] text-[11px]">Delete task record</span>
+                  <span className="text-[var(--text-muted)] text-[11px]">Delete task record</span>
                 </div>
               </div>
             </section>
 
-            <div className="border-b border-[#222428]" />
+            <div className="border-b border-[#141414]" />
 
             {/* ══════════════════════════════════════════════════════════════
                 SECTION 20: KEYBOARD SHORTCUTS
             ══════════════════════════════════════════════════════════════ */}
             <section data-doc-id="global-shortcuts" id="global-shortcuts" className="scroll-mt-24 space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001] uppercase tracking-wider">
+              <div className="flex items-center gap-2 text-xs font-mono text-white uppercase tracking-wider">
                 <Keyboard size={14} />
                 <span>20. Keyboard Shortcuts</span>
               </div>
               <h2 className="text-2xl font-bold text-white tracking-tight">Global Shortcuts Cheatsheet</h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border border-[#24262B] rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border border-[#272727] rounded-xl overflow-hidden">
                   <thead>
-                    <tr className="bg-[#16181D] text-[#8E939D] border-b border-[#24262B]">
+                    <tr className="bg-[#191919] text-[var(--text-secondary)] border-b border-[#272727]">
                       <th className="p-3 font-mono">Shortcut</th>
                       <th className="p-3 font-mono">Action</th>
                       <th className="p-3 font-mono">Scope</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#24262B] bg-[#111215] text-[#CFD4DD] font-mono">
+                  <tbody className="divide-y divide-[#272727] bg-[#141414] text-[var(--text-secondary)] font-mono">
                     <tr>
-                      <td className="p-3 text-[#DCB001]">⌘K / Ctrl+K</td>
+                      <td className="p-3 text-white">⌘K / Ctrl+K</td>
                       <td className="p-3 text-white">Open Quick Search & Command Palette</td>
-                      <td className="p-3 text-[#8E939D]">Global</td>
+                      <td className="p-3 text-[var(--text-secondary)]">Global</td>
                     </tr>
                     <tr>
-                      <td className="p-3 text-[#DCB001]">?</td>
+                      <td className="p-3 text-white">?</td>
                       <td className="p-3 text-white">Open Keyboard Shortcuts Modal</td>
-                      <td className="p-3 text-[#8E939D]">Global</td>
+                      <td className="p-3 text-[var(--text-secondary)]">Global</td>
                     </tr>
                     <tr>
-                      <td className="p-3 text-[#DCB001]">Escape</td>
+                      <td className="p-3 text-white">Escape</td>
                       <td className="p-3 text-white">Close modals, panels & deselect tasks</td>
-                      <td className="p-3 text-[#8E939D]">Global</td>
+                      <td className="p-3 text-[var(--text-secondary)]">Global</td>
                     </tr>
                     <tr>
-                      <td className="p-3 text-[#DCB001]">Ctrl+S</td>
+                      <td className="p-3 text-white">Ctrl+S</td>
                       <td className="p-3 text-white">Save technical documentation changes</td>
-                      <td className="p-3 text-[#8E939D]">Docs View</td>
+                      <td className="p-3 text-[var(--text-secondary)]">Docs View</td>
                     </tr>
                     <tr>
-                      <td className="p-3 text-[#DCB001]">N</td>
+                      <td className="p-3 text-white">N</td>
                       <td className="p-3 text-white">Create new task in active column</td>
-                      <td className="p-3 text-[#8E939D]">Board View</td>
+                      <td className="p-3 text-[var(--text-secondary)]">Board View</td>
                     </tr>
                   </tbody>
                 </table>

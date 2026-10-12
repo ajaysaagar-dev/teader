@@ -101,7 +101,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   // Folder Form State
   const [folderName, setFolderName] = useState('');
   const [folderDescription, setFolderDescription] = useState('');
-  const [folderColor, setFolderColor] = useState('#DCB001');
+  const [folderColor, setFolderColor] = useState('#FFFFFF');
   const [folderTasks, setFolderTasks] = useState<{ id: string; title: string; completed: boolean; isFolder?: boolean }[]>([]);
   const [newFolderTaskTitle, setNewFolderTaskTitle] = useState('');
 
@@ -472,11 +472,11 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   };
 
   const priorityColor: Record<Priority, string> = {
-    critical: 'bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/40',
-    high: 'bg-[#F97316]/20 text-[#F97316] border-[#F97316]/40',
-    medium: 'bg-[#DCB001]/20 text-[#DCB001] border-[#DCB001]/40',
-    low: 'bg-[#3B82F6]/20 text-[#3B82F6] border-[#3B82F6]/40',
-    none: 'bg-[#2A2C30] text-[#787C83] border-[#2A2C30]',
+    critical: 'bg-[var(--ramp-3)]/20 text-white border-[var(--border-secondary)]',
+    high: 'bg-[#FFFFFF]/20 text-[#FFFFFF] border-[#FFFFFF]/40',
+    medium: 'bg-white text-black/20 text-white border-[var(--border-secondary)]',
+    low: 'bg-[#FFFFFF]/20 text-white border-[#FFFFFF]/40',
+    none: 'bg-[#222222] text-[var(--text-muted)] border-[var(--border-primary)]',
   };
 
   const parsedLabels = labels.split(',').map((l) => l.trim()).filter(Boolean);
@@ -493,12 +493,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
-          className="w-full max-w-5xl bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+          className="w-full max-w-5xl bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
         >
           {/* Modal Header */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[#2A2C30] bg-[#17181A]">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]">
             <div className="flex items-center gap-2.5">
-              <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+              <span className="font-mono text-xs font-bold text-white bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
                 {projectKey}
               </span>
               <h2 className="text-sm font-bold text-white tracking-tight">
@@ -506,13 +506,13 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
               </h2>
             </div>
 
-            <button onClick={onClose} className="text-[#787C83] hover:text-white p-1 rounded-lg transition-colors">
+            <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white p-1 rounded-lg transition-colors">
               <X size={16} />
             </button>
           </div>
 
           {/* Mode Switcher Bars: 1) Task vs Folder & 2) Quick vs Advanced */}
-          <div className="flex items-center justify-between px-5 py-2 bg-[#131415] border-b border-[#2A2C30] flex-wrap gap-2">
+          <div className="flex items-center justify-between px-5 py-2 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex-wrap gap-2">
             {/* Folder creation is intentionally exposed only from the Tree page. */}
             {allowFolderCreation && (
               <div className="flex items-center gap-1.5">
@@ -521,8 +521,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   onClick={() => setCreationMode('task')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     creationMode === 'task'
-                      ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      ? 'bg-[#222222] text-white shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   <ListTodo size={13} />
@@ -534,8 +534,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   onClick={() => setCreationMode('folder')}
                   className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     creationMode === 'folder'
-                      ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                      : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      ? 'bg-[#222222] text-white shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   <Folder size={13} />
@@ -545,14 +545,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
             )}
 
             {/* Complexity Switch: Quick vs Advanced */}
-            <div className="flex items-center bg-[#1A1B1E] border border-[#2A2C30] p-0.5 rounded-lg">
+            <div className="flex items-center bg-[var(--bg-card)] border border-[var(--border-primary)] p-0.5 rounded-lg">
               <button
                 type="button"
                 onClick={() => setFormView('quick')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                   formView === 'quick'
-                    ? 'bg-[#DCB001] text-[#0F1011] shadow-sm'
-                    : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    ? 'bg-white text-black text-[#000000] shadow-sm'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
                 <Zap size={11} />
@@ -563,8 +563,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 onClick={() => setFormView('advanced')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                   formView === 'advanced'
-                    ? 'bg-[#DCB001] text-[#0F1011] shadow-sm'
-                    : 'text-[#787C83] hover:text-[#CFD4DD]'
+                    ? 'bg-white text-black text-[#000000] shadow-sm'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
                 <Sliders size={11} />
@@ -575,7 +575,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
           {/* Form Body - 2 Columns (Left: Form Inputs, Right: Live Real-Time Preview) */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col font-sans text-xs">
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto divide-y lg:divide-y-0 lg:divide-x divide-[#2A2C30]">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto divide-y lg:divide-y-0 lg:divide-x divide-[var(--border-primary)]">
               
               {/* Left Column: Inputs */}
               <div className="lg:col-span-6 xl:col-span-7 p-5 space-y-4 overflow-y-auto">
@@ -585,8 +585,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   <>
                     {/* Task Title */}
                     <div className="relative">
-                      <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
-                        Task Title <span className="text-[#EF4444]">*</span>
+                      <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                        Task Title <span className="text-white">*</span>
                       </label>
                       <input
                         type="text"
@@ -596,7 +596,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         value={title}
                         onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'title')}
                         onKeyDown={(e) => handleInputKeyDownWithMention(e, 'title')}
-                        className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
+                        className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
                       />
 
                       {/* Mention Popover for Title */}
@@ -614,13 +614,13 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                       {/* Duplicate Detection Warning Banner */}
                       {detectedDuplicates.length > 0 && (
-                        <div className="mt-2 p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-xs space-y-1">
-                          <span className="text-[#EF4444] font-bold flex items-center gap-1 text-[11px]">
+                        <div className="mt-2 p-2.5 bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] rounded-lg text-xs space-y-1">
+                          <span className="text-white font-bold flex items-center gap-1 text-[11px]">
                             <AlertTriangle size={12} /> Potential Duplicates Detected ({detectedDuplicates.length}):
                           </span>
                           {detectedDuplicates.map((dup) => (
-                            <div key={dup.id} className="text-[#CFD4DD] text-[11px] font-mono truncate pl-1">
-                              &bull; <strong className="text-[#DCB001]">{dup.key}</strong>: {dup.title}
+                            <div key={dup.id} className="text-[var(--text-secondary)] text-[11px] font-mono truncate pl-1">
+                              &bull; <strong className="text-white">{dup.key}</strong>: {dup.title}
                             </div>
                           ))}
                         </div>
@@ -630,10 +630,10 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                     {/* Description & Markdown */}
                     <div className="relative">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                        <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
                           Description (Markdown Supported)
                         </label>
-                        <span className="text-[10px] text-[#787C83] font-mono">Real-time preview on right &rarr;</span>
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono">Real-time preview on right &rarr;</span>
                       </div>
                       <textarea
                         rows={formView === 'quick' ? 6 : 4}
@@ -641,7 +641,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         value={description}
                         onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'desc')}
                         onKeyDown={(e) => handleInputKeyDownWithMention(e, 'desc')}
-                        className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
+                        className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
                       />
 
                       {/* Mention Popover for Description */}
@@ -659,16 +659,16 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                     </div>
 
                     {/* @ Tag Related Tasks */}
-                    <div className="space-y-2 pt-1 border-t border-[#2A2C30]/70">
+                    <div className="space-y-2 pt-1 border-t border-[var(--border-primary)]">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
-                          <Tag size={12} className="text-[#38BDF8]" />
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
+                          <Tag size={12} className="text-white" />
                           <span>Tagged & Related Tasks (@)</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setShowTaskPicker((prev) => !prev)}
-                          className="flex items-center gap-1 text-[11px] font-mono text-[#38BDF8] hover:text-white bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-[#38BDF8]/50 px-2 py-0.5 rounded transition-all cursor-pointer"
+                          className="flex items-center gap-1 text-[11px] font-mono text-white hover:text-white bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] px-2 py-0.5 rounded transition-all cursor-pointer"
                         >
                           <Plus size={11} />
                           <span>Tag Task (@)</span>
@@ -685,18 +685,18 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             return (
                               <span
                                 key={tKey}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#38BDF8]/10 border border-[#38BDF8]/30 text-xs font-mono text-[#38BDF8]"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] text-xs font-mono text-white"
                               >
                                 <span>@{tKey}</span>
                                 {matchingTask && (
-                                  <span className="text-[#CFD4DD] truncate max-w-[120px] font-sans">
+                                  <span className="text-[var(--text-secondary)] truncate max-w-[120px] font-sans">
                                     {matchingTask.title}
                                   </span>
                                 )}
                                 <button
                                   type="button"
                                   onClick={() => setTaggedTasks((prev) => prev.filter((k) => k !== tKey))}
-                                  className="hover:text-[#EF4444] transition-colors ml-0.5 cursor-pointer"
+                                  className="hover:text-white transition-colors ml-0.5 cursor-pointer"
                                 >
                                   <X size={11} />
                                 </button>
@@ -708,13 +708,13 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                       {/* Task Picker Dropdown */}
                       {showTaskPicker && (
-                        <div className="p-2.5 bg-[#131415] border border-[#38BDF8]/40 rounded-xl space-y-2 shadow-xl animate-in fade-in">
+                        <div className="p-2.5 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl space-y-2 shadow-xl animate-in fade-in">
                           <input
                             type="text"
                             placeholder="Search tasks to tag (e.g. T1, auth, UI)..."
                             value={taskPickerSearch}
                             onChange={(e) => setTaskPickerSearch(e.target.value)}
-                            className="w-full bg-[#1B1C1F] border border-[#2A2C30] focus:border-[#38BDF8] rounded-lg px-2.5 py-1 text-xs text-white outline-none"
+                            className="w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1 text-xs text-white outline-none"
                             autoFocus
                           />
                           <div className="max-h-36 overflow-y-auto space-y-1 custom-scrollbar">
@@ -745,17 +745,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                     }}
                                     className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs text-left transition-colors cursor-pointer ${
                                       isSelected
-                                        ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
-                                        : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
+                                        ? 'bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)]'
+                                        : 'bg-[var(--bg-panel)] hover:bg-[#141414] text-[var(--text-secondary)] border border-[var(--border-primary)]'
                                     }`}
                                   >
                                     <div className="flex items-center gap-2 truncate">
-                                      <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1 py-0.2 rounded text-[10px]">
+                                      <span className="font-mono font-bold text-white bg-white text-black/10 px-1 py-0.2 rounded text-[10px]">
                                         {shortId}
                                       </span>
                                       <span className="truncate">{task.title}</span>
                                     </div>
-                                    {isSelected && <Check size={12} className="text-[#38BDF8] shrink-0 ml-1" />}
+                                    {isSelected && <Check size={12} className="text-white shrink-0 ml-1" />}
                                   </button>
                                 );
                               })}
@@ -766,11 +766,11 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                     {/* Advanced Configuration Options (Only shown in Advanced Mode) */}
                     {formView === 'advanced' && (
-                      <div className="space-y-3.5 pt-2 border-t border-[#2A2C30]">
+                      <div className="space-y-3.5 pt-2 border-t border-[var(--border-primary)]">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* Priority */}
                           <div>
-                            <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                               Priority
                             </label>
                             <CustomDropdown<Priority>
@@ -783,14 +783,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                 { value: 'low', label: 'Low (P3)' },
                               ]}
                               className="w-full"
-                              triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] capitalize hover:border-[#DCB001]/50"
+                              triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] capitalize hover:border-[var(--border-secondary)]"
                               size="sm"
                             />
                           </div>
 
                           {/* Assignee */}
                           <div>
-                            <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                               Assignee
                             </label>
                             <CustomDropdown<string>
@@ -806,14 +806,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                 { value: 'jori', label: 'jori' },
                               ]}
                               className="w-full"
-                              triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] hover:border-[#DCB001]/50"
+                              triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] hover:border-[var(--border-secondary)]"
                               size="sm"
                             />
                           </div>
 
                           {/* Estimate */}
                           <div>
-                            <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                               Estimate (Hours)
                             </label>
                             <input
@@ -822,21 +822,21 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                               step="0.5"
                               value={estimatedHours}
                               onChange={(e) => setEstimatedHours(parseFloat(e.target.value) || 0)}
-                              className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono"
+                              className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono"
                             />
                           </div>
 
                           {/* Custom Date Selector */}
                           <div>
                             <div className="flex items-center justify-between mb-1">
-                              <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                              <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
                                 Due Date
                               </label>
                               {dueDate && (
                                 <button
                                   type="button"
                                   onClick={() => setDueDate('')}
-                                  className="text-[10px] text-[#EF4444] hover:underline font-mono"
+                                  className="text-[10px] text-white hover:underline font-mono"
                                 >
                                   Clear
                                 </button>
@@ -844,12 +844,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             </div>
                             <div className="space-y-1.5">
                               <div className="relative flex items-center">
-                                <Calendar size={13} className="absolute left-2.5 text-[#DCB001] pointer-events-none" />
+                                <Calendar size={13} className="absolute left-2.5 text-white pointer-events-none" />
                                 <input
                                   type="date"
                                   value={dueDate}
                                   onChange={(e) => setDueDate(e.target.value)}
-                                  className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg pl-8 pr-2.5 py-1.5 text-white outline-none font-mono text-xs cursor-pointer [color-scheme:dark]"
+                                  className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg pl-8 pr-2.5 py-1.5 text-white outline-none font-mono text-xs cursor-pointer [color-scheme:dark]"
                                 />
                               </div>
                               {/* Quick Date Presets */}
@@ -860,7 +860,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                     const d = new Date();
                                     setDueDate(d.toISOString().split('T')[0]);
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A1B1D] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#CFD4DD] transition-colors"
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
                                 >
                                   Today
                                 </button>
@@ -871,7 +871,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                     d.setDate(d.getDate() + 1);
                                     setDueDate(d.toISOString().split('T')[0]);
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A1B1D] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#CFD4DD] transition-colors"
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
                                 >
                                   Tomorrow
                                 </button>
@@ -882,7 +882,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                     d.setDate(d.getDate() + 7);
                                     setDueDate(d.toISOString().split('T')[0]);
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#1A1B1D] hover:bg-[#25272B] border border-[#2A2C30] hover:border-[#DCB001]/40 text-[#CFD4DD] transition-colors"
+                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
                                 >
                                   +1 Week
                                 </button>
@@ -893,7 +893,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                         {/* Destination Folder */}
                         <div>
-                          <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                          <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                             Destination Folder
                           </label>
                           <CustomDropdown<string>
@@ -908,14 +908,14 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                               label: `📁 ${f.name} ${f.id !== 'folder_general' && f.createdAt ? `(${new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}`,
                             }))}
                             className="w-full"
-                            triggerClassName="w-full bg-[#131415] border border-[#2A2C30] rounded-lg px-2.5 py-1.5 text-[#CFD4DD] font-sans text-xs hover:border-[#DCB001]/50"
+                            triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] font-sans text-xs hover:border-[var(--border-secondary)]"
                             size="sm"
                           />
                         </div>
 
                         {/* Labels */}
                         <div>
-                          <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                          <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                             Labels (Comma-separated)
                           </label>
                           <input
@@ -923,7 +923,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             value={labels}
                             onChange={(e) => setLabels(e.target.value)}
                             placeholder="UI, Frontend, Security..."
-                            className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-1.5 text-white outline-none font-mono"
+                            className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-1.5 text-white outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -934,11 +934,11 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   <>
                     {/* Folder Name */}
                     <div className="relative">
-                      <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
-                        Folder / Group Name <span className="text-[#EF4444]">*</span>
+                      <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                        Folder / Group Name <span className="text-white">*</span>
                       </label>
                       <div className="relative flex items-center">
-                        <Folder size={15} className="absolute left-3 text-[#DCB001]" />
+                        <Folder size={15} className="absolute left-3 text-white" />
                         <input
                           type="text"
                           autoFocus
@@ -947,7 +947,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                           value={folderName}
                           onChange={(e) => handleInputChangeWithMention(e.target.value, e.target.selectionStart ?? e.target.value.length, 'folder')}
                           onKeyDown={(e) => handleInputKeyDownWithMention(e, 'folder')}
-                          className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg pl-9 pr-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
+                          className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg pl-9 pr-3 py-2 text-white outline-none text-xs sm:text-sm font-medium transition-colors"
                         />
                       </div>
 
@@ -967,7 +967,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                     {/* Folder Description */}
                     <div>
-                      <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1">
+                      <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
                         Folder Scope & Documentation
                       </label>
                       <textarea
@@ -975,42 +975,42 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         placeholder="Describe the purpose of this folder group, related architectural components, or milestones..."
                         value={folderDescription}
                         onChange={(e) => setFolderDescription(e.target.value)}
-                        className="w-full bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
+                        className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-2 text-white outline-none font-mono text-xs leading-relaxed resize-y transition-colors"
                       />
                     </div>
 
                     {/* Advanced Folder Options (Only shown in Advanced Mode) */}
                     {formView === 'advanced' && (
-                      <div className="space-y-3.5 pt-2 border-t border-[#2A2C30]">
+                      <div className="space-y-3.5 pt-2 border-t border-[var(--border-primary)]">
                         {/* Folder Color Badge */}
                         <div>
-                          <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider mb-1.5">
+                          <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                             Folder Accent Color
                           </label>
                           <div className="flex items-center gap-2">
-                            {['#DCB001', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#F97316'].map((col) => (
+                            {['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'].map((col) => (
                               <button
                                 key={col}
                                 type="button"
                                 onClick={() => setFolderColor(col)}
                                 style={{ backgroundColor: col }}
                                 className={`w-6 h-6 rounded-full transition-transform flex items-center justify-center ${
-                                  folderColor === col ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#1B1C1F]' : 'opacity-70 hover:opacity-100'
+                                  folderColor === col ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#141414]' : 'opacity-70 hover:opacity-100'
                                 }`}
                               >
-                                {folderColor === col && <Check size={12} className="text-[#0F1011] stroke-[3]" />}
+                                {folderColor === col && <Check size={12} className="text-[#000000] stroke-[3]" />}
                               </button>
                             ))}
                           </div>
                         </div>
 
                         {/* Folder Tasks Checklist Builder */}
-                        <div className="space-y-2 pt-2 border-t border-[#2A2C30]">
+                        <div className="space-y-2 pt-2 border-t border-[var(--border-primary)]">
                           <div className="flex items-center justify-between">
-                            <label className="block text-[11px] font-mono text-[#787C83] uppercase tracking-wider">
+                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
                               Initial Tasks Inside Folder ({folderTasks.length})
                             </label>
-                            <span className="text-[10px] font-mono text-[#787C83]">Can add more tasks anytime</span>
+                            <span className="text-[10px] font-mono text-[var(--text-muted)]">Can add more tasks anytime</span>
                           </div>
 
                           {/* Folder task list */}
@@ -1019,17 +1019,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                               {folderTasks.map((ft, idx) => (
                                 <div
                                   key={ft.id}
-                                  className="flex items-center justify-between px-2.5 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg text-xs"
+                                  className="flex items-center justify-between px-2.5 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg text-xs"
                                 >
                                   <div className="flex items-center gap-2 truncate">
-                                    <span className="font-mono text-[9px] text-[#787C83]">0{idx + 1}.</span>
-                                    <CheckSquare size={12} className="text-[#DCB001]" shrink-0 />
-                                    <span className="text-[#CFD4DD] truncate">{ft.title}</span>
+                                    <span className="font-mono text-[9px] text-[var(--text-muted)]">0{idx + 1}.</span>
+                                    <CheckSquare size={12} className="text-white" shrink-0 />
+                                    <span className="text-[var(--text-secondary)] truncate">{ft.title}</span>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveFolderTask(ft.id)}
-                                    className="text-[#787C83] hover:text-[#EF4444]"
+                                    className="text-[var(--text-muted)] hover:text-white"
                                   >
                                     <Trash2 size={12} />
                                   </button>
@@ -1050,12 +1050,12 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                   handleAddFolderTask();
                                 }
                               }}
-                              className="flex-1 bg-[#131415] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg px-2.5 py-1.5 text-white outline-none"
+                              className="flex-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1.5 text-white outline-none"
                             />
                             <button
                               type="button"
                               onClick={handleAddFolderTask}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg font-bold"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg font-bold"
                             >
                               <Plus size={13} />
                               <span>Add Task</span>
@@ -1070,17 +1070,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
               </div>
 
               {/* Right Column: Real-time Live Preview */}
-              <div className="lg:col-span-6 xl:col-span-5 bg-[#151618] p-5 flex flex-col overflow-y-auto space-y-4">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#2A2C30]">
+              <div className="lg:col-span-6 xl:col-span-5 bg-[#161616] p-5 flex flex-col overflow-y-auto space-y-4">
+                <div className="flex items-center justify-between pb-2.5 border-b border-[var(--border-primary)]">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-                    <Eye size={14} className="text-[#DCB001]" />
+                    <Eye size={14} className="text-white" />
                     <span>Real-time Preview</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-mono uppercase bg-[#2A2C30] text-[#DCB001] px-2 py-0.5 rounded-full font-semibold">
+                    <span className="text-[10px] font-mono uppercase bg-[#222222] text-white px-2 py-0.5 rounded-full font-semibold">
                       {creationMode === 'task' ? 'Task Card' : 'Folder Node'}
                     </span>
-                    <span className="text-[9px] font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-1.5 py-0.5 rounded">
+                    <span className="text-[9px] font-mono text-[var(--text-muted)] bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-1.5 py-0.5 rounded">
                       {formView.toUpperCase()}
                     </span>
                   </div>
@@ -1088,9 +1088,9 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                 {/* ─── PREVIEW: TASK CARD ─────────────────────────────────── */}
                 {creationMode === 'task' ? (
-                  <div className="bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-4 space-y-3.5 shadow-md">
+                  <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 space-y-3.5 shadow-md">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+                      <span className="font-mono text-xs font-bold text-white bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
                         {projectKey}-PREVIEW
                       </span>
                       <div className="flex items-center gap-1.5">
@@ -1099,7 +1099,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             {priority}
                           </span>
                         )}
-                        <span className="text-[10px] font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
                           TODO
                         </span>
                       </div>
@@ -1107,26 +1107,26 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                     <div>
                       <h3 className="text-sm font-bold text-white leading-snug break-words">
-                        {title.trim() || <span className="text-[#585C60] italic">Untitled Task</span>}
+                        {title.trim() || <span className="text-[var(--text-muted)] italic">Untitled Task</span>}
                       </h3>
                     </div>
 
                     {/* Metadata Chips (in Advanced view) */}
                     {formView === 'advanced' && (
-                      <div className="flex flex-wrap gap-2 text-[11px] text-[#8E939D]">
-                        <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
-                          <UserIcon size={11} className="text-[#DCB001]" />
+                      <div className="flex flex-wrap gap-2 text-[11px] text-[var(--text-secondary)]">
+                        <div className="flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
+                          <UserIcon size={11} className="text-white" />
                           <span>{assigneeName}</span>
                         </div>
                         {estimatedHours > 0 && (
-                          <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded font-mono">
-                            <Clock size={11} className="text-[#DCB001]" />
+                          <div className="flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded font-mono">
+                            <Clock size={11} className="text-white" />
                             <span>{estimatedHours}h</span>
                           </div>
                         )}
                         {dueDate && (
-                          <div className="flex items-center gap-1 bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded font-mono">
-                            <Calendar size={11} className="text-[#DCB001]" />
+                          <div className="flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded font-mono">
+                            <Calendar size={11} className="text-white" />
                             <span>{dueDate}</span>
                           </div>
                         )}
@@ -1139,9 +1139,9 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                         {parsedLabels.map((tag, idx) => (
                           <span
                             key={idx}
-                            className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-[#202226] border border-[#2F333A] text-[#CFD4DD]"
+                            className="flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-[#141414] border border-[#343434] text-[var(--text-secondary)]"
                           >
-                            <Tag size={9} className="text-[#DCB001]" />
+                            <Tag size={9} className="text-white" />
                             {tag}
                           </span>
                         ))}
@@ -1149,15 +1149,15 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                     )}
 
                     {/* Live Description Render */}
-                    <div className="pt-2 border-t border-[#2A2C30] space-y-1.5">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] block">
+                    <div className="pt-2 border-t border-[var(--border-primary)] space-y-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] block">
                         Description Preview
                       </span>
-                      <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl text-xs text-[#CFD4DD] leading-relaxed max-h-60 overflow-y-auto">
+                      <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl text-xs text-[var(--text-secondary)] leading-relaxed max-h-60 overflow-y-auto">
                         {description.trim() ? (
                           <MarkdownRenderer content={description} />
                         ) : (
-                          <p className="text-[#585C60] italic text-xs">
+                          <p className="text-[var(--text-muted)] italic text-xs">
                             Task description and markdown formatting will render here in real-time as you type...
                           </p>
                         )}
@@ -1166,22 +1166,22 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                   </div>
                 ) : (
                   /* ─── PREVIEW: FOLDER NODE CARD ──────────────────────────── */
-                  <div className="bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-4 space-y-3.5 shadow-md">
+                  <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 space-y-3.5 shadow-md">
                     {/* Folder Header */}
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <div 
                           style={{ backgroundColor: `${folderColor}20`, borderColor: `${folderColor}60` }}
-                          className="w-7 h-7 rounded-lg border flex items-center justify-center text-[#DCB001]"
+                          className="w-7 h-7 rounded-lg border flex items-center justify-center text-white"
                         >
                           <Folder size={15} style={{ color: folderColor }} />
                         </div>
-                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[#131415] border border-[#2A2C30] text-[#DCB001]">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-[var(--bg-canvas)] border border-[var(--border-primary)] text-white">
                           FOLDER GROUP
                         </span>
                       </div>
                       {formView === 'advanced' && (
-                        <span className="text-[10px] font-mono text-[#787C83] bg-[#131415] border border-[#2A2C30] px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
                           {folderTasks.length} Tasks
                         </span>
                       )}
@@ -1190,20 +1190,20 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                     {/* Folder Name */}
                     <div>
                       <h3 className="text-base font-bold text-white leading-snug break-words">
-                        {folderName.trim() || <span className="text-[#585C60] italic">Untitled Folder</span>}
+                        {folderName.trim() || <span className="text-[var(--text-muted)] italic">Untitled Folder</span>}
                       </h3>
                     </div>
 
                     {/* Folder Description Preview */}
-                    <div className="pt-2 border-t border-[#2A2C30] space-y-1.5">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83] block">
+                    <div className="pt-2 border-t border-[var(--border-primary)] space-y-1.5">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)] block">
                         Folder Scope
                       </span>
-                      <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl text-xs text-[#CFD4DD] leading-relaxed max-h-40 overflow-y-auto">
+                      <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl text-xs text-[var(--text-secondary)] leading-relaxed max-h-40 overflow-y-auto">
                         {folderDescription.trim() ? (
                           <MarkdownRenderer content={folderDescription} />
                         ) : (
-                          <p className="text-[#585C60] italic text-xs">
+                          <p className="text-[var(--text-muted)] italic text-xs">
                             Folder documentation and group overview will appear here...
                           </p>
                         )}
@@ -1212,8 +1212,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
 
                     {/* Tasks inside this folder preview (Advanced mode) */}
                     {formView === 'advanced' && (
-                      <div className="pt-2 border-t border-[#2A2C30] space-y-1.5">
-                        <div className="flex items-center justify-between text-[10px] font-mono text-[#787C83] uppercase tracking-wider">
+                      <div className="pt-2 border-t border-[var(--border-primary)] space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
                           <span className="flex items-center gap-1">
                             <FolderPlus size={11} style={{ color: folderColor }} />
                             Folder Tasks ({folderTasks.length})
@@ -1224,16 +1224,16 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             {folderTasks.map((ft, idx) => (
                               <div
                                 key={ft.id}
-                                className="flex items-center gap-2 px-2.5 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-lg text-[11px] text-[#CFD4DD]"
+                                className="flex items-center gap-2 px-2.5 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg text-[11px] text-[var(--text-secondary)]"
                               >
-                                <span className="font-mono text-[9px] text-[#787C83]">0{idx + 1}</span>
-                                <div className="w-3 h-3 rounded border border-[#2A2C30] bg-[#17181A]" />
+                                <span className="font-mono text-[9px] text-[var(--text-muted)]">0{idx + 1}</span>
+                                <div className="w-3 h-3 rounded border border-[var(--border-primary)] bg-[var(--bg-panel)]" />
                                 <span className="truncate">{ft.title}</span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[11px] text-[#585C60] italic p-2 bg-[#131415] border border-[#2A2C30] rounded-lg">
+                          <p className="text-[11px] text-[var(--text-muted)] italic p-2 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg">
                             No initial tasks specified. You can drag and drop tasks into this folder anytime!
                           </p>
                         )}
@@ -1247,22 +1247,22 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
             </div>
 
             {/* Bottom Modal Actions Bar */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-[#2A2C30] bg-[#17181A]">
-              <span className="text-[11px] text-[#787C83]">
-                Press <kbd className="px-1.5 py-0.5 bg-[#131415] border border-[#2A2C30] rounded font-mono text-[10px] text-white">Esc</kbd> to exit
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[var(--border-primary)] bg-[var(--bg-panel)]">
+              <span className="text-[11px] text-[var(--text-muted)]">
+                Press <kbd className="px-1.5 py-0.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded font-mono text-[10px] text-white">Esc</kbd> to exit
               </span>
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-1.5 bg-[#17181A] hover:bg-[#222427] text-[#787C83] hover:text-white rounded-lg font-semibold transition-colors"
+                  className="px-4 py-1.5 bg-[var(--bg-panel)] hover:bg-[#242424] text-[var(--text-muted)] hover:text-white rounded-lg font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-1.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {creationMode === 'task' ? (
                     <>

@@ -54,16 +54,16 @@ export const TaskMentionPopover: React.FC<TaskMentionPopoverProps> = ({
 
   return (
     <div
-      className={`bg-[#131415] border border-[#38BDF8]/50 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 ${className}`}
+      className={`bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-100 ${className}`}
       onMouseDown={(e) => e.preventDefault()} // Prevent losing input focus
     >
       {/* Popover Header */}
-      <div className="px-3 py-1.5 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[#38BDF8] font-bold">
+      <div className="px-3 py-1.5 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-[11px] font-mono text-white font-bold">
           <Tag size={11} />
           <span>Tag Related Task</span>
         </div>
-        <span className="text-[9px] font-mono text-[#787C83]">
+        <span className="text-[9px] font-mono text-[var(--text-muted)]">
           &uarr;&darr; Enter / Click
         </span>
       </div>
@@ -79,17 +79,17 @@ export const TaskMentionPopover: React.FC<TaskMentionPopoverProps> = ({
               onClick={() => onSelect(item)}
               className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-[#38BDF8]/20 text-white border border-[#38BDF8]/40 shadow-sm'
-                  : 'text-[#CFD4DD] hover:bg-[#1A1B1E] border border-transparent'
+                  ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)] shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.2 rounded text-[10px] border border-[#DCB001]/30 shrink-0">
+                <span className="font-mono font-bold text-white bg-white text-black/10 px-1.5 py-0.2 rounded text-[10px] border border-[var(--border-secondary)] shrink-0">
                   {item.shortId}
                 </span>
                 <span className="truncate text-xs">{item.title}</span>
               </div>
-              <span className="text-[10px] font-mono text-[#787C83] shrink-0 ml-1.5 hidden sm:inline">
+              <span className="text-[10px] font-mono text-[var(--text-muted)] shrink-0 ml-1.5 hidden sm:inline">
                 {item.key}
               </span>
             </button>

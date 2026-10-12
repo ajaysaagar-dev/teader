@@ -263,12 +263,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -12, scale: 0.97 }}
           transition={{ duration: 0.14, ease: 'easeOut' }}
-          className="w-full max-w-2xl bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="w-full max-w-2xl bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Search Input Bar */}
-          <div className="flex items-center px-4 py-3 border-b border-[#2A2C30] bg-[#0F1011]">
-            <Search size={18} className="text-[#DCB001] mr-3 shrink-0" />
+          <div className="flex items-center px-4 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)]">
+            <Search size={18} className="text-white mr-3 shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -279,12 +279,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               }}
               onKeyDown={handleKeyDown}
               placeholder="Type a command, search issues, or use operators (e.g. status:done, priority:high)..."
-              className="w-full bg-transparent text-sm text-[#E5E7EB] placeholder-[#9CA3AF] outline-none"
+              className="w-full bg-transparent text-sm text-[#EDEDED] placeholder-[#A0A0A0] outline-none"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="p-1 text-[#9CA3AF] hover:text-white rounded transition-colors"
+                className="p-1 text-[var(--text-secondary)] hover:text-white rounded transition-colors"
               >
                 <X size={15} />
               </button>
@@ -296,7 +296,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Quick Actions */}
             {filteredActions.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                <div className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                   Commands & Views
                 </div>
                 <div className="space-y-0.5">
@@ -311,15 +311,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[#222222] text-white'
+                            : 'text-[#EDEDED] hover:bg-[#242424]'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Icon size={16} className={isSelected ? 'text-[#DCB001]' : 'text-[#9CA3AF]'} />
+                          <Icon size={16} className={isSelected ? 'text-white' : 'text-[var(--text-secondary)]'} />
                           <span className="font-medium">{act.label}</span>
                         </div>
-                        <span className="text-xs text-[#9CA3AF] opacity-60">
+                        <span className="text-xs text-[var(--text-secondary)] opacity-60">
                           {act.category}
                         </span>
                       </button>
@@ -332,7 +332,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Issues */}
             {filteredIssues.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                <div className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                   Tasks ({filteredIssues.length})
                 </div>
                 <div className="space-y-0.5">
@@ -350,18 +350,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[#222222] text-white'
+                            : 'text-[#EDEDED] hover:bg-[#242424]'
                         }`}
                       >
                         <div className="flex items-center gap-3 overflow-hidden mr-2">
-                          <span className="font-mono text-xs font-bold text-[#DCB001] shrink-0">
+                          <span className="font-mono text-xs font-bold text-white shrink-0">
                             {issue.key}
                           </span>
-                          <span className="truncate text-[#E5E7EB]">{issue.title}</span>
+                          <span className="truncate text-[#EDEDED]">{issue.title}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 text-xs text-[#9CA3AF]">
-                          <span className="px-1.5 py-0.5 rounded bg-[#131415] border border-[#2A2C30] capitalize">
+                        <div className="flex items-center gap-1.5 shrink-0 text-xs text-[var(--text-secondary)]">
+                          <span className="px-1.5 py-0.5 rounded bg-[var(--bg-canvas)] border border-[var(--border-primary)] capitalize">
                             {issue.status.replace('_', ' ')}
                           </span>
                         </div>
@@ -375,7 +375,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Projects */}
             {filteredProjects.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                <div className="px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
                   Projects ({filteredProjects.length})
                 </div>
                 <div className="space-y-0.5">
@@ -392,16 +392,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
                         className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[#222222] text-white'
+                            : 'text-[#EDEDED] hover:bg-[#242424]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <FolderKanban size={15} className="text-[#DCB001]" />
-                          <span className="font-mono font-bold text-[#DCB001]">{p.key}</span>
-                          <span className="text-[#E5E7EB]">{p.name}</span>
+                          <FolderKanban size={15} className="text-white" />
+                          <span className="font-mono font-bold text-white">{p.key}</span>
+                          <span className="text-[#EDEDED]">{p.name}</span>
                         </div>
-                        <span className="text-xs text-[#9CA3AF]">Open Workspace ↵</span>
+                        <span className="text-xs text-[var(--text-secondary)]">Open Workspace ↵</span>
                       </button>
                     );
                   })}
@@ -410,23 +410,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             )}
 
             {flatItems.length === 0 && (
-              <div className="p-8 text-center text-xs text-[#9CA3AF] space-y-2">
+              <div className="p-8 text-center text-xs text-[var(--text-secondary)] space-y-2">
                 <Search size={24} className="mx-auto opacity-40 mb-2" />
-                <p className="font-semibold text-[#E5E7EB] text-sm">No matching commands or tasks found</p>
+                <p className="font-semibold text-[#EDEDED] text-sm">No matching commands or tasks found</p>
                 <p className="text-xs">Try searching by task ID, title, or status (e.g. `status:done`)</p>
               </div>
             )}
           </div>
 
           {/* Footer Shortcuts & Syntax Hints */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#0F1011] border-t border-[#2A2C30] text-xs text-[#9CA3AF] font-mono">
+          <div className="flex items-center justify-between px-4 py-3 bg-[var(--bg-canvas)] border-t border-[var(--border-primary)] text-xs text-[var(--text-secondary)] font-mono">
             <div className="flex items-center gap-3">
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↑↓</kbd> Navigate</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↵</kbd> Execute</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">ESC</kbd> Close</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-white">↑↓</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-white">↵</kbd> Execute</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded text-white">ESC</kbd> Close</span>
             </div>
             <span className="hidden sm:inline opacity-70">
-              Filter tips: <code className="text-[#DCB001]">status:in_progress</code> · <code className="text-[#3B82F6]">priority:high</code>
+              Filter tips: <code className="text-white">status:in_progress</code> · <code className="text-white">priority:high</code>
             </span>
           </div>
         </motion.div>
