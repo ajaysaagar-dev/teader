@@ -92,7 +92,8 @@ function getDbPool() {
   try {
     const { Pool } = require('pg');
     const DATABASE_URL = process.env.DATABASE_URL;
-    if (DATABASE_URL && DATABASE_URL.startsWith('postgres')) {
+    const isPlaceholderUrl = !DATABASE_URL || DATABASE_URL.includes('your_db_user') || DATABASE_URL.includes('your_db_password');
+    if (!isPlaceholderUrl && DATABASE_URL.startsWith('postgres')) {
       pgPool = new Pool({ connectionString: DATABASE_URL, max: 3 });
     } else {
       pgPool = new Pool({

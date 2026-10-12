@@ -1,26 +1,39 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Issue, Project } from '@/lib/types';
+import { resetUIScale } from '@/components/UIScaleInitializer';
+import { StatusIcon } from '@/components/ui/StatusIcon';
+import { PriorityIcon } from '@/components/ui/PriorityIcon';
+import { toast } from 'sonner';
 import { 
   Search,
   PlusCircle, 
-  ArrowRight,
   LayoutGrid,
+  List,
   BarChart3,
-  Layers,
   FolderTree,
-  Terminal,
+  Calendar,
+  Network,
   FolderKanban,
   LayoutDashboard,
   CheckCircle2,
   Clock,
-  Flame,
   X,
-  Sparkles,
-  User,
-  Tag
+  CheckSquare,
+  Flame,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  Workflow,
+  PhoneCall,
+  Boxes,
+  Plug,
+  Settings,
+  RotateCcw,
+  Trash2,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,6 +57,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectView,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,7 +82,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // ─── Scoped Search Filtering (GitHub-style syntax) ─────────────────────────
+  // ─── Scoped Search Filtering (GitHub / Linear syntax) ───────────────────────
 
   const { filteredIssues, filteredProjects, filteredActions } = useMemo(() => {
     const raw = query.trim().toLowerCase();
@@ -104,6 +118,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       cleanQuery = cleanQuery.replace(assigneeMatch[0], '').trim();
     }
 
+    const projectMatch = pathname?.match(/^\/projects\/([^/?#]+)/);
+    const currentProjectId = projectMatch ? projectMatch[1] : (projects.length > 0 ? String(projects[0].id) : null);
+    const currentProject = projects.find((p) => String(p.id) === currentProjectId);
+    const projPrefix = currentProject ? `${currentProject.key}: ` : 'Project: ';
+
     const allActions = [
       {
         id: 'act_new',
@@ -113,39 +132,39 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         run: () => { onOpenNewIssue(); onClose(); },
       },
       {
-        id: 'act_overview',
-        label: 'Switch to Project Overview (Analytics & Charts)',
-        category: 'View',
-        icon: BarChart3,
-        run: () => { onSelectView?.('overview'); onClose(); },
+        id: 'act_dashboard',
+        label: 'Go to Workspace Dashboard',
+        category: 'Navigation',
+        icon: LayoutDashboard,
+        run: () => { router.push('/dashboard'); onClose(); },
       },
       {
-        id: 'act_board',
-        label: 'Switch to Kanban Board View',
-        category: 'View',
-        icon: LayoutGrid,
-        run: () => { onSelectView?.('board'); onClose(); },
+        id: 'act_my_work',
+        label: 'Go to My Work',
+        category: 'Navigation',
+        icon: CheckSquare,
+        run: () => { router.push('/my-work'); onClose(); },
       },
       {
-        id: 'act_tree',
-        label: 'Switch to Project Tree Explorer',
-        category: 'View',
-        icon: FolderTree,
-        run: () => { onSelectView?.('tree'); onClose(); },
+        id: 'act_initiatives',
+        label: 'Go to Initiatives',
+        category: 'Navigation',
+        icon: Flame,
+        run: () => { router.push('/initiatives'); onClose(); },
       },
       {
-        id: 'act_hierarchy',
-        label: 'Switch to Hierarchical View',
-        category: 'View',
-        icon: Layers,
-        run: () => { onSelectView?.('hierarchy'); onClose(); },
+        id: 'act_conversations',
+        label: 'Go to Conversations',
+        category: 'Navigation',
+        icon: MessageSquare,
+        run: () => { router.push('/conversations'); onClose(); },
       },
       {
-        id: 'act_dev',
-        label: 'Switch to Developer Workstation Stream',
-        category: 'View',
-        icon: Terminal,
-        run: () => { onSelectView?.('dev'); onClose(); },
+        id: 'act_documentation',
+        label: 'Go to Documentation',
+        category: 'Navigation',
+        icon: BookOpen,
+        run: () => { router.push('/documentation'); onClose(); },
       },
       {
         id: 'act_projects',
@@ -154,18 +173,138 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         icon: FolderKanban,
         run: () => { router.push('/projects'); onClose(); },
       },
+      ...(currentProjectId ? [
+        {
+          id: 'act_proj_overview',
+          label: `${projPrefix}Overview & Analytics`,
+          category: 'Project',
+          icon: BarChart3,
+          run: () => { router.push(`/projects/${currentProjectId}/overview`); onSelectView?.('overview'); onClose(); },
+        },
+        {
+          id: 'act_proj_activity',
+          label: `${projPrefix}Activity & History`,
+          category: 'Project',
+          icon: History,
+          run: () => { router.push(`/projects/${currentProjectId}/history`); onClose(); },
+        },
+        {
+          id: 'act_proj_board',
+          label: `${projPrefix}Tasks — Kanban Board`,
+          category: 'Project',
+          icon: LayoutGrid,
+          run: () => { router.push(`/projects/${currentProjectId}/board`); onSelectView?.('board'); onClose(); },
+        },
+        {
+          id: 'act_proj_list',
+          label: `${projPrefix}Tasks — Compact List`,
+          category: 'Project',
+          icon: List,
+          run: () => { router.push(`/projects/${currentProjectId}/list`); onClose(); },
+        },
+        {
+          id: 'act_proj_tree',
+          label: `${projPrefix}Tasks — Structure Explorer`,
+          category: 'Project',
+          icon: FolderTree,
+          run: () => { router.push(`/projects/${currentProjectId}/tree`); onSelectView?.('tree'); onClose(); },
+        },
+        {
+          id: 'act_proj_timeline',
+          label: `${projPrefix}Tasks — Timeline & Calendar`,
+          category: 'Project',
+          icon: Calendar,
+          run: () => { router.push(`/projects/${currentProjectId}/timeline`); onClose(); },
+        },
+        {
+          id: 'act_proj_deps',
+          label: `${projPrefix}Tasks — Dependency Graph`,
+          category: 'Project',
+          icon: Network,
+          run: () => { router.push(`/projects/${currentProjectId}/dependencies`); onClose(); },
+        },
+        {
+          id: 'act_proj_docs',
+          label: `${projPrefix}Documentation & Wiki`,
+          category: 'Project',
+          icon: FileText,
+          run: () => { router.push(`/projects/${currentProjectId}/docs`); onClose(); },
+        },
+        {
+          id: 'act_proj_charts',
+          label: `${projPrefix}Diagrams & Architecture`,
+          category: 'Project',
+          icon: Workflow,
+          run: () => { router.push(`/projects/${currentProjectId}/charts`); onClose(); },
+        },
+        {
+          id: 'act_proj_chat',
+          label: `${projPrefix}Chat & Discussion`,
+          category: 'Project',
+          icon: MessageSquare,
+          run: () => { router.push(`/projects/${currentProjectId}/chats`); onClose(); },
+        },
+        {
+          id: 'act_proj_meeting',
+          label: `${projPrefix}Call & Meeting Room`,
+          category: 'Project',
+          icon: PhoneCall,
+          run: () => { router.push(`/projects/${currentProjectId}/meeting`); onClose(); },
+        },
+        {
+          id: 'act_proj_apps',
+          label: `${projPrefix}Integrations & Apps`,
+          category: 'Project',
+          icon: Boxes,
+          run: () => { router.push(`/projects/${currentProjectId}/apps`); onClose(); },
+        },
+        {
+          id: 'act_proj_plugins',
+          label: `${projPrefix}Plugins & Git Repositories`,
+          category: 'Project',
+          icon: Plug,
+          run: () => { router.push(`/projects/${currentProjectId}/plugins`); onClose(); },
+        },
+        {
+          id: 'act_proj_settings',
+          label: `${projPrefix}Project Settings`,
+          category: 'Project',
+          icon: Settings,
+          run: () => { router.push(`/projects/${currentProjectId}/settings`); onClose(); },
+        },
+      ] : []),
       {
-        id: 'act_dashboard',
-        label: 'Go to Workspace Dashboard',
-        category: 'Navigation',
-        icon: LayoutDashboard,
-        run: () => { router.push('/dashboard'); onClose(); },
+        id: 'act_reset_scale',
+        label: 'Reset UI Scale to 100%',
+        category: 'Action',
+        icon: RotateCcw,
+        run: () => {
+          resetUIScale();
+          toast.success('UI scale reset to 100%');
+          onClose();
+        },
+      },
+      {
+        id: 'act_clear_cache',
+        label: 'Clear Local Storage & Cache',
+        category: 'Action',
+        icon: Trash2,
+        run: () => {
+          try {
+            localStorage.clear();
+            toast.success('Local cache cleared');
+          } catch {}
+          onClose();
+        },
       },
     ];
 
     const matchingActions = cleanQuery === ''
-      ? allActions.slice(0, 5)
-      : allActions.filter((a) => a.label.toLowerCase().includes(cleanQuery));
+      ? allActions.slice(0, 6)
+      : allActions.filter((a) => 
+          a.label.toLowerCase().includes(cleanQuery) || 
+          a.category.toLowerCase().includes(cleanQuery)
+        );
 
     const matchingIssues = issues.filter((i) => {
       if (statusFilter && !i.status.toLowerCase().includes(statusFilter)) return false;
@@ -196,7 +335,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       filteredProjects: matchingProjects.slice(0, 6),
       filteredActions: matchingActions,
     };
-  }, [query, issues, projects, onOpenNewIssue, onSelectView, router, onClose]);
+  }, [query, pathname, issues, projects, onOpenNewIssue, onSelectView, router, onClose]);
 
   // Flatten items for arrow key indexing
   const flatItems = useMemo(() => {
@@ -255,20 +394,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label="Command Palette"
-        className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/75 backdrop-blur-sm select-none"
+        className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 p-4 bg-black/80 backdrop-blur-sm select-none"
         onClick={onClose}
       >
         <motion.div
-          initial={{ opacity: 0, y: -12, scale: 0.97 }}
+          initial={{ opacity: 0, y: -10, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -12, scale: 0.97 }}
-          transition={{ duration: 0.14, ease: 'easeOut' }}
-          className="w-full max-w-2xl bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          exit={{ opacity: 0, y: -10, scale: 0.98 }}
+          transition={{ duration: 0.12, ease: 'easeOut' }}
+          className="w-full max-w-2xl bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl shadow-2xl overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Search Input Bar */}
-          <div className="flex items-center px-4 py-3 border-b border-[#2A2C30] bg-[#0F1011]">
-            <Search size={18} className="text-[#DCB001] mr-3 shrink-0" />
+          <div className="flex items-center px-4 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)]">
+            <Search size={16} className="text-[var(--text-muted)] mr-3 shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -278,15 +417,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 setSelectedIndex(0);
               }}
               onKeyDown={handleKeyDown}
-              placeholder="Type a command, search issues, or use operators (e.g. status:done, priority:high)..."
-              className="w-full bg-transparent text-sm text-[#E5E7EB] placeholder-[#9CA3AF] outline-none"
+              placeholder="Type a command, search issues, or use operators (status:done, priority:high)..."
+              className="w-full bg-transparent text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] outline-none"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="p-1 text-[#9CA3AF] hover:text-white rounded transition-colors"
+                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded transition-colors"
+                aria-label="Clear query"
               >
-                <X size={15} />
+                <X size={14} />
               </button>
             )}
           </div>
@@ -296,8 +436,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Quick Actions */}
             {filteredActions.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
-                  Commands & Views
+                <div className="px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]">
+                  Commands & Navigation
                 </div>
                 <div className="space-y-0.5">
                   {filteredActions.map((act) => {
@@ -309,17 +449,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                         key={act.id}
                         onClick={act.run}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Icon size={16} className={isSelected ? 'text-[#DCB001]' : 'text-[#9CA3AF]'} />
-                          <span className="font-medium">{act.label}</span>
+                        <div className="flex items-center gap-2.5">
+                          <Icon size={15} className={isSelected ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'} />
+                          <span className="font-medium text-xs sm:text-sm">{act.label}</span>
                         </div>
-                        <span className="text-xs text-[#9CA3AF] opacity-60">
+                        <span className="text-xs text-[var(--text-muted)]">
                           {act.category}
                         </span>
                       </button>
@@ -332,7 +472,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Issues */}
             {filteredIssues.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]">
                   Tasks ({filteredIssues.length})
                 </div>
                 <div className="space-y-0.5">
@@ -348,20 +488,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                         }`}
                       >
-                        <div className="flex items-center gap-3 overflow-hidden mr-2">
-                          <span className="font-mono text-xs font-bold text-[#DCB001] shrink-0">
+                        <div className="flex items-center gap-2.5 overflow-hidden mr-2">
+                          <StatusIcon status={issue.status} size={14} className="shrink-0 text-[var(--text-muted)]" />
+                          <span className="font-mono text-xs font-medium text-[var(--text-muted)] shrink-0">
                             {issue.key}
                           </span>
-                          <span className="truncate text-[#E5E7EB]">{issue.title}</span>
+                          <span className="truncate text-xs sm:text-sm text-[var(--text-primary)]">{issue.title}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 text-xs text-[#9CA3AF]">
-                          <span className="px-1.5 py-0.5 rounded bg-[#131415] border border-[#2A2C30] capitalize">
+                        <div className="flex items-center gap-2 shrink-0 text-xs text-[var(--text-muted)]">
+                          <PriorityIcon priority={issue.priority} size={14} className="shrink-0" />
+                          <span className="hidden sm:inline capitalize">
                             {issue.status.replace('_', ' ')}
                           </span>
                         </div>
@@ -375,7 +517,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             {/* Projects */}
             {filteredProjects.length > 0 && (
               <div>
-                <div className="px-4 py-2 text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]">
                   Projects ({filteredProjects.length})
                 </div>
                 <div className="space-y-0.5">
@@ -390,18 +532,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                           onClose();
                         }}
                         onMouseEnter={() => setSelectedIndex(itemIndex)}
-                        className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-xl text-left transition-colors ${
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg text-left transition-colors ${
                           isSelected
-                            ? 'bg-[#2A2C30] text-[#DCB001]'
-                            : 'text-[#E5E7EB] hover:bg-[#222427]'
+                            ? 'bg-[var(--bg-active)] text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <FolderKanban size={15} className="text-[#DCB001]" />
-                          <span className="font-mono font-bold text-[#DCB001]">{p.key}</span>
-                          <span className="text-[#E5E7EB]">{p.name}</span>
+                          <FolderKanban size={14} className="text-[var(--text-muted)]" />
+                          <span className="font-mono text-xs font-medium text-[var(--text-primary)]">{p.key}</span>
+                          <span className="text-xs sm:text-sm text-[var(--text-primary)]">{p.name}</span>
                         </div>
-                        <span className="text-xs text-[#9CA3AF]">Open Workspace ↵</span>
+                        <span className="text-xs text-[var(--text-muted)]">Open ↵</span>
                       </button>
                     );
                   })}
@@ -410,23 +552,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             )}
 
             {flatItems.length === 0 && (
-              <div className="p-8 text-center text-xs text-[#9CA3AF] space-y-2">
-                <Search size={24} className="mx-auto opacity-40 mb-2" />
-                <p className="font-semibold text-[#E5E7EB] text-sm">No matching commands or tasks found</p>
-                <p className="text-xs">Try searching by task ID, title, or status (e.g. `status:done`)</p>
+              <div className="p-8 text-center text-xs text-[var(--text-muted)] space-y-2">
+                <Search size={20} className="mx-auto opacity-40 mb-2" />
+                <p className="font-medium text-[var(--text-primary)] text-sm">No matching commands or tasks found</p>
+                <p className="text-xs text-[var(--text-muted)]">Try searching by task ID, title, or status (e.g. status:done)</p>
               </div>
             )}
           </div>
 
           {/* Footer Shortcuts & Syntax Hints */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#0F1011] border-t border-[#2A2C30] text-xs text-[#9CA3AF] font-mono">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--bg-canvas)] border-t border-[var(--border-primary)] text-xs text-[var(--text-muted)]">
             <div className="flex items-center gap-3">
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↑↓</kbd> Navigate</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">↵</kbd> Execute</span>
-              <span><kbd className="px-1.5 py-0.5 bg-[#1B1C1F] border border-[#2A2C30] rounded text-white">ESC</kbd> Close</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded font-mono text-[var(--text-primary)]">↑↓</kbd> Navigate</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded font-mono text-[var(--text-primary)]">↵</kbd> Select</span>
+              <span><kbd className="px-1.5 py-0.5 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded font-mono text-[var(--text-primary)]">ESC</kbd> Close</span>
             </div>
-            <span className="hidden sm:inline opacity-70">
-              Filter tips: <code className="text-[#DCB001]">status:in_progress</code> · <code className="text-[#3B82F6]">priority:high</code>
+            <span className="hidden sm:inline text-[var(--text-muted)]">
+              Operators: <code className="text-[var(--text-primary)] font-mono">status:done</code> · <code className="text-[var(--text-primary)] font-mono">priority:high</code>
             </span>
           </div>
         </motion.div>

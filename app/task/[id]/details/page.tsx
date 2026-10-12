@@ -147,8 +147,8 @@ export default function TaskDetailsPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#131415] text-[#CFD4DD] text-sm gap-3 p-6 select-none">
-          <div className="w-8 h-8 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
+        <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg-canvas)] text-[var(--text-secondary)] text-sm gap-3 p-6 select-none">
+          <div className="w-8 h-8 rounded-full border-2 border-[var(--border-secondary)] border-t-transparent animate-spin" />
           <span className="font-bold text-white tracking-tight">Loading task details...</span>
           <RandomLoadingText />
         </div>
@@ -159,14 +159,14 @@ export default function TaskDetailsPage() {
   if (!issue) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col items-center justify-center bg-[#131415] text-[#9CA3AF] text-sm space-y-4">
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] text-center space-y-2 max-w-sm">
+        <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg-canvas)] text-[var(--text-secondary)] text-sm space-y-4">
+          <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] text-center space-y-2 max-w-sm">
             <span className="text-white font-bold block text-sm">Task Not Found</span>
-            <p className="text-sm text-[#9CA3AF]">The requested task #{issueId} could not be located or has been deleted.</p>
+            <p className="text-sm text-[var(--text-secondary)]">The requested task #{issueId} could not be located or has been deleted.</p>
           </div>
           <button
             onClick={() => router.push('/projects')}
-            className="px-4 py-2 bg-[#1E1E1E] hover:bg-[#2A2C30] text-[#CFD4DD] hover:text-white border border-[#3B3D41] rounded-lg transition-colors font-semibold text-sm flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#1E1E1E] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-white border border-[#3E3E3E] rounded-lg transition-colors font-semibold text-sm flex items-center gap-1.5"
           >
             <ArrowLeft size={13} />
             <span>Back to Projects</span>
@@ -180,32 +180,32 @@ export default function TaskDetailsPage() {
     <AppLayout>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Top Header / Navigation Bar */}
-        <div className="px-4 py-2 bg-[#131415] border-b border-[#2A2C30] flex items-center justify-between shrink-0 gap-3">
+        <div className="px-4 py-2 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={handleBack}
-              className="text-sm text-[#9CA3AF] hover:text-[#CFD4DD] flex items-center gap-1.5 transition-colors shrink-0"
+              className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-secondary)] flex items-center gap-1.5 transition-colors shrink-0"
               title="Return to project board"
             >
               <ArrowLeft size={13} />
               <span>Back to {project ? project.name : 'Projects'}</span>
             </button>
 
-            <span className="text-[#2A2C30]">/</span>
+            <span className="text-[#222222]">/</span>
 
             {/* Breadcrumb info */}
             <div className="flex items-center gap-2 font-mono text-sm truncate">
               {project && (
                 <button
                   onClick={() => router.push(`/projects/${project.id}`)}
-                  className="text-[#9CA3AF] hover:text-[#DCB001] transition-colors truncate max-w-[140px]"
+                  className="text-[var(--text-secondary)] hover:text-white transition-colors truncate max-w-[140px]"
                 >
                   {project.key}
                 </button>
               )}
-              {project && <span className="text-[#9CA3AF]">/</span>}
-              <span className="font-bold text-[#DCB001] shrink-0">{issue.key}</span>
-              <span className="text-[#9CA3AF] font-sans truncate hidden sm:inline text-sm max-w-[200px]">
+              {project && <span className="text-[var(--text-secondary)]">/</span>}
+              <span className="font-bold text-white shrink-0">{issue.key}</span>
+              <span className="text-[var(--text-secondary)] font-sans truncate hidden sm:inline text-sm max-w-[200px]">
                 {issue.title}
               </span>
             </div>
@@ -215,16 +215,16 @@ export default function TaskDetailsPage() {
             {/* Copy Link Button */}
             <button
               onClick={handleCopyLink}
-              className="px-4 py-2 text-sm bg-[#1B1C1F] hover:bg-[#2A2C30] text-[#9CA3AF] hover:text-[#CFD4DD] border border-[#2A2C30] rounded-lg transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 text-sm bg-[var(--bg-panel)] hover:bg-[#222222] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] border border-[var(--border-primary)] rounded-lg transition-colors flex items-center gap-1.5"
               title="Copy task details route link"
             >
-              {copiedLink ? <Check size={12} className="text-[#22C55E]" /> : <Copy size={12} />}
+              {copiedLink ? <Check size={12} className="text-white" /> : <Copy size={12} />}
               <span className="hidden md:inline">{copiedLink ? 'Copied' : 'Share Link'}</span>
             </button>
 
             {/* Status Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-[#9CA3AF] hidden sm:inline">Status:</span>
+              <span className="text-sm text-[var(--text-secondary)] hidden sm:inline">Status:</span>
               <CustomDropdown<Status>
                 value={issue.status}
                 onChange={(val) => handleUpdateStatus(val)}
@@ -234,7 +234,7 @@ export default function TaskDetailsPage() {
                   { value: 'needs_review', label: 'Needs Review' },
                   { value: 'done', label: 'Done' },
                 ]}
-                triggerClassName="bg-[#1A1B1D] text-sm text-[#DCB001] border border-[#2A2C30] rounded-lg px-4 py-2 font-semibold hover:border-[#DCB001]/50"
+                triggerClassName="bg-[var(--bg-card)] text-sm text-white border border-[var(--border-primary)] rounded-lg px-4 py-2 font-semibold hover:border-[var(--border-secondary)]"
                 size="xs"
               />
             </div>

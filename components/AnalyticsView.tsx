@@ -31,14 +31,14 @@ export const AnalyticsView: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 h-full overflow-y-auto bg-[#131415] p-6 lg:p-8 space-y-6 select-none">
+    <div className="flex-1 h-full overflow-y-auto bg-[var(--bg-canvas)] p-6 lg:p-8 space-y-6 select-none">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-[#CFD4DD] tracking-tight flex items-center gap-2">
-            <Activity className="text-[#DCB001]" />
+          <h2 className="text-xl font-bold text-[var(--text-secondary)] tracking-tight flex items-center gap-2">
+            <Activity className="text-white" />
             <span>Velocity Pulse & System Metrics</span>
           </h2>
-          <p className="text-xs text-[#787C83] mt-1">
+          <p className="text-xs text-[var(--text-muted)] mt-1">
             Real-time analytics on platform performance, RPC request throughput, and sprint task completion velocity.
           </p>
         </div>
@@ -46,92 +46,92 @@ export const AnalyticsView: React.FC = () => {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#787C83]">
+        <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>p99 Latency</span>
-            <Clock size={14} className="text-[#DCB001]" />
+            <Clock size={14} className="text-white" />
           </div>
-          <div className="text-2xl font-bold text-[#CFD4DD] font-mono">1.34s</div>
-          <div className="text-[11px] text-[#22C55E] flex items-center gap-1 font-mono">
+          <div className="text-2xl font-bold text-[var(--text-secondary)] font-mono">1.34s</div>
+          <div className="text-[11px] text-white flex items-center gap-1 font-mono">
             <TrendingUp size={12} /> -68.0% after router patch
           </div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#787C83]">
+        <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>Merged Pull Requests</span>
-            <GitCommit size={14} className="text-[#0391A1]" />
+            <GitCommit size={14} className="text-[#A0A0A0]" />
           </div>
-          <div className="text-2xl font-bold text-[#CFD4DD] font-mono">84 PRs</div>
-          <div className="text-[11px] text-[#22C55E] font-mono">99.1% CI Pass Rate</div>
+          <div className="text-2xl font-bold text-[var(--text-secondary)] font-mono">84 PRs</div>
+          <div className="text-[11px] text-white font-mono">99.1% CI Pass Rate</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#787C83]">
+        <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>RPC Throughput</span>
-            <Zap size={14} className="text-[#DCB001]" />
+            <Zap size={14} className="text-white" />
           </div>
-          <div className="text-2xl font-bold text-[#CFD4DD] font-mono">2.84M</div>
-          <div className="text-[11px] text-[#787C83] font-mono">Requests / hour</div>
+          <div className="text-2xl font-bold text-[var(--text-secondary)] font-mono">2.84M</div>
+          <div className="text-[11px] text-[var(--text-muted)] font-mono">Requests / hour</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2">
-          <div className="flex items-center justify-between text-xs text-[#787C83]">
+        <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>Sprint Burndown</span>
-            <CheckCircle2 size={14} className="text-[#22C55E]" />
+            <CheckCircle2 size={14} className="text-white" />
           </div>
-          <div className="text-2xl font-bold text-[#CFD4DD] font-mono">88%</div>
-          <div className="text-[11px] text-[#DCB001] font-mono">On schedule</div>
+          <div className="text-2xl font-bold text-[var(--text-secondary)] font-mono">88%</div>
+          <div className="text-[11px] text-white font-mono">On schedule</div>
         </div>
       </div>
 
       {/* Recharts Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* RPC Throughput Chart */}
-        <div className="p-5 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4">
+        <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-[#CFD4DD] uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               Request Stream & Latency Curve
             </h3>
-            <span className="text-[11px] text-[#DCB001] font-mono">Live Telemetry</span>
+            <span className="text-[11px] text-white font-mono">Live Telemetry</span>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={rpcData}>
                 <defs>
                   <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#DCB001" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#DCB001" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <XAxis dataKey="time" stroke="#787C83" fontSize={11} tickLine={false} />
-                <YAxis stroke="#787C83" fontSize={11} tickLine={false} />
+                <XAxis dataKey="time" stroke="#666666" fontSize={11} tickLine={false} />
+                <YAxis stroke="#666666" fontSize={11} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0F1011', borderColor: '#2A2C30', borderRadius: '8px', fontSize: '12px', color: '#CFD4DD' }}
+                  contentStyle={{ backgroundColor: '#000000', borderColor: '#222222', borderRadius: '8px', fontSize: '12px', color: '#A0A0A0' }}
                 />
-                <Area type="monotone" dataKey="requests" stroke="#DCB001" fillOpacity={1} fill="url(#colorRequests)" />
+                <Area type="monotone" dataKey="requests" stroke="#FFFFFF" fillOpacity={1} fill="url(#colorRequests)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Sprint Velocity Comparison Bar Chart */}
-        <div className="p-5 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4">
+        <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-[#CFD4DD] uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               Sprint Task Completion Velocity
             </h3>
-            <span className="text-[11px] text-[#787C83] font-mono">Story Points</span>
+            <span className="text-[11px] text-[var(--text-muted)] font-mono">Story Points</span>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={velocityData}>
-                <XAxis dataKey="sprint" stroke="#787C83" fontSize={11} tickLine={false} />
-                <YAxis stroke="#787C83" fontSize={11} tickLine={false} />
+                <XAxis dataKey="sprint" stroke="#666666" fontSize={11} tickLine={false} />
+                <YAxis stroke="#666666" fontSize={11} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0F1011', borderColor: '#2A2C30', borderRadius: '8px', fontSize: '12px', color: '#CFD4DD' }}
+                  contentStyle={{ backgroundColor: '#000000', borderColor: '#222222', borderRadius: '8px', fontSize: '12px', color: '#A0A0A0' }}
                 />
-                <Bar dataKey="completed" name="Story Points" fill="#0391A1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="completed" name="Story Points" fill="#A0A0A0" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

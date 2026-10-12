@@ -17,8 +17,8 @@ export default function TaskRedirectPage() {
   }, [id, router]);
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-[#131415] text-[#787C83] font-mono text-xs">
-      <div className="w-6 h-6 rounded-full border-2 border-[#DCB001] border-t-transparent animate-spin" />
+    <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg-canvas)] text-[var(--text-muted)] font-mono text-xs">
+      <div className="w-6 h-6 rounded-full border-2 border-[var(--border-secondary)] border-t-transparent animate-spin" />
     </div>
   );
 }

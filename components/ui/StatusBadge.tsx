@@ -1,14 +1,6 @@
 import React from 'react';
 import { Status } from '@/lib/types';
-import { 
-  Circle, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle2, 
-  XCircle, 
-  Eye, 
-  GitMerge 
-} from 'lucide-react';
+import { StatusIcon } from './StatusIcon';
 
 interface StatusBadgeProps {
   status: Status;
@@ -17,48 +9,51 @@ interface StatusBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+export const STATUS_CONFIG: Record<
+  Status,
+  { label: string; color: string; bg: string; icon: React.FC<{ size?: number; className?: string }> }
+> = {
   todo: {
     label: 'Todo',
-    color: 'var(--status-todo, #787C83)',
-    bg: 'var(--status-todo-bg, rgba(120, 124, 131, 0.12))',
-    icon: Circle,
+    color: 'var(--text-secondary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="todo" {...props} />,
   },
   in_progress: {
     label: 'In Progress',
-    color: 'var(--status-inprogress, #DCB001)',
-    bg: 'var(--status-inprogress-bg, rgba(220, 176, 1, 0.12))',
-    icon: Clock,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="in_progress" {...props} />,
   },
   blocked: {
     label: 'Blocked',
-    color: 'var(--status-blocked, #EF4444)',
-    bg: 'var(--status-blocked-bg, rgba(239, 68, 68, 0.12))',
-    icon: AlertCircle,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="blocked" {...props} />,
   },
   needs_review: {
     label: 'Needs Review',
-    color: 'var(--status-review, #A855F7)',
-    bg: 'var(--status-review-bg, rgba(168, 85, 247, 0.12))',
-    icon: Eye,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="needs_review" {...props} />,
   },
   done: {
     label: 'Done',
-    color: 'var(--status-done, #22C55E)',
-    bg: 'var(--status-done-bg, rgba(34, 197, 94, 0.12))',
-    icon: CheckCircle2,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="done" {...props} />,
   },
   cancelled: {
     label: 'Cancelled',
-    color: 'var(--status-cancelled, #64748B)',
-    bg: 'var(--status-cancelled-bg, rgba(100, 116, 139, 0.12))',
-    icon: XCircle,
+    color: 'var(--text-muted)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="cancelled" {...props} />,
   },
   merged: {
     label: 'Merged',
-    color: 'var(--accent-yellow-dark, #AE8D05)',
-    bg: 'var(--bg-card, #1A1B1D)',
-    icon: GitMerge,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <StatusIcon status="merged" {...props} />,
   },
 };
 
@@ -69,21 +64,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   size = 'md' 
 }) => {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.todo;
-  const Icon = config.icon;
-  const iconSize = size === 'sm' ? 13 : 15;
+  const iconSize = size === 'sm' ? 12 : 13;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium font-mono rounded-full border transition-all duration-150 ${
-        size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1.5 text-xs'
+      className={`inline-flex items-center gap-1.5 font-medium rounded border border-[var(--border-primary)] bg-[var(--ramp-1)] text-[var(--text-secondary)] transition-colors select-none ${
+        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-xs'
       } ${className}`}
-      style={{
-        color: config.color,
-        backgroundColor: config.bg,
-        borderColor: `${config.color}40`,
-      }}
     >
-      <Icon className="shrink-0" size={iconSize} />
+      <StatusIcon status={status} size={iconSize} className="text-[var(--text-primary)] shrink-0" />
       {showText && <span>{config.label}</span>}
     </span>
   );

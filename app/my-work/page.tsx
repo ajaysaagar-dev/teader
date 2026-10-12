@@ -209,18 +209,18 @@ export default function MyWorkPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] font-sans select-none overflow-y-auto">
+      <div className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans select-none overflow-y-auto">
 
         {/* Top Header */}
-        <div className="px-6 py-5 border-b border-[#2A2C30] bg-[#17181A] flex items-center justify-between flex-wrap gap-4">
+        <div className="px-6 py-5 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] flex items-center justify-between flex-wrap gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-xl bg-white/10 text-white border border-[var(--border-secondary)] flex items-center justify-center font-bold">
                 <UserCheck size={18} />
               </div>
               <h1 className="text-xl font-bold text-white tracking-tight">My Work & Focus Workspace</h1>
             </div>
-            <p className="text-sm text-[#9CA3AF]">
+            <p className="text-sm text-[var(--text-secondary)]">
               Personal cross-project dashboard for {currentUser?.name || 'Engineer'}
             </p>
           </div>
@@ -228,14 +228,14 @@ export default function MyWorkPage() {
           {/* Quick Metrics Header Pills */}
           <div className="flex items-center gap-2 text-sm">
             <RealtimeBadge />
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-xl">
-              <span className="text-[#DCB001] font-bold font-mono">{myAssignedIssues.length}</span>
-              <span className="text-[#9CA3AF]">Assigned Tasks</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl">
+              <span className="text-white font-bold font-mono">{myAssignedIssues.length}</span>
+              <span className="text-[var(--text-secondary)]">Assigned Tasks</span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#131415] border border-[#2A2C30] rounded-xl">
-              <Flame size={13} className="text-[#F97316]" />
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl">
+              <Flame size={13} className="text-[#FFFFFF]" />
               <span className="text-white font-bold font-mono">{pomodoroCycles}</span>
-              <span className="text-[#9CA3AF]">Focus Sessions</span>
+              <span className="text-[var(--text-secondary)]">Focus Sessions</span>
             </div>
           </div>
         </div>
@@ -246,11 +246,11 @@ export default function MyWorkPage() {
           <div className="col-span-12 lg:col-span-8 space-y-4">
             {/* Filter Tabs & Search */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center bg-[#1B1C1F] border border-[#2A2C30] rounded-xl p-1 text-sm">
+              <div className="flex items-center bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-1 text-sm">
                 <button
                   onClick={() => setFilterTab('assigned')}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    filterTab === 'assigned' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                    filterTab === 'assigned' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   Assigned ({myAssignedIssues.filter((i) => i.status !== 'done').length})
@@ -258,7 +258,7 @@ export default function MyWorkPage() {
                 <button
                   onClick={() => setFilterTab('blocked')}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    filterTab === 'blocked' ? 'bg-[#2A2C30] text-[#EF4444] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                    filterTab === 'blocked' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   Blocked ({blockedIssues.length})
@@ -266,7 +266,7 @@ export default function MyWorkPage() {
                 <button
                   onClick={() => setFilterTab('due')}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    filterTab === 'due' ? 'bg-[#2A2C30] text-[#3B82F6] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                    filterTab === 'due' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   Due Soon ({dueSoonIssues.length})
@@ -274,7 +274,7 @@ export default function MyWorkPage() {
                 <button
                   onClick={() => setFilterTab('completed')}
                   className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    filterTab === 'completed' ? 'bg-[#2A2C30] text-[#22C55E] shadow-sm' : 'text-[#9CA3AF] hover:text-[#CFD4DD]'
+                    filterTab === 'completed' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
                   Completed ({completedIssues.length})
@@ -283,13 +283,13 @@ export default function MyWorkPage() {
 
               {/* Search Bar */}
               <div className="relative flex-1 max-w-xs">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
                 <input
                   type="text"
                   placeholder="Filter tasks..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#1B1C1F] border border-[#2A2C30] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-[#9CA3AF] outline-none focus:ring-2 focus:ring-[#DCB001]/40 focus:ring-offset-1 focus:ring-offset-[#131415]"
+                  className="w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl pl-9 pr-3 py-2.5 text-sm text-white placeholder-[#A0A0A0] outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-black"
                 />
               </div>
             </div>
@@ -297,10 +297,10 @@ export default function MyWorkPage() {
             {/* Issues List Cards */}
             <div className="space-y-2.5">
               {displayedIssues.length === 0 ? (
-                <div className="p-12 text-center bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl space-y-2">
-                  <CheckCircle2 size={32} className="mx-auto text-[#22C55E]/60 mb-2" />
+                <div className="p-12 text-center bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl space-y-2">
+                  <CheckCircle2 size={32} className="mx-auto text-white/60 mb-2" />
                   <h3 className="text-base font-bold text-white">All clear in this section!</h3>
-                  <p className="text-sm text-[#9CA3AF]">No tasks matching this filter.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">No tasks matching this filter.</p>
                 </div>
               ) : (
                 displayedIssues.map((issue) => {
@@ -309,25 +309,25 @@ export default function MyWorkPage() {
                   return (
                     <div
                       key={issue.id}
-                      className={`p-4 bg-[#1B1C1F] border rounded-2xl transition-all shadow-sm flex items-center justify-between gap-4 group ${
+                      className={`p-4 bg-[var(--bg-panel)] border rounded-2xl transition-all shadow-sm flex items-center justify-between gap-4 group ${
                         isCurrentFocus
-                          ? 'border-[#DCB001] bg-[#1F2023] ring-2 ring-[#DCB001]/20'
-                          : 'border-[#2A2C30] hover:border-[#DCB001]/40'
+                          ? 'border-[var(--border-secondary)] bg-[#212121] ring-2 ring-[#FFFFFF]/20'
+                          : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)]'
                       }`}
                     >
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap text-xs">
-                          <span className="font-mono font-bold text-[#DCB001] bg-[#131415] border border-[#2A2C30] px-2.5 py-1 rounded">
+                          <span className="font-mono font-bold text-white bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2.5 py-1 rounded">
                             {issue.key}
                           </span>
-                          <span className="text-[#9CA3AF] text-xs">
+                          <span className="text-[var(--text-secondary)] text-xs">
                             {issue.project}
                           </span>
-                          <span className="px-2 py-0.5 rounded bg-[#131415] text-xs capitalize border border-[#2A2C30]">
+                          <span className="px-2 py-0.5 rounded bg-[var(--bg-canvas)] text-xs capitalize border border-[var(--border-primary)]">
                             {issue.status.replace('_', ' ')}
                           </span>
                           {issue.priority === 'critical' && (
-                            <span className="px-2 py-0.5 rounded bg-[#EF4444]/20 text-[#EF4444] text-xs font-bold border border-[#EF4444]/40">
+                            <span className="px-2 py-0.5 rounded bg-[var(--ramp-3)]/20 text-white text-xs font-bold border border-[var(--border-secondary)]">
                               Critical
                             </span>
                           )}
@@ -335,7 +335,7 @@ export default function MyWorkPage() {
 
                         <Link
                           href={`/task/${issue.id}/details`}
-                          className="block text-sm font-semibold text-white hover:text-[#DCB001] transition-colors truncate"
+                          className="block text-sm font-semibold text-white hover:text-white transition-colors truncate"
                         >
                           {issue.title}
                         </Link>
@@ -352,8 +352,8 @@ export default function MyWorkPage() {
                           }}
                           className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                             isCurrentFocus
-                              ? 'bg-[#DCB001] text-[#0F1011]'
-                              : 'bg-[#131415] hover:bg-[#2A2C30] text-[#CFD4DD] border border-[#2A2C30]'
+                              ? 'bg-white text-black'
+                              : 'bg-[var(--bg-canvas)] hover:bg-[#222222] text-[var(--text-secondary)] border border-[var(--border-primary)]'
                           }`}
                         >
                           <Play size={12} />
@@ -369,23 +369,23 @@ export default function MyWorkPage() {
 
           {/* Right Column: Pomodoro Focus Timer (§11.2) */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="p-6 bg-[#1B1C1F] border border-[#2A2C30] rounded-2xl space-y-5 shadow-xl text-center">
-              <div className="flex items-center justify-between pb-3 border-b border-[#2A2C30]">
+            <div className="p-6 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl space-y-5 shadow-xl text-center">
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
                 <div className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Flame size={16} className="text-[#F97316]" />
+                  <Flame size={16} className="text-[#FFFFFF]" />
                   <span>Pomodoro Focus Timer</span>
                 </div>
-                <span className="text-xs text-[#9CA3AF]">25m Work / 5m Break</span>
+                <span className="text-xs text-[var(--text-secondary)]">25m Work / 5m Break</span>
               </div>
 
               {/* Active Focus Target */}
               {focusIssue ? (
-                <div className="p-3 bg-[#131415] border border-[#DCB001]/40 rounded-xl text-left space-y-1">
-                  <span className="text-xs text-[#DCB001] font-bold">Active Focus Target</span>
+                <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl text-left space-y-1">
+                  <span className="text-xs text-white font-bold">Active Focus Target</span>
                   <div className="text-xs font-bold text-white truncate">{focusIssue.key}: {focusIssue.title}</div>
                 </div>
               ) : (
-                <div className="p-3 bg-[#131415] border border-[#2A2C30] rounded-xl text-sm text-[#9CA3AF] italic">
+                <div className="p-3 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl text-sm text-[var(--text-secondary)] italic">
                   Select a task from your list to anchor this focus session.
                 </div>
               )}
@@ -395,7 +395,7 @@ export default function MyWorkPage() {
                 <div className="text-4xl sm:text-5xl font-mono font-black text-white tracking-widest">
                   {formatPomodoro(pomodoroSeconds)}
                 </div>
-                <span className="text-xs text-[#9CA3AF] mt-1 block">
+                <span className="text-xs text-[var(--text-secondary)] mt-1 block">
                   {isPomodoroRunning ? '⚡ Deep Focus Mode Active' : 'Paused / Ready'}
                 </span>
               </div>
@@ -406,8 +406,8 @@ export default function MyWorkPage() {
                   onClick={() => setIsPomodoroRunning((prev) => !prev)}
                   className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md ${
                     isPomodoroRunning
-                      ? 'bg-[#EF4444] hover:bg-[#dc2626] text-white'
-                      : 'bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011]'
+                      ? 'bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white'
+                      : 'bg-white text-black hover:bg-[#FFFFFF]'
                   }`}
                 >
                   {isPomodoroRunning ? <Square size={13} /> : <Play size={13} />}
@@ -419,7 +419,7 @@ export default function MyWorkPage() {
                     setIsPomodoroRunning(false);
                     setPomodoroSeconds(25 * 60);
                   }}
-                  className="p-2.5 bg-[#131415] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-xl text-[#9CA3AF] hover:text-white transition-colors"
+                  className="p-2.5 bg-[var(--bg-canvas)] hover:bg-[#222222] border border-[var(--border-primary)] rounded-xl text-[var(--text-secondary)] hover:text-white transition-colors"
                   title="Reset Timer"
                 >
                   <RotateCcw size={14} />

@@ -16,8 +16,11 @@ import {
   Clock,
   Play,
   RotateCcw,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
+import { StatusIcon } from '@/components/ui/StatusIcon';
+import { PriorityIcon } from '@/components/ui/PriorityIcon';
 import { getTaskShortId, formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 
 interface CompactListViewProps {
@@ -126,25 +129,25 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
   }, [issues, onReorderIssues]);
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0F1011] p-3 sm:p-4 gap-3 select-none">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-[var(--bg-canvas)] p-3 sm:p-4 gap-3 select-none">
       {/* Top Controls Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 pb-1">
         {/* Search and Filters */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Search Box */}
           <div className="relative flex items-center">
-            <Search size={13} className="absolute left-2.5 text-[#787C83]" />
+            <Search size={13} className="absolute left-2.5 text-[var(--text-muted)]" />
             <input
               type="text"
               placeholder="Filter tasks by key, title, assignee..."
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
-              className="bg-[#17181A] text-xs text-[#CFD4DD] placeholder-[#787C83] pl-8 pr-7 py-1.5 rounded-lg border border-[#2A2C30] focus:border-[#DCB001] outline-none w-56 sm:w-64 transition-all"
+              className="bg-[var(--bg-panel)] text-xs text-[var(--text-secondary)] placeholder-[#666666] pl-8 pr-7 py-1.5 rounded-lg border border-[var(--border-primary)] focus:border-[var(--border-secondary)] outline-none w-56 sm:w-64 transition-all"
             />
             {filterQuery && (
               <button
                 onClick={() => setFilterQuery('')}
-                className="absolute right-2 text-[#787C83] hover:text-white"
+                className="absolute right-2 text-[var(--text-muted)] hover:text-white"
               >
                 <X size={12} />
               </button>
@@ -162,7 +165,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
               { value: 'needs_review', label: 'Needs Review' },
               { value: 'done', label: 'Done' },
             ]}
-            triggerClassName="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50"
+            triggerClassName="bg-[var(--bg-panel)] text-xs text-[var(--text-secondary)] py-1.5 px-2.5 rounded-lg border border-[var(--border-primary)] hover:border-[var(--border-secondary)]"
             size="sm"
           />
 
@@ -177,7 +180,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
               { value: 'medium', label: 'Medium' },
               { value: 'low', label: 'Low' },
             ]}
-            triggerClassName="bg-[#17181A] text-xs text-[#CFD4DD] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50"
+            triggerClassName="bg-[var(--bg-panel)] text-xs text-[var(--text-secondary)] py-1.5 px-2.5 rounded-lg border border-[var(--border-primary)] hover:border-[var(--border-secondary)]"
             size="sm"
           />
 
@@ -193,7 +196,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                   label: `📁 ${f}`,
                 })),
               ]}
-              triggerClassName="bg-[#17181A] text-xs text-[#DCB001] py-1.5 px-2.5 rounded-lg border border-[#2A2C30] hover:border-[#DCB001]/50 font-medium"
+              triggerClassName="bg-[var(--bg-panel)] text-xs text-white py-1.5 px-2.5 rounded-lg border border-[var(--border-primary)] hover:border-[var(--border-secondary)] font-medium"
               size="sm"
             />
           )}
@@ -201,13 +204,13 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
 
         {/* Task Count & + New Task Button */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-[#787C83] font-mono whitespace-nowrap">
+          <span className="text-[11px] text-[var(--text-muted)] font-mono whitespace-nowrap">
             {filteredIssues.length} {filteredIssues.length === 1 ? 'task' : 'tasks'}
           </span>
 
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-3 py-1.5 bg-[#DCB001] hover:bg-[#c49c00] text-[#0F1011] rounded-lg text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3B82F6] text-white hover:bg-[#2563EB] rounded-lg text-xs font-semibold shadow-sm shadow-[#3B82F6]/25 transition-all"
           >
             <Plus size={13} />
             <span>New Task</span>
@@ -216,21 +219,21 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
       </div>
 
       {/* Main List Table */}
-      <div className="flex-1 bg-[#1B1C1F] border border-[#2A2C30] rounded-xl overflow-hidden flex flex-col min-h-0 shadow-lg">
+      <div className="flex-1 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col min-h-0 shadow-lg">
         {/* Table Header */}
-        <div className="px-4 py-2 bg-[#17181A] border-b border-[#2A2C30] grid grid-cols-12 text-[10px] font-mono text-[#787C83] uppercase tracking-wider items-center">
-          <div className="col-span-1">Key</div>
+        <div className="px-4 py-2 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] grid grid-cols-12 text-xs text-[var(--text-muted)] font-medium items-center">
+          <div className="col-span-1 font-mono">Key</div>
           <div className="col-span-4">Title</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-1">Priority</div>
-          <div className="col-span-2">Added</div>
+          <div className="col-span-2">Updated</div>
           <div className="col-span-2 text-right">Assignee</div>
         </div>
 
         {/* Table Rows */}
-        <div className="flex-1 overflow-y-auto divide-y divide-[#2A2C30]/50 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto divide-y divide-[var(--border-primary)] custom-scrollbar">
           {filteredIssues.length === 0 ? (
-            <div className="p-12 text-center text-xs text-[#787C83] font-mono">
+            <div className="p-12 text-center text-xs text-[var(--text-muted)] font-mono">
               No tasks found matching filter.
             </div>
           ) : (
@@ -303,95 +306,74 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                       issue,
                     });
                   }}
-                  className={`relative px-4 py-2.5 grid grid-cols-12 items-center hover:bg-[#131415] cursor-grab active:cursor-grabbing transition-all text-xs group select-none ${
-                    isDragging ? 'opacity-30 bg-[#131415]' : ''
+                  className={`relative px-4 h-10 min-h-[40px] grid grid-cols-12 items-center hover:bg-[var(--bg-hover)] cursor-pointer transition-colors text-xs group select-none ${
+                    isDragging ? 'opacity-30 bg-[var(--bg-canvas)]' : ''
                   }`}
                 >
                   {/* Top Drop Indicator Line */}
                   {isOverThis && dropPosition === 'before' && (
-                    <div className="absolute -top-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                    <div className="absolute -top-0.5 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                   )}
 
                   {/* Bottom Drop Indicator Line */}
                   {isOverThis && dropPosition === 'after' && (
-                    <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                    <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                   )}
 
                   {/* Key (T1, T2... Tn) */}
-                  <div className="col-span-1 flex items-center gap-1.5 font-mono font-bold text-[#DCB001] text-[11px]">
-                    <GripVertical size={12} className="text-[#787C83] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
-                    <span className="bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/30">
-                      {getTaskShortId(issue, issues)}
-                    </span>
+                  <div className="col-span-1 flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
+                    <GripVertical size={12} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
+                    <span className="group-hover:text-[#60A5FA] transition-colors">{getTaskShortId(issue, issues)}</span>
                   </div>
 
-                  {/* Title & Folder Tag & Related Task Pills */}
+                  {/* Title & Folder Tag */}
                   <div className="col-span-4 flex items-center gap-2 pr-3 truncate">
                     {(issue.epic || issue.title.startsWith('📁 ')) && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded border border-[#DCB001]/25 shrink-0">
-                        <Folder size={10} className="shrink-0" />
-                        <span className="truncate max-w-[80px]">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#3B82F6]/10 text-[#60A5FA] border border-[#3B82F6]/25 truncate shrink-0">
+                        📁 {issue.epic || issue.title.replace(/^📁\s*/, '')}
                       </span>
                     )}
-                    <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
+                    <span className="text-[var(--text-primary)] group-hover:text-white font-medium truncate text-xs">
                       {issue.title}
                     </span>
-                    {issue.tags && issue.tags.length > 0 && (
-                      <div className="hidden md:flex items-center gap-1 shrink-0 ml-1">
-                        {issue.tags.slice(0, 2).map((t, idx) => (
-                          <span key={idx} className="text-[9px] font-mono text-[#38BDF8] bg-[#38BDF8]/10 border border-[#38BDF8]/30 px-1 py-0.2 rounded">
-                            @{t.replace(/^@/, '')}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Status */}
-                  <div className="col-span-2 flex items-center">
-                    <span
-                      className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full capitalize ${
-                        issue.status === 'done'
-                          ? 'bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30'
-                          : issue.status === 'in_progress'
-                          ? 'bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30'
-                          : issue.status === 'needs_review'
-                          ? 'bg-[#3B82F6]/15 text-[#3B82F6] border border-[#3B82F6]/30'
-                          : 'bg-[#2A2C30] text-[#787C83]'
-                      }`}
-                    >
-                      {issue.status.replace('_', ' ')}
-                    </span>
+                  {/* Status Icon & Label */}
+                  <div className="col-span-2 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+                    <StatusIcon status={issue.status} size={14} className="shrink-0" />
+                    <span className="capitalize">{issue.status.replace('_', ' ')}</span>
                   </div>
 
-                  {/* Priority */}
-                  <div className="col-span-1">
-                    <span
-                      className={`text-[10px] font-mono uppercase font-semibold ${
-                        issue.priority === 'critical'
-                          ? 'text-[#C0393B]'
-                          : issue.priority === 'high'
-                          ? 'text-[#DCB001]'
-                          : 'text-[#787C83]'
-                      }`}
-                    >
-                      {issue.priority}
-                    </span>
+                  {/* Priority Icon */}
+                  <div className="col-span-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                    <PriorityIcon priority={issue.priority} size={14} className="shrink-0" />
                   </div>
 
-                  {/* Added Timing */}
-                  <div className="col-span-2 flex items-center gap-1 font-mono text-[11px] text-[#787C83]" title={formatExactDateTime(issue.createdAt)}>
-                    <Clock size={11} className="text-[#DCB001] shrink-0" />
+                  {/* Added / Updated Timing */}
+                  <div className="col-span-2 flex items-center gap-1 font-mono text-xs text-[var(--text-muted)]" title={formatExactDateTime(issue.createdAt)}>
+                    <Clock size={11} className="text-[var(--text-muted)] shrink-0" />
                     <span>{formatAddedTiming(issue.createdAt)}</span>
                   </div>
 
-                  {/* Assignee */}
+                  {/* Assignee & Hover Actions */}
                   <div className="col-span-2 flex items-center justify-end gap-2">
+                    {canDelete && onDeleteIssue && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteIssue(issue.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-muted)] hover:text-white rounded transition-opacity"
+                        title="Delete task"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                     <Avatar user={assigneeUser} size="xs" />
-                    <span className="text-[11px] text-[#787C83] font-mono truncate max-w-[80px]">
+                    <span className="text-xs text-[var(--text-muted)] font-mono truncate max-w-[80px]">
                       {assigneeUser.name}
                     </span>
-                    <ChevronRight size={13} className="text-[#787C83] group-hover:text-white shrink-0" />
+                    <ChevronRight size={13} className="text-[var(--text-muted)] group-hover:text-white shrink-0" />
                   </div>
                 </div>
               );

@@ -22,6 +22,8 @@ import {
   FolderOpen,
   Clock
 } from 'lucide-react';
+import { StatusIcon } from '@/components/ui/StatusIcon';
+import { PriorityIcon } from '@/components/ui/PriorityIcon';
 import { getTaskShortId, formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 
 interface KanbanBoardViewProps {
@@ -107,30 +109,26 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
     });
   }, [issues, filterQuery, selectedPriority, selectedFolder]);
 
-  const columns: { id: Status; title: string; count: number; color: string }[] = useMemo(() => [
+  const columns: { id: Status; title: string; count: number }[] = useMemo(() => [
     {
       id: 'todo',
       title: 'Todo',
       count: filteredIssues.filter((i) => i.status === 'todo').length,
-      color: 'var(--status-todo, #787C83)',
     },
     {
       id: 'in_progress',
       title: 'In Progress',
       count: filteredIssues.filter((i) => i.status === 'in_progress').length,
-      color: 'var(--status-inprogress, #DCB001)',
     },
     {
       id: 'needs_review',
       title: 'Needs Review',
       count: filteredIssues.filter((i) => i.status === 'needs_review').length,
-      color: 'var(--status-review, #A855F7)',
     },
     {
       id: 'done',
       title: 'Done',
       count: filteredIssues.filter((i) => i.status === 'done').length,
-      color: 'var(--status-done, #22C55E)',
     },
   ], [filteredIssues]);
 
@@ -232,14 +230,14 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
             value={selectedFolder}
             onChange={(val) => setSelectedFolder(val)}
             options={[
-              { value: 'all', label: 'All Folders', icon: <Folder size={12} className="text-[var(--accent-yellow)]" /> },
+              { value: 'all', label: 'All Folders', icon: <Folder size={12} className="text-[var(--text-muted)]" /> },
               ...folderList.map((f) => ({
                 value: f,
                 label: f,
-                icon: <Folder size={12} className="text-[var(--accent-yellow)]" />,
+                icon: <Folder size={12} className="text-[var(--text-muted)]" />,
               })),
             ]}
-            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] px-2 py-0.5 rounded-md h-7 text-xs text-[var(--text-primary)] font-medium hover:border-[var(--accent-yellow)]/50"
+            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] px-2 py-0.5 rounded-md h-7 text-xs text-[var(--text-primary)] font-medium hover:border-[var(--border-secondary)]"
             size="xs"
           />
 
@@ -254,7 +252,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
               { value: 'medium', label: 'Medium' },
               { value: 'low', label: 'Low' },
             ]}
-            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] text-xs text-[var(--text-primary)] rounded-md px-2 py-0.5 font-mono h-7 hover:border-[var(--accent-yellow)]/50"
+            triggerClassName="bg-[var(--bg-main)] border border-[var(--border-primary)] text-xs text-[var(--text-primary)] rounded-md px-2 py-0.5 font-mono h-7 hover:border-[var(--border-secondary)]"
             size="xs"
           />
         </div>
@@ -268,7 +266,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
           {/* + New Task Button */}
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-2.5 py-1 bg-[var(--accent-yellow)] hover:bg-[var(--accent-yellow-hover)] text-[var(--bg-canvas)] rounded-md text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-[#E5E5E5] text-black rounded-md text-xs font-medium shadow-sm transition-all"
           >
             <Plus size={13} />
             <span>New</span>
@@ -310,25 +308,22 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   setDragOverIssueId(null);
                   setDropPosition(null);
                 }}
-                className={`bg-[var(--bg-card)] border rounded-lg flex flex-col max-h-full overflow-hidden transition-all duration-150 ${
+                className={`bg-[var(--bg-panel)] border rounded-lg flex flex-col max-h-full overflow-hidden transition-all duration-150 ${
                   isColumnOver
-                    ? 'border-[var(--accent-yellow)] bg-[var(--bg-hover)] ring-2 ring-[var(--accent-yellow)]/20'
+                    ? 'border-[var(--border-secondary)] bg-[var(--bg-hover)]'
                     : 'border-[var(--border-primary)]'
                 }`}
               >
                 {/* Column Header */}
-                <div className={`px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 transition-colors ${
+                <div className={`px-3 py-2 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 transition-colors ${
                   isColumnOver ? 'bg-[var(--bg-hover)]' : 'bg-[var(--bg-panel)]'
                 }`}>
-                  <div className="flex items-center gap-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: col.color }}
-                    />
-                    <span className="font-semibold text-[11px] text-[var(--text-primary)] uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <StatusIcon status={col.id} size={14} className="shrink-0" />
+                    <span className="font-medium text-xs text-[var(--text-primary)]">
                       {col.title}
                     </span>
-                    <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-main)] px-1.5 py-0.2 rounded border border-[var(--border-primary)]">
+                    <span className="text-xs text-[var(--text-muted)]">
                       {col.count}
                     </span>
                   </div>
@@ -344,7 +339,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                           setInlineTaskTitle('');
                         }
                       }}
-                      className="p-1 text-[var(--text-muted)] hover:text-[var(--accent-yellow)] hover:bg-[var(--bg-main)] rounded transition-colors"
+                      className="p-1 text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-hover)] rounded transition-colors"
                       title={`Add task to ${col.title}`}
                     >
                       <Plus size={13} />
@@ -379,7 +374,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                         <button
                           type="submit"
                           disabled={!inlineTaskTitle.trim()}
-                          className="px-2.5 py-0.5 bg-[var(--accent-yellow)] text-[var(--bg-canvas)] rounded text-[10px] font-bold disabled:opacity-40"
+                          className="px-2.5 py-0.5 bg-white text-black rounded text-[10px] font-bold disabled:opacity-40"
                         >
                           Add
                         </button>
@@ -463,69 +458,47 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                             issue,
                           });
                         }}
-                        className={`relative p-2.5 bg-[var(--bg-main)] hover:bg-[var(--bg-hover-subtle)] border rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-all duration-150 shadow-sm group select-none ${
+                        className={`relative p-3 bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-colors shadow-sm group select-none ${
                           isDragging
-                            ? 'opacity-30 border-dashed border-[var(--accent-yellow)] scale-[0.98]'
-                            : 'border-[var(--border-primary)] hover:border-[var(--accent-yellow)]/40'
+                            ? 'opacity-30 border-dashed border-[#3B82F6]'
+                            : ''
                         }`}
                       >
                         {/* Top Drop Indicator Line (Reorder Above) */}
                         {isOverThis && dropPosition === 'before' && (
-                          <div className="absolute -top-1.5 left-0 right-0 h-1 bg-[var(--accent-yellow)] rounded-full shadow-[0_0_8px_var(--accent-yellow)] z-20 animate-pulse" />
+                          <div className="absolute -top-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                         )}
 
                         {/* Bottom Drop Indicator Line (Reorder Below) */}
                         {isOverThis && dropPosition === 'after' && (
-                          <div className="absolute -bottom-1.5 left-0 right-0 h-1 bg-[var(--accent-yellow)] rounded-full shadow-[0_0_8px_var(--accent-yellow)] z-20 animate-pulse" />
+                          <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                         )}
 
-                        {/* Key, Priority & Drag Handle */}
+                        {/* Key, Drag Handle & Priority */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <GripVertical size={12} className="text-[var(--text-muted)] opacity-40 group-hover:opacity-100 group-hover:text-[var(--accent-yellow)] transition-all shrink-0 cursor-grab" />
-                            <span className="font-mono text-[11px] font-bold text-[var(--accent-yellow)] bg-[var(--accent-yellow-subtle)] px-1.5 py-0.2 rounded border border-[var(--accent-yellow-muted)]">
+                            <GripVertical size={12} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab" />
+                            <span className="font-mono text-xs text-[var(--text-muted)]">
                               {getTaskShortId(issue, issues)}
                             </span>
                           </div>
-                          <span
-                            className={`text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded uppercase ${
-                              issue.priority === 'critical'
-                                ? 'bg-[var(--priority-critical-bg)] text-[var(--priority-critical)] border border-[var(--priority-critical-border)]'
-                                : issue.priority === 'high'
-                                ? 'bg-[var(--priority-high-bg)] text-[var(--priority-high)] border border-[var(--priority-high-border)]'
-                                : 'bg-[var(--bg-card)] text-[var(--text-muted)] border border-[var(--border-primary)]'
-                            }`}
-                          >
-                            {issue.priority}
-                          </span>
+                          <PriorityIcon priority={issue.priority} size={13} className="shrink-0" />
                         </div>
 
                         {/* Title & Folder Tag */}
                         <div className="space-y-1">
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {(issue.epic || issue.title.startsWith('📁 ')) && (
-                              <div className="inline-flex items-center gap-1 text-[9px] font-mono text-[var(--accent-yellow)] bg-[var(--accent-yellow-subtle)] px-1.5 py-0.5 rounded border border-[var(--accent-yellow-muted)] max-w-full truncate">
-                                <Folder size={10} className="shrink-0" />
-                                <span className="truncate">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
-                              </div>
-                            )}
-                            {issue.tags && issue.tags.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                {issue.tags.slice(0, 2).map((t, idx) => (
-                                  <span key={idx} className="text-[9px] font-mono text-[var(--cyan)] bg-[var(--cyan)]/10 border border-[var(--cyan)]/30 px-1 py-0.2 rounded">
-                                    @{t.replace(/^@/, '')}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <h4 className="text-xs font-semibold text-[var(--text-primary)] group-hover:text-white line-clamp-2 leading-snug">
+                          {(issue.epic || issue.title.startsWith('📁 ')) && (
+                            <div className="text-[11px] text-[var(--text-muted)] truncate">
+                              📁 {issue.epic || issue.title.replace(/^📁\s*/, '')}
+                            </div>
+                          )}
+                          <h4 className="text-xs font-medium text-[var(--text-primary)] group-hover:text-white line-clamp-2 leading-snug">
                             {issue.title}
                           </h4>
                         </div>
 
                         {/* Card Footer */}
-                        <div className="pt-1.5 border-t border-[var(--border-primary)]/50 flex items-center justify-between text-xs relative min-h-[22px]">
+                        <div className="pt-1.5 border-t border-[var(--border-primary)] flex items-center justify-between text-xs relative min-h-[22px]">
                           <div className="flex items-center gap-1.5 truncate max-w-[120px]">
                             <Avatar user={assigneeUser} size="xs" />
                             <span className="text-[10px] text-[var(--text-muted)] font-mono truncate">
@@ -552,7 +525,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                                   e.stopPropagation();
                                   onUpdateIssueStatus(issue.id, 'in_progress');
                                 }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[var(--accent-yellow)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-[var(--accent-yellow-muted)] rounded flex items-center gap-0.5"
+                                className="px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-white bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded flex items-center gap-0.5 transition-colors"
                                 title="Start Progress"
                               >
                                 <Play size={9} /> Start
@@ -565,7 +538,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                                   e.stopPropagation();
                                   onUpdateIssueStatus(issue.id, 'needs_review');
                                 }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[var(--info)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-[var(--info)]/40 rounded flex items-center gap-0.5"
+                                className="px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-white bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded flex items-center gap-0.5 transition-colors"
                                 title="Submit for Review"
                               >
                                 <Eye size={9} /> Review
@@ -578,7 +551,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                                   e.stopPropagation();
                                   onUpdateIssueStatus(issue.id, 'done');
                                 }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[var(--success)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-[var(--success-border)] rounded flex items-center gap-0.5"
+                                className="px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-white bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded flex items-center gap-0.5 transition-colors"
                                 title="Approve & Complete"
                               >
                                 <CheckCircle2 size={9} /> Approve
@@ -591,7 +564,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                                   e.stopPropagation();
                                   onUpdateIssueStatus(issue.id, 'todo');
                                 }}
-                                className="px-1.5 py-0.5 text-[9px] font-semibold text-[var(--text-muted)] bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded flex items-center gap-0.5"
+                                className="px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-white bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-secondary)] rounded flex items-center gap-0.5 transition-colors"
                                 title="Reopen Task"
                               >
                                 <RotateCcw size={9} /> Reopen
@@ -607,7 +580,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   {columnCards.length === 0 && (
                     <div className={`p-4 border-2 border-dashed rounded-lg text-center text-[10px] font-mono transition-colors ${
                       isColumnOver
-                        ? 'border-[var(--accent-yellow)] bg-[var(--accent-yellow-subtle)] text-[var(--accent-yellow)]'
+                        ? 'border-[var(--border-secondary)] bg-[var(--bg-hover)] text-white'
                         : 'border-[var(--border-primary)] text-[var(--text-muted)]'
                     }`}>
                       {isColumnOver ? 'Drop here to add to this column' : 'No tasks in this stage'}

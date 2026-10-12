@@ -1,6 +1,6 @@
 import React from 'react';
 import { Priority } from '@/lib/types';
-import { Flame, ShieldAlert, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { PriorityIcon } from './PriorityIcon';
 
 interface PriorityBadgeProps {
   priority: Priority;
@@ -9,36 +9,39 @@ interface PriorityBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+export const PRIORITY_CONFIG: Record<
+  Priority,
+  { label: string; color: string; bg: string; icon: React.FC<{ size?: number; className?: string }> }
+> = {
   critical: {
     label: 'Critical',
-    color: 'var(--priority-critical, #EF4444)',
-    bg: 'var(--priority-critical-bg, rgba(239, 68, 68, 0.12))',
-    icon: Flame,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <PriorityIcon priority="critical" {...props} />,
   },
   high: {
     label: 'High',
-    color: 'var(--priority-high, #F97316)',
-    bg: 'var(--priority-high-bg, rgba(249, 115, 22, 0.12))',
-    icon: ShieldAlert,
+    color: 'var(--text-primary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <PriorityIcon priority="high" {...props} />,
   },
   medium: {
     label: 'Medium',
-    color: 'var(--priority-medium, #3B82F6)',
-    bg: 'var(--priority-medium-bg, rgba(59, 130, 246, 0.12))',
-    icon: ArrowUpRight,
+    color: 'var(--text-secondary)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <PriorityIcon priority="medium" {...props} />,
   },
   low: {
     label: 'Low',
-    color: 'var(--priority-low, #9499A0)',
-    bg: 'var(--priority-low-bg, rgba(148, 153, 160, 0.12))',
-    icon: ArrowDownRight,
+    color: 'var(--text-muted)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <PriorityIcon priority="low" {...props} />,
   },
   none: {
     label: 'No Priority',
-    color: 'var(--text-disabled, #585C60)',
-    bg: 'var(--bg-main, #131415)',
-    icon: Minus,
+    color: 'var(--text-muted)',
+    bg: 'var(--ramp-1)',
+    icon: (props) => <PriorityIcon priority="none" {...props} />,
   },
 };
 
@@ -49,21 +52,15 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
   size = 'md',
 }) => {
   const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.none;
-  const Icon = config.icon;
-  const iconSize = size === 'sm' ? 12 : 14;
+  const iconSize = size === 'sm' ? 12 : 13;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium font-mono rounded-md border transition-colors ${
-        size === 'sm' ? 'px-2 py-1 text-xs' : 'px-2.5 py-1 text-xs'
+      className={`inline-flex items-center gap-1.5 font-medium rounded border border-[var(--border-primary)] bg-[var(--ramp-1)] text-[var(--text-secondary)] transition-colors select-none ${
+        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-0.5 text-xs'
       } ${className}`}
-      style={{
-        color: config.color,
-        backgroundColor: config.bg,
-        borderColor: `${config.color}35`,
-      }}
     >
-      <Icon size={iconSize} className="shrink-0" />
+      <PriorityIcon priority={priority} size={iconSize} className="text-[var(--text-primary)] shrink-0" />
       {showText && <span>{config.label}</span>}
     </span>
   );

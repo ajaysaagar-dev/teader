@@ -368,25 +368,25 @@ export function ProjectConversationView({
   };
 
   return (
-    <div className="relative flex flex-1 h-full min-h-0 w-full overflow-hidden bg-[#0D0E11] text-[#CFD4DD]">
+    <div className="relative flex flex-1 h-full min-h-0 w-full overflow-hidden bg-[#0F0F0F] text-[var(--text-secondary)]">
       {/* ─── Left Channels Sidebar (Always Shown) ──────────── */}
       <aside
-        className="w-56 sm:w-64 shrink-0 bg-[#111215] border-r border-[#222428] flex flex-col justify-between select-none h-full min-h-0"
+        className="w-56 sm:w-64 shrink-0 bg-[#141414] border-r border-[#141414] flex flex-col justify-between select-none h-full min-h-0"
       >
         <div className="flex flex-col h-full min-h-0">
-          <div className="p-3.5 border-b border-[#222428] flex items-center justify-between">
+          <div className="p-3.5 border-b border-[#141414] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center">
+              <div className="w-6 h-6 rounded-lg bg-white/15 text-white flex items-center justify-center">
                 <Hash size={13} />
               </div>
               <span className="text-xs font-bold text-white tracking-tight">Channels</span>
-              <span className="text-[10px] font-mono text-[#787C83]">({channels.length})</span>
+              <span className="text-[10px] font-mono text-[var(--text-muted)]">({channels.length})</span>
             </div>
 
             {isUserAdmin && (
               <button
                 onClick={() => setIsNewChannelModalOpen(true)}
-                className="p-1 rounded-md text-[#787C83] hover:text-[#DCB001] hover:bg-[#1E2024] transition-colors cursor-pointer"
+                className="p-1 rounded-md text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
                 title="Create Channel (Admin Only)"
               >
                 <Plus size={14} />
@@ -407,12 +407,12 @@ export function ProjectConversationView({
                     }}
                     className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left truncate cursor-pointer ${
                       isActive
-                        ? 'bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30 font-bold shadow-sm'
-                        : 'text-[#8E939D] hover:text-white hover:bg-[#16171B]'
+                        ? 'bg-white/15 text-white border border-[var(--border-secondary)] font-bold shadow-sm'
+                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#181818]'
                     }`}
                     title={ch.desc || ch.name}
                   >
-                    <Hash size={13} className={isActive ? 'text-[#DCB001] shrink-0' : 'text-[#585C60] shrink-0'} />
+                    <Hash size={13} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
                     <span className="truncate">{ch.name}</span>
                   </button>
 
@@ -422,7 +422,7 @@ export function ProjectConversationView({
                         e.stopPropagation();
                         setChannelToDelete(ch.name);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[#787C83] hover:text-[#EF4444] hover:bg-[#1F2026] rounded transition-all cursor-pointer"
+                      className="opacity-0 group-hover:opacity-100 p-1 mr-1 text-[var(--text-muted)] hover:text-white hover:bg-[#222222] rounded transition-all cursor-pointer"
                       title={`Delete #${ch.name}`}
                     >
                       <Trash2 size={12} />
@@ -433,9 +433,9 @@ export function ProjectConversationView({
             })}
           </div>
 
-          <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/80 flex items-center justify-between text-[11px] text-[#787C83]">
+          <div className="p-3 border-t border-[#141414] bg-[#000000]/80 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-white text-black animate-pulse" />
               <span className="font-mono text-[10px]">Realtime Synced</span>
             </span>
             <span className="font-mono text-[10px]">{members.length} members</span>
@@ -452,42 +452,42 @@ export function ProjectConversationView({
       )}
 
       <aside
-        className={`absolute inset-y-0 right-0 z-30 w-72 bg-[#111215] border-l border-[#222428] flex flex-col justify-between select-none shadow-2xl transition-transform duration-200 ease-in-out ${
+        className={`absolute inset-y-0 right-0 z-30 w-72 bg-[#141414] border-l border-[#141414] flex flex-col justify-between select-none shadow-2xl transition-transform duration-200 ease-in-out ${
           showMembersSidebar ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="p-3.5 border-b border-[#222428] space-y-2.5">
+        <div className="p-3.5 border-b border-[#141414] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users size={14} className="text-[#DCB001]" />
+              <Users size={14} className="text-white" />
               <h3 className="text-xs font-bold text-white tracking-tight">Joined Members</h3>
-              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#1E2024] text-[#DCB001] border border-[#2B2D33]">
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[var(--bg-card)] text-white border border-[#2E2E2E]">
                 {members.length}
               </span>
             </div>
             <button
               onClick={() => setShowMembersSidebar(false)}
-              className="p-1 rounded-md text-[#787C83] hover:text-white hover:bg-[#1E2024] transition-colors cursor-pointer"
+              className="p-1 rounded-md text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
             >
               <X size={14} />
             </button>
           </div>
 
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#686C74]" />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#6D6D6D]" />
             <input
               type="text"
               value={searchMember}
               onChange={(e) => setSearchMember(e.target.value)}
               placeholder="Search members..."
-              className="w-full bg-[#17181C] border border-[#25272C] text-white text-[11px] rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[#DCB001] placeholder-[#585C60]"
+              className="w-full bg-[#191919] border border-[#282828] text-white text-[11px] rounded-lg pl-7 pr-2.5 py-1.5 focus:outline-none focus:border-[var(--border-secondary)] placeholder-[#666666]"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
           {filteredMembers.length === 0 ? (
-            <div className="text-center py-8 text-xs font-mono text-[#686C74]">
+            <div className="text-center py-8 text-xs font-mono text-[#6D6D6D]">
               No members found
             </div>
           ) : (
@@ -498,7 +498,7 @@ export function ProjectConversationView({
               return (
                 <div
                   key={`member_${m.userId || m.id}_${idx}`}
-                  className="flex items-center gap-2.5 p-2 rounded-xl bg-[#16171B] border border-[#222428] hover:border-[#2C2E35] transition-colors"
+                  className="flex items-center gap-2.5 p-2 rounded-xl bg-[#181818] border border-[#141414] hover:border-[#303030] transition-colors"
                 >
                   <div className="relative shrink-0">
                     <Avatar
@@ -506,7 +506,7 @@ export function ProjectConversationView({
                       size="sm"
                       className="rounded-lg"
                     />
-                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 border-2 border-[#16171B] rounded-full" />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-white text-black border-2 border-[#181818] rounded-full" />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -517,16 +517,16 @@ export function ProjectConversationView({
                       <span
                         className={`text-[8px] font-mono uppercase font-bold px-1 py-0.2 rounded border ${
                           isOwner
-                            ? 'bg-[#DCB001]/15 text-[#DCB001] border-[#DCB001]/30'
+                            ? 'bg-white/15 text-white border-[var(--border-secondary)]'
                             : isAdmin
-                            ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                            : 'bg-[#202227] text-[#8E939D] border-[#2D3036]'
+                            ? 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]'
+                            : 'bg-[#232323] text-[var(--text-secondary)] border-[#313131]'
                         }`}
                       >
                         {m.role || 'member'}
                       </span>
                     </div>
-                    <p className="text-[10px] font-mono text-[#686C74] truncate">
+                    <p className="text-[10px] font-mono text-[#6D6D6D] truncate">
                       {m.userEmail}
                     </p>
                   </div>
@@ -536,34 +536,34 @@ export function ProjectConversationView({
           )}
         </div>
 
-        <div className="p-3 border-t border-[#222428] bg-[#0E0F12]/80 space-y-1.5">
+        <div className="p-3 border-t border-[#141414] bg-[#000000]/80 space-y-1.5">
           <div className="flex items-center justify-between text-[10px]">
             <span className="font-semibold text-white">Project Key</span>
-            <span className="font-mono text-[#787C83]">Share to join</span>
+            <span className="font-mono text-[var(--text-muted)]">Share to join</span>
           </div>
           <button
             onClick={handleCopyKey}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#16171B] border border-[#27292F] hover:border-[#DCB001]/40 text-xs font-mono text-[#DCB001] cursor-pointer transition-colors"
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#181818] border border-[#2A2A2A] hover:border-[var(--border-secondary)] text-xs font-mono text-white cursor-pointer transition-colors"
           >
             <span className="truncate">{projectKey || '...'}</span>
-            {copiedKey ? <Check size={12} className="text-emerald-400 shrink-0" /> : <Copy size={12} className="shrink-0 text-[#8E939D]" />}
+            {copiedKey ? <Check size={12} className="text-white shrink-0" /> : <Copy size={12} className="shrink-0 text-[var(--text-secondary)]" />}
           </button>
         </div>
       </aside>
 
       {/* ─── Center: Main Full-Width Chat Panel ─────────────────────── */}
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#0E0F12]">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full bg-[#000000]">
         {/* Modern Header Banner */}
-        <div className="h-12 px-3 sm:px-4 border-b border-[#222428] bg-[#111215]/90 backdrop-blur flex items-center justify-between shrink-0 gap-2">
+        <div className="h-12 px-3 sm:px-4 border-b border-[#141414] bg-[#141414]/90 backdrop-blur flex items-center justify-between shrink-0 gap-2">
           {/* Active Channel Display */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="flex items-center gap-1.5 px-2 py-1 text-white font-bold text-xs shrink-0">
-              <Hash size={14} className="text-[#DCB001]" />
+              <Hash size={14} className="text-white" />
               <span className="truncate max-w-[140px] sm:max-w-[220px]">{activeChannelObj.name}</span>
             </div>
 
             {activeChannelObj.desc && (
-              <span className="text-[11px] text-[#787C83] truncate hidden sm:inline" title={activeChannelObj.desc}>
+              <span className="text-[11px] text-[var(--text-muted)] truncate hidden sm:inline" title={activeChannelObj.desc}>
                 • {activeChannelObj.desc}
               </span>
             )}
@@ -574,20 +574,20 @@ export function ProjectConversationView({
             {projectKey && (
               <button
                 onClick={handleCopyKey}
-                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-[#16171B] border border-[#26282E] hover:border-[#DCB001]/40 text-[10px] font-mono text-[#DCB001] transition-colors cursor-pointer"
+                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-[#181818] border border-[#292929] hover:border-[var(--border-secondary)] text-[10px] font-mono text-white transition-colors cursor-pointer"
                 title="Copy project key"
               >
                 <span>{projectKey}</span>
-                {copiedKey ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} className="text-[#787C83]" />}
+                {copiedKey ? <Check size={11} className="text-white" /> : <Copy size={11} className="text-[var(--text-muted)]" />}
               </button>
             )}
 
             <button
               onClick={() => setShowMembersSidebar(true)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#17181C] hover:bg-[#202227] border border-[#2A2C30] hover:border-[#DCB001]/40 text-xs font-semibold text-[#CFD4DD] hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#191919] hover:bg-[#232323] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-xs font-semibold text-[var(--text-secondary)] hover:text-white transition-colors cursor-pointer"
               title="View joined members"
             >
-              <Users size={13} className="text-[#DCB001]" />
+              <Users size={13} className="text-white" />
               <span className="font-mono text-[11px]">{members.length}</span>
             </button>
           </div>
@@ -596,18 +596,18 @@ export function ProjectConversationView({
         {/* Messages Feed Area */}
         <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4 space-y-3.5 custom-scrollbar">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[#787C83] space-y-2">
-              <Loader2 size={20} className="animate-spin text-[#DCB001]" />
+            <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[var(--text-muted)] space-y-2">
+              <Loader2 size={20} className="animate-spin text-white" />
               <span>Loading messages...</span>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center space-y-3 py-12 px-4 select-none">
-              <div className="w-12 h-12 rounded-2xl bg-[#17181C] border border-[#26282E] flex items-center justify-center text-[#DCB001] shadow-lg">
+              <div className="w-12 h-12 rounded-2xl bg-[#191919] border border-[#292929] flex items-center justify-center text-white shadow-lg">
                 <MessageSquare size={22} />
               </div>
               <div className="max-w-xs space-y-1">
                 <h3 className="text-sm font-bold text-white">Welcome to #{activeChannelObj.name}!</h3>
-                <p className="text-xs text-[#787C83] leading-relaxed">
+                <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                   Start the conversation with your team. Anyone in {projectName || 'this project'} can join and send messages.
                 </p>
               </div>
@@ -629,7 +629,7 @@ export function ProjectConversationView({
                 <React.Fragment key={`msg_frag_${msg.id ?? 'opt'}_${idx}`}>
                   {showDateSeparator && (
                     <div className="flex items-center justify-center my-3 select-none">
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#17181C] border border-[#26282E] text-[10px] font-mono text-[#787C83]">
+                      <span className="px-2.5 py-0.5 rounded-full bg-[#191919] border border-[#292929] text-[10px] font-mono text-[var(--text-muted)]">
                         {currentDateLabel}
                       </span>
                     </div>
@@ -645,30 +645,30 @@ export function ProjectConversationView({
                         avatar: isMe ? (msg.userAvatar || currentUser?.avatar) : msg.userAvatar,
                       }}
                       size="sm"
-                      className={`rounded-lg mt-0.5 shrink-0 ${isMe ? 'ring-1 ring-[#DCB001]/40' : ''}`}
+                      className={`rounded-lg mt-0.5 shrink-0 ${isMe ? 'ring-1 ring-[#FFFFFF]/40' : ''}`}
                     />
 
                     {/* Message Bubble Container */}
                     <div className="flex flex-col min-w-0 max-w-[88%] sm:max-w-[80%] items-start">
                       {/* Sender Info & Role Badge */}
                       <div className="flex items-center gap-1.5 px-1 mb-1 select-none">
-                        <span className={`text-[11px] font-bold truncate ${isMe ? 'text-[#DCB001]' : 'text-white'}`}>
+                        <span className={`text-[11px] font-bold truncate ${isMe ? 'text-white' : 'text-white'}`}>
                           {isMe ? `${currentUser?.name || msg.userName} (You)` : msg.userName}
                         </span>
 
                         {isOwner && (
-                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-[#DCB001]/15 text-[#DCB001] border border-[#DCB001]/30">
+                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-white/15 text-white border border-[var(--border-secondary)]">
                             OWNER
                           </span>
                         )}
 
                         {isAdmin && (
-                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]">
                             ADMIN
                           </span>
                         )}
 
-                        <span className="text-[9px] font-mono text-[#6A6E75]">
+                        <span className="text-[9px] font-mono text-[#6F6F6F]">
                           {msg.createdAt
                             ? new Date(msg.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',
@@ -682,22 +682,22 @@ export function ProjectConversationView({
                       <div
                         className={`relative px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                           isMe
-                            ? 'bg-[#DCB001]/10 text-white border border-[#DCB001]/30 rounded-tl-xs'
-                            : 'bg-[#16171B] text-[#CFD4DD] border border-[#26282E] rounded-tl-xs'
+                            ? 'bg-white/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
+                            : 'bg-[#181818] text-[var(--text-secondary)] border border-[#292929] rounded-tl-xs'
                         }`}
                       >
                         {msg.content}
 
                         {/* Hover Action Menu */}
                         <div
-                          className="absolute top-1 left-full ml-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#111215]/95 border border-[#2A2C30] rounded-lg p-0.5 shadow-md z-10"
+                          className="absolute top-1 left-full ml-1.5 opacity-0 group-hover/msg:opacity-100 transition-opacity flex items-center gap-1 bg-[#141414]/95 border border-[var(--border-primary)] rounded-lg p-0.5 shadow-md z-10"
                         >
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(msg.content);
                               toast.success('Copied message text');
                             }}
-                            className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                            className="p-1 rounded hover:bg-[#232323] text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                             title="Copy text"
                           >
                             <Copy size={11} />
@@ -706,7 +706,7 @@ export function ProjectConversationView({
                           {canDelete && (
                             <button
                               onClick={() => handleDeleteMessage(msg.id)}
-                              className="p-1 rounded hover:bg-[#202227] text-[#787C83] hover:text-[#EF4444] transition-colors cursor-pointer"
+                              className="p-1 rounded hover:bg-[#232323] text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                               title={isUserAdmin && !isMe ? 'Delete (Admin)' : 'Delete'}
                             >
                               <Trash2 size={11} />
@@ -724,10 +724,10 @@ export function ProjectConversationView({
         </div>
 
         {/* Bottom Message Input Bar */}
-        <div className="p-3 sm:p-3.5 border-t border-[#222428] bg-[#111215]/95 shrink-0 relative">
+        <div className="p-3 sm:p-3.5 border-t border-[#141414] bg-[#141414]/95 shrink-0 relative">
           {/* Emoji Quick Picker Popup */}
           {showEmojiPicker && (
-            <div className="absolute bottom-full right-3 sm:right-4 mb-2 z-40 flex items-center gap-1.5 p-2 bg-[#17181C] border border-[#2A2C30] rounded-xl shadow-2xl select-none animate-in fade-in zoom-in-95 duration-100">
+            <div className="absolute bottom-full right-3 sm:right-4 mb-2 z-40 flex items-center gap-1.5 p-2 bg-[#191919] border border-[var(--border-primary)] rounded-xl shadow-2xl select-none animate-in fade-in zoom-in-95 duration-100">
               {EMOJIS.map((emoji) => (
                 <button
                   key={emoji}
@@ -736,7 +736,7 @@ export function ProjectConversationView({
                     setShowEmojiPicker(false);
                     inputRef.current?.focus();
                   }}
-                  className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#24262B] rounded-lg transition-transform hover:scale-125 cursor-pointer"
+                  className="w-7 h-7 flex items-center justify-center text-sm hover:bg-[#272727] rounded-lg transition-transform hover:scale-125 cursor-pointer"
                 >
                   {emoji}
                 </button>
@@ -744,7 +744,7 @@ export function ProjectConversationView({
             </div>
           )}
 
-          <div className="flex items-end gap-2 bg-[#17181C] border border-[#2A2C30] focus-within:border-[#DCB001] rounded-2xl p-2 transition-colors">
+          <div className="flex items-end gap-2 bg-[#191919] border border-[var(--border-primary)] focus-within:border-[var(--border-secondary)] rounded-2xl p-2 transition-colors">
             <textarea
               ref={inputRef}
               value={inputValue}
@@ -752,7 +752,7 @@ export function ProjectConversationView({
               onKeyDown={handleKeyDown}
               placeholder={`Message #${activeChannelObj.name}...`}
               rows={1}
-              className="flex-1 bg-transparent text-xs text-white placeholder-[#686C74] focus:outline-none resize-none max-h-28 min-h-[32px] py-1 px-1.5 leading-relaxed"
+              className="flex-1 bg-transparent text-xs text-white placeholder-[#6D6D6D] focus:outline-none resize-none max-h-28 min-h-[32px] py-1 px-1.5 leading-relaxed"
             />
 
             <div className="flex items-center gap-1 shrink-0 pb-0.5">
@@ -761,8 +761,8 @@ export function ProjectConversationView({
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                   showEmojiPicker
-                    ? 'bg-[#DCB001]/20 text-[#DCB001]'
-                    : 'text-[#787C83] hover:text-white hover:bg-[#222428]'
+                    ? 'bg-white/20 text-white'
+                    : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)]'
                 }`}
                 title="Insert emoji"
               >
@@ -773,7 +773,7 @@ export function ProjectConversationView({
                 type="button"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isSending}
-                className="p-2 rounded-xl bg-[#DCB001] hover:bg-[#E5B800] disabled:bg-[#222428] text-[#0A0B0D] disabled:text-[#585C60] font-bold transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
+                className="p-2 rounded-xl bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
                 title="Send (Enter)"
               >
                 <Send size={13} />
@@ -786,20 +786,20 @@ export function ProjectConversationView({
       {/* ─── Admin Modal: Create New Channel ───────────────────────── */}
       {isNewChannelModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md bg-[#16171A] border border-[#2A2C30] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-[#2A2C30]">
+          <div className="w-full max-w-md bg-[#141414] border border-[var(--border-primary)] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#DCB001]/15 text-[#DCB001] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center">
                   <Hash size={16} />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white">Create New Channel</h3>
-                  <p className="text-xs text-[#787C83]">Admins can create channels for team discussions.</p>
+                  <p className="text-xs text-[var(--text-muted)]">Admins can create channels for team discussions.</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsNewChannelModalOpen(false)}
-                className="p-1 rounded-lg text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white hover:bg-[#141414] transition-colors"
               >
                 <X size={16} />
               </button>
@@ -807,29 +807,29 @@ export function ProjectConversationView({
 
             <form onSubmit={handleCreateChannel} className="space-y-3.5">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#CFD4DD]">Channel Name</label>
-                <div className="flex items-center gap-1.5 bg-[#101113] border border-[#2A2C30] focus-within:border-[#DCB001] rounded-xl px-3 py-2">
-                  <span className="text-xs font-mono text-[#787C83]">#</span>
+                <label className="text-xs font-semibold text-[var(--text-secondary)]">Channel Name</label>
+                <div className="flex items-center gap-1.5 bg-[#111111] border border-[var(--border-primary)] focus-within:border-[var(--border-secondary)] rounded-xl px-3 py-2">
+                  <span className="text-xs font-mono text-[var(--text-muted)]">#</span>
                   <input
                     type="text"
                     required
                     value={newChannelName}
                     onChange={(e) => setNewChannelName(e.target.value)}
                     placeholder="e.g. backend-api, release-v2"
-                    className="w-full bg-transparent text-xs text-white placeholder-[#585C60] outline-none"
+                    className="w-full bg-transparent text-xs text-white placeholder-[#666666] outline-none"
                     autoFocus
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#CFD4DD]">Description (Optional)</label>
+                <label className="text-xs font-semibold text-[var(--text-secondary)]">Description (Optional)</label>
                 <textarea
                   value={newChannelDesc}
                   onChange={(e) => setNewChannelDesc(e.target.value)}
                   placeholder="What is this channel for?"
                   rows={2}
-                  className="w-full bg-[#101113] border border-[#2A2C30] focus:border-[#DCB001] rounded-xl p-2.5 text-xs text-white placeholder-[#585C60] outline-none resize-none"
+                  className="w-full bg-[#111111] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-xl p-2.5 text-xs text-white placeholder-[#666666] outline-none resize-none"
                 />
               </div>
 
@@ -837,14 +837,14 @@ export function ProjectConversationView({
                 <button
                   type="button"
                   onClick={() => setIsNewChannelModalOpen(false)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[var(--text-muted)] hover:text-white hover:bg-[#141414] transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newChannelName.trim() || isCreatingChannel}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#DCB001] hover:bg-[#c49c00] disabled:bg-[#2A2C30] text-[#0F1011] disabled:text-[#585C60] rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] disabled:text-[var(--text-muted)] rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
                   {isCreatingChannel ? (
                     <>
@@ -864,14 +864,14 @@ export function ProjectConversationView({
       {/* ─── Admin Modal: Delete Channel Confirmation ──────────────── */}
       {channelToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm bg-[#16171A] border border-[#EF4444]/40 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-sm bg-[#141414] border border-[var(--border-secondary)] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#EF4444]/15 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[var(--ramp-3)]/15 border border-[var(--border-secondary)] flex items-center justify-center text-white shrink-0">
                 <AlertTriangle size={20} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Delete Channel #{channelToDelete}?</h3>
-                <p className="text-xs text-[#787C83]">All messages in this channel will be permanently removed.</p>
+                <p className="text-xs text-[var(--text-muted)]">All messages in this channel will be permanently removed.</p>
               </div>
             </div>
 
@@ -879,7 +879,7 @@ export function ProjectConversationView({
               <button
                 type="button"
                 onClick={() => setChannelToDelete(null)}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#787C83] hover:text-white hover:bg-[#202226] transition-colors"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[var(--text-muted)] hover:text-white hover:bg-[#141414] transition-colors"
               >
                 Cancel
               </button>
@@ -887,7 +887,7 @@ export function ProjectConversationView({
                 type="button"
                 disabled={isDeletingChannel}
                 onClick={() => handleDeleteChannel(channelToDelete)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 {isDeletingChannel ? (
                   <>

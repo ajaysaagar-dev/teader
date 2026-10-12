@@ -72,14 +72,14 @@ interface DocsPresence {
 const DEFAULT_FOLDER = 'Start';
 
 const COLLABORATOR_COLORS = [
-  '#06B6D4', // Cyan
-  '#22C55E', // Green
-  '#A855F7', // Purple
-  '#EC4899', // Pink
-  '#F97316', // Orange
-  '#3B82F6', // Blue
-  '#EAB308', // Yellow
-  '#14B8A6', // Teal
+  '#FFFFFF', // Cyan
+  '#FFFFFF', // Green
+  '#FFFFFF', // Purple
+  '#FFFFFF', // Pink
+  '#FFFFFF', // Orange
+  '#FFFFFF', // Blue
+  '#FFFFFF', // Yellow
+  '#FFFFFF', // Teal
 ];
 
 function getCollaboratorColor(userId: string): string {
@@ -331,7 +331,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     col: 1,
     offset: 0,
     isLocal: true,
-    color: '#DCB001',
+    color: '#FFFFFF',
   });
 
   const [remoteCursors, setRemoteCursors] = useState<Record<string, ActiveCursorInfo & { lastActive: number }>>({});
@@ -409,7 +409,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       col,
       offset,
       isLocal: true,
-      color: '#DCB001',
+      color: '#FFFFFF',
     });
 
     broadcastCursor(lineIndex, col, offset);
@@ -465,7 +465,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       (c) => now - (c.lastActive || 0) < 10000
     );
     return [
-      { ...cursorPos, isLocal: true, color: '#DCB001' },
+      { ...cursorPos, isLocal: true, color: '#FFFFFF' },
       ...activeRemotes,
     ];
   }, [cursorPos, remoteCursors]);
@@ -1647,16 +1647,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   }, [docs, customFolders, searchQuery]);
 
   return (
-    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[#0A0B0D] text-[#CFD4DD] font-sans selection:bg-[#DCB001]/30 selection:text-[#DCB001] overflow-hidden overscroll-none">
+    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white/30 selection:text-white overflow-hidden overscroll-none">
       {/* ─── Main Two-Column Layout ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* ─── Left Sidebar: Folders & Markdown Files (Drag and Drop) ─────── */}
-        <aside className="w-72 sm:w-80 shrink-0 border-r border-[#222428] bg-[#0F1012] flex flex-col h-full select-none z-10">
+        <aside className="w-72 sm:w-80 shrink-0 border-r border-[#141414] bg-[#101010] flex flex-col h-full select-none z-10">
           {/* Header & Actions */}
-          <div className="p-3.5 border-b border-[#222428] space-y-2.5 bg-[#121316]">
+          <div className="p-3.5 border-b border-[#141414] space-y-2.5 bg-[var(--bg-panel)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <BookOpen size={15} className="text-[#DCB001]" />
+                <BookOpen size={15} className="text-white" />
                 <span className="font-bold text-xs text-white uppercase tracking-wider font-mono">
                   Documentation Tree
                 </span>
@@ -1664,7 +1664,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsCreatingFolder(true)}
-                  className="p-1.5 rounded-lg bg-[#181A1E] hover:bg-[#22252B] text-[#CFD4DD] hover:text-[#DCB001] border border-[#2A2C30] transition-colors"
+                  className="p-1.5 rounded-lg bg-[#1B1B1B] hover:bg-[#262626] text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] transition-colors"
                   title="Create New Folder"
                 >
                   <FolderPlus size={13} />
@@ -1674,7 +1674,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     setActiveFolderForCreation(DEFAULT_FOLDER);
                     setIsCreatingNew(true);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] text-[#0A0B0D] font-bold text-xs transition-transform hover:scale-105 shadow-sm"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs transition-transform hover:scale-105 shadow-sm"
                   title="Create New Document in Start folder"
                 >
                   <Plus size={13} />
@@ -1685,21 +1685,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
             {/* Quick Search */}
             <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#787C83]" />
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter documents..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#17181C] border border-[#26282D] focus:border-[#DCB001]/60 rounded-lg text-xs text-white placeholder-[#787C83] outline-none"
+                className="w-full pl-8 pr-3 py-1.5 bg-[#191919] border border-[#292929] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white placeholder-[#666666] outline-none"
               />
             </div>
           </div>
 
           {/* Inline Folder Creation Form */}
           {isCreatingFolder && (
-            <form onSubmit={handleCreateFolder} className="p-3 bg-[#15171A] border-b border-[#2A2C30] space-y-2">
-              <div className="flex items-center gap-2 text-xs font-mono text-[#DCB001]">
+            <form onSubmit={handleCreateFolder} className="p-3 bg-[#171717] border-b border-[var(--border-primary)] space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono text-white">
                 <FolderPlus size={13} />
                 <span>New Folder Name:</span>
               </div>
@@ -1710,18 +1710,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="e.g. Architecture, API Guides..."
                   autoFocus
-                  className="flex-1 px-2.5 py-1.5 bg-[#0E1012] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg text-xs text-white outline-none font-mono"
+                  className="flex-1 px-2.5 py-1.5 bg-[#101010] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white outline-none font-mono"
                 />
                 <button
                   type="submit"
-                  className="px-2.5 py-1.5 bg-[#DCB001] text-[#0A0B0D] font-bold rounded-lg text-xs hover:bg-[#E5B800]"
+                  className="px-2.5 py-1.5 bg-white text-black font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
                 >
                   Add
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCreatingFolder(false)}
-                  className="px-2 py-1.5 bg-[#1F2126] text-[#8E939D] hover:text-white rounded-lg text-xs"
+                  className="px-2 py-1.5 bg-[#222222] text-[var(--text-secondary)] hover:text-white rounded-lg text-xs"
                 >
                   Cancel
                 </button>
@@ -1731,8 +1731,8 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
           {/* Inline New Doc Creation Form */}
           {isCreatingNew && (
-            <form onSubmit={handleCreateDoc} className="p-3 bg-[#15171A] border-b border-[#2A2C30] space-y-2">
-              <div className="flex items-center justify-between text-xs font-mono text-[#DCB001]">
+            <form onSubmit={handleCreateDoc} className="p-3 bg-[#171717] border-b border-[var(--border-primary)] space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono text-white">
                 <div className="flex items-center gap-1.5">
                   <FileCode size={13} />
                   <span>Create in [{activeFolderForCreation}]:</span>
@@ -1747,7 +1747,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       label: f,
                     })),
                   ]}
-                  triggerClassName="bg-[#0E1012] border border-[#2A2C30] text-[10px] text-[#CFD4DD] rounded px-1.5 py-0.5 hover:border-[#DCB001]/50"
+                  triggerClassName="bg-[#101010] border border-[var(--border-primary)] text-[10px] text-[var(--text-secondary)] rounded px-1.5 py-0.5 hover:border-[var(--border-secondary)]"
                   size="xs"
                 />
               </div>
@@ -1758,18 +1758,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   onChange={(e) => setNewDocTitle(e.target.value)}
                   placeholder="Document title or filename..."
                   autoFocus
-                  className="flex-1 px-2.5 py-1.5 bg-[#0E1012] border border-[#2A2C30] focus:border-[#DCB001] rounded-lg text-xs text-white outline-none font-mono"
+                  className="flex-1 px-2.5 py-1.5 bg-[#101010] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white outline-none font-mono"
                 />
                 <button
                   type="submit"
-                  className="px-2.5 py-1.5 bg-[#DCB001] text-[#0A0B0D] font-bold rounded-lg text-xs hover:bg-[#E5B800]"
+                  className="px-2.5 py-1.5 bg-white text-black font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
                 >
                   Create
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsCreatingNew(false)}
-                  className="px-2 py-1.5 bg-[#1F2126] text-[#8E939D] hover:text-white rounded-lg text-xs"
+                  className="px-2 py-1.5 bg-[#222222] text-[var(--text-secondary)] hover:text-white rounded-lg text-xs"
                 >
                   Cancel
                 </button>
@@ -1830,21 +1830,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     }
                   }}
                   className={`relative rounded-xl border transition-all ${
-                    isFolderBeingDragged ? 'opacity-40 border-dashed border-[#DCB001]' : ''
+                    isFolderBeingDragged ? 'opacity-40 border-dashed border-[var(--border-secondary)]' : ''
                   } ${
                     isDragOverFolderBox
-                      ? 'border-[#DCB001] bg-[#DCB001]/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
-                      : 'border-[#222428] bg-[#121316]/50'
+                      ? 'border-[var(--border-secondary)] bg-white/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
+                      : 'border-[#141414] bg-[var(--bg-panel)]/50'
                   }`}
                 >
                   {/* Top Drop Indicator for Folder */}
                   {isFolderOverThis && folderPos === 'before' && (
-                    <div className="absolute -top-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-30" />
+                    <div className="absolute -top-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-30" />
                   )}
 
                   {/* Bottom Drop Indicator for Folder */}
                   {isFolderOverThis && folderPos === 'after' && (
-                    <div className="absolute -bottom-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-30" />
+                    <div className="absolute -bottom-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-30" />
                   )}
 
                   {/* Folder Header */}
@@ -1861,7 +1861,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       setDragOverFolderTarget(null);
                     }}
                     onClick={() => setOpenFolders((prev) => ({ ...prev, [folder]: !isOpen }))}
-                    className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#1A1C20] rounded-t-xl transition-colors group ${
+                    className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#1D1D1D] rounded-t-xl transition-colors group ${
                       !isDefault ? 'cursor-grab active:cursor-grabbing' : ''
                     }`}
                   >
@@ -1869,29 +1869,29 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       {!isDefault && (
                         <GripVertical
                           size={12}
-                          className="text-[#787C83] opacity-30 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab"
+                          className="text-[var(--text-muted)] opacity-30 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab"
                         />
                       )}
                       {isOpen ? (
-                        <ChevronDown size={13} className="text-[#DCB001] shrink-0" />
+                        <ChevronDown size={13} className="text-white shrink-0" />
                       ) : (
-                        <ChevronRight size={13} className="text-[#787C83] shrink-0" />
+                        <ChevronRight size={13} className="text-[var(--text-muted)] shrink-0" />
                       )}
                       {isOpen ? (
-                        <FolderOpen size={14} className="text-[#DCB001] shrink-0" />
+                        <FolderOpen size={14} className="text-white shrink-0" />
                       ) : (
-                        <Folder size={14} className="text-[#787C83] shrink-0" />
+                        <Folder size={14} className="text-[var(--text-muted)] shrink-0" />
                       )}
                       <span className="truncate">{folder}</span>
                       {isDefault && (
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#1F2126] text-[#DCB001] border border-[#2E3138] shrink-0">
+                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#222222] text-white border border-[#222222] shrink-0">
                           Default
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-[10px] font-mono text-[#787C83] px-1.5 py-0.5 rounded bg-[#16181C]">
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] px-1.5 py-0.5 rounded bg-[#191919]">
                         {items.length}
                       </span>
                       <button
@@ -1901,7 +1901,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           setActiveFolderForCreation(folder);
                           setIsCreatingNew(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#DCB001] text-[#787C83] rounded transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
                         title={`Add doc inside ${folder}`}
                       >
                         <Plus size={12} />
@@ -1910,7 +1910,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleDeleteFolder(folder, e)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-[#EF4444] text-[#787C83] rounded transition-opacity"
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
                           title={`Delete folder "${folder}"`}
                         >
                           <Trash2 size={12} />
@@ -1925,7 +1925,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       {items.length === 0 ? (
                         <div
                           className={`p-3 text-center border border-dashed rounded-lg text-[11px] font-mono transition-all ${
-                            isDragOverFolderBox ? 'border-[#DCB001] text-[#DCB001] bg-[#DCB001]/5' : 'border-[#2A2C30] text-[#787C83]'
+                            isDragOverFolderBox ? 'border-[var(--border-secondary)] text-white bg-white/5' : 'border-[var(--border-primary)] text-[var(--text-muted)]'
                           }`}
                         >
                           {isDragOverFolderBox ? 'Drop file here to move' : 'Empty folder — drag .md files here'}
@@ -1990,28 +1990,28 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                               }}
                               className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all border ${
                                 isSelected
-                                  ? 'bg-[#1F2126] border-[#DCB001]/50 text-white shadow-sm'
-                                  : 'hover:bg-[#16181D] border-transparent text-[#CFD4DD]'
-                              } ${isDocDragging ? 'opacity-30 bg-[#141518]' : ''}`}
+                                  ? 'bg-[#222222] border-[var(--border-secondary)] text-white shadow-sm'
+                                  : 'hover:bg-[#191919] border-transparent text-[var(--text-secondary)]'
+                              } ${isDocDragging ? 'opacity-30 bg-[var(--bg-panel)]' : ''}`}
                             >
                               {/* Top Drop Indicator Line for Doc */}
                               {isDocOverThis && docPos === 'before' && (
-                                <div className="absolute -top-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                                <div className="absolute -top-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
                               )}
 
                               {/* Bottom Drop Indicator Line for Doc */}
                               {isDocOverThis && docPos === 'after' && (
-                                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-[#DCB001] rounded-full shadow-[0_0_8px_#DCB001] z-20" />
+                                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
                               )}
 
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <GripVertical
                                   size={11}
-                                  className="text-[#787C83] opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
+                                  className="text-[var(--text-muted)] opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
                                 />
                                 <FileText
                                   size={13}
-                                  className={isSelected ? 'text-[#DCB001] shrink-0' : 'text-[#787C83] shrink-0'}
+                                  className={isSelected ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'}
                                 />
 
                                 {isRenaming ? (
@@ -2025,7 +2025,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                       if (e.key === 'Escape') setRenamingDocId(null);
                                     }}
                                     autoFocus
-                                    className="px-1.5 py-0.5 bg-[#0D0E11] border border-[#DCB001] rounded text-xs text-white outline-none w-full font-mono"
+                                    className="px-1.5 py-0.5 bg-[#0F0F0F] border border-[var(--border-secondary)] rounded text-xs text-white outline-none w-full font-mono"
                                   />
                                 ) : (
                                   <div
@@ -2034,7 +2034,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                     title="Double-click to rename"
                                   >
                                     <span>{cleanTitle}</span>
-                                    <span className="text-[10px] text-[#787C83] font-mono ml-1 opacity-60">.md</span>
+                                    <span className="text-[10px] text-[var(--text-muted)] font-mono ml-1 opacity-60">.md</span>
                                   </div>
                                 )}
                               </div>
@@ -2044,14 +2044,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
                                     onClick={(e) => handleStartRename(doc, e)}
-                                    className="p-1 hover:text-[#DCB001] text-[#787C83] transition-colors"
+                                    className="p-1 hover:text-white text-[var(--text-muted)] transition-colors"
                                     title="Rename File"
                                   >
                                     <Edit3 size={11} />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteDoc(doc.id, doc.fileName, e)}
-                                    className="p-1 hover:text-[#EF4444] text-[#787C83] transition-colors"
+                                    className="p-1 hover:text-white text-[var(--text-muted)] transition-colors"
                                     title="Delete File"
                                   >
                                     <Trash2 size={11} />
@@ -2071,7 +2071,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
         </aside>
 
         {/* ─── Right Area: Document Editor & Live Preview ─────────────────── */}
-        <div className="flex-1 min-w-0 flex flex-col h-full bg-[#0A0B0D] relative">
+        <div className="flex-1 min-w-0 flex flex-col h-full bg-[var(--bg-canvas)] relative">
           {/* ─── Document Tabs Bar ────────────────────────────────────────── */}
           <div
             ref={tabsContainerRef}
@@ -2080,17 +2080,17 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 tabsContainerRef.current.scrollLeft += e.deltaY;
               }
             }}
-            className="bg-[#0B0C0E] border-b border-[#222428] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
+            className="bg-[#000000] border-b border-[#141414] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
           >
             {openDocIds.length === 0 ? (
-              <div className="flex items-center gap-2 px-2 text-xs text-[#787C83] font-mono">
+              <div className="flex items-center gap-2 px-2 text-xs text-[var(--text-muted)] font-mono">
                 <span>No open tabs</span>
                 <button
                   onClick={() => {
                     setActiveFolderForCreation(DEFAULT_FOLDER);
                     setIsCreatingNew(true);
                   }}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#16181D] hover:bg-[#20232A] text-[#DCB001] border border-[#2A2C30] text-[11px] transition-colors"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#191919] hover:bg-[#242424] text-white border border-[var(--border-primary)] text-[11px] transition-colors"
                 >
                   <Plus size={11} />
                   <span>New Tab</span>
@@ -2154,17 +2154,17 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[190px] sm:max-w-[240px] ${
                       isDraggingThis ? 'opacity-40' : ''
                     } ${
-                      isDragOverThis ? 'border-r-2 border-r-[#DCB001]' : ''
+                      isDragOverThis ? 'border-r-2 border-r-[#FFFFFF]' : ''
                     } ${
                       isActive
-                        ? 'bg-[#15171C] text-white border-t-[#DCB001] border-x border-x-[#252830] border-b border-b-[#15171C] shadow-sm font-medium'
-                        : 'bg-[#0E0F12] text-[#8E939D] hover:text-[#CFD4DD] hover:bg-[#131519] border-t-transparent border-x border-x-[#181A1F] border-b border-b-[#222428]'
+                        ? 'bg-[#181818] text-white border-t-[#FFFFFF] border-x border-x-[#2A2A2A] border-b border-b-[#181818] shadow-sm font-medium'
+                        : 'bg-[#000000] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#161616] border-t-transparent border-x border-x-[#141414] border-b border-b-[#141414]'
                     }`}
                     title={`${doc?.folder ? `[${doc.folder}] ` : ''}${cleanTitle}.md\nClick to switch • Middle-click to close • Right-click for options`}
                   >
                     <FileText
                       size={13}
-                      className={`shrink-0 ${isActive ? 'text-[#DCB001]' : 'text-[#787C83] group-hover:text-[#A0A5B0]'}`}
+                      className={`shrink-0 ${isActive ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-[#A7A7A7]'}`}
                     />
 
                     <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
@@ -2173,7 +2173,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
                     {/* Folder badge for context */}
                     {doc?.folder && doc.folder !== DEFAULT_FOLDER && (
-                      <span className="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-[#1A1C20] text-[#787C83] truncate max-w-[55px]">
+                      <span className="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-[#1D1D1D] text-[var(--text-muted)] truncate max-w-[55px]">
                         {doc.folder}
                       </span>
                     )}
@@ -2182,11 +2182,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <div className="flex items-center shrink-0 ml-0.5">
                       {tabIsDirty ? (
                         <div className="relative flex items-center justify-center w-4 h-4">
-                          <span className="w-2 h-2 rounded-full bg-[#DCB001] group-hover:hidden transition-opacity shadow-[0_0_6px_#DCB001]" />
+                          <span className="w-2 h-2 rounded-full bg-white text-black group-hover:hidden transition-opacity shadow-[0_0_6px_#FFFFFF]" />
                           <button
                             type="button"
                             onClick={(e) => handleCloseTab(tabId, e)}
-                            className="hidden group-hover:flex items-center justify-center w-4 h-4 rounded hover:bg-[#2A2C30] text-[#787C83] hover:text-white transition-colors"
+                            className="hidden group-hover:flex items-center justify-center w-4 h-4 rounded hover:bg-[#222222] text-[var(--text-muted)] hover:text-white transition-colors"
                             title="Close tab (changes will be auto-saved)"
                           >
                             <X size={11} />
@@ -2196,7 +2196,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleCloseTab(tabId, e)}
-                          className="flex items-center justify-center w-4 h-4 rounded opacity-40 group-hover:opacity-100 hover:bg-[#2A2C30] text-[#787C83] hover:text-white transition-all"
+                          className="flex items-center justify-center w-4 h-4 rounded opacity-40 group-hover:opacity-100 hover:bg-[#222222] text-[var(--text-muted)] hover:text-white transition-all"
                           title="Close tab"
                         >
                           <X size={11} />
@@ -2214,7 +2214,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 setActiveFolderForCreation(DEFAULT_FOLDER);
                 setIsCreatingNew(true);
               }}
-              className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-[#181A1F] text-[#787C83] hover:text-[#DCB001] transition-colors shrink-0 ml-1"
+              className="flex items-center justify-center w-7 h-7 rounded-lg hover:bg-[#141414] text-[var(--text-muted)] hover:text-white transition-colors shrink-0 ml-1"
               title="Create new document"
             >
               <Plus size={14} />
@@ -2225,7 +2225,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               <div className="ml-auto flex items-center gap-1 pl-2">
                 <button
                   onClick={handleCloseAllTabs}
-                  className="p-1 px-2 rounded-md hover:bg-[#1A1C22] text-[#787C83] hover:text-[#EF4444] transition-colors text-[10px] flex items-center gap-1 font-mono border border-transparent hover:border-[#2A2C30]"
+                  className="p-1 px-2 rounded-md hover:bg-[#1D1D1D] text-[var(--text-muted)] hover:text-white transition-colors text-[10px] flex items-center gap-1 font-mono border border-transparent hover:border-[var(--border-primary)]"
                   title="Close all tabs"
                 >
                   <X size={11} />
@@ -2238,9 +2238,9 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           {selectedDoc ? (
             <>
               {/* Document Header & Mode Controls */}
-              <div className="h-14 px-6 border-b border-[#222428] bg-[#0E1012] flex items-center justify-between gap-4 shrink-0">
+              <div className="h-14 px-6 border-b border-[#141414] bg-[#101010] flex items-center justify-between gap-4 shrink-0">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-lg bg-[#16181D] border border-[#2A2C30] flex items-center justify-center text-[#DCB001] shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white shrink-0">
                     <FileCode2 size={16} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -2249,11 +2249,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       value={activeTitle}
                       onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="Untitled Document..."
-                      className="w-full bg-transparent border-b border-transparent hover:border-[#2A2C30] focus:border-[#DCB001] text-sm sm:text-base font-bold text-white outline-none font-prompt transition-colors truncate"
+                      className="w-full bg-transparent border-b border-transparent hover:border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-sm sm:text-base font-bold text-white outline-none font-prompt transition-colors truncate"
                       title="Click to rename document title"
                     />
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-[#787C83]">
-                      <span>Folder: <strong className="text-[#DCB001]">{selectedDoc.folder || DEFAULT_FOLDER}</strong></span>
+                    <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--text-muted)]">
+                      <span>Folder: <strong className="text-white">{selectedDoc.folder || DEFAULT_FOLDER}</strong></span>
                       <span>•</span>
                       <span>File: {selectedDoc.fileName}</span>
                     </div>
@@ -2265,18 +2265,18 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   {/* Autosave Status Indicator */}
                   <div className="hidden sm:flex items-center select-none font-mono text-xs">
                     {isAutoSaving ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#DCB001]/30 rounded-lg text-[11px] text-[#DCB001]">
-                        <Loader2 size={11} className="animate-spin text-[#DCB001]" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-lg text-[11px] text-white">
+                        <Loader2 size={11} className="animate-spin text-white" />
                         <span>Saving...</span>
                       </div>
                     ) : hasUnsavedChanges ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#2A2C30] rounded-lg text-[11px] text-[#787C83]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg text-[11px] text-[var(--text-muted)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white text-black animate-pulse" />
                         <span>Unsaved</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#131415] border border-[#22C55E]/20 rounded-lg text-[11px] text-[#22C55E]">
-                        <CheckCircle2 size={11} className="text-[#22C55E]" />
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-lg text-[11px] text-white">
+                        <CheckCircle2 size={11} className="text-white" />
                         <span>Synced</span>
                       </div>
                     )}
@@ -2287,19 +2287,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   </div>
 
                   {/* Realtime Live Cursor Position Indicator */}
-                  <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[#141518] border border-[#2A2C30] rounded-lg text-[11px] font-mono text-[#CFD4DD]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse shadow-[0_0_6px_#DCB001]" />
+                  <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg text-[11px] font-mono text-[var(--text-secondary)]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white text-black animate-pulse shadow-[0_0_6px_#FFFFFF]" />
                     <span className="text-white font-bold">Ln {cursorPos.lineIndex + 1}</span>
-                    <span className="text-[#787C83]">:</span>
+                    <span className="text-[var(--text-muted)]">:</span>
                     <span className="text-white font-bold">Col {cursorPos.col || 1}</span>
-                    <span className="text-[#787C83] ml-1">({cursorPos.offset || 0} ch)</span>
+                    <span className="text-[var(--text-muted)] ml-1">({cursorPos.offset || 0} ch)</span>
                   </div>
 
                   {/* Manual Save Button */}
                   <button
                     onClick={() => performManualSave()}
                     disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#DCB001] hover:bg-[#E5B800] disabled:bg-[#1B1C1F] text-[#0A0B0D] disabled:text-[#787C83] font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-default"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-default"
                     title="Manual Save (Ctrl + S)"
                   >
                     <Save size={13} />
@@ -2307,11 +2307,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   </button>
 
                   {/* View Mode Toggle */}
-                  <div className="flex items-center bg-[#131415] border border-[#2A2C30] rounded-lg p-0.5 text-xs">
+                  <div className="flex items-center bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg p-0.5 text-xs">
                     <button
                       onClick={() => setViewMode('editor')}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all ${
-                        viewMode === 'editor' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#787C83] hover:text-white'
+                        viewMode === 'editor' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
                       }`}
                       title="Editor only"
                     >
@@ -2321,7 +2321,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <button
                       onClick={() => setViewMode('split')}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all ${
-                        viewMode === 'split' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#787C83] hover:text-white'
+                        viewMode === 'split' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
                       }`}
                       title="Split view (Live synchronized preview)"
                     >
@@ -2331,7 +2331,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     <button
                       onClick={() => setViewMode('preview')}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-all ${
-                        viewMode === 'preview' ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm' : 'text-[#787C83] hover:text-white'
+                        viewMode === 'preview' ? 'bg-[#222222] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-white'
                       }`}
                       title="Preview only"
                     >
@@ -2346,7 +2346,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               <div className="flex-1 min-h-0 flex overflow-hidden">
                 {/* Editor Column */}
                 {(viewMode === 'editor' || viewMode === 'split') && (
-                  <div className={`flex-1 h-full min-h-0 flex flex-col p-4 pb-14 ${viewMode === 'split' ? 'border-r border-[#222428]' : ''}`}>
+                  <div className={`flex-1 h-full min-h-0 flex flex-col p-4 pb-14 ${viewMode === 'split' ? 'border-r border-[#141414]' : ''}`}>
                     <textarea
                       ref={textareaRef}
                       value={activeContent}
@@ -2359,7 +2359,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       onKeyUp={updateCursorPos}
                       onFocus={updateCursorPos}
                       placeholder="Write markdown documentation and GitHub HTML tags here..."
-                      className="w-full h-full flex-1 p-4 bg-[#111215] border border-[#222428] focus:border-[#DCB001]/60 rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
+                      className="w-full h-full flex-1 p-4 bg-[#141414] border border-[#141414] focus:border-[var(--border-secondary)] rounded-xl font-mono text-xs sm:text-sm text-white leading-relaxed outline-none resize-none custom-scrollbar"
                     />
                   </div>
                 )}
@@ -2368,14 +2368,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 {(viewMode === 'preview' || viewMode === 'split') && (
                   <div
                     ref={previewContainerRef}
-                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#0E0F11] custom-scrollbar scroll-smooth"
+                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#000000] custom-scrollbar scroll-smooth"
                   >
-                    <div className="max-w-4xl mx-auto space-y-2 text-[#CFD4DD] font-sans">
+                    <div className="max-w-4xl mx-auto space-y-2 text-[var(--text-secondary)] font-sans">
                       {viewMode === 'split' && (
-                        <div className="flex items-center justify-between pb-2 text-[11px] font-mono text-[#787C83] border-b border-[#222428] mb-4">
+                        <div className="flex items-center justify-between pb-2 text-[11px] font-mono text-[var(--text-muted)] border-b border-[#141414] mb-4">
                           <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse shadow-[0_0_8px_#22C55E]" />
-                            <span className="text-[#CFD4DD] font-bold">SYNCHRONIZED PREVIEW</span>
+                            <span className="w-2 h-2 rounded-full bg-[var(--ramp-3)] animate-pulse shadow-[0_0_8px_#FFFFFF]" />
+                            <span className="text-[var(--text-secondary)] font-bold">SYNCHRONIZED PREVIEW</span>
                             {Object.values(remoteCursors).length > 0 && (
                               <div className="flex items-center gap-1.5 ml-2">
                                 {Object.values(remoteCursors).map((rc) => (
@@ -2399,11 +2399,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         </div>
                       )}
 
-                      <div className="p-6 sm:p-8 bg-[#141518] border border-[#222428] rounded-2xl shadow-xl">
+                      <div className="p-6 sm:p-8 bg-[var(--bg-panel)] border border-[#141414] rounded-2xl shadow-xl">
                         {activeContent || savedContent ? (
                           renderGithubMarkdown(activeContent || savedContent)
                         ) : (
-                          <p className="text-xs text-[#787C83] italic">Start typing in the editor to see real-time preview...</p>
+                          <p className="text-xs text-[var(--text-muted)] italic">Start typing in the editor to see real-time preview...</p>
                         )}
                       </div>
                     </div>
@@ -2413,11 +2413,11 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#141518] border border-[#2A2C30] flex items-center justify-center text-[#DCB001]">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex items-center justify-center text-white">
                 <FileText size={22} />
               </div>
               <h3 className="text-base font-bold text-white">No Document Selected</h3>
-              <p className="text-xs text-[#8E939D] max-w-sm">
+              <p className="text-xs text-[var(--text-secondary)] max-w-sm">
                 Select a document from the folder tree on the left, or create a new specification file inside the <strong>Start</strong> folder.
               </p>
               <button
@@ -2425,7 +2425,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   setActiveFolderForCreation(DEFAULT_FOLDER);
                   setIsCreatingNew(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DCB001] text-[#0A0B0D] font-bold text-xs hover:bg-[#E5B800] transition-transform hover:scale-105"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-[#FFFFFF] transition-transform hover:scale-105"
               >
                 <Plus size={14} />
                 <span>Create in Start Folder</span>
@@ -2439,7 +2439,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       {tabContextMenu && (
         <div
           style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
-          className="fixed z-50 min-w-[170px] bg-[#16181D] border border-[#2A2C30] rounded-xl shadow-2xl py-1 text-xs font-sans select-none"
+          className="fixed z-50 min-w-[170px] bg-[#191919] border border-[var(--border-primary)] rounded-xl shadow-2xl py-1 text-xs font-sans select-none"
           onClick={(e) => e.stopPropagation()}
         >
           <button
@@ -2447,27 +2447,27 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               handleCloseTab(tabContextMenu.docId);
               setTabContextMenu(null);
             }}
-            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] flex items-center justify-between transition-colors"
+            className="w-full text-left px-3 py-1.5 text-[var(--text-secondary)] hover:text-white hover:bg-[#242424] flex items-center justify-between transition-colors"
           >
             <span>Close Tab</span>
-            <span className="text-[10px] text-[#787C83] font-mono">Ctrl+Alt+W</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-mono">Ctrl+Alt+W</span>
           </button>
           <button
             onClick={() => handleCloseOtherTabs(tabContextMenu.docId)}
-            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] transition-colors"
+            className="w-full text-left px-3 py-1.5 text-[var(--text-secondary)] hover:text-white hover:bg-[#242424] transition-colors"
           >
             Close Other Tabs
           </button>
           <button
             onClick={() => handleCloseTabsToRight(tabContextMenu.docId)}
-            className="w-full text-left px-3 py-1.5 text-[#CFD4DD] hover:text-white hover:bg-[#20232A] transition-colors"
+            className="w-full text-left px-3 py-1.5 text-[var(--text-secondary)] hover:text-white hover:bg-[#242424] transition-colors"
           >
             Close Tabs to the Right
           </button>
-          <div className="border-t border-[#24262B] my-1" />
+          <div className="border-t border-[#272727] my-1" />
           <button
             onClick={() => handleCloseAllTabs()}
-            className="w-full text-left px-3 py-1.5 text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors"
+            className="w-full text-left px-3 py-1.5 text-white hover:bg-[var(--ramp-3)]/10 transition-colors"
           >
             Close All Tabs
           </button>

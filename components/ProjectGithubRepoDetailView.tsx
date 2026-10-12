@@ -371,23 +371,23 @@ export function ProjectGithubRepoDetailView({
   }, [currentPath]);
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0D0E11] text-[#CFD4DD] overflow-hidden select-none">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0F0F0F] text-[var(--text-secondary)] overflow-hidden select-none">
       {/* ───────────────────────────────────────────────────────────── */}
       {/* HEADER BAR: Back Button + Repo Identity + Actions             */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="h-14 border-b border-[#2A2C30] bg-[#141518] px-6 flex items-center justify-between gap-4 shrink-0">
+      <div className="h-14 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] px-6 flex items-center justify-between gap-4 shrink-0">
         {/* Left: Back button + Repo Name */}
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] transition-colors cursor-pointer shrink-0"
             title="Back to Repositories"
           >
             <ArrowLeft size={14} />
             <span>Repos</span>
           </button>
 
-          <div className="h-4 w-px bg-[#2A2C30] shrink-0" />
+          <div className="h-4 w-px bg-[#222222] shrink-0" />
 
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white shrink-0">
@@ -396,15 +396,15 @@ export function ProjectGithubRepoDetailView({
 
             <div className="flex items-center gap-2 min-w-0">
               <h2 className="text-sm font-bold text-white tracking-tight truncate flex items-center gap-1.5">
-                <span className="text-[#787C83] font-normal">{owner}/</span>
+                <span className="text-[var(--text-muted)] font-normal">{owner}/</span>
                 <span>{repoName}</span>
               </h2>
 
               <span
                 className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${
                   repo.isPrivate || repoDetails?.isPrivate
-                    ? 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20'
-                    : 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20'
+                    ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
+                    : 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
                 }`}
               >
                 {repo.isPrivate || repoDetails?.isPrivate ? <Lock size={9} /> : <Globe size={9} />}
@@ -418,15 +418,15 @@ export function ProjectGithubRepoDetailView({
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Branch Switcher */}
           {branches.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-[#1B1C20] border border-[#2A2C30] px-2.5 py-1 rounded-xl text-xs">
-              <GitBranch size={13} className="text-[#DCB001]" />
+            <div className="flex items-center gap-1.5 bg-[#1D1D1D] border border-[var(--border-primary)] px-2.5 py-1 rounded-xl text-xs">
+              <GitBranch size={13} className="text-white" />
               <select
                 value={selectedBranch}
                 onChange={(e) => setSelectedBranch(e.target.value)}
                 className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer pr-1"
               >
                 {branches.map((b) => (
-                  <option key={b.name} value={b.name} className="bg-[#141518] text-white">
+                  <option key={b.name} value={b.name} className="bg-[var(--bg-panel)] text-white">
                     {b.name}
                   </option>
                 ))}
@@ -435,11 +435,11 @@ export function ProjectGithubRepoDetailView({
           )}
 
           {/* Clone Command Copy */}
-          <div className="flex items-center bg-[#1B1C20] border border-[#2A2C30] rounded-xl overflow-hidden p-0.5 text-xs">
+          <div className="flex items-center bg-[#1D1D1D] border border-[var(--border-primary)] rounded-xl overflow-hidden p-0.5 text-xs">
             <button
               onClick={() => setCloneMode('https')}
               className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
-                cloneMode === 'https' ? 'bg-[#2A2C30] text-white' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                cloneMode === 'https' ? 'bg-[#222222] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
             >
               HTTPS
@@ -447,14 +447,14 @@ export function ProjectGithubRepoDetailView({
             <button
               onClick={() => setCloneMode('ssh')}
               className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
-                cloneMode === 'ssh' ? 'bg-[#2A2C30] text-white' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                cloneMode === 'ssh' ? 'bg-[#222222] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
               }`}
             >
               SSH
             </button>
             <button
               onClick={handleCopyCloneCommand}
-              className="px-2 py-1 text-xs text-[#DCB001] hover:text-white flex items-center gap-1 transition-colors cursor-pointer ml-1"
+              className="px-2 py-1 text-xs text-white hover:text-white flex items-center gap-1 transition-colors cursor-pointer ml-1"
               title="Copy git clone command"
             >
               <Copy size={12} />
@@ -467,7 +467,7 @@ export function ProjectGithubRepoDetailView({
             href={repo.htmlUrl || `https://github.com/${owner}/${repoName}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#222428] hover:bg-[#2A2C30] text-xs font-semibold text-white rounded-xl transition-all cursor-pointer border border-[#2A2C30]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-card)] hover:bg-[#222222] text-xs font-semibold text-white rounded-xl transition-all cursor-pointer border border-[var(--border-primary)]"
           >
             <span>GitHub</span>
             <ExternalLink size={11} />
@@ -478,30 +478,30 @@ export function ProjectGithubRepoDetailView({
       {/* ───────────────────────────────────────────────────────────── */}
       {/* STATS & METADATA BAR                                          */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="px-6 py-2 border-b border-[#2A2C30] bg-[#141518]/50 flex items-center justify-between gap-4 text-xs text-[#787C83] shrink-0">
+      <div className="px-6 py-2 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]/50 flex items-center justify-between gap-4 text-xs text-[var(--text-muted)] shrink-0">
         <div className="flex items-center gap-4 flex-wrap">
           {repoDetails?.language && (
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#DCB001]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-white text-black" />
               <span className="text-white font-medium">{repoDetails.language}</span>
             </div>
           )}
 
           <div className="flex items-center gap-1">
-            <Star size={12} className="text-[#DCB001]" />
-            <span className="text-[#CFD4DD] font-medium">{repoDetails?.starsCount || repo.starsCount || 0}</span>
+            <Star size={12} className="text-white" />
+            <span className="text-[var(--text-secondary)] font-medium">{repoDetails?.starsCount || repo.starsCount || 0}</span>
             <span>stars</span>
           </div>
 
           <div className="flex items-center gap-1">
             <GitFork size={12} />
-            <span className="text-[#CFD4DD] font-medium">{repoDetails?.forksCount || repo.forksCount || 0}</span>
+            <span className="text-[var(--text-secondary)] font-medium">{repoDetails?.forksCount || repo.forksCount || 0}</span>
             <span>forks</span>
           </div>
 
           <div className="flex items-center gap-1">
             <CircleDot size={12} />
-            <span className="text-[#CFD4DD] font-medium">{repoDetails?.openIssuesCount || repo.openIssuesCount || 0}</span>
+            <span className="text-[var(--text-secondary)] font-medium">{repoDetails?.openIssuesCount || repo.openIssuesCount || 0}</span>
             <span>issues</span>
           </div>
 
@@ -514,7 +514,7 @@ export function ProjectGithubRepoDetailView({
         </div>
 
         {repoDetails?.updatedAt && (
-          <div className="text-[11px] text-[#787C83]">
+          <div className="text-[11px] text-[var(--text-muted)]">
             Updated {formatTimeAgo(repoDetails.updatedAt)}
           </div>
         )}
@@ -523,7 +523,7 @@ export function ProjectGithubRepoDetailView({
       {/* ───────────────────────────────────────────────────────────── */}
       {/* SUB-TABS NAVIGATION: Code | Commits | Branches | PRs | Issues */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="h-12 border-b border-[#2A2C30] bg-[#141518] px-6 flex items-center gap-2 shrink-0">
+      <div className="h-12 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] px-6 flex items-center gap-2 shrink-0">
         {[
           { id: 'code', label: 'Code', icon: Code2 },
           { id: 'commits', label: 'Commits', icon: GitCommit },
@@ -539,14 +539,14 @@ export function ProjectGithubRepoDetailView({
               onClick={() => setActiveTab(tab.id as TabType)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-[#2A2C30] text-[#DCB001] shadow-sm'
-                  : 'text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#1B1C20]'
+                  ? 'bg-[#222222] text-white shadow-sm'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#1D1D1D]'
               }`}
             >
               <Icon size={13} />
               <span>{tab.label}</span>
               {typeof tab.count === 'number' && tab.count > 0 && (
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#1B1C20] text-[#CFD4DD] font-mono">
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#1D1D1D] text-[var(--text-secondary)] font-mono">
                   {tab.count}
                 </span>
               )}
@@ -565,21 +565,21 @@ export function ProjectGithubRepoDetailView({
         {activeTab === 'code' && (
           <div className="space-y-6 max-w-6xl mx-auto">
             {/* Breadcrumb Path Bar */}
-            <div className="flex items-center gap-1 text-xs text-[#787C83] bg-[#141518] border border-[#2A2C30] rounded-xl px-4 py-2.5 overflow-x-auto">
+            <div className="flex items-center gap-1 text-xs text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl px-4 py-2.5 overflow-x-auto">
               <button
                 onClick={() => navigateBreadcrumb(-1)}
-                className="font-bold text-white hover:text-[#DCB001] transition-colors cursor-pointer"
+                className="font-bold text-white hover:text-white transition-colors cursor-pointer"
               >
                 {repoName}
               </button>
 
               {pathSegments.map((segment, idx) => (
                 <React.Fragment key={idx}>
-                  <ChevronRight size={12} className="text-[#787C83] shrink-0" />
+                  <ChevronRight size={12} className="text-[var(--text-muted)] shrink-0" />
                   <button
                     onClick={() => navigateBreadcrumb(idx)}
-                    className={`font-medium hover:text-[#DCB001] transition-colors cursor-pointer ${
-                      idx === pathSegments.length - 1 ? 'text-[#DCB001]' : 'text-white'
+                    className={`font-medium hover:text-white transition-colors cursor-pointer ${
+                      idx === pathSegments.length - 1 ? 'text-white' : 'text-white'
                     }`}
                   >
                     {segment}
@@ -588,19 +588,19 @@ export function ProjectGithubRepoDetailView({
               ))}
 
               {isLoadingContents && (
-                <RefreshCw size={12} className="animate-spin text-[#DCB001] ml-auto shrink-0" />
+                <RefreshCw size={12} className="animate-spin text-white ml-auto shrink-0" />
               )}
             </div>
 
             {/* If a file is selected: Display File Viewer */}
             {activeFile ? (
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg">
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg">
                 {/* File Header */}
-                <div className="h-11 px-4 border-b border-[#2A2C30] bg-[#18191E] flex items-center justify-between">
+                <div className="h-11 px-4 border-b border-[var(--border-primary)] bg-[#1A1A1A] flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-semibold text-white">
-                    <FileCode size={14} className="text-[#DCB001]" />
+                    <FileCode size={14} className="text-white" />
                     <span>{activeFile.name}</span>
-                    <span className="text-[11px] text-[#787C83] font-mono font-normal">
+                    <span className="text-[11px] text-[var(--text-muted)] font-mono font-normal">
                       ({formatBytes(activeFile.size)})
                     </span>
                   </div>
@@ -611,7 +611,7 @@ export function ProjectGithubRepoDetailView({
                         navigator.clipboard.writeText(activeFile.content);
                         toast.success('Copied file contents to clipboard!');
                       }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#222428] hover:bg-[#2A2C30] text-[11px] text-[#CFD4DD] rounded-lg transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-[var(--bg-card)] hover:bg-[#222222] text-[11px] text-[var(--text-secondary)] rounded-lg transition-colors cursor-pointer"
                     >
                       <Copy size={11} />
                       <span>Copy</span>
@@ -624,7 +624,7 @@ export function ProjectGithubRepoDetailView({
                         const parent = activeFile.path.split('/').slice(0, -1).join('/');
                         fetchContents(parent, selectedBranch);
                       }}
-                      className="p-1 text-[#787C83] hover:text-white rounded-lg hover:bg-[#2A2C30] transition-colors cursor-pointer"
+                      className="p-1 text-[var(--text-muted)] hover:text-white rounded-lg hover:bg-[#222222] transition-colors cursor-pointer"
                     >
                       <X size={14} />
                     </button>
@@ -632,10 +632,10 @@ export function ProjectGithubRepoDetailView({
                 </div>
 
                 {/* File Lines */}
-                <div className="p-4 font-mono text-xs text-[#CFD4DD] bg-[#0E0F12] overflow-x-auto max-h-[600px] leading-relaxed">
+                <div className="p-4 font-mono text-xs text-[var(--text-secondary)] bg-[#000000] overflow-x-auto max-h-[600px] leading-relaxed">
                   {activeFile.content.split('\n').map((line, lineIdx) => (
-                    <div key={lineIdx} className="flex hover:bg-[#1A1C22]">
-                      <span className="w-12 text-right pr-4 select-none text-[#525761] shrink-0 text-[11px]">
+                    <div key={lineIdx} className="flex hover:bg-[#1D1D1D]">
+                      <span className="w-12 text-right pr-4 select-none text-[#595959] shrink-0 text-[11px]">
                         {lineIdx + 1}
                       </span>
                       <pre className="flex-1 whitespace-pre font-mono">{line || ' '}</pre>
@@ -645,23 +645,23 @@ export function ProjectGithubRepoDetailView({
               </div>
             ) : (
               /* Directory Items List */
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg">
-                <div className="h-10 px-4 border-b border-[#2A2C30] bg-[#18191E] flex items-center justify-between text-xs text-[#787C83] font-semibold">
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg">
+                <div className="h-10 px-4 border-b border-[var(--border-primary)] bg-[#1A1A1A] flex items-center justify-between text-xs text-[var(--text-muted)] font-semibold">
                   <span>Name</span>
                   <span>Branch: {selectedBranch}</span>
                 </div>
 
                 {isLoadingContents ? (
-                  <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[#787C83]">
-                    <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+                  <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[var(--text-muted)]">
+                    <RefreshCw size={20} className="animate-spin text-white" />
                     <span>Loading repository contents...</span>
                   </div>
                 ) : directoryItems.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-[#787C83]">
+                  <div className="p-8 text-center text-xs text-[var(--text-muted)]">
                     This folder is empty.
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#202227]">
+                  <div className="divide-y divide-[#232323]">
                     {/* Go back row if inside subdirectory */}
                     {currentPath && (
                       <div
@@ -669,9 +669,9 @@ export function ProjectGithubRepoDetailView({
                           const parent = currentPath.split('/').slice(0, -1).join('/');
                           fetchContents(parent, selectedBranch);
                         }}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#1B1C20] cursor-pointer text-xs text-[#787C83] transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#1D1D1D] cursor-pointer text-xs text-[var(--text-muted)] transition-colors"
                       >
-                        <Folder size={15} className="text-[#787C83]" />
+                        <Folder size={15} className="text-[var(--text-muted)]" />
                         <span>..</span>
                       </div>
                     )}
@@ -686,21 +686,21 @@ export function ProjectGithubRepoDetailView({
                             fetchContents(item.path, selectedBranch);
                           }
                         }}
-                        className="flex items-center justify-between px-4 py-2.5 hover:bg-[#1B1C20] cursor-pointer text-xs transition-colors group"
+                        className="flex items-center justify-between px-4 py-2.5 hover:bg-[#1D1D1D] cursor-pointer text-xs transition-colors group"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           {item.type === 'dir' ? (
-                            <Folder size={15} className="text-[#DCB001] shrink-0" />
+                            <Folder size={15} className="text-white shrink-0" />
                           ) : (
-                            <FileText size={15} className="text-[#787C83] group-hover:text-white shrink-0" />
+                            <FileText size={15} className="text-[var(--text-muted)] group-hover:text-white shrink-0" />
                           )}
-                          <span className="text-[#CFD4DD] group-hover:text-white font-medium truncate">
+                          <span className="text-[var(--text-secondary)] group-hover:text-white font-medium truncate">
                             {item.name}
                           </span>
                         </div>
 
                         {item.type === 'file' && (
-                          <span className="text-[11px] text-[#787C83] font-mono shrink-0">
+                          <span className="text-[11px] text-[var(--text-muted)] font-mono shrink-0">
                             {formatBytes(item.size)}
                           </span>
                         )}
@@ -713,12 +713,12 @@ export function ProjectGithubRepoDetailView({
 
             {/* Formatted README Viewer if at root path */}
             {!currentPath && readmeContent && (
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg">
-                <div className="h-11 px-4 border-b border-[#2A2C30] bg-[#18191E] flex items-center gap-2 text-xs font-bold text-white">
-                  <FileText size={14} className="text-[#DCB001]" />
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg">
+                <div className="h-11 px-4 border-b border-[var(--border-primary)] bg-[#1A1A1A] flex items-center gap-2 text-xs font-bold text-white">
+                  <FileText size={14} className="text-white" />
                   <span>README.md</span>
                 </div>
-                <div className="p-6 text-xs text-[#CFD4DD] space-y-4 leading-relaxed whitespace-pre-wrap font-sans bg-[#0E0F12]">
+                <div className="p-6 text-xs text-[var(--text-secondary)] space-y-4 leading-relaxed whitespace-pre-wrap font-sans bg-[#000000]">
                   {readmeContent}
                 </div>
               </div>
@@ -731,64 +731,64 @@ export function ProjectGithubRepoDetailView({
         {/* ============================================================= */}
         {activeTab === 'commits' && (
           <div className="space-y-4 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between text-xs text-[#787C83] mb-2">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
               <span>Commits on <strong className="text-white">{selectedBranch}</strong> ({commits.length})</span>
               <button
                 onClick={() => fetchCommits(selectedBranch)}
                 className="p-1 hover:text-white cursor-pointer"
                 title="Refresh commits"
               >
-                <RefreshCw size={12} className={isLoadingCommits ? 'animate-spin text-[#DCB001]' : ''} />
+                <RefreshCw size={12} className={isLoadingCommits ? 'animate-spin text-white' : ''} />
               </button>
             </div>
 
             {isLoadingCommits ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[#787C83]">
-                <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[var(--text-muted)]">
+                <RefreshCw size={20} className="animate-spin text-white" />
                 <span>Loading commit history...</span>
               </div>
             ) : commits.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#787C83] bg-[#141518] border border-[#2A2C30] rounded-2xl">
+              <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl">
                 No commits found on branch {selectedBranch}.
               </div>
             ) : (
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#202227]">
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#232323]">
                 {commits.map((commit) => (
                   <div
                     key={commit.sha}
                     onClick={() => fetchCommitDetail(commit.sha)}
-                    className="p-4 hover:bg-[#18191E] cursor-pointer transition-colors flex items-start justify-between gap-4 group"
+                    className="p-4 hover:bg-[#1A1A1A] cursor-pointer transition-colors flex items-start justify-between gap-4 group"
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       {commit.author?.avatarUrl ? (
                         <img
                           src={commit.author.avatarUrl}
                           alt={commit.author.name}
-                          className="w-7 h-7 rounded-full object-cover border border-[#2A2C30] shrink-0 mt-0.5"
+                          className="w-7 h-7 rounded-full object-cover border border-[var(--border-primary)] shrink-0 mt-0.5"
                         />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-[#2A2C30] flex items-center justify-center text-[#787C83] shrink-0 mt-0.5">
+                        <div className="w-7 h-7 rounded-full bg-[#222222] flex items-center justify-center text-[var(--text-muted)] shrink-0 mt-0.5">
                           <User size={13} />
                         </div>
                       )}
 
                       <div className="min-w-0">
-                        <h4 className="text-xs font-semibold text-white group-hover:text-[#DCB001] transition-colors line-clamp-1 mb-1">
+                        <h4 className="text-xs font-semibold text-white group-hover:text-white transition-colors line-clamp-1 mb-1">
                           {commit.message}
                         </h4>
 
-                        <div className="flex items-center gap-2 text-[11px] text-[#787C83]">
-                          <span className="text-[#CFD4DD] font-medium">{commit.author?.name}</span>
+                        <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                          <span className="text-[var(--text-secondary)] font-medium">{commit.author?.name}</span>
                           <span>committed {formatTimeAgo(commit.author?.date)}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-0.5 rounded-md bg-[#222428] text-[#DCB001] font-mono text-[11px] font-semibold">
+                      <span className="px-2 py-0.5 rounded-md bg-[var(--bg-card)] text-white font-mono text-[11px] font-semibold">
                         {commit.shortSha}
                       </span>
-                      <ChevronRight size={14} className="text-[#787C83] group-hover:text-white transition-colors" />
+                      <ChevronRight size={14} className="text-[var(--text-muted)] group-hover:text-white transition-colors" />
                     </div>
                   </div>
                 ))}
@@ -802,31 +802,31 @@ export function ProjectGithubRepoDetailView({
         {/* ============================================================= */}
         {activeTab === 'branches' && (
           <div className="space-y-4 max-w-3xl mx-auto">
-            <div className="flex items-center justify-between text-xs text-[#787C83] mb-2">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
               <span>Branches ({branches.length})</span>
               <button
                 onClick={fetchBranches}
                 className="p-1 hover:text-white cursor-pointer"
                 title="Refresh branches"
               >
-                <RefreshCw size={12} className={isLoadingBranches ? 'animate-spin text-[#DCB001]' : ''} />
+                <RefreshCw size={12} className={isLoadingBranches ? 'animate-spin text-white' : ''} />
               </button>
             </div>
 
-            <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#202227]">
+            <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#232323]">
               {branches.map((b) => {
                 const isDefault = b.name === (repoDetails?.defaultBranch || repo.defaultBranch || 'main');
                 const isSelected = b.name === selectedBranch;
                 return (
                   <div
                     key={b.name}
-                    className="p-4 flex items-center justify-between gap-4 hover:bg-[#18191E] transition-colors"
+                    className="p-4 flex items-center justify-between gap-4 hover:bg-[#1A1A1A] transition-colors"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <GitBranch size={15} className={isSelected ? 'text-[#DCB001]' : 'text-[#787C83]'} />
+                      <GitBranch size={15} className={isSelected ? 'text-white' : 'text-[var(--text-muted)]'} />
                       <span className="text-xs font-semibold text-white font-mono truncate">{b.name}</span>
                       {isDefault && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/30 font-medium">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white border border-[var(--border-secondary)] font-medium">
                           default
                         </span>
                       )}
@@ -834,7 +834,7 @@ export function ProjectGithubRepoDetailView({
 
                     <div className="flex items-center gap-2">
                       {b.sha && (
-                        <span className="text-[11px] text-[#787C83] font-mono">
+                        <span className="text-[11px] text-[var(--text-muted)] font-mono">
                           {b.sha.substring(0, 7)}
                         </span>
                       )}
@@ -846,8 +846,8 @@ export function ProjectGithubRepoDetailView({
                         }}
                         className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-[#DCB001] text-black'
-                            : 'bg-[#222428] hover:bg-[#2A2C30] text-[#CFD4DD]'
+                            ? 'bg-white text-black'
+                            : 'bg-[var(--bg-card)] hover:bg-[#222222] text-[var(--text-secondary)]'
                         }`}
                       >
                         {isSelected ? 'Active' : 'Switch'}
@@ -866,8 +866,8 @@ export function ProjectGithubRepoDetailView({
         {activeTab === 'pulls' && (
           <div className="space-y-4 max-w-4xl mx-auto">
             {/* Filter Pills */}
-            <div className="flex items-center justify-between text-xs text-[#787C83] mb-2">
-              <div className="flex items-center bg-[#141518] p-0.5 rounded-xl border border-[#2A2C30]">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+              <div className="flex items-center bg-[var(--bg-panel)] p-0.5 rounded-xl border border-[var(--border-primary)]">
                 {(['open', 'closed', 'all'] as const).map((filter) => (
                   <button
                     key={filter}
@@ -876,7 +876,7 @@ export function ProjectGithubRepoDetailView({
                       fetchPulls(filter);
                     }}
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer capitalize ${
-                      pullFilter === filter ? 'bg-[#2A2C30] text-white' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      pullFilter === filter ? 'bg-[#222222] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                     }`}
                   >
                     {filter}
@@ -885,47 +885,47 @@ export function ProjectGithubRepoDetailView({
               </div>
 
               <button onClick={() => fetchPulls(pullFilter)} className="p-1 hover:text-white cursor-pointer">
-                <RefreshCw size={12} className={isLoadingPulls ? 'animate-spin text-[#DCB001]' : ''} />
+                <RefreshCw size={12} className={isLoadingPulls ? 'animate-spin text-white' : ''} />
               </button>
             </div>
 
             {isLoadingPulls ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[#787C83]">
-                <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[var(--text-muted)]">
+                <RefreshCw size={20} className="animate-spin text-white" />
                 <span>Loading pull requests...</span>
               </div>
             ) : pullRequests.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#787C83] bg-[#141518] border border-[#2A2C30] rounded-2xl">
+              <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl">
                 No {pullFilter} pull requests found.
               </div>
             ) : (
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#202227]">
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#232323]">
                 {pullRequests.map((pr) => (
                   <a
                     key={pr.id}
                     href={pr.htmlUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-4 hover:bg-[#18191E] transition-colors flex items-start justify-between gap-4 block group"
+                    className="p-4 hover:bg-[#1A1A1A] transition-colors flex items-start justify-between gap-4 block group"
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <GitPullRequest
                         size={16}
                         className={`mt-0.5 shrink-0 ${
                           pr.merged
-                            ? 'text-[#A855F7]'
+                            ? 'text-white'
                             : pr.state === 'open'
-                            ? 'text-[#22C55E]'
-                            : 'text-[#EF4444]'
+                            ? 'text-white'
+                            : 'text-white'
                         }`}
                       />
 
                       <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white group-hover:text-[#DCB001] transition-colors line-clamp-1 mb-1">
-                          {pr.title} <span className="text-[#787C83] font-normal font-mono">#{pr.number}</span>
+                        <h4 className="text-xs font-bold text-white group-hover:text-white transition-colors line-clamp-1 mb-1">
+                          {pr.title} <span className="text-[var(--text-muted)] font-normal font-mono">#{pr.number}</span>
                         </h4>
 
-                        <p className="text-[11px] text-[#787C83]">
+                        <p className="text-[11px] text-[var(--text-muted)]">
                           opened by {pr.user?.login} • {formatTimeAgo(pr.createdAt)}
                         </p>
                       </div>
@@ -934,10 +934,10 @@ export function ProjectGithubRepoDetailView({
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-medium border shrink-0 ${
                         pr.merged
-                          ? 'bg-[#A855F7]/10 text-[#A855F7] border-[#A855F7]/30'
+                          ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
                           : pr.state === 'open'
-                          ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30'
-                          : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'
+                          ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
+                          : 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
                       }`}
                     >
                       {pr.merged ? 'Merged' : pr.state === 'open' ? 'Open' : 'Closed'}
@@ -955,8 +955,8 @@ export function ProjectGithubRepoDetailView({
         {activeTab === 'issues' && (
           <div className="space-y-4 max-w-4xl mx-auto">
             {/* Filter Pills */}
-            <div className="flex items-center justify-between text-xs text-[#787C83] mb-2">
-              <div className="flex items-center bg-[#141518] p-0.5 rounded-xl border border-[#2A2C30]">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-2">
+              <div className="flex items-center bg-[var(--bg-panel)] p-0.5 rounded-xl border border-[var(--border-primary)]">
                 {(['open', 'closed', 'all'] as const).map((filter) => (
                   <button
                     key={filter}
@@ -965,7 +965,7 @@ export function ProjectGithubRepoDetailView({
                       fetchIssues(filter);
                     }}
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer capitalize ${
-                      issueFilter === filter ? 'bg-[#2A2C30] text-white' : 'text-[#787C83] hover:text-[#CFD4DD]'
+                      issueFilter === filter ? 'bg-[#222222] text-white' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                     }`}
                   >
                     {filter}
@@ -974,43 +974,43 @@ export function ProjectGithubRepoDetailView({
               </div>
 
               <button onClick={() => fetchIssues(issueFilter)} className="p-1 hover:text-white cursor-pointer">
-                <RefreshCw size={12} className={isLoadingIssues ? 'animate-spin text-[#DCB001]' : ''} />
+                <RefreshCw size={12} className={isLoadingIssues ? 'animate-spin text-white' : ''} />
               </button>
             </div>
 
             {isLoadingIssues ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[#787C83]">
-                <RefreshCw size={20} className="animate-spin text-[#DCB001]" />
+              <div className="flex flex-col items-center justify-center h-48 gap-2 text-xs text-[var(--text-muted)]">
+                <RefreshCw size={20} className="animate-spin text-white" />
                 <span>Loading issues...</span>
               </div>
             ) : issues.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#787C83] bg-[#141518] border border-[#2A2C30] rounded-2xl">
+              <div className="p-8 text-center text-xs text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl">
                 No {issueFilter} issues found.
               </div>
             ) : (
-              <div className="bg-[#141518] border border-[#2A2C30] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#202227]">
+              <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl overflow-hidden shadow-lg divide-y divide-[#232323]">
                 {issues.map((issue) => (
                   <a
                     key={issue.id}
                     href={issue.htmlUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-4 hover:bg-[#18191E] transition-colors flex items-start justify-between gap-4 block group"
+                    className="p-4 hover:bg-[#1A1A1A] transition-colors flex items-start justify-between gap-4 block group"
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <CircleDot
                         size={16}
                         className={`mt-0.5 shrink-0 ${
-                          issue.state === 'open' ? 'text-[#22C55E]' : 'text-[#8957E5]'
+                          issue.state === 'open' ? 'text-white' : 'text-[#FFFFFF]'
                         }`}
                       />
 
                       <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white group-hover:text-[#DCB001] transition-colors line-clamp-1 mb-1">
-                          {issue.title} <span className="text-[#787C83] font-normal font-mono">#{issue.number}</span>
+                        <h4 className="text-xs font-bold text-white group-hover:text-white transition-colors line-clamp-1 mb-1">
+                          {issue.title} <span className="text-[var(--text-muted)] font-normal font-mono">#{issue.number}</span>
                         </h4>
 
-                        <p className="text-[11px] text-[#787C83]">
+                        <p className="text-[11px] text-[var(--text-muted)]">
                           opened by {issue.user?.login} • {formatTimeAgo(issue.createdAt)}
                         </p>
                       </div>
@@ -1019,8 +1019,8 @@ export function ProjectGithubRepoDetailView({
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-medium border shrink-0 ${
                         issue.state === 'open'
-                          ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30'
-                          : 'bg-[#8957E5]/10 text-[#8957E5] border-[#8957E5]/30'
+                          ? 'bg-[var(--ramp-3)]/10 text-white border-[var(--border-secondary)]'
+                          : 'bg-[#FFFFFF]/10 text-[#FFFFFF] border-[#FFFFFF]/30'
                       }`}
                     >
                       {issue.state === 'open' ? 'Open' : 'Closed'}
@@ -1038,15 +1038,15 @@ export function ProjectGithubRepoDetailView({
       {/* ───────────────────────────────────────────────────────────── */}
       {selectedCommit && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="max-w-4xl w-full bg-[#141518] border border-[#2A2C30] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-left">
+          <div className="max-w-4xl w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-left">
             {/* Modal Header */}
-            <div className="p-5 border-b border-[#2A2C30] bg-[#18191E] flex items-start justify-between gap-4 shrink-0">
+            <div className="p-5 border-b border-[var(--border-primary)] bg-[#1A1A1A] flex items-start justify-between gap-4 shrink-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded bg-[#DCB001]/10 text-[#DCB001] font-mono text-[11px] font-bold border border-[#DCB001]/30">
+                  <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[11px] font-bold border border-[var(--border-secondary)]">
                     {selectedCommit.shortSha}
                   </span>
-                  <span className="text-xs text-[#787C83]">
+                  <span className="text-xs text-[var(--text-muted)]">
                     by <strong className="text-white">{selectedCommit.author?.name}</strong> • {formatTimeAgo(selectedCommit.author?.date)}
                   </span>
                 </div>
@@ -1059,14 +1059,14 @@ export function ProjectGithubRepoDetailView({
               <div className="flex items-center gap-3 shrink-0">
                 {selectedCommit.stats && (
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-[#22C55E]">+{selectedCommit.stats.additions}</span>
-                    <span className="text-[#EF4444]">-{selectedCommit.stats.deletions}</span>
+                    <span className="text-white">+{selectedCommit.stats.additions}</span>
+                    <span className="text-white">-{selectedCommit.stats.deletions}</span>
                   </div>
                 )}
 
                 <button
                   onClick={() => setSelectedCommit(null)}
-                  className="text-[#787C83] hover:text-white p-1 rounded-lg hover:bg-[#2A2C30] transition-colors cursor-pointer"
+                  className="text-[var(--text-muted)] hover:text-white p-1 rounded-lg hover:bg-[#222222] transition-colors cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -1074,27 +1074,27 @@ export function ProjectGithubRepoDetailView({
             </div>
 
             {/* Changed Files & Diffs */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#0E0F12]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#000000]">
               {selectedCommit.files.length === 0 ? (
-                <div className="p-8 text-center text-xs text-[#787C83]">
+                <div className="p-8 text-center text-xs text-[var(--text-muted)]">
                   No changed files in this commit.
                 </div>
               ) : (
                 selectedCommit.files.map((file, fileIdx) => (
                   <div
                     key={fileIdx}
-                    className="border border-[#2A2C30] rounded-xl overflow-hidden bg-[#141518] shadow-md"
+                    className="border border-[var(--border-primary)] rounded-xl overflow-hidden bg-[var(--bg-panel)] shadow-md"
                   >
                     {/* File bar */}
-                    <div className="px-4 py-2.5 bg-[#18191E] border-b border-[#2A2C30] flex items-center justify-between text-xs font-mono">
+                    <div className="px-4 py-2.5 bg-[#1A1A1A] border-b border-[var(--border-primary)] flex items-center justify-between text-xs font-mono">
                       <div className="flex items-center gap-2 min-w-0">
                         <span
                           className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
                             file.status === 'added'
-                              ? 'bg-[#22C55E]/10 text-[#22C55E]'
+                              ? 'bg-[var(--ramp-3)]/10 text-white'
                               : file.status === 'removed'
-                              ? 'bg-[#EF4444]/10 text-[#EF4444]'
-                              : 'bg-[#38BDF8]/10 text-[#38BDF8]'
+                              ? 'bg-[var(--ramp-3)]/10 text-white'
+                              : 'bg-[var(--ramp-3)]/10 text-white'
                           }`}
                         >
                           {file.status}
@@ -1103,27 +1103,27 @@ export function ProjectGithubRepoDetailView({
                       </div>
 
                       <div className="flex items-center gap-2 text-[11px] shrink-0">
-                        <span className="text-[#22C55E]">+{file.additions}</span>
-                        <span className="text-[#EF4444]">-{file.deletions}</span>
+                        <span className="text-white">+{file.additions}</span>
+                        <span className="text-white">-{file.deletions}</span>
                       </div>
                     </div>
 
                     {/* Diff Patch Viewer */}
                     {file.patch ? (
-                      <div className="font-mono text-[11px] leading-relaxed overflow-x-auto p-2 bg-[#0A0B0D]">
+                      <div className="font-mono text-[11px] leading-relaxed overflow-x-auto p-2 bg-[var(--bg-canvas)]">
                         {file.patch.split('\n').map((diffLine, lineIndex) => {
-                          let lineStyle = 'text-[#CFD4DD]';
+                          let lineStyle = 'text-[var(--text-secondary)]';
                           let bgStyle = '';
 
                           if (diffLine.startsWith('+') && !diffLine.startsWith('+++')) {
-                            lineStyle = 'text-[#4ADE80]';
-                            bgStyle = 'bg-[#22C55E]/10';
+                            lineStyle = 'text-[#FFFFFF]';
+                            bgStyle = 'bg-[var(--ramp-3)]/10';
                           } else if (diffLine.startsWith('-') && !diffLine.startsWith('---')) {
-                            lineStyle = 'text-[#F87171]';
-                            bgStyle = 'bg-[#EF4444]/10';
+                            lineStyle = 'text-white';
+                            bgStyle = 'bg-[var(--ramp-3)]/10';
                           } else if (diffLine.startsWith('@@')) {
-                            lineStyle = 'text-[#38BDF8]';
-                            bgStyle = 'bg-[#38BDF8]/10 font-bold';
+                            lineStyle = 'text-white';
+                            bgStyle = 'bg-[var(--ramp-3)]/10 font-bold';
                           }
 
                           return (
@@ -1134,7 +1134,7 @@ export function ProjectGithubRepoDetailView({
                         })}
                       </div>
                     ) : (
-                      <div className="p-4 text-xs text-[#787C83] text-center">
+                      <div className="p-4 text-xs text-[var(--text-muted)] text-center">
                         Binary file or diff not displayed.
                       </div>
                     )}

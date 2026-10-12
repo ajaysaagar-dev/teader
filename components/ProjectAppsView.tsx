@@ -30,8 +30,8 @@ export const DEFAULT_APPS: AppDefinition[] = [
     id: 'google',
     name: 'Google',
     defaultUrl: 'https://www.google.com/webhp?igu=1',
-    iconBg: 'bg-[#4285F4]/10 border-[#4285F4]/30',
-    iconColor: 'text-[#4285F4]'
+    iconBg: 'bg-[#FFFFFF]/10 border-[#FFFFFF]/30',
+    iconColor: 'text-[#FFFFFF]'
   }
 ];
 
@@ -208,8 +208,8 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
   return (
     <div
       ref={containerRef}
-      className={`flex-1 flex flex-col h-full min-h-0 bg-[#141518] text-[#CFD4DD] select-none ${
-        isFullscreen ? 'fixed inset-0 z-50 bg-[#141518]' : 'relative'
+      className={`flex-1 flex flex-col h-full min-h-0 bg-[var(--bg-panel)] text-[var(--text-secondary)] select-none ${
+        isFullscreen ? 'fixed inset-0 z-50 bg-[var(--bg-panel)]' : 'relative'
       }`}
     >
       {/* ------------------------------------------------------------- */}
@@ -228,19 +228,19 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
         /* ------------------------------------------------------------- */
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
           {/* Top Browser Bar */}
-          <div className="h-12 border-b border-[#2A2C30] bg-[#1B1C20] px-3 flex items-center justify-between gap-3 shrink-0">
+          <div className="h-12 border-b border-[var(--border-primary)] bg-[#1D1D1D] px-3 flex items-center justify-between gap-3 shrink-0">
             {/* Left: Back button & App Logo/Name */}
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleBackFromEmbed}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] transition-colors cursor-pointer"
                 title={selectedAppId === 'github' ? 'Back to GitHub Repositories' : 'Back to Apps'}
               >
                 <ArrowLeft size={14} />
                 <span>{selectedAppId === 'github' ? 'Repos' : 'Apps'}</span>
               </button>
 
-              <div className="h-4 w-px bg-[#2A2C30]" />
+              <div className="h-4 w-px bg-[#222222]" />
 
               <div className="flex items-center gap-2">
                 <div
@@ -257,7 +257,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             {/* Middle: Address / Search Bar */}
             <form onSubmit={handleAddressSubmit} className="flex-1 max-w-2xl min-w-0">
               <div className="relative flex items-center">
-                <div className="absolute left-3 text-[#787C83] pointer-events-none">
+                <div className="absolute left-3 text-[var(--text-muted)] pointer-events-none">
                   <Search size={13} />
                 </div>
                 <input
@@ -265,11 +265,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                   value={addressInput}
                   onChange={(e) => setAddressInput(e.target.value)}
                   placeholder="Enter URL or search..."
-                  className="w-full bg-[#141518] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-[#CFD4DD] placeholder-[#787C83] rounded-lg pl-8 pr-16 py-1.5 focus:outline-none transition-colors font-mono text-[11px]"
+                  className="w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-xs text-[var(--text-secondary)] placeholder-[#666666] rounded-lg pl-8 pr-16 py-1.5 focus:outline-none transition-colors font-mono text-[11px]"
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 px-2 py-0.5 bg-[#2A2C30] hover:bg-[#DCB001] hover:text-black text-[11px] font-medium text-[#CFD4DD] rounded transition-colors cursor-pointer"
+                  className="absolute right-1.5 px-2 py-0.5 bg-[#222222] hover:bg-neutral-200 hover:text-black text-[11px] font-medium text-[var(--text-secondary)] rounded transition-colors cursor-pointer"
                 >
                   Go
                 </button>
@@ -280,15 +280,15 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={handleReload}
-                className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
                 title="Reload"
               >
-                <RotateCw size={14} className={isLoadingIframe ? 'animate-spin text-[#DCB001]' : ''} />
+                <RotateCw size={14} className={isLoadingIframe ? 'animate-spin text-white' : ''} />
               </button>
 
               <button
                 onClick={handlePopOutWindow}
-                className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
                 title="Pop out in Separate Window"
               >
                 <Share2 size={14} />
@@ -296,7 +296,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 
               <button
                 onClick={() => handleOpenExternal()}
-                className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
                 title="Open in New Tab"
               >
                 <ExternalLink size={14} />
@@ -304,7 +304,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
 
               <button
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="p-1.5 text-[#787C83] hover:text-[#CFD4DD] hover:bg-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[#222222] rounded-lg transition-colors cursor-pointer"
                 title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
               >
                 {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
@@ -313,12 +313,12 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
           </div>
 
           {/* Main App Canvas / Iframe View */}
-          <div className="flex-1 w-full h-full min-h-0 relative bg-[#0D0E11] overflow-hidden">
+          <div className="flex-1 w-full h-full min-h-0 relative bg-[#0F0F0F] overflow-hidden">
             {/* Loading Indicator */}
             {isLoadingIframe && (
-              <div className="absolute inset-0 bg-[#141518]/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 pointer-events-none">
-                <div className="w-8 h-8 rounded-full border-2 border-[#2A2C30] border-t-[#DCB001] animate-spin mb-2" />
-                <span className="text-xs text-[#787C83] font-medium">Loading {activeApp.name}...</span>
+              <div className="absolute inset-0 bg-[var(--bg-panel)]/60 backdrop-blur-xs flex flex-col items-center justify-center z-10 pointer-events-none">
+                <div className="w-8 h-8 rounded-full border-2 border-[var(--border-primary)] border-t-[#FFFFFF] animate-spin mb-2" />
+                <span className="text-xs text-[var(--text-muted)] font-medium">Loading {activeApp.name}...</span>
               </div>
             )}
 
@@ -336,11 +336,11 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             ) : null}
 
             {/* Bottom Overlay Info */}
-            <div className="absolute bottom-2 right-3 z-10 flex items-center gap-2 bg-[#1B1C20]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[#2A2C30] text-[11px] text-[#787C83] shadow-lg">
+            <div className="absolute bottom-2 right-3 z-10 flex items-center gap-2 bg-[#1D1D1D]/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-[var(--border-primary)] text-[11px] text-[var(--text-muted)] shadow-lg">
               <span>{activeApp.name}</span>
               <button
                 onClick={() => handleOpenExternal()}
-                className="text-[#DCB001] hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                className="text-white hover:underline flex items-center gap-1 font-medium cursor-pointer"
               >
                 <span>Open in Tab</span>
                 <ExternalLink size={11} />
@@ -358,7 +358,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
               <button
                 key={app.id}
                 onClick={() => handleOpenApp(app)}
-                className="flex flex-col items-center justify-center p-8 rounded-3xl bg-[#1B1C20] hover:bg-[#2A2C30] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 hover:scale-105 hover:shadow-2xl w-48 h-48 cursor-pointer group"
+                className="flex flex-col items-center justify-center p-8 rounded-3xl bg-[#1D1D1D] hover:bg-[#222222] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] transition-all duration-200 hover:scale-105 hover:shadow-2xl w-48 h-48 cursor-pointer group"
                 title={`Open ${app.name}`}
               >
                 <div
@@ -366,7 +366,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                 >
                   <AppIcon app={app} size={44} />
                 </div>
-                <span className="text-base font-semibold text-white group-hover:text-[#DCB001] transition-colors text-center">
+                <span className="text-base font-semibold text-white group-hover:text-white transition-colors text-center">
                   {app.name}
                 </span>
               </button>
@@ -380,10 +380,10 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
       {/* ------------------------------------------------------------- */}
       {showTokenPromptModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-150">
-          <div className="max-w-md w-full bg-[#141518] border border-[#2A2C30] rounded-2xl p-6 shadow-2xl relative text-left">
+          <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl relative text-left">
             <button
               onClick={() => setShowTokenPromptModal(false)}
-              className="absolute top-4 right-4 text-[#787C83] hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
@@ -395,14 +395,14 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
             <h3 className="text-base font-bold text-white tracking-tight mb-1">
               GitHub Access Token Required
             </h3>
-            <p className="text-xs text-[#9BA1A6] mb-5 leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary)] mb-5 leading-relaxed">
               To open GitHub and connect repositories to this project, please provide your GitHub Personal Access Token.
             </p>
 
             <form onSubmit={handleConfirmTokenAndOpen} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#CFD4DD] mb-1.5 flex items-center gap-1.5">
-                  <Key size={13} className="text-[#DCB001]" />
+                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5 flex items-center gap-1.5">
+                  <Key size={13} className="text-white" />
                   <span>Personal Access Token</span>
                 </label>
 
@@ -412,25 +412,25 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                     value={tokenInput}
                     onChange={(e) => setTokenInput(e.target.value)}
                     placeholder="ghp_xxxxxxxxxxxxxxxxxxxx or github_pat_..."
-                    className="w-full bg-[#0E0F12] border border-[#2A2C30] focus:border-[#DCB001] text-xs text-white placeholder-[#787C83] rounded-xl px-3 py-2.5 pr-10 focus:outline-none transition-colors font-mono"
+                    className="w-full bg-[#000000] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-xs text-white placeholder-[#666666] rounded-xl px-3 py-2.5 pr-10 focus:outline-none transition-colors font-mono"
                     autoFocus
                   />
                   <button
                     type="button"
                     onClick={() => setShowTokenText(!showTokenText)}
-                    className="absolute right-3 text-[#787C83] hover:text-white transition-colors"
+                    className="absolute right-3 text-[var(--text-muted)] hover:text-white transition-colors"
                   >
                     {showTokenText ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between mt-2 text-[11px] text-[#787C83]">
-                  <span>Requires <code className="text-[#DCB001] bg-[#1B1C20] px-1 py-0.5 rounded">repo</code> scope</span>
+                <div className="flex items-center justify-between mt-2 text-[11px] text-[var(--text-muted)]">
+                  <span>Requires <code className="text-white bg-[#1D1D1D] px-1 py-0.5 rounded">repo</code> scope</span>
                   <a
                     href="https://github.com/settings/tokens/new?scopes=repo&description=Teader%20Workspace"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[#DCB001] hover:underline flex items-center gap-1"
+                    className="text-white hover:underline flex items-center gap-1"
                   >
                     <span>Generate token</span>
                     <ExternalLink size={10} />
@@ -442,14 +442,14 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                 <button
                   type="button"
                   onClick={() => setShowTokenPromptModal(false)}
-                  className="px-4 py-2 text-xs font-medium text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-medium text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isVerifyingToken || !tokenInput.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-[#DCB001] hover:bg-[#E5B800] disabled:opacity-50 rounded-xl shadow-lg transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-black bg-white text-black hover:bg-[#FFFFFF] disabled:opacity-50 rounded-xl shadow-lg transition-all cursor-pointer"
                 >
                   {isVerifyingToken ? (
                     <>
@@ -489,19 +489,19 @@ function AppIcon({ app, size = 24 }: { app: AppDefinition; size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path
         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-        fill="#4285F4"
+        fill="#FFFFFF"
       />
       <path
         d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-        fill="#34A853"
+        fill="#FFFFFF"
       />
       <path
         d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-        fill="#FBBC05"
+        fill="#FFFFFF"
       />
       <path
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-        fill="#EA4335"
+        fill="#FFFFFF"
       />
     </svg>
   );

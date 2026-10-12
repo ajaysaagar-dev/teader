@@ -17,6 +17,16 @@ export async function GET() {
       return NextResponse.json({ user: null, authenticated: false, error: 'User no longer exists' }, { status: 200 });
     }
 
+    // Refresh and ensure teader_session cookie is set for browser navigations
+    try {
+      await setSessionCookie({
+        id: dbUser.id,
+        name: dbUser.name,
+        email: dbUser.email,
+        avatar: dbUser.avatar,
+      });
+    } catch {}
+
     return NextResponse.json({ user: dbUser, authenticated: true }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ user: null, authenticated: false, error: err.message }, { status: 200 });

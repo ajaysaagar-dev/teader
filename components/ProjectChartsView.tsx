@@ -386,7 +386,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             x2: guideXCoord,
             y2: guideYRange[1],
             type: 'vertical',
-            color: '#06B6D4',
+            color: '#FFFFFF',
           });
         }
 
@@ -398,7 +398,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             x2: guideXRange[1],
             y2: guideYCoord,
             type: 'horizontal',
-            color: '#06B6D4',
+            color: '#FFFFFF',
           });
         }
       }
@@ -1996,20 +1996,20 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   }, [charts, searchQuery]);
 
   return (
-    <div className="flex flex-col h-full max-h-full w-full bg-[#101114] text-[#E0E2E7] overflow-hidden overscroll-none select-none">
+    <div className="flex flex-col h-full max-h-full w-full bg-[#000000] text-[#E3E3E3] overflow-hidden overscroll-none select-none">
       {/* ── Top Bar: Tabs & Canvas Action Controls ── */}
-      <div className="h-10 bg-[#0E0F12] border-b border-[#202226] flex items-center justify-between px-2 shrink-0 z-20 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
+      <div className="h-10 bg-[#000000] border-b border-[#141414] flex items-center justify-between px-2 shrink-0 z-20 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
         {/* Tab Switcher */}
         <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
           {openChartIds.length === 0 ? (
-            <div className="text-xs text-[#787C83] px-2 flex items-center gap-2">
+            <div className="text-xs text-[var(--text-muted)] px-2 flex items-center gap-2">
               <span>No open diagram tabs</span>
               <button
                 onClick={() => {
                   setIsSidebarOpen(true);
                   handleCreateChart();
                 }}
-                className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1A1C21] hover:bg-[#252830] text-[#DCB001] text-[11px] transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1D1D1D] hover:bg-[#2A2A2A] text-white text-[11px] transition-colors"
               >
                 <Plus size={11} />
                 <span>New Diagram</span>
@@ -2034,21 +2034,21 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   }}
                   className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[200px] sm:max-w-[240px] ${
                     isActive
-                      ? 'bg-[#15171C] text-white border-t-[#DCB001] border-x border-x-[#252830] border-b border-b-[#15171C] font-semibold shadow-sm'
-                      : 'bg-[#0E0F12] text-[#8E939D] hover:text-[#CFD4DD] hover:bg-[#131519] border-t-transparent border-x border-x-transparent'
+                      ? 'bg-[#181818] text-white border-t-[#FFFFFF] border-x border-x-[#2A2A2A] border-b border-b-[#181818] font-semibold shadow-sm'
+                      : 'bg-[#000000] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#161616] border-t-transparent border-x border-x-transparent'
                   }`}
                   title={`${title}\nClick to view • Middle-click to close`}
                 >
                   <Workflow
                     size={12}
-                    className={`shrink-0 ${isActive ? 'text-[#DCB001]' : 'text-[#787C83] group-hover:text-[#A0A5B0]'}`}
+                    className={`shrink-0 ${isActive ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-[#A7A7A7]'}`}
                   />
                   <span className="truncate flex-1 text-[11px] sm:text-xs">{title}</span>
 
                   {/* Dirty Unsaved Dot */}
                   {tabIsDirty && (
                     <span
-                      className="w-2 h-2 rounded-full bg-[#DCB001] shrink-0 animate-pulse"
+                      className="w-2 h-2 rounded-full bg-white text-black shrink-0 animate-pulse"
                       title="Unsaved changes (Press Ctrl+S to save)"
                     />
                   )}
@@ -2056,7 +2056,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   {/* Close tab button */}
                   <button
                     onClick={(e) => handleCloseTab(tabId, e)}
-                    className="opacity-0 group-hover:opacity-100 hover:bg-[#2A2D35] text-[#787C83] hover:text-white rounded p-0.5 transition-all"
+                    className="opacity-0 group-hover:opacity-100 hover:bg-[#2F2F2F] text-[var(--text-muted)] hover:text-white rounded p-0.5 transition-all"
                     title="Close Tab"
                   >
                     <X size={11} />
@@ -2069,7 +2069,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           {/* New Tab Button */}
           <button
             onClick={() => handleCreateChart()}
-            className="flex items-center justify-center w-7 h-7 rounded hover:bg-[#1B1D23] text-[#787C83] hover:text-[#DCB001] transition-colors ml-1"
+            className="flex items-center justify-center w-7 h-7 rounded hover:bg-[#1E1E1E] text-[var(--text-muted)] hover:text-white transition-colors ml-1"
             title="Create New Diagram File"
           >
             <Plus size={14} />
@@ -2084,15 +2084,15 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             disabled={isSaving || (!hasUnsavedChanges && !isJustSaved)}
             className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
               hasUnsavedChanges
-                ? 'bg-[#DCB001] text-black border-[#DCB001] shadow-sm hover:bg-[#c9a102] cursor-pointer'
-                : 'bg-[#16181D] text-[#787C83] border-[#252830] opacity-80 cursor-default'
+                ? 'bg-white text-black border-[var(--border-secondary)] shadow-sm hover:bg-[#FFFFFF] cursor-pointer'
+                : 'bg-[#191919] text-[var(--text-muted)] border-[#2A2A2A] opacity-80 cursor-default'
             }`}
             title="Save Diagram to Server (Ctrl+S)"
           >
             {isSaving ? (
               <Loader2 size={12} className="animate-spin" />
             ) : isJustSaved ? (
-              <Check size={12} className="text-emerald-400" />
+              <Check size={12} className="text-white" />
             ) : (
               <Save size={12} />
             )}
@@ -2103,37 +2103,37 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           </button>
 
           {/* Auto save status indicator */}
-          <div className="flex items-center gap-1.5 text-[11px] text-[#787C83] px-1 font-mono">
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] px-1 font-mono">
             {isSaving || isAutoSaving ? (
-              <div className="flex items-center gap-1 text-[#DCB001]">
+              <div className="flex items-center gap-1 text-white">
                 <Loader2 size={11} className="animate-spin" />
                 <span>Auto-saving...</span>
               </div>
             ) : isJustSaved ? (
-              <div className="flex items-center gap-1 text-emerald-400">
+              <div className="flex items-center gap-1 text-white">
                 <Check size={11} />
                 <span>Saved</span>
               </div>
             ) : hasUnsavedChanges ? (
-              <div className="flex items-center gap-1 text-[#DCB001]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#DCB001] animate-pulse" />
+              <div className="flex items-center gap-1 text-white">
+                <span className="w-1.5 h-1.5 rounded-full bg-white text-black animate-pulse" />
                 <span>Unsaved</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1 text-[#60646D]">
+              <div className="flex items-center gap-1 text-[#666666]">
                 <Check size={11} />
                 <span>All saved</span>
               </div>
             )}
           </div>
 
-          <div className="w-[1px] h-4 bg-[#26282E]" />
+          <div className="w-[1px] h-4 bg-[#292929]" />
 
           {/* Export Menu */}
-          <div className="flex items-center gap-1 bg-[#16181D] border border-[#26282E] rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-[#191919] border border-[#292929] rounded-lg p-0.5">
             <button
               onClick={handleExportSVG}
-              className="px-2 py-1 text-[11px] font-medium text-[#CFD4DD] hover:text-[#DCB001] hover:bg-[#20232A] rounded transition-colors flex items-center gap-1"
+              className="px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-white hover:bg-[#242424] rounded transition-colors flex items-center gap-1"
               title="Download as SVG Vector"
             >
               <FileCode size={12} />
@@ -2141,7 +2141,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             </button>
             <button
               onClick={handleExportJSON}
-              className="px-2 py-1 text-[11px] font-medium text-[#CFD4DD] hover:text-[#DCB001] hover:bg-[#20232A] rounded transition-colors flex items-center gap-1"
+              className="px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] hover:text-white hover:bg-[#242424] rounded transition-colors flex items-center gap-1"
               title="Download JSON Project"
             >
               <Download size={12} />
@@ -2154,8 +2154,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             onClick={() => setIsSidebarOpen((prev) => !prev)}
             className={`p-1.5 rounded-lg border transition-colors ${
               isSidebarOpen
-                ? 'bg-[#20232A] text-[#DCB001] border-[#30333D]'
-                : 'bg-[#16181D] text-[#787C83] hover:text-[#CFD4DD] border-[#26282E]'
+                ? 'bg-[#242424] text-white border-[#353535]'
+                : 'bg-[#191919] text-[var(--text-muted)] hover:text-[var(--text-secondary)] border-[#292929]'
             }`}
             title={isSidebarOpen ? 'Hide Files Sidebar' : 'Show Files Sidebar'}
           >
@@ -2174,17 +2174,17 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               animate={{ width: 260, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.15 }}
-              className="h-full bg-[#131418] border-r border-[#202228] flex flex-col shrink-0 overflow-hidden z-10"
+              className="h-full bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 overflow-hidden z-10"
             >
               {/* Sidebar Header & New Chart Button */}
-              <div className="p-3 border-b border-[#202228] space-y-2">
+              <div className="p-3 border-b border-[#232323] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#787C83]">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                     Diagram Files ({charts.length})
                   </span>
                   <button
                     onClick={() => handleCreateChart()}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-[#DCB001] hover:bg-[#b89401] text-black font-semibold text-xs shadow-sm transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-white text-black hover:bg-[#FFFFFF] text-black font-semibold text-xs shadow-sm transition-colors"
                   >
                     <Plus size={12} />
                     <span>New Chart</span>
@@ -2193,13 +2193,13 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
                 {/* Search */}
                 <div className="relative">
-                  <Search size={12} className="absolute left-2.5 top-2.5 text-[#60646D]" />
+                  <Search size={12} className="absolute left-2.5 top-2.5 text-[#666666]" />
                   <input
                     type="text"
                     placeholder="Search diagrams..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-7 pr-2.5 py-1.5 bg-[#0E0F12] border border-[#22252C] rounded-lg text-xs text-white placeholder-[#555963] focus:outline-none focus:border-[#DCB001]/60"
+                    className="w-full pl-7 pr-2.5 py-1.5 bg-[#000000] border border-[#262626] rounded-lg text-xs text-white placeholder-[#5B5B5B] focus:outline-none focus:border-[var(--border-secondary)]"
                   />
                 </div>
               </div>
@@ -2207,7 +2207,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               {/* Diagram File List */}
               <div className="flex-1 overflow-y-auto p-2 space-y-1">
                 {filteredCharts.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-[#60646D]">
+                  <div className="text-center py-8 text-xs text-[#666666]">
                     {searchQuery ? 'No matching diagrams' : 'No diagram files yet'}
                   </div>
                 ) : (
@@ -2221,12 +2221,12 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         onClick={() => handleSelectChart(chart.id)}
                         className={`group relative flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
                           isActive
-                            ? 'bg-[#1D1F25] text-[#DCB001] font-medium border border-[#2F323C]'
-                            : 'text-[#9A9FA9] hover:bg-[#16181D] hover:text-[#CFD4DD]'
+                            ? 'bg-[#202020] text-white font-medium border border-[#343434]'
+                            : 'text-[#A1A1A1] hover:bg-[#191919] hover:text-[var(--text-secondary)]'
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Workflow size={14} className={isActive ? 'text-[#DCB001]' : 'text-[#60646D]'} />
+                          <Workflow size={14} className={isActive ? 'text-white' : 'text-[#666666]'} />
 
                           {isRenaming ? (
                             <input
@@ -2240,12 +2240,12 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                               }}
                               onBlur={() => handleSaveRename(chart.id)}
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-[#0E0F12] border border-[#DCB001] text-xs text-white px-1.5 py-0.5 rounded focus:outline-none"
+                              className="w-full bg-[#000000] border border-[var(--border-secondary)] text-xs text-white px-1.5 py-0.5 rounded focus:outline-none"
                             />
                           ) : (
                             <div className="min-w-0 flex-1">
                               <p className="text-xs truncate">{chart.title}</p>
-                              <p className="text-[10px] text-[#555963] font-mono truncate">
+                              <p className="text-[10px] text-[#5B5B5B] font-mono truncate">
                                 {chart.data?.elements?.length || 0} elements
                               </p>
                             </div>
@@ -2260,21 +2260,21 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                               setRenamingChartId(chart.id);
                               setRenamingTitle(chart.title);
                             }}
-                            className="p-1 rounded hover:bg-[#252830] text-[#787C83] hover:text-white"
+                            className="p-1 rounded hover:bg-[#2A2A2A] text-[var(--text-muted)] hover:text-white"
                             title="Rename"
                           >
                             <Edit2 size={11} />
                           </button>
                           <button
                             onClick={(e) => handleDuplicateChart(chart.id, e)}
-                            className="p-1 rounded hover:bg-[#252830] text-[#787C83] hover:text-white"
+                            className="p-1 rounded hover:bg-[#2A2A2A] text-[var(--text-muted)] hover:text-white"
                             title="Duplicate"
                           >
                             <Copy size={11} />
                           </button>
                           <button
                             onClick={(e) => handleDeleteChart(chart.id, e)}
-                            className="p-1 rounded hover:bg-[#252830] text-[#787C83] hover:text-rose-400"
+                            className="p-1 rounded hover:bg-[#2A2A2A] text-[var(--text-muted)] hover:text-white"
                             title="Delete"
                           >
                             <Trash2 size={11} />
@@ -2292,14 +2292,14 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
         {/* ── Canvas Central Area ── */}
         <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-[#1e1e1e]">
           {/* Floating Shape Palette / Draggable Toolbar */}
-          <div className="absolute top-3 left-3 sm:left-4 z-30 max-w-[calc(100vw-1.5rem)] flex items-center gap-1 bg-[#16171B]/95 backdrop-blur border border-[#2B2D33] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
+          <div className="absolute top-3 left-3 sm:left-4 z-30 max-w-[calc(100vw-1.5rem)] flex items-center gap-1 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
             {/* Mode tools: Select / Link / Pan */}
             <button
               onClick={() => setActiveTool('select')}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'select'
-                  ? 'bg-[#DCB001] text-black shadow-sm font-semibold'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#22242B]'
+                  ? 'bg-white text-black shadow-sm font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Select & Move Tool (V)"
             >
@@ -2313,8 +2313,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               }}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'link'
-                  ? 'bg-[#DCB001] text-black shadow-sm font-semibold'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#22242B]'
+                  ? 'bg-white text-black shadow-sm font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Connector Link Tool (L) - Link shapes together"
             >
@@ -2325,8 +2325,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               onClick={() => setActiveTool('pan')}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'pan'
-                  ? 'bg-[#DCB001] text-black shadow-sm font-semibold'
-                  : 'text-[#8E939D] hover:text-white hover:bg-[#22242B]'
+                  ? 'bg-white text-black shadow-sm font-semibold'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Pan Tool (Hand / Middle click)"
             >
@@ -2339,8 +2339,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                 onClick={() => setIsSnapMenuOpen((prev) => !prev)}
                 className={`p-2 rounded-lg transition-all flex items-center gap-1.5 ${
                   snapSettings.enabled
-                    ? 'bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/50 font-semibold shadow-sm'
-                    : 'text-[#8E939D] hover:text-white hover:bg-[#22242B] border border-transparent'
+                    ? 'bg-white/20 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] border border-transparent'
                 }`}
                 title="Snap Options (Snap to Grid & Nearby Elements)"
               >
@@ -2358,19 +2358,19 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -6, scale: 0.95 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute top-full left-0 mt-2 w-72 bg-[#17181C] border border-[#2B2D33] rounded-xl shadow-2xl p-3 space-y-3 z-50 text-white select-none pointer-events-auto"
+                    className="absolute top-full left-0 mt-2 w-72 bg-[#191919] border border-[#2E2E2E] rounded-xl shadow-2xl p-3 space-y-3 z-50 text-white select-none pointer-events-auto"
                   >
-                    <div className="flex items-center justify-between pb-2 border-b border-[#252830]">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#2A2A2A]">
                       <div className="flex items-center gap-2">
-                        <Magnet size={15} className="text-[#DCB001]" />
+                        <Magnet size={15} className="text-white" />
                         <span className="text-xs font-bold tracking-tight">Snap & Alignment</span>
                       </div>
                       <button
                         onClick={() => updateSnapSettings({ enabled: !snapSettings.enabled })}
                         className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
                           snapSettings.enabled
-                            ? 'bg-[#DCB001] text-black'
-                            : 'bg-[#252830] text-[#8E939D] hover:text-white'
+                            ? 'bg-white text-black'
+                            : 'bg-[#2A2A2A] text-[var(--text-secondary)] hover:text-white'
                         }`}
                       >
                         {snapSettings.enabled ? 'ON' : 'OFF'}
@@ -2380,10 +2380,10 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     {/* Snap to Nearby Elements */}
                     <label className="flex items-center justify-between cursor-pointer group py-0.5">
                       <div className="space-y-0.5">
-                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                        <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white block">
                           Snap to Nearby Elements
                         </span>
-                        <span className="text-[10px] text-[#8E939D] block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">
                           Align edges & centers with other shapes
                         </span>
                       </div>
@@ -2391,17 +2391,17 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         type="checkbox"
                         checked={snapSettings.snapToElements}
                         onChange={(e) => updateSnapSettings({ snapToElements: e.target.checked })}
-                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                        className="w-4 h-4 accent-[#FFFFFF] rounded cursor-pointer"
                       />
                     </label>
 
                     {/* Snap to Grid */}
                     <label className="flex items-center justify-between cursor-pointer group py-0.5">
                       <div className="space-y-0.5">
-                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                        <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white block">
                           Snap to Invisible Grid
                         </span>
-                        <span className="text-[10px] text-[#8E939D] block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">
                           Lock coordinates to grid intervals
                         </span>
                       </div>
@@ -2409,15 +2409,15 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         type="checkbox"
                         checked={snapSettings.snapToGrid}
                         onChange={(e) => updateSnapSettings({ snapToGrid: e.target.checked })}
-                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                        className="w-4 h-4 accent-[#FFFFFF] rounded cursor-pointer"
                       />
                     </label>
 
                     {/* Grid Size Selection */}
-                    <div className="space-y-1.5 pt-1 border-t border-[#252830]">
+                    <div className="space-y-1.5 pt-1 border-t border-[#2A2A2A]">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-[#8E939D]">Grid Step Size</span>
-                        <span className="font-mono text-[#DCB001] font-bold">{snapSettings.gridSize}px</span>
+                        <span className="text-[var(--text-secondary)]">Grid Step Size</span>
+                        <span className="font-mono text-white font-bold">{snapSettings.gridSize}px</span>
                       </div>
                       <div className="grid grid-cols-5 gap-1">
                         {[10, 16, 20, 24, 32].map((size) => (
@@ -2426,8 +2426,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                             onClick={() => updateSnapSettings({ gridSize: size })}
                             className={`py-1 text-xs font-mono rounded transition-colors ${
                               snapSettings.gridSize === size
-                                ? 'bg-[#DCB001] text-black font-bold shadow-sm'
-                                : 'bg-[#1F2127] text-[#9A9FA9] hover:bg-[#2A2D35] hover:text-white'
+                                ? 'bg-white text-black font-bold shadow-sm'
+                                : 'bg-[#222222] text-[#A1A1A1] hover:bg-[#2F2F2F] hover:text-white'
                             }`}
                           >
                             {size}px
@@ -2437,12 +2437,12 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     </div>
 
                     {/* Smart Alignment Guides */}
-                    <label className="flex items-center justify-between cursor-pointer group py-0.5 pt-1 border-t border-[#252830]">
+                    <label className="flex items-center justify-between cursor-pointer group py-0.5 pt-1 border-t border-[#2A2A2A]">
                       <div className="space-y-0.5">
-                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                        <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white block">
                           Alignment Guide Lines
                         </span>
-                        <span className="text-[10px] text-[#8E939D] block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">
                           Display cyan snap lines while dragging
                         </span>
                       </div>
@@ -2450,17 +2450,17 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         type="checkbox"
                         checked={snapSettings.showGuideLines}
                         onChange={(e) => updateSnapSettings({ showGuideLines: e.target.checked })}
-                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                        className="w-4 h-4 accent-[#FFFFFF] rounded cursor-pointer"
                       />
                     </label>
 
                     {/* Show Background Grid (Default: false, "no need to the grid to be visible") */}
                     <label className="flex items-center justify-between cursor-pointer group py-0.5">
                       <div className="space-y-0.5">
-                        <span className="text-xs font-semibold text-[#CFD4DD] group-hover:text-white block">
+                        <span className="text-xs font-semibold text-[var(--text-secondary)] group-hover:text-white block">
                           Show Background Grid
                         </span>
-                        <span className="text-[10px] text-[#8E939D] block">
+                        <span className="text-[10px] text-[var(--text-secondary)] block">
                           Off by default (invisible grid)
                         </span>
                       </div>
@@ -2468,19 +2468,19 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         type="checkbox"
                         checked={snapSettings.showGrid}
                         onChange={(e) => updateSnapSettings({ showGrid: e.target.checked })}
-                        className="w-4 h-4 accent-[#DCB001] rounded cursor-pointer"
+                        className="w-4 h-4 accent-[#FFFFFF] rounded cursor-pointer"
                       />
                     </label>
 
-                    <div className="text-[10px] text-[#717680] pt-1 border-t border-[#252830] italic flex items-center gap-1">
-                      <span>Tip: Hold <kbd className="font-mono px-1 py-0.2 bg-[#252830] rounded text-white not-italic">Alt</kbd> while dragging to bypass snapping.</span>
+                    <div className="text-[10px] text-[#787878] pt-1 border-t border-[#2A2A2A] italic flex items-center gap-1">
+                      <span>Tip: Hold <kbd className="font-mono px-1 py-0.2 bg-[#2A2A2A] rounded text-white not-italic">Alt</kbd> while dragging to bypass snapping.</span>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            <div className="w-[1px] h-6 bg-[#2B2D33] mx-1" />
+            <div className="w-[1px] h-6 bg-[#2E2E2E] mx-1" />
 
             {/* Draggable Shape Items */}
             {DEFAULT_SHAPES.map((shape) => (
@@ -2491,7 +2491,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   e.dataTransfer.setData('chart/shape-type', shape.type);
                 }}
                 onClick={() => handleAddShape(shape.type)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg text-white hover:text-[#DCB001] hover:bg-[#22242B] cursor-grab active:cursor-grabbing transition-all border border-transparent hover:border-[#383B44]"
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-white hover:text-white hover:bg-[#262626] cursor-grab active:cursor-grabbing transition-all border border-transparent hover:border-[#3D3D3D]"
                 title={`Drag & drop or click to add ${shape.label}`}
               >
                 {shape.icon}
@@ -2500,27 +2500,27 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           </div>
 
           {/* Bottom Zoom & History Bar */}
-          <div className="absolute bottom-4 right-4 z-30 flex items-center gap-1.5 bg-[#16171B]/95 backdrop-blur border border-[#2B2D33] p-1 rounded-xl shadow-2xl">
+          <div className="absolute bottom-4 right-4 z-30 flex items-center gap-1.5 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl">
             <button
               onClick={handleUndo}
-              className="p-1.5 rounded-lg text-[#8E939D] hover:text-white hover:bg-[#22242B] transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"
               title="Undo (Ctrl+Z)"
             >
               <RotateCcw size={14} />
             </button>
             <button
               onClick={handleRedo}
-              className="p-1.5 rounded-lg text-[#8E939D] hover:text-white hover:bg-[#22242B] transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"
               title="Redo (Ctrl+Y)"
             >
               <RotateCw size={14} />
             </button>
 
-            <div className="w-[1px] h-4 bg-[#2B2D33] mx-0.5" />
+            <div className="w-[1px] h-4 bg-[#2E2E2E] mx-0.5" />
 
             <button
               onClick={() => handleZoom(-0.15)}
-              className="p-1.5 rounded-lg text-[#8E939D] hover:text-white hover:bg-[#22242B] transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"
               title="Zoom Out (-)"
             >
               <ZoomOut size={14} />
@@ -2528,7 +2528,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
             <button
               onClick={handleResetZoom}
-              className="px-2 py-1 text-xs font-mono text-white hover:text-[#DCB001] rounded transition-colors"
+              className="px-2 py-1 text-xs font-mono text-white hover:text-white rounded transition-colors"
               title="Reset Zoom to 100%"
             >
               {Math.round(viewport.zoom * 100)}%
@@ -2536,7 +2536,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
             <button
               onClick={() => handleZoom(0.15)}
-              className="p-1.5 rounded-lg text-[#8E939D] hover:text-white hover:bg-[#22242B] transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"
               title="Zoom In (+)"
             >
               <ZoomIn size={14} />
@@ -2544,7 +2544,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
             <button
               onClick={handleFitView}
-              className="p-1.5 rounded-lg text-[#8E939D] hover:text-white hover:bg-[#22242B] transition-colors"
+              className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"
               title="Fit View to Content"
             >
               <Maximize2 size={14} />
@@ -2601,7 +2601,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     height: `${Math.abs(selectionBox.currentY - selectionBox.startY)}px`,
                     pointerEvents: 'none',
                   }}
-                  className="border border-[#DCB001] bg-[#DCB001]/15 rounded-sm z-50 border-dashed pointer-events-none"
+                  className="border border-[var(--border-secondary)] bg-white/15 rounded-sm z-50 border-dashed pointer-events-none"
                 />
               )}
 
@@ -2629,7 +2629,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     refY="3.5"
                     orient="auto"
                   >
-                    <polygon points="0 0, 10 3.5, 0 7" fill="#DCB001" />
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#FFFFFF" />
                   </marker>
                 </defs>
 
@@ -2642,7 +2642,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       y1={guide.y1}
                       x2={guide.x2}
                       y2={guide.y2}
-                      stroke={guide.color || '#06B6D4'}
+                      stroke={guide.color || '#FFFFFF'}
                       strokeWidth={1.5 / viewport.zoom}
                       strokeDasharray={`${5 / viewport.zoom} ${5 / viewport.zoom}`}
                       opacity={0.85}
@@ -2726,7 +2726,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       <path
                         d={pathD}
                         fill="none"
-                        stroke={isSelected ? '#DCB001' : conn.color || '#ffffff'}
+                        stroke={isSelected ? '#FFFFFF' : conn.color || '#ffffff'}
                         strokeWidth={isSelected ? 3 : conn.width || 2}
                         strokeDasharray={conn.dashed ? '6,4' : undefined}
                         markerEnd={isSelected ? 'url(#arrowhead-gold)' : 'url(#arrowhead-white)'}
@@ -2753,7 +2753,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                             height="20"
                             rx="4"
                             fill="#1e1e1e"
-                            stroke={isSelected ? '#DCB001' : '#ffffff'}
+                            stroke={isSelected ? '#FFFFFF' : '#ffffff'}
                             strokeWidth="1"
                           />
                           <text
@@ -2817,7 +2817,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         <path
                           d={pathD}
                           fill="none"
-                          stroke="#DCB001"
+                          stroke="#FFFFFF"
                           strokeWidth="2.5"
                           markerEnd="url(#arrowhead-gold)"
                         />
@@ -2827,7 +2827,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                           cy={end.y}
                           r="14"
                           fill="rgba(220, 176, 1, 0.25)"
-                          stroke="#DCB001"
+                          stroke="#FFFFFF"
                           strokeWidth="2"
                           strokeDasharray="3,3"
                         />
@@ -2835,7 +2835,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                           cx={end.x}
                           cy={end.y}
                           r="5"
-                          fill="#DCB001"
+                          fill="#FFFFFF"
                         />
                       </g>
                     );
@@ -2847,7 +2847,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       y1={start.y}
                       x2={end.x}
                       y2={end.y}
-                      stroke="#DCB001"
+                      stroke="#FFFFFF"
                       strokeWidth="2"
                       strokeDasharray="4,4"
                       markerEnd="url(#arrowhead-gold)"
@@ -2886,7 +2886,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       touchAction: 'none',
                     }}
                     className={`group cursor-move transition-shadow touch-none select-none ${
-                      isSelected ? 'ring-2 ring-[#DCB001] ring-offset-2 ring-offset-[#1e1e1e]' : ''
+                      isSelected ? 'ring-2 ring-[#FFFFFF] ring-offset-2 ring-offset-[#1e1e1e]' : ''
                     }`}
                   >
                     {/* Element Shape Body: Background is #1e1e1e, border is white #ffffff, text is white #ffffff */}
@@ -2896,7 +2896,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         height: '100%',
                         backgroundColor: elem.backgroundColor || '#1e1e1e',
                         borderWidth: `${elem.borderWidth || 2}px`,
-                        borderColor: isSelected ? '#DCB001' : elem.borderColor || '#ffffff',
+                        borderColor: isSelected ? '#FFFFFF' : elem.borderColor || '#ffffff',
                         borderStyle: elem.borderStyle || 'solid',
                         borderRadius:
                           elem.type === 'circle'
@@ -2916,7 +2916,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       {elem.type === 'cylinder' && (
                         <div
                           className="absolute top-0 left-0 right-0 h-4 border-b-2 border-white rounded-full bg-[#1e1e1e]"
-                          style={{ borderColor: isSelected ? '#DCB001' : '#ffffff' }}
+                          style={{ borderColor: isSelected ? '#FFFFFF' : '#ffffff' }}
                         />
                       )}
 
@@ -2956,7 +2956,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                                   commitCurrentEditingText();
                                 }
                               }}
-                              className="w-full h-full bg-black/70 text-white text-center focus:outline-none resize-none overflow-hidden font-sans border-2 border-[#DCB001] rounded px-1 py-0.5 shadow-lg"
+                              className="w-full h-full bg-black/70 text-white text-center focus:outline-none resize-none overflow-hidden font-sans border-2 border-[var(--border-secondary)] rounded px-1 py-0.5 shadow-lg"
                               style={{ fontSize: `${elem.fontSize || 14}px` }}
                             />
 
@@ -2970,13 +2970,13 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                                 transform: 'translateX(-50%)',
                                 zIndex: 60,
                               }}
-                              className="flex items-center gap-1.5 bg-[#0E0F12] border border-[#DCB001] rounded-md px-2 py-0.5 shadow-2xl text-[10px] text-white font-sans pointer-events-auto whitespace-nowrap select-none"
+                              className="flex items-center gap-1.5 bg-[#000000] border border-[var(--border-secondary)] rounded-md px-2 py-0.5 shadow-2xl text-[10px] text-white font-sans pointer-events-auto whitespace-nowrap select-none"
                             >
-                              <span className="text-[#A0A5B0]">Press</span>
-                              <kbd className="px-1 py-0.2 bg-[#252830] text-[#DCB001] font-mono text-[9px] rounded font-bold border border-[#3A3E48]">
+                              <span className="text-[#A7A7A7]">Press</span>
+                              <kbd className="px-1 py-0.2 bg-[#2A2A2A] text-white font-mono text-[9px] rounded font-bold border border-[#404040]">
                                 Enter
                               </kbd>
-                              <span className="text-[#A0A5B0]">or</span>
+                              <span className="text-[#A7A7A7]">or</span>
                               <button
                                 type="button"
                                 onMouseDown={(e) => {
@@ -2984,7 +2984,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                                   e.preventDefault();
                                   commitCurrentEditingText();
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.2 bg-[#DCB001] hover:bg-[#c9a102] text-black font-bold text-[10px] rounded transition-colors cursor-pointer"
+                                className="flex items-center gap-1 px-1.5 py-0.2 bg-white text-black hover:bg-[#FFFFFF] text-black font-bold text-[10px] rounded transition-colors cursor-pointer"
                                 title="Click to set text to element"
                               >
                                 <Check size={10} className="stroke-[3]" />
@@ -3024,16 +3024,16 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                           }}
                           className={`absolute w-3.5 h-3.5 rounded-full cursor-crosshair z-20 transition-all flex items-center justify-center shadow-md ${
                             isSnapped
-                              ? 'bg-[#DCB001] border-2 border-white scale-150 ring-4 ring-[#DCB001]/40 opacity-100'
+                              ? 'bg-white text-black border-2 border-white scale-150 ring-4 ring-[#FFFFFF]/40 opacity-100'
                               : isAvailableTarget
-                              ? 'bg-[#1e1e1e] border-2 border-[#DCB001] opacity-75 hover:opacity-100 hover:scale-125'
-                              : 'bg-[#1e1e1e] border-2 border-white hover:border-[#DCB001] hover:scale-125 opacity-0 group-hover:opacity-100'
+                              ? 'bg-[#1e1e1e] border-2 border-[var(--border-secondary)] opacity-75 hover:opacity-100 hover:scale-125'
+                              : 'bg-[#1e1e1e] border-2 border-white hover:border-[var(--border-secondary)] hover:scale-125 opacity-0 group-hover:opacity-100'
                           }`}
                           title={`Link ${isAvailableTarget ? 'to' : 'from'} ${anchor}`}
                         >
                           <div
                             className={`w-1 h-1 rounded-full ${
-                              isSnapped ? 'bg-black' : isAvailableTarget ? 'bg-[#DCB001]' : 'bg-white group-hover:bg-[#DCB001]'
+                              isSnapped ? 'bg-black' : isAvailableTarget ? 'bg-white text-black' : 'bg-white group-hover:bg-neutral-200'
                             }`}
                           />
                         </div>
@@ -3067,7 +3067,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                                 top: isNorth ? '-5px' : 'calc(100% - 5px)',
                                 left: isWest ? '-5px' : 'calc(100% - 5px)',
                               }}
-                              className={`absolute w-2.5 h-2.5 bg-[#DCB001] border border-black z-30 ${
+                              className={`absolute w-2.5 h-2.5 bg-white text-black border border-black z-30 ${
                                 handle === 'nw' || handle === 'se' ? 'cursor-nwse-resize' : 'cursor-nesw-resize'
                               }`}
                             />

@@ -21,13 +21,13 @@ interface ButterflyParticle {
 }
 
 const BUTTERFLY_COLORS = [
-  '#DCB001', // Primary Golden Amber
-  '#FDE047', // Radiant Sun Gold
-  '#F59E0B', // Amber Honey
-  '#FBBF24', // Warm Topaz
-  '#FEF08A', // Pale Shimmer
+  '#FFFFFF', // Primary Golden Amber
+  '#FFFFFF', // Radiant Sun Gold
+  '#FFFFFF', // Amber Honey
+  '#FFFFFF', // Warm Topaz
+  '#FFFFFF', // Pale Shimmer
   '#FFFFFF', // Stardust White
-  '#38BDF8', // Ethereal Cyan Glint
+  '#FFFFFF', // Ethereal Cyan Glint
 ];
 
 export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
@@ -38,9 +38,9 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
     // 1. DevTools Console Banner
     console.log(
       '%c TEADER %c High-Velocity Engineering & Task Platform %c ⚡ 0ms Optimistic UI ',
-      'background: #DCB001; color: #0A0B0D; font-weight: 900; font-size: 22px; padding: 6px 14px; border-radius: 6px; text-transform: uppercase;',
-      'background: #181A1F; color: #DCB001; font-weight: bold; font-size: 13px; padding: 6px 10px; border-radius: 4px; border: 1px solid #2E3138;',
-      'background: #0E0F11; color: #22C55E; font-family: monospace; font-size: 12px; padding: 6px 8px; border-radius: 4px;'
+      'background: #FFFFFF; color: #000000; font-weight: 900; font-size: 22px; padding: 6px 14px; border-radius: 6px; text-transform: uppercase;',
+      'background: #141414; color: #FFFFFF; font-weight: bold; font-size: 13px; padding: 6px 10px; border-radius: 4px; border: 1px solid #222222;',
+      'background: #000000; color: #FFFFFF; font-family: monospace; font-size: 12px; padding: 6px 8px; border-radius: 4px;'
     );
 
     const canvas = canvasRef.current;
@@ -138,7 +138,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
         ctx.globalAlpha = textAlpha;
 
         // Glowing outer drop shadow
-        ctx.shadowColor = '#DCB001';
+        ctx.shadowColor = '#FFFFFF';
         ctx.shadowBlur = 32;
 
         // Gradient fill for bold solid typography
@@ -148,9 +148,9 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
           canvas.width / 2 + fontSize * 1.5, 
           canvas.height / 2 + fontSize * 0.5
         );
-        textGrad.addColorStop(0, '#DCB001');
-        textGrad.addColorStop(0.5, '#FDE047');
-        textGrad.addColorStop(1, '#F59E0B');
+        textGrad.addColorStop(0, '#FFFFFF');
+        textGrad.addColorStop(0.5, '#FFFFFF');
+        textGrad.addColorStop(1, '#FFFFFF');
 
         ctx.fillStyle = textGrad;
         ctx.font = `900 ${fontSize}px 'Prompt', var(--font-prompt), sans-serif`;
@@ -160,7 +160,7 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
 
         // Subtitle
         ctx.shadowBlur = 12;
-        ctx.fillStyle = '#CFD4DD';
+        ctx.fillStyle = '#A0A0A0';
         ctx.font = `600 ${Math.max(16, fontSize * 0.16)}px 'Prompt', var(--font-prompt), sans-serif`;
         ctx.fillText('workspace', canvas.width / 2, canvas.height / 2 + fontSize * 0.62);
 
@@ -241,11 +241,11 @@ export const TeaderSandCanvas: React.FC<{ onComplete?: () => void }> = ({ onComp
           exit={{ opacity: 0 }}
           transition={{ duration: 0.7 }}
           onClick={() => setIsOverlayVisible(false)}
-          className="fixed inset-0 z-[100] bg-[#0A0B0D]/95 backdrop-blur-md flex items-center justify-center pointer-events-auto cursor-pointer select-none"
+          className="fixed inset-0 z-[100] bg-[var(--bg-canvas)]/95 backdrop-blur-md flex items-center justify-center pointer-events-auto cursor-pointer select-none"
           title="Click to skip animation"
         >
           <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
-          <div className="absolute bottom-8 text-[11px] font-mono text-[#787C83] animate-pulse">
+          <div className="absolute bottom-8 text-[11px] font-mono text-[var(--text-muted)] animate-pulse">
             Click anywhere to enter • Butterfly Particle Intro
           </div>
         </motion.div>

@@ -41,7 +41,8 @@ export interface PgQueryWrapper {
 
 export function getPool(): PgQueryWrapper {
   if (!pgPool) {
-    if (DATABASE_URL && DATABASE_URL.startsWith('postgres')) {
+    const isPlaceholderUrl = !DATABASE_URL || DATABASE_URL.includes('your_db_user') || DATABASE_URL.includes('your_db_password');
+    if (!isPlaceholderUrl && DATABASE_URL.startsWith('postgres')) {
       pgPool = new Pool({
         connectionString: DATABASE_URL,
         max: 10,

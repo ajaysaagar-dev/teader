@@ -40,10 +40,10 @@ interface IssueDetailViewProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
-  todo: { label: 'Todo', bg: 'bg-[#787C83]/10', text: 'text-[#787C83]', border: 'border-[#787C83]/30' },
-  in_progress: { label: 'In Progress', bg: 'bg-[#DCB001]/10', text: 'text-[#DCB001]', border: 'border-[#DCB001]/30' },
-  needs_review: { label: 'Needs Review', bg: 'bg-[#A855F7]/10', text: 'text-[#A855F7]', border: 'border-[#A855F7]/30' },
-  done: { label: 'Done', bg: 'bg-[#22C55E]/10', text: 'text-[#22C55E]', border: 'border-[#22C55E]/30' },
+  todo: { label: 'Todo', bg: 'bg-[#666666]/10', text: 'text-[var(--text-muted)]', border: 'border-[#666666]/30' },
+  in_progress: { label: 'In Progress', bg: 'bg-white/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
+  needs_review: { label: 'Needs Review', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
+  done: { label: 'Done', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
 };
 
 function parseBlockedBy(blockedBy: any): string[] {
@@ -257,15 +257,15 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
   const isBlocked = activeBlockers.length > 0;
 
   return (
-    <div className="relative flex-1 flex flex-col h-full bg-[#131415] text-[#CFD4DD] overflow-y-auto font-sans select-none">
+    <div className="relative flex-1 flex flex-col h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] overflow-y-auto font-sans select-none">
       {/* Top Warning Banner if Task is Blocked */}
       {isBlocked && (
-        <div className="bg-[#EF4444]/15 border-b border-[#EF4444]/30 px-4 py-2 flex items-center justify-between text-xs text-[#EF4444] font-medium shrink-0">
+        <div className="bg-[var(--ramp-3)]/15 border-b border-[var(--border-secondary)] px-4 py-2 flex items-center justify-between text-xs text-white font-medium shrink-0">
           <div className="flex items-center gap-2">
             <ShieldAlert size={15} />
             <span>This task has active blocking dependencies: <strong>{activeBlockers.join(', ')}</strong></span>
           </div>
-          <span className="text-[10px] font-mono uppercase bg-[#EF4444]/20 px-2 py-0.5 rounded border border-[#EF4444]/40">
+          <span className="text-[10px] font-mono uppercase bg-[var(--ramp-3)]/20 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
             Blocked
           </span>
         </div>
@@ -279,23 +279,23 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/10 border border-[#DCB001]/30 px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-bold text-white bg-white/10 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
                   {getTaskShortId(issue, allIssues)}
                 </span>
-                <span className="font-mono text-[11px] text-[#787C83] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded">
+                <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
                   {issue.key}
                 </span>
                 {issue.epic && (
-                  <span className="font-mono text-[11px] text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/30 px-2 py-0.5 rounded flex items-center gap-1">
+                  <span className="font-mono text-[11px] text-white bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] px-2 py-0.5 rounded flex items-center gap-1">
                     <Layers size={10} /> {issue.epic}
                   </span>
                 )}
                 {issue.createdAt && (
                   <span
-                    className="font-mono text-[11px] text-[#787C83] bg-[#1B1C1F] border border-[#2A2C30] px-2 py-0.5 rounded flex items-center gap-1"
+                    className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] px-2 py-0.5 rounded flex items-center gap-1"
                     title={formatExactDateTime(issue.createdAt)}
                   >
-                    <Clock size={11} className="text-[#DCB001]" />
+                    <Clock size={11} className="text-white" />
                     <span>Added {formatAddedTiming(issue.createdAt)}</span>
                   </span>
                 )}
@@ -306,15 +306,15 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 {/* Copy Link Button */}
                 <button
                   onClick={handleCopyLink}
-                  className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-[#CFD4DD] transition-colors cursor-pointer"
+                  className="p-1.5 bg-[var(--bg-panel)] hover:bg-[#222222] border border-[var(--border-primary)] rounded-lg text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
                   title="Copy Task Link"
                 >
-                  {copiedLink ? <Check size={14} className="text-[#22C55E]" /> : <Link size={14} />}
+                  {copiedLink ? <Check size={14} className="text-white" /> : <Link size={14} />}
                 </button>
                 {onClose && (
                   <button
                     onClick={onClose}
-                    className="p-1.5 bg-[#1B1C1F] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-lg text-xs text-[#787C83] hover:text-white transition-colors cursor-pointer"
+                    className="p-1.5 bg-[var(--bg-panel)] hover:bg-[#222222] border border-[var(--border-primary)] rounded-lg text-xs text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
                     title="Close Details"
                   >
                     <X size={14} />
@@ -330,16 +330,16 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           </div>
 
           {/* Description Block with Markdown Rendering */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-2 group/desc">
+          <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-2 group/desc">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block">
+              <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">
                 Description (Markdown)
               </span>
               {!isEditingDesc ? (
                 <button
                   type="button"
                   onClick={() => setIsEditingDesc(true)}
-                  className="flex items-center gap-1 text-[11px] font-mono text-[#787C83] hover:text-[#DCB001] transition-colors opacity-80 group-hover/desc:opacity-100 cursor-pointer"
+                  className="flex items-center gap-1 text-[11px] font-mono text-[var(--text-muted)] hover:text-white transition-colors opacity-80 group-hover/desc:opacity-100 cursor-pointer"
                 >
                   <Pencil size={11} />
                   <span>Edit</span>
@@ -352,7 +352,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                       setDescValue(issue.description || '');
                       setIsEditingDesc(false);
                     }}
-                    className="text-[11px] text-[#787C83] hover:text-white cursor-pointer"
+                    className="text-[11px] text-[var(--text-muted)] hover:text-white cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -374,7 +374,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         toast.error('Network error syncing description');
                       }
                     }}
-                    className="px-2.5 py-0.5 bg-[#DCB001] text-[#0F1011] font-bold text-xs rounded transition-all cursor-pointer"
+                    className="px-2.5 py-0.5 bg-white text-black font-bold text-xs rounded transition-all cursor-pointer"
                   >
                     Save
                   </button>
@@ -389,10 +389,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   onChange={(e) => setDescValue(e.target.value)}
                   placeholder="Write task description in Markdown (use @T1, @T2 to tag other tasks)..."
                   rows={6}
-                  className="w-full p-3 bg-[#131415] border border-[#DCB001]/60 focus:border-[#DCB001] rounded-xl font-mono text-xs text-white outline-none resize-y leading-relaxed"
+                  className="w-full p-3 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] focus:border-[var(--border-secondary)] rounded-xl font-mono text-xs text-white outline-none resize-y leading-relaxed"
                 />
-                <div className="p-3 bg-[#131415]/70 border border-[#2A2C30] rounded-xl space-y-1">
-                  <span className="text-[10px] font-mono text-[#787C83] uppercase tracking-wider block">Live Preview</span>
+                <div className="p-3 bg-[var(--bg-canvas)]/70 border border-[var(--border-primary)] rounded-xl space-y-1">
+                  <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider block">Live Preview</span>
                   <MarkdownRenderer content={descValue} />
                 </div>
               </div>
@@ -404,10 +404,10 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           </div>
 
           {/* ─── TAGGED & RELATED TASKS SECTION (Interactive Cards & Separate Stack View) ─── */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-3.5">
+          <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Tag size={15} className="text-[#38BDF8]" />
+                <Tag size={15} className="text-white" />
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
                   Tagged & Related Tasks ({currentTaskTags.length})
                 </h3>
@@ -417,7 +417,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddTagPicker((prev) => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[#131415] hover:bg-[#202226] border border-[#38BDF8]/40 hover:border-[#38BDF8] text-[#38BDF8] text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-secondary)] hover:border-[var(--border-secondary)] text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-sm"
                 >
                   <Plus size={13} />
                   <span>Tag Task (@)</span>
@@ -437,17 +437,17 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   return (
                     <div
                       key={tagStr}
-                      className="group/card relative flex flex-col justify-between p-3.5 rounded-xl bg-[#17181A] hover:bg-[#1C1E22] border border-[#2A2C30] hover:border-[#38BDF8]/70 transition-all shadow-md"
+                      className="group/card relative flex flex-col justify-between p-3.5 rounded-xl bg-[var(--bg-panel)] hover:bg-[#1F1F1F] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] transition-all shadow-md"
                     >
                       <div>
                         {/* Card Header: Tag Badge & Status & Remove button */}
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/15 border border-[#DCB001]/30 px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs font-bold text-white bg-white/15 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
                               {shortId}
                             </span>
                             {found?.key && (
-                              <span className="font-mono text-[10px] text-[#787C83]">
+                              <span className="font-mono text-[10px] text-[var(--text-muted)]">
                                 {found.key}
                               </span>
                             )}
@@ -462,7 +462,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRemoveTaskTag(tagStr)}
-                            className="p-1 rounded-md text-[#787C83] hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors cursor-pointer"
+                            className="p-1 rounded-md text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-3)]/10 transition-colors cursor-pointer"
                             title={`Remove tag ${displayTag}`}
                           >
                             <Trash2 size={12} />
@@ -470,13 +470,13 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         </div>
 
                         {/* Card Title */}
-                        <h4 className="text-xs font-bold text-white group-hover/card:text-[#38BDF8] transition-colors line-clamp-2 leading-relaxed">
+                        <h4 className="text-xs font-bold text-white group-hover/card:text-white transition-colors line-clamp-2 leading-relaxed">
                           {found ? found.title : displayTag}
                         </h4>
 
                         {/* Folder / Epic Tag */}
                         {found?.epic && (
-                          <div className="flex items-center gap-1 mt-2 text-[10px] font-mono text-[#A855F7]">
+                          <div className="flex items-center gap-1 mt-2 text-[10px] font-mono text-white">
                             <Layers size={10} />
                             <span className="truncate">{found.epic}</span>
                           </div>
@@ -484,8 +484,8 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                       </div>
 
                       {/* Click to Open Tagged Task Button (Opens on top in separate view) */}
-                      <div className="pt-3 mt-2 border-t border-[#2A2C30]/70 flex items-center justify-between">
-                        <span className="text-[10px] text-[#787C83]">
+                      <div className="pt-3 mt-2 border-t border-[var(--border-primary)] flex items-center justify-between">
+                        <span className="text-[10px] text-[var(--text-muted)]">
                           {found?.assigneeName ? `Assignee: ${found.assigneeName}` : 'Click to inspect'}
                         </span>
                         <button
@@ -497,7 +497,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                               toast.info(`Tagged task ${displayTag}`);
                             }
                           }}
-                          className="flex items-center gap-1 text-xs font-bold text-[#38BDF8] hover:text-white bg-[#38BDF8]/10 hover:bg-[#38BDF8] hover:text-[#0F1011] px-2.5 py-1 rounded-md transition-all cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-bold text-white hover:text-white bg-[var(--ramp-3)]/10 hover:bg-[var(--ramp-3)] hover: px-2.5 py-1 rounded-md transition-all cursor-pointer"
                         >
                           <span>Open Task</span>
                           <ExternalLink size={11} />
@@ -508,23 +508,23 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 })}
               </div>
             ) : (
-              <p className="text-xs text-[#787C83] italic pt-1">
+              <p className="text-xs text-[var(--text-muted)] italic pt-1">
                 No other tasks tagged yet. Click &quot;Tag Task (@)&quot; above to relate previous tasks.
               </p>
             )}
 
             {/* Add Task Tag Dropdown / Picker Modal */}
             {showAddTagPicker && allIssues && (
-              <div className="p-3.5 bg-[#131415] border border-[#38BDF8]/60 rounded-xl space-y-3 shadow-2xl animate-in fade-in">
+              <div className="p-3.5 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl space-y-3 shadow-2xl animate-in fade-in">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-[#38BDF8] flex items-center gap-1.5">
+                  <span className="text-xs font-mono font-bold text-white flex items-center gap-1.5">
                     <Tag size={13} />
                     <span>Select or Type Task to Tag (@)</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowAddTagPicker(false)}
-                    className="text-[#787C83] hover:text-white p-0.5 cursor-pointer"
+                    className="text-[var(--text-muted)] hover:text-white p-0.5 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
@@ -568,7 +568,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                       setShowAddTagPicker(false);
                     }
                   }}
-                  className="w-full bg-[#1B1C1F] border border-[#38BDF8]/50 focus:border-[#38BDF8] rounded-lg px-3 py-2 text-xs text-white outline-none font-mono"
+                  className="w-full bg-[var(--bg-panel)] border border-[var(--border-secondary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-2 text-xs text-white outline-none font-mono"
                   autoFocus
                 />
 
@@ -590,26 +590,26 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-[#38BDF8]/20 text-white border border-[#38BDF8]/50'
+                            ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)]'
                             : isTagActive
-                            ? 'bg-[#38BDF8]/15 text-[#38BDF8] border border-[#38BDF8]/40'
-                            : 'bg-[#17181A] hover:bg-[#202226] text-[#CFD4DD] border border-[#2A2C30]'
+                            ? 'bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)]'
+                            : 'bg-[var(--bg-panel)] hover:bg-[#141414] text-[var(--text-secondary)] border border-[var(--border-primary)]'
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="font-mono font-bold text-[#DCB001] bg-[#DCB001]/10 px-1.5 py-0.5 rounded text-[11px] border border-[#DCB001]/25 shrink-0">
+                          <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.5 rounded text-[11px] border border-[var(--border-secondary)] shrink-0">
                             {shortId}
                           </span>
                           <span className="truncate text-xs">{t.title}</span>
                         </div>
-                        {isTagActive && <Check size={13} className="text-[#38BDF8] shrink-0 ml-1.5" />}
+                        {isTagActive && <Check size={13} className="text-white shrink-0 ml-1.5" />}
                       </button>
                     );
                   })}
 
                   {filteredTagCandidates.length === 0 && tagPickerSearch.trim() && (
-                    <div className="p-2 text-center text-xs text-[#787C83]">
-                      Press Enter to add tag <strong className="text-[#38BDF8]">@{tagPickerSearch.trim().replace(/^@/, '')}</strong>
+                    <div className="p-2 text-center text-xs text-[var(--text-muted)]">
+                      Press Enter to add tag <strong className="text-white">@{tagPickerSearch.trim().replace(/^@/, '')}</strong>
                     </div>
                   )}
                 </div>
@@ -621,14 +621,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
         {/* Right Properties Sidebar */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
           {/* Properties Card */}
-          <div className="p-4 rounded-xl bg-[#1B1C1F] border border-[#2A2C30] space-y-4 text-xs">
-            <span className="text-[11px] font-mono text-[#787C83] uppercase tracking-wider block pb-2 border-b border-[#2A2C30]">
+          <div className="p-4 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-4 text-xs">
+            <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider block pb-2 border-b border-[var(--border-primary)]">
               Task Properties
             </span>
 
             {/* Status Selector */}
             <div>
-              <span className="text-[#787C83] block mb-1 font-medium">Status</span>
+              <span className="text-[var(--text-muted)] block mb-1 font-medium">Status</span>
               <CustomDropdown<Status>
                 value={issue.status}
                 onChange={(val) => handleStatusChange(val)}
@@ -643,14 +643,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   },
                 ]}
                 className="w-full"
-                triggerClassName="w-full bg-[#131415] border border-[#2A2C30] text-[#DCB001] font-semibold rounded-lg p-2 hover:border-[#DCB001]/50"
+                triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] text-white font-semibold rounded-lg p-2 hover:border-[var(--border-secondary)]"
                 size="sm"
               />
             </div>
 
             {/* Priority Selector */}
             <div>
-              <span className="text-[#787C83] block mb-1 font-medium">Priority</span>
+              <span className="text-[var(--text-muted)] block mb-1 font-medium">Priority</span>
               <CustomDropdown<Priority>
                 value={issue.priority}
                 onChange={(val) => handlePriorityChange(val)}
@@ -661,28 +661,28 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   { value: 'low', label: 'Low (P3)' },
                 ]}
                 className="w-full"
-                triggerClassName="w-full bg-[#131415] border border-[#2A2C30] text-white font-medium rounded-lg p-2 hover:border-[#DCB001]/50 capitalize"
+                triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] text-white font-medium rounded-lg p-2 hover:border-[var(--border-secondary)] capitalize"
                 size="sm"
               />
             </div>
 
             {/* Due Date */}
             <div>
-              <span className="text-[#787C83] block mb-1 flex items-center gap-1 font-medium">
+              <span className="text-[var(--text-muted)] block mb-1 flex items-center gap-1 font-medium">
                 <Calendar size={12} /> Due Date
               </span>
               <input
                 type="date"
                 value={issue.dueDate ? issue.dueDate.split('T')[0] : ''}
                 onChange={(e) => handleDueDateChange(e.target.value)}
-                className="w-full bg-[#131415] border border-[#2A2C30] text-white font-mono rounded-lg p-2 outline-none cursor-pointer"
+                className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] text-white font-mono rounded-lg p-2 outline-none cursor-pointer"
               />
             </div>
 
             {/* Assigned User */}
             <div>
-              <span className="text-[#787C83] block mb-1 font-medium">Assigned To</span>
-              <div className="flex items-center gap-2 p-2 bg-[#131415] border border-[#2A2C30] rounded-lg">
+              <span className="text-[var(--text-muted)] block mb-1 font-medium">Assigned To</span>
+              <div className="flex items-center gap-2 p-2 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg">
                 <Avatar
                   user={{
                     id: 'usr_assigned',
@@ -693,7 +693,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                   }}
                   size="xs"
                 />
-                <span className="font-semibold text-[#CFD4DD]">
+                <span className="font-semibold text-[var(--text-secondary)]">
                   {(issue as any).assigneeName || issue.assignee?.name || 'General (Anyone)'}
                 </span>
               </div>
@@ -701,23 +701,23 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
 
             {/* Project */}
             <div>
-              <span className="text-[#787C83] block mb-1 font-medium">Project Workspace</span>
-              <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono font-bold text-[#DCB001]">
+              <span className="text-[var(--text-muted)] block mb-1 font-medium">Project Workspace</span>
+              <div className="p-2 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg font-mono font-bold text-white">
                 {issue.project} ({issue.key.split('-')[0]})
               </div>
             </div>
 
             {/* Created Date (Editable by Admin/Owner) */}
-            <div className="pt-2 border-t border-[#2A2C30]">
+            <div className="pt-2 border-t border-[var(--border-primary)]">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[#787C83] flex items-center gap-1 font-medium">
+                <span className="text-[var(--text-muted)] flex items-center gap-1 font-medium">
                   <Clock size={12} /> Created Date
                 </span>
                 {(canEditDates || currentRole === 'owner') && !isEditingCreatedAt && (
                   <button
                     type="button"
                     onClick={() => setIsEditingCreatedAt(true)}
-                    className="flex items-center gap-1 text-[10px] font-mono text-[#DCB001] hover:underline"
+                    className="flex items-center gap-1 text-[10px] font-mono text-white hover:underline"
                     title="Edit creation timestamp (Admin privilege)"
                   >
                     <Pencil size={10} />
@@ -738,13 +738,13 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         : ''
                     }
                     id="created-at-picker-input"
-                    className="w-full bg-[#131415] border border-[#DCB001]/50 text-white font-mono text-[11px] rounded-lg p-1.5 outline-none"
+                    className="w-full bg-[var(--bg-canvas)] border border-[var(--border-secondary)] text-white font-mono text-[11px] rounded-lg p-1.5 outline-none"
                   />
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       type="button"
                       onClick={() => setIsEditingCreatedAt(false)}
-                      className="px-2 py-1 rounded bg-[#1F2024] hover:bg-[#2A2C32] text-[10px] font-semibold text-[#9499A0]"
+                      className="px-2 py-1 rounded bg-[#212121] hover:bg-[#2D2D2D] text-[10px] font-semibold text-[var(--text-secondary)]"
                     >
                       Cancel
                     </button>
@@ -756,14 +756,14 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                           handleCreatedAtChange(input.value);
                         }
                       }}
-                      className="px-2.5 py-1 rounded bg-[#DCB001] hover:bg-[#c49d01] text-[10px] font-bold text-black"
+                      className="px-2.5 py-1 rounded bg-white text-black hover:bg-[#FFFFFF] text-[10px] font-bold text-black"
                     >
                       Save Date
                     </button>
                   </div>
                 </div>
               ) : (
-                <div className="p-2 bg-[#131415] border border-[#2A2C30] rounded-lg font-mono text-[11px] text-[#A4A9B3]">
+                <div className="p-2 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg font-mono text-[11px] text-[#ABABAB]">
                   {issue.createdAt ? new Date(issue.createdAt).toLocaleString(undefined, {
                     year: 'numeric',
                     month: 'short',
@@ -786,23 +786,23 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           aria-label={`Inspecting Tagged Task ${overlayIssue.key}`}
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in"
         >
-          <div className="relative w-full max-w-5xl h-[90vh] bg-[#131415] border border-[#38BDF8]/60 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+          <div className="relative w-full max-w-5xl h-[90vh] bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             {/* Overlay Top Bar */}
-            <div className="px-5 py-3 bg-[#17181A] border-b border-[#2A2C30] flex items-center justify-between gap-3 shrink-0">
+            <div className="px-5 py-3 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setOverlayIssueId(null)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] hover:border-white text-xs font-bold text-[#CFD4DD] hover:text-white rounded-lg transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-primary)] hover:border-white text-xs font-bold text-[var(--text-secondary)] hover:text-white rounded-lg transition-all cursor-pointer"
                 >
                   <ArrowLeft size={13} />
                   <span>Back to {getTaskShortId(issue, allIssues)}</span>
                 </button>
-                <div className="h-4 w-[1px] bg-[#2A2C30]" />
+                <div className="h-4 w-[1px] bg-[#222222]" />
                 <div className="flex items-center gap-2">
-                  <Tag size={14} className="text-[#38BDF8]" />
-                  <span className="text-xs font-mono text-[#38BDF8] font-bold">Tagged Task View:</span>
-                  <span className="font-mono text-xs font-bold text-[#DCB001] bg-[#DCB001]/10 px-2 py-0.5 rounded border border-[#DCB001]/30">
+                  <Tag size={14} className="text-white" />
+                  <span className="text-xs font-mono text-white font-bold">Tagged Task View:</span>
+                  <span className="font-mono text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
                     {getTaskShortId(overlayIssue, allIssues)}
                   </span>
                   <span className="font-bold text-white text-xs truncate max-w-[200px] sm:max-w-[320px]">
@@ -814,7 +814,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
               <button
                 type="button"
                 onClick={() => setOverlayIssueId(null)}
-                className="p-1.5 text-[#787C83] hover:text-white bg-[#131415] hover:bg-[#202226] border border-[#2A2C30] rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-[var(--text-muted)] hover:text-white bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-primary)] rounded-lg transition-colors cursor-pointer"
                 title="Close overlay"
               >
                 <X size={15} />

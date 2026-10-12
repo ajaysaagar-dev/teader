@@ -6,7 +6,7 @@ import React from 'react';
 export function Shimmer({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`animate-pulse bg-[#2A2C30] bg-[var(--border-primary)] rounded ${className}`}
+      className={`animate-pulse bg-[#222222] bg-[var(--border-primary)] rounded ${className}`}
       aria-hidden="true"
     />
   );
@@ -114,7 +114,7 @@ import { RandomLoadingText } from './RandomLoadingText';
 export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
     <div
-      className={`rounded-full border-2 border-[var(--accent-yellow)] border-t-transparent animate-spin ${className}`}
+      className={`rounded-full border-2 border-white border-t-transparent animate-spin ${className}`}
       style={{ width: size, height: size }}
       aria-label="Loading…"
     />

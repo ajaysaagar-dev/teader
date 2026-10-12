@@ -94,17 +94,17 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ duration: 0.16 }}
-          className="w-full max-w-2xl max-h-[88vh] bg-[#16181B] border border-[#2A2C30] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="w-full max-w-2xl max-h-[88vh] bg-[#181818] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#2A2C30] bg-[#111215]">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)] bg-[#141414]">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[var(--purple)]/15 text-[var(--purple)] flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-lg bg-[var(--accent-subtle)] text-white flex items-center justify-center font-bold">
                 <Sparkles size={16} />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight">Choose Profile Portrait</h3>
-                <p className="text-[11px] font-mono text-[#787C83]">
+                <p className="text-[11px] font-mono text-[var(--text-muted)]">
                   Select from {ALL_PROFILE_IMAGES.length} available official portraits
                 </p>
               </div>
@@ -112,16 +112,16 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="text-[#787C83] hover:text-white transition-colors disabled:opacity-50"
+              className="text-[var(--text-muted)] hover:text-white transition-colors disabled:opacity-50"
             >
               <X size={18} />
             </button>
           </div>
 
           {/* Active Preview Bar */}
-          <div className="px-6 py-3 bg-[#131417] border-b border-[#24262B] flex items-center justify-between">
+          <div className="px-6 py-3 bg-[#151515] border-b border-[#272727] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-[var(--purple)] shadow-md shadow-[var(--purple)]/20">
+              <div className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-white shadow-md">
                 <img
                   src={selectedAvatar}
                   alt="Selected avatar"
@@ -139,7 +139,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
             </div>
 
             {selectedAvatar === currentAvatar && (
-              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[var(--ramp-2)] text-black border border-[var(--border-secondary)]">
                 Current Avatar
               </span>
             )}
@@ -158,10 +158,10 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
                     onClick={() => handleSelect(imgUrl)}
                     className={`relative group aspect-square rounded-xl p-1 transition-all flex items-center justify-center border ${
                       isSelected
-                        ? 'border-[var(--purple)] bg-[var(--purple)]/15 ring-2 ring-[var(--purple)]/40 shadow-lg shadow-[var(--purple)]/20 scale-105'
+                        ? 'border-white bg-[var(--accent-subtle)] ring-2 ring-white/20 shadow-lg scale-105'
                         : isCurrent
-                        ? 'border-emerald-500/40 bg-emerald-500/10 hover:border-emerald-400'
-                        : 'border-[#2A2C30] bg-[#121316] hover:border-[#42454D] hover:bg-[#1A1C20]'
+                        ? 'border-[var(--border-secondary)] bg-[var(--ramp-2)] hover:border-[var(--border-secondary)]'
+                        : 'border-[var(--border-primary)] bg-[var(--bg-panel)] hover:border-[#2C2C2C] hover:bg-[#1D1D1D]'
                     }`}
                   >
                     <img
@@ -173,13 +173,13 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
 
                     {/* Indicator Badges */}
                     {isSelected && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--purple)] text-white flex items-center justify-center shadow-md">
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-black flex items-center justify-center shadow-md">
                         <Check size={12} strokeWidth={3} />
                       </span>
                     )}
 
                     {!isSelected && isCurrent && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[8px] font-bold shadow-sm">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-black flex items-center justify-center text-[8px] font-bold shadow-sm">
                         •
                       </span>
                     )}
@@ -194,7 +194,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-3.5 border-t border-[#2A2C30] bg-[#111215] flex items-center justify-between">
+          <div className="px-6 py-3.5 border-t border-[var(--border-primary)] bg-[#141414] flex items-center justify-between">
             <button
               type="button"
               onClick={onClose}
@@ -208,7 +208,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
               type="button"
               onClick={handleSave}
               disabled={isSaving || !selectedAvatar}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--purple)] hover:bg-[var(--purple-hover)] text-white text-xs font-bold transition-all shadow-md shadow-[var(--purple)]/20 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md disabled:opacity-50"
             >
               {isSaving ? (
                 <>

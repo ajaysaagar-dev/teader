@@ -17,7 +17,7 @@ const PLUGINS: PluginItem[] = [
   {
     id: 'github',
     name: 'Github',
-    iconBg: 'bg-[#24292F]/20 border-[#30363D]',
+    iconBg: 'bg-[#292929]/20 border-[#363636]',
     iconColor: 'text-white',
     badge: 'Version Control',
     description: 'Connect GitHub repositories, sync commits, and track pull requests directly within tasks.'
@@ -25,7 +25,7 @@ const PLUGINS: PluginItem[] = [
   {
     id: 'unity-version-control',
     name: 'Unity Version Control',
-    iconBg: 'bg-[#000000]/40 border-[#2A2C30]',
+    iconBg: 'bg-[#000000]/40 border-[var(--border-primary)]',
     iconColor: 'text-white',
     badge: 'Plastic SCM',
     description: 'Track Plastic SCM changesets, sync branch explorer history, and view Unity asset modifications.'
@@ -91,21 +91,21 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0D0E11] overflow-hidden select-none">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#0F0F0F] overflow-hidden select-none">
       {/* ── Header Bar ─────────────────────────────────────────── */}
-      <div className="h-14 px-6 border-b border-[#2A2C30] flex items-center justify-between shrink-0 bg-[#141517]">
+      <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[var(--bg-panel)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#DCB001]/10 border border-[#DCB001]/30 flex items-center justify-center text-[#DCB001]">
+          <div className="w-8 h-8 rounded-lg bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Blocks size={16} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-white tracking-tight">Plugins</h2>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#2A2C30] text-[#DCB001] font-mono font-medium">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#222222] text-white font-mono font-medium">
                 {PLUGINS.length}
               </span>
             </div>
-            <p className="text-[11px] text-[#787C83]">
+            <p className="text-[11px] text-[var(--text-muted)]">
               Project developer integrations &amp; version control tools
             </p>
           </div>
@@ -113,18 +113,18 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
 
         {/* Search Input */}
         <div className="relative w-64 max-w-full">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#787C83]" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search plugins..."
-            className="w-full pl-8 pr-3 py-1.5 bg-[#1B1C20] border border-[#2A2C30] rounded-xl text-xs text-white placeholder-[#787C83] focus:outline-none focus:border-[#DCB001]/60 focus:ring-1 focus:ring-[#DCB001]/30 transition-all"
+            className="w-full pl-8 pr-3 py-1.5 bg-[#1D1D1D] border border-[var(--border-primary)] rounded-xl text-xs text-white placeholder-[#666666] focus:outline-none focus:border-[var(--border-secondary)] focus:ring-1 focus:ring-white/30/30 transition-all"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#787C83] hover:text-white cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white cursor-pointer"
             >
               <X size={12} />
             </button>
@@ -140,7 +140,7 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
               <button
                 key={plugin.id}
                 onClick={() => setSelectedPlugin(plugin)}
-                className="flex flex-col items-center justify-center p-8 rounded-3xl bg-[#1B1C20] hover:bg-[#2A2C30] border border-[#2A2C30] hover:border-[#DCB001]/50 transition-all duration-200 hover:scale-105 hover:shadow-2xl w-56 h-56 cursor-pointer group shadow-md"
+                className="flex flex-col items-center justify-center p-8 rounded-3xl bg-[#1D1D1D] hover:bg-[#222222] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] transition-all duration-200 hover:scale-105 hover:shadow-2xl w-56 h-56 cursor-pointer group shadow-md"
                 title={`Open ${plugin.name}`}
               >
                 {/* Plugin Icon */}
@@ -155,14 +155,14 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
                 </div>
 
                 {/* Plugin Name Only */}
-                <span className="text-base font-semibold text-white group-hover:text-[#DCB001] transition-colors text-center">
+                <span className="text-base font-semibold text-white group-hover:text-white transition-colors text-center">
                   {plugin.name}
                 </span>
               </button>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center text-center p-8 text-[#787C83]">
+          <div className="flex flex-col items-center justify-center text-center p-8 text-[var(--text-muted)]">
             <Blocks size={32} className="mb-2 opacity-40" />
             <p className="text-sm font-medium text-white mb-1">No plugins found</p>
             <p className="text-xs">No plugin matched &quot;{searchQuery}&quot;</p>
@@ -173,10 +173,10 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
       {/* ── Plugin Detail Modal ─────────────────────────────────── */}
       {selectedPlugin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-[#18191E] border border-[#2A2C30] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden p-6 relative">
+          <div className="bg-[#1A1A1A] border border-[var(--border-primary)] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden p-6 relative">
             <button
               onClick={() => setSelectedPlugin(null)}
-              className="absolute top-4 right-4 text-[#787C83] hover:text-white p-1 rounded-lg hover:bg-[#2A2C30] transition-colors cursor-pointer"
+              className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-white p-1 rounded-lg hover:bg-[#222222] transition-colors cursor-pointer"
             >
               <X size={16} />
             </button>
@@ -194,25 +194,25 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
 
               <h3 className="text-lg font-bold text-white mb-1">{selectedPlugin.name}</h3>
               {selectedPlugin.badge && (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#DCB001]/10 text-[#DCB001] border border-[#DCB001]/20 font-medium mb-3">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 text-white border border-[var(--border-secondary)] font-medium mb-3">
                   {selectedPlugin.badge}
                 </span>
               )}
 
-              <p className="text-xs text-[#9DA4AE] leading-relaxed mb-6 max-w-xs">
+              <p className="text-xs text-[#A5A5A5] leading-relaxed mb-6 max-w-xs">
                 {selectedPlugin.description}
               </p>
 
               <div className="flex items-center gap-3 w-full">
                 <button
                   onClick={() => setSelectedPlugin(null)}
-                  className="flex-1 px-4 py-2 text-xs font-semibold text-[#CFD4DD] bg-[#222428] hover:bg-[#2A2C30] border border-[#2A2C30] rounded-xl transition-colors cursor-pointer"
+                  className="flex-1 px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-card)] hover:bg-[#222222] border border-[var(--border-primary)] rounded-xl transition-colors cursor-pointer"
                 >
                   Close
                 </button>
                 <button
                   onClick={() => setSelectedPlugin(null)}
-                  className="flex-1 px-4 py-2 text-xs font-semibold text-black bg-[#DCB001] hover:bg-[#E5B800] rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                  className="flex-1 px-4 py-2 text-xs font-semibold text-black bg-white text-black hover:bg-[#FFFFFF] rounded-xl transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <CheckCircle2 size={13} />
                   <span>Configure</span>

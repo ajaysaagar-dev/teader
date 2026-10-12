@@ -292,40 +292,40 @@ export function ProjectSettingsView({
   if (!project) return null;
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#0E0F12] text-[#CFD4DD] p-6 lg:p-10 select-none">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#000000] text-[var(--text-secondary)] p-6 lg:p-10 select-none">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Title */}
-        <div className="flex items-center justify-between pb-5 border-b border-[#222428]">
+        <div className="flex items-center justify-between pb-5 border-b border-[#141414]">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#17181C] border border-[#2A2C30] flex items-center justify-center text-[#DCB001]">
+            <div className="w-10 h-10 rounded-xl bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white">
               <Settings size={20} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white tracking-tight">Project Settings</h2>
-              <p className="text-xs text-[#787C83]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Manage workspace configuration, access keys, team members, and danger zone actions.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-lg bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+            <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-lg bg-[#141414] text-white border border-[#2E2E2E]">
               {isCreator ? 'Owner Access' : 'Member View'}
             </span>
           </div>
         </div>
 
         {/* 1. General Project Information & Edit Name Card */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-5 shadow-sm">
+        <div className="p-6 rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FolderKanban size={16} className="text-[#DCB001]" />
+              <FolderKanban size={16} className="text-white" />
               <h3 className="text-sm font-bold text-white">General Information</h3>
             </div>
             {isCreator && onOpenEditModal && (
               <button
                 onClick={onOpenEditModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1D1E23] hover:bg-[#25272D] text-xs font-semibold text-white border border-[#2E3138] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1F1F1F] hover:bg-[#282828] text-xs font-semibold text-white border border-[#222222] transition-colors"
               >
                 <Pencil size={13} />
                 <span>Edit Project Name & Details</span>
@@ -334,25 +334,25 @@ export function ProjectSettingsView({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-xl bg-[#101114] border border-[#222428] space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83]">
+            <div className="p-3.5 rounded-xl bg-[#000000] border border-[#141414] space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                 Project Name
               </span>
               <p className="font-bold text-white text-sm">{project.name}</p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#101114] border border-[#222428] space-y-1">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83]">
+            <div className="p-3.5 rounded-xl bg-[#000000] border border-[#141414] space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                 Project Lead / Creator
               </span>
               <p className="font-bold text-white text-sm">{project.ownerName || 'karri'}</p>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#101114] border border-[#222428] space-y-1 md:col-span-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[#787C83]">
+            <div className="p-3.5 rounded-xl bg-[#000000] border border-[#141414] space-y-1 md:col-span-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                 Description
               </span>
-              <p className="text-[#A4A9B3] leading-relaxed">
+              <p className="text-[#ABABAB] leading-relaxed">
                 {project.description || 'No description provided for this project.'}
               </p>
             </div>
@@ -360,40 +360,40 @@ export function ProjectSettingsView({
         </div>
 
         {/* 2. Project Access Key & Copy Card */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
+        <div className="p-6 rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Key size={16} className="text-[#DCB001]" />
+              <Key size={16} className="text-white" />
               <h3 className="text-sm font-bold text-white">Project Access Key</h3>
             </div>
-            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+            <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#141414] text-white border border-[#2E2E2E]">
               30-Char Key
             </span>
           </div>
 
-          <p className="text-xs text-[#9499A0] leading-relaxed">
+          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
             Share this 30-character unique key with team members so they can join and collaborate in this project workspace.
           </p>
 
-          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#25272D] max-w-xl hover:border-[#DCB001]/40 transition-colors">
-            <div className="flex items-center gap-2.5 font-mono text-xs text-[#DCB001] font-bold truncate mr-3">
-              <Lock size={14} className="text-[#787C83] shrink-0" />
+          <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#000000] border border-[#282828] max-w-xl hover:border-[var(--border-secondary)] transition-colors">
+            <div className="flex items-center gap-2.5 font-mono text-xs text-white font-bold truncate mr-3">
+              <Lock size={14} className="text-[var(--text-muted)] shrink-0" />
               <span className="truncate select-all">{project.key}</span>
             </div>
 
             <button
               type="button"
               onClick={handleCopyKey}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1D22] hover:bg-[#25272E] text-xs font-mono text-white border border-[#2C2E35] transition-all shrink-0 active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E1E1E] hover:bg-[#292929] text-xs font-mono text-white border border-[#303030] transition-all shrink-0 active:scale-95 shadow-sm"
             >
               {copiedKey ? (
                 <>
-                  <Check size={13} className="text-emerald-400" />
-                  <span className="text-emerald-400 font-bold">Copied!</span>
+                  <Check size={13} className="text-white" />
+                  <span className="text-white font-bold">Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy size={13} className="text-[#DCB001]" />
+                  <Copy size={13} className="text-white" />
                   <span>Copy Key</span>
                 </>
               )}
@@ -403,25 +403,25 @@ export function ProjectSettingsView({
 
         {/* 3. Join Requests (Owner Only) */}
         {isCreator && (
-          <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
+          <div className="p-6 rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Clock size={16} className="text-[#DCB001]" />
+                <Clock size={16} className="text-white" />
                 <h3 className="text-sm font-bold text-white">Pending Join Requests</h3>
               </div>
-              <span className="text-xs font-mono text-[#DCB001] bg-[#DCB001]/10 px-2 py-0.5 rounded border border-[#DCB001]/30">
+              <span className="text-xs font-mono text-white bg-white/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
                 {joinRequests.length} pending
               </span>
             </div>
 
             {loadingRequests ? (
-              <div className="flex items-center justify-center p-6 text-xs text-[#787C83] gap-2">
-                <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+              <div className="flex items-center justify-center p-6 text-xs text-[var(--text-muted)] gap-2">
+                <Loader2 size={14} className="animate-spin text-white" />
                 <span>Checking join requests...</span>
               </div>
             ) : joinRequests.length === 0 ? (
-              <div className="p-4 rounded-xl bg-[#101114] border border-[#222428] text-center">
-                <p className="text-xs text-[#787C83]">No pending join requests for this project workspace.</p>
+              <div className="p-4 rounded-xl bg-[#000000] border border-[#141414] text-center">
+                <p className="text-xs text-[var(--text-muted)]">No pending join requests for this project workspace.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -430,7 +430,7 @@ export function ProjectSettingsView({
                   return (
                     <div
                       key={req.id || req.userId}
-                      className="flex items-center justify-between p-3.5 rounded-xl bg-[#101114] border border-[#2A2C30] hover:border-[#DCB001]/40 transition-colors"
+                      className="flex items-center justify-between p-3.5 rounded-xl bg-[#000000] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] transition-colors"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar
@@ -440,8 +440,8 @@ export function ProjectSettingsView({
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-white truncate">{req.userName}</p>
-                          <p className="text-[10px] font-mono text-[#787C83] truncate">{req.userEmail}</p>
-                          <p className="text-[9px] font-mono text-[#DCB001] pt-0.5">
+                          <p className="text-[10px] font-mono text-[var(--text-muted)] truncate">{req.userEmail}</p>
+                          <p className="text-[9px] font-mono text-white pt-0.5">
                             Requested {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'recently'}
                           </p>
                         </div>
@@ -452,7 +452,7 @@ export function ProjectSettingsView({
                         <button
                           disabled={isProcessing}
                           onClick={() => handleJoinRequestAction(req.userId, 'accept')}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#22C55E]/15 hover:bg-[#22C55E]/25 text-[#22C55E] border border-[#22C55E]/30 text-xs font-semibold transition-all disabled:opacity-50"
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[var(--ramp-3)]/15 hover:bg-[var(--ramp-3)]/25 text-white border border-[var(--border-secondary)] text-xs font-semibold transition-all disabled:opacity-50"
                           title="Accept join request"
                         >
                           <UserCheck size={12} />
@@ -463,7 +463,7 @@ export function ProjectSettingsView({
                         <button
                           disabled={isProcessing}
                           onClick={() => handleJoinRequestAction(req.userId, 'reject')}
-                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#EF4444]/15 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/30 text-xs font-semibold transition-all disabled:opacity-50"
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[var(--ramp-3)]/15 hover:bg-[var(--ramp-3)]/25 text-white border border-[var(--border-secondary)] text-xs font-semibold transition-all disabled:opacity-50"
                           title="Reject join request"
                         >
                           <UserX size={12} />
@@ -479,13 +479,13 @@ export function ProjectSettingsView({
         )}
 
         {/* 4. Collaborators & Joined Members */}
-        <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-4 shadow-sm">
+        <div className="p-6 rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users size={16} className="text-[#DCB001]" />
+              <Users size={16} className="text-white" />
               <h3 className="text-sm font-bold text-white">Collaborators & Members</h3>
             </div>
-            <span className="text-xs font-mono text-[#787C83]">{members.length} joined</span>
+            <span className="text-xs font-mono text-[var(--text-muted)]">{members.length} joined</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -498,7 +498,7 @@ export function ProjectSettingsView({
                 <div
                   key={m.id || m.userId}
                   className={`flex items-center justify-between p-3 rounded-xl border ${
-                    isCurrentUser ? 'bg-[#18191E] border-[#DCB001]/40' : 'bg-[#101114] border-[#222428]'
+                    isCurrentUser ? 'bg-[#1A1A1A] border-[var(--border-secondary)]' : 'bg-[#000000] border-[#141414]'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -511,17 +511,17 @@ export function ProjectSettingsView({
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-bold text-white truncate">{m.name}</p>
                         {isCurrentUser && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#DCB001]/20 text-[#DCB001] border border-[#DCB001]/30">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-white/20 text-white border border-[var(--border-secondary)]">
                             You
                           </span>
                         )}
                         {isOwnerUser && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#3B82F6]/20 text-[#3B82F6] border border-[#3B82F6]/30">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#FFFFFF]/20 text-white border border-[#FFFFFF]/30">
                             Owner
                           </span>
                         )}
                       </div>
-                      <p className="text-[10px] font-mono text-[#787C83] truncate">{m.email}</p>
+                      <p className="text-[10px] font-mono text-[var(--text-muted)] truncate">{m.email}</p>
                     </div>
                   </div>
 
@@ -532,7 +532,7 @@ export function ProjectSettingsView({
                         disabled={isKicking}
                         onClick={() => handleKickMember(m.id || m.userId, m.name)}
                         title={`Remove ${m.name} from project`}
-                        className="p-1.5 rounded-lg bg-[#241512] hover:bg-[#381614] text-[#EF4444] hover:text-white border border-[#EF4444]/30 transition-colors shrink-0 disabled:opacity-50 flex items-center gap-1 text-xs"
+                        className="p-1.5 rounded-lg bg-[#191919] hover:bg-[#212121] text-white hover:text-white border border-[var(--border-secondary)] transition-colors shrink-0 disabled:opacity-50 flex items-center gap-1 text-xs"
                       >
                         <UserX size={13} />
                         <span className="text-[10px] font-semibold hidden group-hover:inline">Kick</span>
@@ -543,7 +543,7 @@ export function ProjectSettingsView({
                       <button
                         onClick={onOpenLeaveModal}
                         title="Leave this project"
-                        className="p-1.5 rounded-lg bg-[#241512] hover:bg-[#341B17] text-[#F97316] hover:text-white border border-[#F97316]/30 transition-colors shrink-0"
+                        className="p-1.5 rounded-lg bg-[#191919] hover:bg-[#222222] text-[#FFFFFF] hover:text-white border border-[#FFFFFF]/30 transition-colors shrink-0"
                       >
                         <LogOut size={13} />
                       </button>
@@ -557,30 +557,30 @@ export function ProjectSettingsView({
 
         {/* 4. Member Permissions & Access Control (Owner/Admin) */}
         {isCreator && (
-          <div className="p-6 rounded-2xl bg-[#141518] border border-[#222428] space-y-5 shadow-sm">
+          <div className="p-6 rounded-2xl bg-[var(--bg-panel)] border border-[#141414] space-y-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={18} className="text-[#DCB001]" />
+                <ShieldCheck size={18} className="text-white" />
                 <div>
                   <h3 className="text-sm font-bold text-white">Member Permissions & Access Control</h3>
-                  <p className="text-xs text-[#787C83]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Configure granular permissions for creating, editing, deleting tasks, docs, history, and timestamps.
                   </p>
                 </div>
               </div>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#1C1D21] text-[#DCB001] border border-[#2B2D33]">
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#141414] text-white border border-[#2E2E2E]">
                 {permissionsList.length} configured
               </span>
             </div>
 
             {loadingPermissions ? (
-              <div className="flex items-center justify-center p-6 text-xs text-[#787C83] gap-2">
-                <Loader2 size={14} className="animate-spin text-[#DCB001]" />
+              <div className="flex items-center justify-center p-6 text-xs text-[var(--text-muted)] gap-2">
+                <Loader2 size={14} className="animate-spin text-white" />
                 <span>Loading member permissions...</span>
               </div>
             ) : permissionsList.length === 0 ? (
-              <div className="p-4 rounded-xl bg-[#101114] border border-[#222428] text-center">
-                <p className="text-xs text-[#787C83]">No joined members yet to configure permissions.</p>
+              <div className="p-4 rounded-xl bg-[#000000] border border-[#141414] text-center">
+                <p className="text-xs text-[var(--text-muted)]">No joined members yet to configure permissions.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -594,7 +594,7 @@ export function ProjectSettingsView({
                   return (
                     <div
                       key={mem.userId}
-                      className="p-4 rounded-xl bg-[#101114] border border-[#222428] hover:border-[#2F3238] transition-all space-y-3"
+                      className="p-4 rounded-xl bg-[#000000] border border-[#141414] hover:border-[#333333] transition-all space-y-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -609,24 +609,24 @@ export function ProjectSettingsView({
                               <span
                                 className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
                                   isOwnerUser
-                                    ? 'bg-[#3B82F6]/15 text-[#60A5FA] border-[#3B82F6]/30'
-                                    : 'bg-[#1C1D21] text-[#9499A0] border-[#2A2C30]'
+                                    ? 'bg-[#FFFFFF]/15 text-[#FFFFFF] border-[#FFFFFF]/30'
+                                    : 'bg-[#141414] text-[var(--text-secondary)] border-[var(--border-primary)]'
                                 }`}
                               >
                                 {isOwnerUser ? 'Owner' : 'Member'}
                               </span>
                             </div>
-                            <p className="text-[10px] font-mono text-[#787C83] truncate">{mem.userEmail}</p>
+                            <p className="text-[10px] font-mono text-[var(--text-muted)] truncate">{mem.userEmail}</p>
                           </div>
                         </div>
 
                         {isOwnerUser ? (
-                          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/25">
+                          <span className="text-[11px] font-mono text-white bg-[var(--ramp-2)] px-2 py-1 rounded-md border border-[var(--border-secondary)]">
                             Full Workspace Access
                           </span>
                         ) : (
                           isSaving && (
-                            <div className="flex items-center gap-1 text-[11px] text-[#DCB001] font-mono">
+                            <div className="flex items-center gap-1 text-[11px] text-white font-mono">
                               <Loader2 size={12} className="animate-spin" />
                               <span>Saving...</span>
                             </div>
@@ -636,7 +636,7 @@ export function ProjectSettingsView({
 
                       {/* Granular Permission Toggles */}
                       {!isOwnerUser && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-[#1C1D22]">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 border-t border-[#1E1E1E]">
                           {(
                             [
                               { key: 'can_create_tasks', label: 'Create Tasks & Folders', icon: <FolderKanban size={12} /> },
@@ -659,12 +659,12 @@ export function ProjectSettingsView({
                                 onClick={() => handleTogglePermission(mem.userId, p.key, isEnabled)}
                                 className={`flex items-center justify-between p-2 rounded-lg border text-left text-xs transition-all ${
                                   isEnabled
-                                    ? 'bg-[#182618] border-emerald-500/35 text-white hover:bg-[#1f331f]'
-                                    : 'bg-[#121316] border-[#222428] text-[#787C83] hover:text-[#CFD4DD] hover:border-[#2E3138]'
+                                    ? 'bg-[#1D1D1D] border-[var(--border-secondary)] text-white hover:bg-[#262626]'
+                                    : 'bg-[var(--bg-panel)] border-[#141414] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:border-[#222222]'
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                                  <span className={isEnabled ? 'text-emerald-400' : 'text-[#787C83]'}>
+                                  <span className={isEnabled ? 'text-white' : 'text-[var(--text-muted)]'}>
                                     {p.icon}
                                   </span>
                                   <span className="text-[11px] font-medium truncate">{p.label}</span>
@@ -672,8 +672,8 @@ export function ProjectSettingsView({
                                 <span
                                   className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                                     isEnabled
-                                      ? 'bg-emerald-500/20 text-emerald-400'
-                                      : 'bg-[#1C1D21] text-[#60646C]'
+                                      ? 'bg-[var(--ramp-2)] text-white'
+                                      : 'bg-[#141414] text-[#656565]'
                                   }`}
                                 >
                                   {isEnabled ? 'ON' : 'OFF'}
@@ -695,23 +695,23 @@ export function ProjectSettingsView({
         <div className="space-y-4 pt-2">
           {/* Leave Project Option (For Joined Collaborators) */}
           {onOpenLeaveModal && (
-            <div className="p-6 rounded-2xl bg-[#181310] border border-[#F97316]/30 space-y-4">
+            <div className="p-6 rounded-2xl bg-[#141414] border border-[#FFFFFF]/30 space-y-4">
               <div className="flex items-center gap-2">
-                <LogOut size={18} className="text-[#F97316]" />
-                <h3 className="text-sm font-bold text-[#F97316]">Leave Project Workspace</h3>
+                <LogOut size={18} className="text-[#FFFFFF]" />
+                <h3 className="text-sm font-bold text-[#FFFFFF]">Leave Project Workspace</h3>
               </div>
-              <p className="text-xs text-[#A89488]">
+              <p className="text-xs text-[#979797]">
                 Leave this project workspace. You will be removed from the team members list and this project will no longer appear in your dashboard unless you rejoin using the Project Key.
               </p>
 
               <div className="flex items-center justify-between pt-2">
-                <span className="text-[11px] font-mono text-[#8E8078]">
+                <span className="text-[11px] font-mono text-[#828282]">
                   Logged in as {currentUser?.name || 'Member'}
                 </span>
 
                 <button
                   onClick={onOpenLeaveModal}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFFFFF] hover:bg-[#FFFFFF] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
                 >
                   <LogOut size={14} />
                   <span>Leave Project</span>
@@ -722,23 +722,23 @@ export function ProjectSettingsView({
 
           {/* Delete Project Option (For Creator / Owner) */}
           {isCreator && onOpenDeleteModal && (
-            <div className="p-6 rounded-2xl bg-[#181112] border border-[#EF4444]/30 space-y-4">
+            <div className="p-6 rounded-2xl bg-[#141414] border border-[var(--border-secondary)] space-y-4">
               <div className="flex items-center gap-2">
-                <AlertTriangle size={18} className="text-[#EF4444]" />
-                <h3 className="text-sm font-bold text-[#EF4444]">Danger Zone — Delete Project</h3>
+                <AlertTriangle size={18} className="text-white" />
+                <h3 className="text-sm font-bold text-white">Danger Zone — Delete Project</h3>
               </div>
-              <p className="text-xs text-[#A88B8C]">
+              <p className="text-xs text-[#959595]">
                 Permanently delete this project along with all associated Kanban tasks, subtask trees, channel messages, technical documentation, and collaborator roles. This action cannot be undone.
               </p>
 
               <div className="flex items-center justify-between pt-2">
-                <span className="text-[11px] font-mono text-[#8E7879]">
+                <span className="text-[11px] font-mono text-[#808080]">
                   Owner authorization verified ({currentUser?.name || 'Lead'})
                 </span>
 
                 <button
                   onClick={onOpenDeleteModal}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#EF4444] hover:bg-[#DC2626] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
                 >
                   <Trash2 size={14} />
                   <span>Delete Project</span>
