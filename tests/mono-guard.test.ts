@@ -19,7 +19,10 @@ function walk(dir: string): string[] {
   return results;
 }
 
-const THEME_ACCENT_HEXES = new Set(['#BB86FC', '#CCA5FD', '#D4B2FF']);
+const THEME_ACCENT_HEXES = new Set([
+  '#BB86FC', '#CCA5FD', '#D4B2FF',
+  '#8400FF', '#FF0051', '#B800D8', '#A824FF', '#FF2D73'
+]);
 
 function isMonochromeHex(hex: string): boolean {
   if (THEME_ACCENT_HEXES.has(hex.toUpperCase())) return true;
@@ -44,6 +47,8 @@ function isMonochromeRgb(rgbStr: string): boolean {
   const g = Math.round(parseFloat(m[2]));
   const b = Math.round(parseFloat(m[3]));
   if (r === 187 && g === 134 && b === 252) return true;
+  if (r === 132 && g === 0 && b === 255) return true; // #8400FF (Logo Violet)
+  if (r === 255 && g === 0 && b === 81) return true;  // #FF0051 (Logo Pink)
   return r === g && g === b;
 }
 
