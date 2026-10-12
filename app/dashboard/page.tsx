@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
-import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { 
@@ -270,33 +269,6 @@ export default function DashboardPage() {
   return (
     <AppLayout>
       <div className="flex-1 flex flex-col h-full min-h-0 bg-[#000000] text-[var(--text-secondary)] font-sans overflow-y-auto custom-scrollbar select-none">
-        {/* Top Header Banner */}
-        <div className="px-6 py-6 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]/80 backdrop-blur-md shrink-0">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-medium tracking-wider text-white mb-1">
-                <Sparkles size={13} />
-                <span>WORKSPACE OVERVIEW & ANALYTICS</span>
-              </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">Executive Dashboard</h1>
-              <p className="text-sm text-[var(--text-secondary)] mt-0.5">
-                Real-time aggregated health, task velocity, and project graphs across all repositories.
-              </p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2.5">
-              <RealtimeBadge />
-              <Link
-                href="/projects"
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#1E1E1E] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-white rounded-lg text-sm font-medium transition-all shadow-sm"
-              >
-                <FolderKanban size={14} className="text-white" />
-                <span>Explore All Projects ({projects.length})</span>
-              </Link>
-            </div>
-          </div>
-        </div>
 
         {/* Dashboard Main Content Grid */}
         <div className="p-6 max-w-7xl mx-auto w-full space-y-6">

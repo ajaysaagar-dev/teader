@@ -44,6 +44,7 @@ interface NewIssueModalProps {
   initialMode?: 'task' | 'folder';
   allowFolderCreation?: boolean;
   currentUser?: { id: number | string; name: string; username?: string; email?: string } | null;
+  projects?: Array<{ id: number | string; name: string; key?: string }>;
 }
 
 export const NewIssueModal: React.FC<NewIssueModalProps> = ({
@@ -57,6 +58,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   initialMode = 'task',
   allowFolderCreation = true,
   currentUser,
+  projects = [],
 }) => {
   // Primary Switch: Task (default) or Folder
   const [creationMode, setCreationMode] = useState<'task' | 'folder'>(
@@ -70,6 +72,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [projectKey, setProjectKey] = useState(defaultProjectKey);
+  // When opened from sidebar (no locked project), user must pick a project
+  const [selectedProjectId, setSelectedProjectId] = useState<number | string | undefined>(defaultProjectId);
   const [priority, setPriority] = useState<Priority>('medium');
   const [assigneeName, setAssigneeName] = useState('General (Anyone)');
   const [targetFolderId, setTargetFolderId] = useState('folder_general');
@@ -159,6 +163,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       setCreationMode(allowFolderCreation ? initialMode : 'task');
       setTaggedTasks([]);
       setShowTaskPicker(false);
+      setSelectedProjectId(defaultProjectId);
       setMentionState({
         active: false,
         target: 'title',
@@ -168,7 +173,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
         selectedIndex: 0,
       });
     }
-  }, [isOpen, initialMode, allowFolderCreation]);
+  }, [isOpen, initialMode, allowFolderCreation, defaultProjectId]);
 
   const handleSelectMention = (option: TaskMentionOption) => {
     const tagToAdd = `@${option.shortId}`;
@@ -352,6 +357,13 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Require project selection when not locked to a specific project
+    const effectiveProjectId = isProjectLocked ? defaultProjectId : selectedProjectId;
+    if (!isProjectLocked && !effectiveProjectId) {
+      toast.error('Please select a project for this task');
+      return;
+    }
+
     if (creationMode === 'task' && !title.trim()) {
       toast.error('Please enter a task title');
       return;
@@ -362,10 +374,17 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       return;
     }
 
+    // Derive effective project name and key from the selected project (when not locked)
+    const selectedProjectObj = !isProjectLocked && effectiveProjectId
+      ? projects.find((p) => String(p.id) === String(effectiveProjectId))
+      : null;
+    const effectiveProjectName = selectedProjectObj?.name || defaultProjectName || 'Project';
+    const effectiveProjectKey = selectedProjectObj?.key || projectKey || 'PRJ';
+
     setIsSubmitting(true);
-    const targetProjectName = defaultProjectName || 'Project';
+    const targetProjectName = effectiveProjectName;
     const tempId = `temp_${Date.now()}`;
-    const tempKey = `${projectKey}-${Date.now().toString().slice(-4)}`;
+    const tempKey = `${effectiveProjectKey}-${Date.now().toString().slice(-4)}`;
 
     let finalTitle = '';
     let finalDescription = '';
@@ -418,7 +437,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       dueDate: dueDate ? dueDate : undefined,
       estimatedHours: creationMode === 'task' ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
       project: targetProjectName,
-      projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
+      projectId: effectiveProjectId ? Number(effectiveProjectId) : undefined,
       epic: selectedEpic,
       folderId: selectedFolderId,
       labels: finalLabels,
@@ -448,7 +467,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           dueDate: dueDate ? dueDate : undefined,
           estimatedHours: creationMode === 'task' ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
           project: targetProjectName,
-          projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
+          projectId: effectiveProjectId ? Number(effectiveProjectId) : undefined,
           epic: selectedEpic,
           folderId: selectedFolderId,
           labels: finalLabels,
@@ -497,13 +516,39 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
         >
           {/* Modal Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]">
-            <div className="flex items-center gap-2.5">
-              <span className="font-mono text-xs font-bold text-white bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
-                {projectKey}
-              </span>
-              <h2 className="text-sm font-bold text-white tracking-tight">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <h2 className="text-sm font-bold text-white tracking-tight shrink-0">
                 {creationMode === 'task' ? 'Create Task' : 'Create Folder / Group'}
               </h2>
+              {/* Project selector — shown only when not locked to a specific project */}
+              {!isProjectLocked && projects.length > 0 ? (
+                <select
+                  value={selectedProjectId !== undefined ? String(selectedProjectId) : ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedProjectId(val ? val : undefined);
+                    const proj = projects.find((p) => String(p.id) === val);
+                    if (proj?.key) setProjectKey(proj.key);
+                  }}
+                  className={`h-6 px-2 text-[11px] font-mono font-bold rounded border transition-colors bg-[var(--bg-canvas)] outline-none cursor-pointer max-w-[200px] truncate ${
+                    !selectedProjectId
+                      ? 'border-[var(--accent)] text-[var(--accent)] animate-pulse'
+                      : 'border-[var(--border-primary)] text-white'
+                  }`}
+                  title="Select project"
+                >
+                  <option value="">— Select project —</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : isProjectLocked ? (
+                <span className="font-mono text-xs font-bold text-white bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
+                  {projectKey}
+                </span>
+              ) : null}
             </div>
 
             <button onClick={onClose} className="text-[var(--text-muted)] hover:text-white p-1 rounded-lg transition-colors">

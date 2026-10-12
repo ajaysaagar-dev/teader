@@ -108,8 +108,6 @@ export function ProjectsGridSkeleton() {
   );
 }
 
-import { RandomLoadingText } from './RandomLoadingText';
-
 /** Generic inline loading spinner */
 export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
@@ -126,7 +124,6 @@ export function ViewLoadingFallback() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--bg-main)] gap-3 select-none">
       <Spinner size={22} />
-      <RandomLoadingText className="mt-1" />
     </div>
   );
 }

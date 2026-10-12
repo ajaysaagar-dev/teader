@@ -536,19 +536,6 @@ export function ProjectConversationView({
           )}
         </div>
 
-        <div className="p-3 border-t border-[#141414] bg-[#000000]/80 space-y-1.5">
-          <div className="flex items-center justify-between text-[10px]">
-            <span className="font-semibold text-white">Project Key</span>
-            <span className="font-mono text-[var(--text-muted)]">Share to join</span>
-          </div>
-          <button
-            onClick={handleCopyKey}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#181818] border border-[#2A2A2A] hover:border-[var(--border-secondary)] text-xs font-mono text-white cursor-pointer transition-colors"
-          >
-            <span className="truncate">{projectKey || '...'}</span>
-            {copiedKey ? <Check size={12} className="text-white shrink-0" /> : <Copy size={12} className="shrink-0 text-[var(--text-secondary)]" />}
-          </button>
-        </div>
       </aside>
 
       {/* ─── Center: Main Full-Width Chat Panel ─────────────────────── */}
@@ -571,17 +558,6 @@ export function ProjectConversationView({
 
           {/* Right Header Actions */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {projectKey && (
-              <button
-                onClick={handleCopyKey}
-                className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md bg-[#181818] border border-[#292929] hover:border-[var(--border-secondary)] text-[10px] font-mono text-white transition-colors cursor-pointer"
-                title="Copy project key"
-              >
-                <span>{projectKey}</span>
-                {copiedKey ? <Check size={11} className="text-white" /> : <Copy size={11} className="text-[var(--text-muted)]" />}
-              </button>
-            )}
-
             <button
               onClick={() => setShowMembersSidebar(true)}
               className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#191919] hover:bg-[#232323] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-xs font-semibold text-[var(--text-secondary)] hover:text-white transition-colors cursor-pointer"
@@ -887,7 +863,7 @@ export function ProjectConversationView({
                 type="button"
                 disabled={isDeletingChannel}
                 onClick={() => handleDeleteChannel(channelToDelete)}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)] rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
               >
                 {isDeletingChannel ? (
                   <>

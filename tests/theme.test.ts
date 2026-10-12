@@ -57,3 +57,25 @@ describe('Legacy Theme Cleanup Tests', () => {
     expect(removed).not.toContain('zoom');
   });
 });
+
+describe('Centralized Theme Palette Tests', () => {
+  it('defines the centralized theme variables in globals.css', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const cssPath = path.resolve(process.cwd(), 'app/globals.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+
+    expect(css).toContain('--theme-bg: #121212;');
+    expect(css).toContain('--theme-text-primary: #E0E0E0;');
+    expect(css).toContain('--theme-text-secondary: #B0B0B0;');
+    expect(css).toContain('--theme-border: #242424;');
+    expect(css).toContain('--theme-accent: #BB86FC;');
+
+    // Verify mapping from centralized variables to app tokens
+    expect(css).toContain('--bg-main: var(--theme-bg);');
+    expect(css).toContain('--text-primary: var(--theme-text-primary);');
+    expect(css).toContain('--text-secondary: var(--theme-text-secondary);');
+    expect(css).toContain('--border-primary: var(--theme-border);');
+    expect(css).toContain('--accent: var(--theme-accent);');
+  });
+});

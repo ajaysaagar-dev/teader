@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ShieldCheck, LogIn, Mail, Lock, Sparkles, CheckSquare, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { clearAllLocalCaches } from '@/lib/client-cache';
+import { TopFrame } from '@/components/TopFrame';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -183,12 +184,18 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden select-none">
+      {/* ─── Top Frameless Window Header ──────────────────────────── */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[var(--bg-main)] border-b border-[var(--border-primary)] px-5 py-2">
+        <TopFrame />
+      </div>
+
       {/* Glow Effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/10 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="w-full max-w-md bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl shadow-2xl overflow-hidden relative z-10">
         {/* Header Branding */}
-        <div className="p-8 pb-6 text-center space-y-2 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)]">
+        <div className="p-8 pb-6 text-center space-y-2 border-b border-[var(--border-primary)] bg-[var(--bg-canvas)] flex flex-col items-center">
+          <img src="/logo.svg" alt="Teader" className="w-10 h-10 object-contain mb-1" />
           <h1 className="text-2xl font-bold text-white tracking-tight">Welcome to Teader</h1>
           <p className="text-sm text-[var(--text-secondary)]">Sign in to access your projects and task boards</p>
         </div>
@@ -250,7 +257,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={!identifier.trim() || !password.trim() || isSubmitting}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold bg-white text-black hover:bg-[#FFFFFF] rounded-xl shadow-lg transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold bg-[var(--accent)] text-[var(--text-inverse)] hover:brightness-110 active:brightness-95 rounded-xl shadow-lg transition-all disabled:opacity-50"
           >
             <LogIn size={18} />
             <span>Sign In</span>

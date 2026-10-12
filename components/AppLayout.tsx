@@ -310,13 +310,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       const parts = pathname.split("/");
       const pId = parts[2];
       const found = projects.find((p) => String(p.id) === String(pId));
-      const pName = found?.name || found?.key || "Project";
+      const pName = found?.name || "Project";
       return ["Teader", "Projects", pName];
     }
-    if (pathname === "/my-work") return ["Teader", "My Work"];
-    if (pathname === "/initiatives") return ["Teader", "Initiatives"];
-    if (pathname.startsWith("/conversations")) return ["Teader", "Conversations"];
-    if (pathname === "/documentation") return ["Teader", "Documentation"];
+    if (pathname === "/my-work") return ["Teader", "Commitments"];
     return ["Teader"];
   }, [pathname, projects]);
 
@@ -327,12 +324,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-black text-white font-sans antialiased select-none p-[19px] box-border">
+    <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[black] text-[var(--text-primary)] font-sans antialiased select-none p-[10px] box-border">
       {/* ─── Top Frameless Window Header ────────────────────────────── */}
       <TopFrame className="shrink-0" />
 
       {/* ─── Main Content View (Including Sidebar) ───────────────────── */}
-      <div className="mt-[15px] flex-1 flex flex-row min-w-0 min-h-0 h-full overflow-hidden bg-[#1E1E1E] rounded-[5px] border-2 border-[rgba(255,255,255,0.13)] box-border">
+      <div className="mt-[10px] flex-1 flex flex-row min-w-0 min-h-0 h-full overflow-hidden bg-[var(--bg-surface)] rounded-[5px] border border-[var(--border-containers)] box-border">
         {/* ─── Left Sidebar Shell ──────────────────────────────────────── */}
         {currentUser && (
           <Sidebar
@@ -429,30 +426,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     ⌘K
                   </kbd>
                 </button>
-
-                <button
-                  onClick={() => setIsNewIssueModalOpen(true)}
-                  className="w-7 h-7 flex items-center justify-center rounded bg-white text-black hover:bg-[#E5E5E5] transition-colors"
-                  title="Create Task (C)"
-                >
-                  <Plus size={14} />
-                </button>
-
-                <button
-                  onClick={() => setIsShortcutsModalOpen(true)}
-                  className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-hover)] transition-colors"
-                  title="Keyboard Shortcuts (?)"
-                >
-                  <HelpCircle size={14} />
-                </button>
-
-                <button
-                  onClick={() => setIsAccountModalOpen(true)}
-                  className="p-0.5 rounded hover:ring-1 hover:ring-[var(--border-focus)] transition-all"
-                  title="View Account"
-                >
-                  <Avatar user={currentUser} size="xs" />
-                </button>
               </div>
             </header>
           )}
@@ -463,7 +436,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
             </div>
           ) : !currentUser ? null : (
-            <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none p-2 bg-[var(--bg-canvas)]">
+            <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none p-0 bg-[var(--bg-canvas)]">
               <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg shadow-sm">
                 {children}
               </div>
@@ -471,17 +444,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           )}
         </div>
       </div>
-
-      {/* ─── Bottom Status Bar View ─────────────────────────────────── */}
-      <footer
-        role="contentinfo"
-        aria-label="Status Bar View"
-        className="mt-[11px] h-[42px] min-h-[42px] flex items-center justify-center bg-[#1E1E1E] rounded-[5px] border-2 border-[rgba(255,255,255,0.13)] px-4 box-border shrink-0 select-none"
-      >
-        <span className="text-[14px] sm:text-[15px] font-medium text-white tracking-normal">
-          [StatusBar View]
-        </span>
-      </footer>
 
       {/* ─── Account Modal ──────────────────────────────────────────── */}
       <AnimatePresence>
@@ -610,6 +572,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             isOpen={isNewIssueModalOpen}
             onClose={() => setIsNewIssueModalOpen(false)}
             onCreateIssue={handleCreateIssue}
+            projects={projects}
           />
         </Suspense>
       )}

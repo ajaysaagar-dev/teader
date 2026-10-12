@@ -5,9 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AppLayout } from '@/components/AppLayout';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { WorkspaceSplashScreen } from '@/components/WorkspaceSplashScreen';
-import { ProjectPageHeaderSkeleton, KanbanBoardSkeleton, ViewLoadingFallback } from '@/components/ui/Skeleton';
-import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
+import { ViewLoadingFallback } from '@/components/ui/Skeleton';
 import { Issue, Status, Priority, MemberPermissions } from '@/lib/types';
 import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cache';
 import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
@@ -341,6 +339,18 @@ export default function SingleProjectPage() {
         handleTabSwitch('docs');
       } else if (e.key === '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
+        handleTabSwitch('charts');
+      } else if (e.key === '5' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('chats');
+      } else if (e.key === '6' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('meeting');
+      } else if (e.key === '7' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('history');
+      } else if (e.key === '8' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
         handleTabSwitch('settings');
       } else if (e.key.toLowerCase() === 'v' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         if (activeTab === 'tasks') {
@@ -569,15 +579,9 @@ export default function SingleProjectPage() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  // Splash Screen States: only show on initial opening of project, never when switching tabs
-  const isAlreadyLoaded = initializedProjects.has(String(projectIdParam).toLowerCase());
-  const [isInitialLoading, setIsInitialLoading] = useState(!isAlreadyLoaded);
-  const [splashStep, setSplashStep] = useState(1);
-  const [splashMessage, setSplashMessage] = useState('Verifying user authentication...');
-
   const isFetchingRef = useRef(false);
 
-  // Real-time Fetching & User Session with Splash Steps
+  // Real-time Fetching & User Session
   const fetchProjectData = useCallback(async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -588,8 +592,6 @@ export default function SingleProjectPage() {
         : undefined;
 
       // Step 1: Verify User Session
-      setSplashStep(1);
-      setSplashMessage('Verifying user authentication...');
       let sessionUser: any = null;
       const meRes = await fetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
       if (meRes && meRes.ok) {
@@ -607,8 +609,6 @@ export default function SingleProjectPage() {
       }
 
       // Step 2: Verify Project Permissions & Membership
-      setSplashStep(2);
-      setSplashMessage('Verifying project permissions & membership...');
       const [projRes, issueRes] = await Promise.all([
         fetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
         fetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
@@ -636,19 +636,16 @@ export default function SingleProjectPage() {
 
       if (!foundProj) {
         // Project not found or user lacks access
-        setIsInitialLoading(false);
         setLoading(false);
         return;
       }
 
-      // Register project in session memory so switching tabs never shows splash screen
+      // Register project in session memory
       initializedProjects.add(String(projectIdParam).toLowerCase());
       if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
       if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
 
       // Step 3: Load Architecture, Members, and Issues
-      setSplashStep(3);
-      setSplashMessage('Loading workspace issues & architecture...');
       if (foundProj && foundProj.id) {
         const [memRes, permRes] = await Promise.all([
           fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
@@ -682,29 +679,17 @@ export default function SingleProjectPage() {
         }
       }
 
-      // Step 4: Finalize and Open Workspace
-      setSplashStep(4);
-      setSplashMessage('Initializing workspace views...');
-      if (!isAlreadyLoaded) {
-        await new Promise((r) => setTimeout(r, 180));
-      }
-
     } catch (err) {
       console.error('Error loading project:', err);
     } finally {
-      setIsInitialLoading(false);
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [projectIdParam, router, isAlreadyLoaded]);
+  }, [projectIdParam, router]);
 
   // Smart polling: every 30s only when tab is visible
   useEffect(() => {
     fetchProjectData();
-    const safetySplashTimer = setTimeout(() => {
-      setIsInitialLoading(false);
-      setLoading(false);
-    }, 4500);
 
     const POLL_INTERVAL = 30_000;
     let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -733,7 +718,6 @@ export default function SingleProjectPage() {
     startPolling();
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
-      clearTimeout(safetySplashTimer);
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
@@ -1770,16 +1754,14 @@ export default function SingleProjectPage() {
   }, [project, fetchProjectData]);
 
   return (
-    <>
-      {/* Upper Layer Splash Screen (Fades out when background loading completes) */}
-      <AnimatePresence>
-        {isInitialLoading && <WorkspaceSplashScreen />}
-      </AnimatePresence>
+    <AppLayout>
 
-      <AppLayout>
-
-      {/* Access Denied Guard if user does not own and is not joined in this project */}
-      {!isInitialLoading && !project ? (
+      {/* If still loading initial project data, show simple centered spinner inside content */}
+      {loading && !project ? (
+        <div className="flex-1 flex items-center justify-center h-full p-6 bg-[var(--bg-canvas)]">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+        </div>
+      ) : !project ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[var(--bg-canvas)] text-[var(--text-secondary)]">
           <div className="w-14 h-14 rounded-2xl bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Lock size={28} />
@@ -1807,103 +1789,12 @@ export default function SingleProjectPage() {
             Your request to join <span className="text-[var(--text-secondary)] font-semibold">{project.name}</span> has been sent to the project owner. You will get workspace access once it is approved.
           </p>
           <div className="flex items-center gap-3 pt-2">
-            <button onClick={() => router.push('/projects')} className="px-4 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs font-bold rounded-xl hover:bg-[var(--bg-panel)] transition-colors">Back to My Projects</button>
-            <button onClick={handleCancelJoinRequest} className="px-4 py-2 bg-[#FFFFFF] text-white text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors">Cancel Request</button>
+            <button onClick={() => router.push('/projects')} className="px-4 py-2 border border-[var(--border-primary)] text-[var(--text-secondary)] text-xs font-bold rounded-xl hover:bg-[var(--bg-panel)] transition-colors cursor-pointer">Back to My Projects</button>
+            <button onClick={handleCancelJoinRequest} className="px-4 py-2 bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)] text-xs font-bold rounded-xl transition-colors cursor-pointer">Cancel Request</button>
           </div>
         </div>
       ) : (
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans">
-        {/* 1. Main Workspace Top Header: 1 Calm Row with Project Identity & More Menu */}
-        <div className="h-11 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none">
-          {/* Left: Project Icon, Name & Key */}
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-5 h-5 rounded bg-[var(--ramp-2)] text-white font-mono text-[10px] font-bold flex items-center justify-center border border-[var(--border-secondary)] shrink-0">
-              {project?.key ? project.key.slice(0, 2) : 'P'}
-            </div>
-            <span className="text-xs font-semibold text-white truncate max-w-[200px] md:max-w-[320px]" title={project?.name}>
-              {project?.name}
-            </span>
-            {project && (
-              <button
-                onClick={handleCopyProjectKey}
-                className="flex items-center gap-1 text-[11px] font-mono text-[var(--text-muted)] hover:text-white transition-colors"
-                title={`Click to copy key: ${project.key}`}
-              >
-                <Copy size={11} className="shrink-0" />
-                <span className="truncate max-w-[140px]">{project.key}</span>
-                {copiedKey && <Check size={11} className="text-white" />}
-              </button>
-            )}
-            <div className="hidden sm:flex items-center pl-1">
-              <RealtimeBadge />
-            </div>
-          </div>
-
-          {/* Right: Creator, Members, and More (⋯) Dropdown Menu */}
-          <div className="flex items-center gap-2 text-xs shrink-0">
-            {joinedMembers.length > 0 && (
-              <div className="hidden md:flex items-center -space-x-1.5 pr-1">
-                {joinedMembers.slice(0, 3).map((m) => (
-                  <div key={m.id} className="ring-1 ring-black rounded-full">
-                    <Avatar user={{ id: String(m.id), name: m.name, avatar: m.avatar, email: m.email, role: '' }} size="xs" />
-                  </div>
-                ))}
-                {joinedMembers.length > 3 && (
-                  <div className="w-5 h-5 rounded-full bg-[var(--ramp-2)] border border-[var(--border-primary)] flex items-center justify-center text-[9px] font-mono text-[var(--text-muted)]">
-                    +{joinedMembers.length - 3}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Project More Actions Menu */}
-            <CustomDropdown
-              options={[
-                ...(isCreator ? [{ value: 'edit', label: 'Edit project details', icon: <Pencil size={13} /> }] : []),
-                { value: 'import', label: 'Import tasks (CSV/JSON)...', icon: <Upload size={13} /> },
-                { value: 'export', label: 'Export project data', icon: <Download size={13} /> },
-                { value: 'calendar', label: 'Export calendar (.ics)', icon: <Calendar size={13} /> },
-                { value: 'automations', label: 'Automations...', icon: <Zap size={13} /> },
-                { value: 'copy_key', label: `Copy key (${project?.key})`, icon: <Copy size={13} /> },
-                { value: 'leave', label: 'Leave project', icon: <LogOut size={13} /> },
-                ...(isCreator ? [{ value: 'delete', label: 'Delete project', icon: <Trash2 size={13} /> }] : []),
-              ]}
-              onChange={(action) => {
-                if (action === 'edit' && project) {
-                  setEditName(project.name);
-                  setEditDesc(project.description || '');
-                  setIsEditProjectModalOpen(true);
-                } else if (action === 'import') {
-                  setIsImportTasksModalOpen(true);
-                } else if (action === 'export') {
-                  handleExportProject();
-                } else if (action === 'calendar' && project) {
-                  window.open(`/api/projects/${project.id}/calendar.ics`, '_blank');
-                } else if (action === 'automations') {
-                  setIsAutomationsModalOpen(true);
-                } else if (action === 'copy_key') {
-                  handleCopyProjectKey();
-                } else if (action === 'leave') {
-                  setIsLeaveProjectModalOpen(true);
-                } else if (action === 'delete') {
-                  setConfirmDeleteName('');
-                  setConfirmDeleteKey('');
-                  setIsDeleteProjectModalOpen(true);
-                }
-              }}
-              renderTrigger={() => (
-                <button
-                  className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-2)] border border-transparent hover:border-[var(--border-primary)] transition-colors"
-                  title="Project options"
-                >
-                  <MoreHorizontal size={14} />
-                </button>
-              )}
-              align="right"
-              size="sm"
-            />
-          </div>
-        </div>
 
         {/* 2. 4 Primary Tabs Bar (Overview, Tasks, Docs, Settings) + Sub-views / Tasks Toolbar */}
         <div className="h-10 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none gap-3">
@@ -1939,6 +1830,46 @@ export default function SingleProjectPage() {
               }`}
             >
               Docs
+            </button>
+            <button
+              onClick={() => handleTabSwitch('charts')}
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
+                activeTab === 'charts'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              Charts
+            </button>
+            <button
+              onClick={() => handleTabSwitch('chats')}
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
+                activeTab === 'chats'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              Conversations
+            </button>
+            <button
+              onClick={() => handleTabSwitch('meeting')}
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
+                activeTab === 'meeting'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              Meetings
+            </button>
+            <button
+              onClick={() => handleTabSwitch('history')}
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
+                activeTab === 'history'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
+              }`}
+            >
+              History
             </button>
             <button
               onClick={() => handleTabSwitch('settings')}
@@ -1997,15 +1928,6 @@ export default function SingleProjectPage() {
                   </button>
                 )}
               </div>
-
-              {/* + New Task Button */}
-              <button
-                onClick={() => setIsNewIssueModalOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded bg-white text-black hover:bg-neutral-200 text-xs font-medium transition-colors shadow-sm"
-              >
-                <Plus size={13} />
-                <span>New task</span>
-              </button>
             </div>
           )}
 
@@ -2620,7 +2542,7 @@ export default function SingleProjectPage() {
                           confirmDeleteKey.trim().toUpperCase() !== project.key.toUpperCase() ||
                           isDeletingProject
                         }
-                        className="px-4 py-2 text-sm font-semibold text-white bg-[var(--ramp-3)] hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[#242424] hover:bg-[#2E2E2E] border border-[var(--border-secondary)] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
                         {isDeletingProject ? 'Deleting...' : 'Permanently Delete'}
                       </button>
@@ -2674,14 +2596,14 @@ export default function SingleProjectPage() {
                       <button
                         type="button"
                         onClick={() => setIsLeaveProjectModalOpen(false)}
-                        className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg hover:bg-[#242424]"
+                        className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-white rounded-lg hover:bg-[#242424] cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         type="submit"
                         disabled={isLeavingProject}
-                        className="px-4 py-2 text-sm font-semibold text-white bg-[#FFFFFF] hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-4 py-2 text-sm font-semibold text-white bg-[#242424] hover:bg-[#2E2E2E] border border-[var(--border-secondary)] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
                       >
                         {isLeavingProject ? 'Leaving...' : 'Confirm & Leave'}
                       </button>
@@ -2824,7 +2746,6 @@ export default function SingleProjectPage() {
       </div>
       )}
     </AppLayout>
-    </>
   );
 }
 

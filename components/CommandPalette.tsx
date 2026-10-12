@@ -140,31 +140,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
       {
         id: 'act_my_work',
-        label: 'Go to My Work',
+        label: 'Go to Commitments',
         category: 'Navigation',
         icon: CheckSquare,
         run: () => { router.push('/my-work'); onClose(); },
-      },
-      {
-        id: 'act_initiatives',
-        label: 'Go to Initiatives',
-        category: 'Navigation',
-        icon: Flame,
-        run: () => { router.push('/initiatives'); onClose(); },
-      },
-      {
-        id: 'act_conversations',
-        label: 'Go to Conversations',
-        category: 'Navigation',
-        icon: MessageSquare,
-        run: () => { router.push('/conversations'); onClose(); },
-      },
-      {
-        id: 'act_documentation',
-        label: 'Go to Documentation',
-        category: 'Navigation',
-        icon: BookOpen,
-        run: () => { router.push('/documentation'); onClose(); },
       },
       {
         id: 'act_projects',

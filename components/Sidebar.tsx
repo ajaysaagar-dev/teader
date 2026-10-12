@@ -6,9 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   CheckSquare,
-  Layers,
-  MessageSquare,
-  BookOpen,
   FolderKanban,
   Settings,
   Keyboard,
@@ -94,10 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/my-work', label: 'My Work', icon: CheckSquare },
-    { href: '/initiatives', label: 'Initiatives', icon: Layers },
-    { href: '/conversations', label: 'Conversations', icon: MessageSquare },
-    { href: '/documentation', label: 'Documentation', icon: BookOpen },
+    { href: '/my-work', label: 'Commitments', icon: CheckSquare },
   ];
 
   return (
@@ -108,52 +102,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Top Header & Links */}
       <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-        {/* Workspace Brand Row */}
-        <div className="h-11 px-3 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2 text-white font-semibold tracking-tight hover:opacity-80 transition-opacity min-w-0"
-            title="Teader Workspace"
-          >
-            <div className="w-6 h-6 rounded bg-white text-black font-bold flex items-center justify-center shrink-0 text-xs">
-              T
-            </div>
-            {!collapsed && (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="truncate text-xs font-semibold text-white">Teader</span>
-                {desktopInfo.isDesktop && desktopInfo.version && (
-                  <span className="text-[11px] text-[var(--text-muted)] font-normal">
-                    v{desktopInfo.version}
-                  </span>
-                )}
-              </div>
-            )}
-          </Link>
-
-          <button
-            onClick={onToggleCollapse}
-            className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors shrink-0"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
-          </button>
-        </div>
-
-        {/* Quick Action: New Issue */}
-        {onOpenNewIssue && (
-          <div className="p-2 shrink-0">
-            <button
-              onClick={onOpenNewIssue}
-              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-white text-black hover:bg-[#E5E5E5] active:bg-[#D4D4D4] transition-colors font-medium text-xs ${
-                collapsed ? 'justify-center px-0' : ''
-              }`}
-              title="New Issue (C)"
-            >
-              <Plus size={14} className="shrink-0" />
-              {!collapsed && <span>New Issue</span>}
-            </button>
-          </div>
-        )}
 
         {/* Primary Navigation Links */}
         <div className="p-2 space-y-0.5 shrink-0">
@@ -168,12 +116,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 href={item.href}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded transition-colors text-xs relative ${
                   isActive
-                    ? 'bg-white/10 text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
-                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
+                    ? 'bg-[var(--accent-subtle)] text-[var(--accent)] font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-[var(--accent)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                 } ${collapsed ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
-                <Icon size={14} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
+                <Icon size={14} className={isActive ? 'text-[var(--accent)] shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
                 {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );

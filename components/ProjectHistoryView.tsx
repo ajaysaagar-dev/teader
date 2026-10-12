@@ -230,9 +230,6 @@ export function ProjectHistoryView({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white tracking-tight">Project History</h2>
-                <span className="text-[11px] font-mono text-white bg-white/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
-                  {projectKey}
-                </span>
               </div>
               <p className="text-xs text-[var(--text-muted)]">
                 Comprehensive audit trail tracking every task, folder, documentation, permission and team action.
