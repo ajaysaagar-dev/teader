@@ -115,8 +115,8 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
     >
       {/* Header with Task Identifier */}
       <div className="px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center justify-between mb-1 text-[11px]">
-        <span className="font-mono font-bold text-[var(--accent-yellow)]">{issue.key}</span>
-        <span className="text-[10px] text-[var(--text-muted)] uppercase font-mono">{issue.status}</span>
+        <span className="font-mono font-bold text-white">{issue.key}</span>
+        <span className="text-[10px] text-[var(--text-muted)] capitalize font-mono">{issue.status.replace('_', ' ')}</span>
       </div>
 
       {/* 1. Edit / Open Task */}
@@ -127,7 +127,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
         }}
         className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left font-medium"
       >
-        <Pencil size={13} className="text-[var(--accent-yellow)]" />
+        <Pencil size={13} className="text-[var(--text-muted)]" />
         <span>Open / Edit Task</span>
       </button>
 

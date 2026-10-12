@@ -394,8 +394,8 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
     );
 
     const finalLabels = creationMode === 'task' 
-      ? (formView === 'advanced' ? labels.split(',').map((l) => l.trim()).filter(Boolean) : ['General'])
-      : ['Folder', 'Group', ...(formView === 'advanced' ? labels.split(',').map((l) => l.trim()).filter(Boolean) : [])];
+      ? (labels.trim() ? labels.split(',').map((l) => l.trim()).filter(Boolean) : ['General'])
+      : ['Folder', 'Group', ...(labels.trim() ? labels.split(',').map((l) => l.trim()).filter(Boolean) : [])];
     const finalSubtasks = creationMode === 'folder' ? folderTasks : [];
 
     const currentUserName = currentUser?.name || currentUser?.username || 'Current User';
@@ -412,11 +412,11 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
       title: finalTitle,
       description: finalDescription,
       status: 'todo',
-      priority: (creationMode === 'task' && formView === 'advanced') ? priority : 'medium',
-      assigneeName: (creationMode === 'task' && formView === 'advanced') ? assigneeName : 'General (Anyone)',
+      priority: creationMode === 'task' ? priority : 'medium',
+      assigneeName: creationMode === 'task' ? assigneeName : 'General (Anyone)',
       reporterName: currentUserName,
-      dueDate: (formView === 'advanced' && dueDate) ? dueDate : undefined,
-      estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
+      dueDate: dueDate ? dueDate : undefined,
+      estimatedHours: creationMode === 'task' ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
       project: targetProjectName,
       projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
       epic: selectedEpic,
@@ -442,11 +442,11 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
           title: finalTitle,
           description: finalDescription,
           status: 'todo',
-          priority: (creationMode === 'task' && formView === 'advanced') ? priority : 'medium',
-          assigneeName: (creationMode === 'task' && formView === 'advanced') ? assigneeName : 'General (Anyone)',
+          priority: creationMode === 'task' ? priority : 'medium',
+          assigneeName: creationMode === 'task' ? assigneeName : 'General (Anyone)',
           reporterName: currentUserName,
-          dueDate: (formView === 'advanced' && dueDate) ? dueDate : undefined,
-          estimatedHours: (creationMode === 'task' && formView === 'advanced') ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
+          dueDate: dueDate ? dueDate : undefined,
+          estimatedHours: creationMode === 'task' ? (Number(estimatedHours) || undefined) : (creationMode === 'folder' ? folderTasks.length * 2 : 2),
           project: targetProjectName,
           projectId: defaultProjectId ? Number(defaultProjectId) : undefined,
           epic: selectedEpic,
@@ -658,159 +658,111 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                       )}
                     </div>
 
-                    {/* @ Tag Related Tasks */}
-                    <div className="space-y-2 pt-1 border-t border-[var(--border-primary)]">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                          <Tag size={12} className="text-white" />
-                          <span>Tagged & Related Tasks (@)</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowTaskPicker((prev) => !prev)}
-                          className="flex items-center gap-1 text-[11px] font-mono text-white hover:text-white bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] px-2 py-0.5 rounded transition-all cursor-pointer"
-                        >
-                          <Plus size={11} />
-                          <span>Tag Task (@)</span>
-                        </button>
+                    {/* Property Chips Row (Basic-First: Priority, Assignee, Due Date, Folder) */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-[var(--border-primary)]">
+                      {/* Priority */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-[var(--text-muted)] mb-1">
+                          Priority
+                        </label>
+                        <CustomDropdown<Priority>
+                          value={priority}
+                          onChange={(val) => setPriority(val)}
+                          options={[
+                            { value: 'critical', label: 'Critical (P0)' },
+                            { value: 'high', label: 'High (P1)' },
+                            { value: 'medium', label: 'Medium (P2)' },
+                            { value: 'low', label: 'Low (P3)' },
+                          ]}
+                          className="w-full"
+                          triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md px-2 py-1 text-xs text-[var(--text-primary)] capitalize hover:border-[var(--border-secondary)]"
+                          size="xs"
+                        />
                       </div>
 
-                      {/* Active Tagged Task Pills */}
-                      {taggedTasks.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {taggedTasks.map((tKey) => {
-                            const matchingTask = existingIssues.find(
-                              (i) => getTaskShortId(i, existingIssues).toUpperCase() === tKey.toUpperCase() || i.key.toUpperCase() === tKey.toUpperCase()
-                            );
-                            return (
-                              <span
-                                key={tKey}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] text-xs font-mono text-white"
-                              >
-                                <span>@{tKey}</span>
-                                {matchingTask && (
-                                  <span className="text-[var(--text-secondary)] truncate max-w-[120px] font-sans">
-                                    {matchingTask.title}
-                                  </span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => setTaggedTasks((prev) => prev.filter((k) => k !== tKey))}
-                                  className="hover:text-white transition-colors ml-0.5 cursor-pointer"
-                                >
-                                  <X size={11} />
-                                </button>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      )}
+                      {/* Assignee */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-[var(--text-muted)] mb-1">
+                          Assignee
+                        </label>
+                        <CustomDropdown<string>
+                          value={assigneeName}
+                          onChange={(val) => setAssigneeName(val)}
+                          options={[
+                            { value: 'General (Anyone)', label: 'General' },
+                            ...joinedMembers.map((m) => ({
+                              value: m.name,
+                              label: m.name,
+                            })),
+                            { value: 'karri', label: 'karri' },
+                            { value: 'jori', label: 'jori' },
+                          ]}
+                          className="w-full"
+                          triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md px-2 py-1 text-xs text-[var(--text-primary)] hover:border-[var(--border-secondary)]"
+                          size="xs"
+                        />
+                      </div>
 
-                      {/* Task Picker Dropdown */}
-                      {showTaskPicker && (
-                        <div className="p-2.5 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl space-y-2 shadow-xl animate-in fade-in">
-                          <input
-                            type="text"
-                            placeholder="Search tasks to tag (e.g. T1, auth, UI)..."
-                            value={taskPickerSearch}
-                            onChange={(e) => setTaskPickerSearch(e.target.value)}
-                            className="w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1 text-xs text-white outline-none"
-                            autoFocus
-                          />
-                          <div className="max-h-36 overflow-y-auto space-y-1 custom-scrollbar">
-                            {existingIssues
-                              .filter((i) => !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
-                              .filter((i) => {
-                                const shortId = getTaskShortId(i, existingIssues);
-                                const q = taskPickerSearch.toLowerCase();
-                                return (
-                                  shortId.toLowerCase().includes(q) ||
-                                  i.title.toLowerCase().includes(q) ||
-                                  i.key.toLowerCase().includes(q)
-                                );
-                              })
-                              .map((task) => {
-                                const shortId = getTaskShortId(task, existingIssues);
-                                const isSelected = taggedTasks.includes(shortId);
-                                return (
-                                  <button
-                                    key={task.id}
-                                    type="button"
-                                    onClick={() => {
-                                      if (isSelected) {
-                                        setTaggedTasks((prev) => prev.filter((k) => k !== shortId));
-                                      } else {
-                                        setTaggedTasks((prev) => [...prev, shortId]);
-                                      }
-                                    }}
-                                    className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs text-left transition-colors cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)]'
-                                        : 'bg-[var(--bg-panel)] hover:bg-[#141414] text-[var(--text-secondary)] border border-[var(--border-primary)]'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 truncate">
-                                      <span className="font-mono font-bold text-white bg-white text-black/10 px-1 py-0.2 rounded text-[10px]">
-                                        {shortId}
-                                      </span>
-                                      <span className="truncate">{task.title}</span>
-                                    </div>
-                                    {isSelected && <Check size={12} className="text-white shrink-0 ml-1" />}
-                                  </button>
-                                );
-                              })}
-                          </div>
+                      {/* Due Date */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[10px] font-mono text-[var(--text-muted)]">
+                            Due Date
+                          </label>
+                          {dueDate && (
+                            <button
+                              type="button"
+                              onClick={() => setDueDate('')}
+                              className="text-[9px] text-[var(--text-muted)] hover:text-white"
+                            >
+                              Clear
+                            </button>
+                          )}
                         </div>
-                      )}
+                        <input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                          className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-md px-2 py-1 text-xs text-[var(--text-primary)] outline-none font-mono cursor-pointer [color-scheme:dark]"
+                        />
+                      </div>
+
+                      {/* Destination Folder */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-[var(--text-muted)] mb-1">
+                          Folder
+                        </label>
+                        <CustomDropdown<string>
+                          value={targetFolderId}
+                          onChange={(selectedId) => {
+                            setTargetFolderId(selectedId);
+                            const found = availableFolderOptions.find((f) => f.id === selectedId);
+                            setTargetFolder(found ? found.name : selectedId);
+                          }}
+                          options={availableFolderOptions.map((f) => ({
+                            value: f.id,
+                            label: `📁 ${f.name}`,
+                          }))}
+                          className="w-full"
+                          triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md px-2 py-1 text-xs text-[var(--text-primary)] hover:border-[var(--border-secondary)]"
+                          size="xs"
+                        />
+                      </div>
                     </div>
 
-                    {/* Advanced Configuration Options (Only shown in Advanced Mode) */}
-                    {formView === 'advanced' && (
-                      <div className="space-y-3.5 pt-2 border-t border-[var(--border-primary)]">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {/* Priority */}
-                          <div>
-                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                              Priority
-                            </label>
-                            <CustomDropdown<Priority>
-                              value={priority}
-                              onChange={(val) => setPriority(val)}
-                              options={[
-                                { value: 'critical', label: 'Critical (P0)' },
-                                { value: 'high', label: 'High (P1)' },
-                                { value: 'medium', label: 'Medium (P2)' },
-                                { value: 'low', label: 'Low (P3)' },
-                              ]}
-                              className="w-full"
-                              triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] capitalize hover:border-[var(--border-secondary)]"
-                              size="sm"
-                            />
-                          </div>
+                    {/* More Options Disclosure */}
+                    <div className="pt-2 border-t border-[var(--border-primary)]">
+                      <button
+                        type="button"
+                        onClick={() => setFormView((prev) => (prev === 'advanced' ? 'quick' : 'advanced'))}
+                        className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-white transition-colors"
+                      >
+                        <Sliders size={12} />
+                        <span>{formView === 'advanced' ? 'Hide additional options' : 'More options (labels, tagging, estimate)...'}</span>
+                      </button>
 
-                          {/* Assignee */}
-                          <div>
-                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                              Assignee
-                            </label>
-                            <CustomDropdown<string>
-                              value={assigneeName}
-                              onChange={(val) => setAssigneeName(val)}
-                              options={[
-                                { value: 'General (Anyone)', label: 'General (Anyone)' },
-                                ...joinedMembers.map((m) => ({
-                                  value: m.name,
-                                  label: m.name,
-                                })),
-                                { value: 'karri', label: 'karri' },
-                                { value: 'jori', label: 'jori' },
-                              ]}
-                              className="w-full"
-                              triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] hover:border-[var(--border-secondary)]"
-                              size="sm"
-                            />
-                          </div>
-
+                      {formView === 'advanced' && (
+                        <div className="mt-3 space-y-3.5 animate-in fade-in">
                           {/* Estimate */}
                           <div>
                             <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
@@ -822,112 +774,132 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                               step="0.5"
                               value={estimatedHours}
                               onChange={(e) => setEstimatedHours(parseFloat(e.target.value) || 0)}
-                              className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono"
+                              className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1.5 text-white outline-none font-mono text-xs"
                             />
                           </div>
 
-                          {/* Custom Date Selector */}
+                          {/* Labels */}
                           <div>
-                            <div className="flex items-center justify-between mb-1">
-                              <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
-                                Due Date
-                              </label>
-                              {dueDate && (
-                                <button
-                                  type="button"
-                                  onClick={() => setDueDate('')}
-                                  className="text-[10px] text-white hover:underline font-mono"
-                                >
-                                  Clear
-                                </button>
-                              )}
+                            <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
+                              Labels (Comma-separated)
+                            </label>
+                            <input
+                              type="text"
+                              value={labels}
+                              onChange={(e) => setLabels(e.target.value)}
+                              placeholder="UI, Frontend, Security..."
+                              className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-1.5 text-white outline-none font-mono text-xs"
+                            />
+                          </div>
+
+                          {/* @ Tag Related Tasks */}
+                          <div className="space-y-2 pt-1 border-t border-[var(--border-primary)]">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
+                                <Tag size={12} className="text-white" />
+                                <span>Tagged & Related Tasks (@)</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowTaskPicker((prev) => !prev)}
+                                className="flex items-center gap-1 text-[11px] font-mono text-white hover:text-white bg-[var(--bg-canvas)] hover:bg-[#141414] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] px-2 py-0.5 rounded transition-all cursor-pointer"
+                              >
+                                <Plus size={11} />
+                                <span>Tag Task (@)</span>
+                              </button>
                             </div>
-                            <div className="space-y-1.5">
-                              <div className="relative flex items-center">
-                                <Calendar size={13} className="absolute left-2.5 text-white pointer-events-none" />
+
+                            {/* Active Tagged Task Pills */}
+                            {taggedTasks.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {taggedTasks.map((tKey) => {
+                                  const matchingTask = existingIssues.find(
+                                    (i) => getTaskShortId(i, existingIssues).toUpperCase() === tKey.toUpperCase() || i.key.toUpperCase() === tKey.toUpperCase()
+                                  );
+                                  return (
+                                    <span
+                                      key={tKey}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--fill-quaternary)] border border-[var(--border-secondary)] text-xs font-mono text-white"
+                                    >
+                                      <span>@{tKey}</span>
+                                      {matchingTask && (
+                                        <span className="text-[var(--text-secondary)] truncate max-w-[120px] font-sans">
+                                          {matchingTask.title}
+                                        </span>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => setTaggedTasks((prev) => prev.filter((k) => k !== tKey))}
+                                        className="hover:text-white transition-colors ml-0.5 cursor-pointer"
+                                      >
+                                        <X size={11} />
+                                      </button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Task Picker Dropdown */}
+                            {showTaskPicker && (
+                              <div className="p-2.5 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-xl space-y-2 shadow-xl animate-in fade-in">
                                 <input
-                                  type="date"
-                                  value={dueDate}
-                                  onChange={(e) => setDueDate(e.target.value)}
-                                  className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg pl-8 pr-2.5 py-1.5 text-white outline-none font-mono text-xs cursor-pointer [color-scheme:dark]"
+                                  type="text"
+                                  placeholder="Search tasks to tag (e.g. T1, auth, UI)..."
+                                  value={taskPickerSearch}
+                                  onChange={(e) => setTaskPickerSearch(e.target.value)}
+                                  className="w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-2.5 py-1 text-xs text-white outline-none"
+                                  autoFocus
                                 />
+                                <div className="max-h-36 overflow-y-auto space-y-1 custom-scrollbar">
+                                  {existingIssues
+                                    .filter((i) => !i.title.startsWith('📁 ') && !i.title.startsWith('[Folder]'))
+                                    .filter((i) => {
+                                      const shortId = getTaskShortId(i, existingIssues);
+                                      const q = taskPickerSearch.toLowerCase();
+                                      return (
+                                        shortId.toLowerCase().includes(q) ||
+                                        i.title.toLowerCase().includes(q) ||
+                                        i.key.toLowerCase().includes(q)
+                                      );
+                                    })
+                                    .map((task) => {
+                                      const shortId = getTaskShortId(task, existingIssues);
+                                      const isSelected = taggedTasks.includes(shortId);
+                                      return (
+                                        <button
+                                          key={task.id}
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              setTaggedTasks((prev) => prev.filter((k) => k !== shortId));
+                                            } else {
+                                              setTaggedTasks((prev) => [...prev, shortId]);
+                                            }
+                                          }}
+                                          className={`w-full flex items-center justify-between px-2 py-1.5 rounded text-xs text-left transition-colors cursor-pointer ${
+                                            isSelected
+                                              ? 'bg-[var(--fill-quaternary)] text-white border border-[var(--border-secondary)]'
+                                              : 'bg-[var(--bg-panel)] hover:bg-[#141414] text-[var(--text-secondary)] border border-[var(--border-primary)]'
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2 truncate">
+                                            <span className="font-mono font-bold text-white bg-[var(--fill-quaternary)] px-1 py-0.2 rounded text-[10px]">
+                                              {shortId}
+                                            </span>
+                                            <span className="truncate">{task.title}</span>
+                                          </div>
+                                          {isSelected && <Check size={12} className="text-white shrink-0 ml-1" />}
+                                        </button>
+                                      );
+                                    })}
+                                </div>
                               </div>
-                              {/* Quick Date Presets */}
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const d = new Date();
-                                    setDueDate(d.toISOString().split('T')[0]);
-                                  }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
-                                >
-                                  Today
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const d = new Date();
-                                    d.setDate(d.getDate() + 1);
-                                    setDueDate(d.toISOString().split('T')[0]);
-                                  }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
-                                >
-                                  Tomorrow
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const d = new Date();
-                                    d.setDate(d.getDate() + 7);
-                                    setDueDate(d.toISOString().split('T')[0]);
-                                  }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-mono bg-[var(--bg-card)] hover:bg-[#282828] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] transition-colors"
-                                >
-                                  +1 Week
-                                </button>
-                              </div>
-                            </div>
+                            )}
                           </div>
                         </div>
-
-                        {/* Destination Folder */}
-                        <div>
-                          <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                            Destination Folder
-                          </label>
-                          <CustomDropdown<string>
-                            value={targetFolderId}
-                            onChange={(selectedId) => {
-                              setTargetFolderId(selectedId);
-                              const found = availableFolderOptions.find((f) => f.id === selectedId);
-                              setTargetFolder(found ? found.name : selectedId);
-                            }}
-                            options={availableFolderOptions.map((f) => ({
-                              value: f.id,
-                              label: `📁 ${f.name} ${f.id !== 'folder_general' && f.createdAt ? `(${new Date(f.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })})` : ''}`,
-                            }))}
-                            className="w-full"
-                            triggerClassName="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-[var(--text-secondary)] font-sans text-xs hover:border-[var(--border-secondary)]"
-                            size="sm"
-                          />
-                        </div>
-
-                        {/* Labels */}
-                        <div>
-                          <label className="block text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider mb-1">
-                            Labels (Comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            value={labels}
-                            onChange={(e) => setLabels(e.target.value)}
-                            placeholder="UI, Frontend, Security..."
-                            className="w-full bg-[var(--bg-canvas)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded-lg px-3 py-1.5 text-white outline-none font-mono"
-                          />
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </>
                 ) : (
                   /* ─── TAB 2: FOLDER CREATION FORM ─────────────────────────── */

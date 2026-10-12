@@ -3,31 +3,52 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  Layers, 
-  FolderKanban, 
-  ChevronDown,
-  FileCode,
+import {
+  LayoutDashboard,
+  CheckSquare,
+  Layers,
+  MessageSquare,
+  BookOpen,
+  FolderKanban,
+  Settings,
+  Keyboard,
   LogOut,
-  ShieldCheck,
-  User,
-  UserCheck
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeft,
+  Plus,
+  Cpu
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Avatar } from './ui/Avatar';
 import { getDesktopInfo } from '@/lib/desktop';
 
+interface ProjectItem {
+  id: string | number;
+  key?: string;
+  name: string;
+}
+
 interface SidebarProps {
+  collapsed: boolean;
+  onToggleCollapse: () => void;
   onOpenNewIssue?: () => void;
   onOpenCommandPalette?: () => void;
   onOpenShortcuts?: () => void;
-  collapsed?: boolean;
+  onOpenSettings?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  collapsed,
+  onToggleCollapse,
+  onOpenNewIssue,
+  onOpenShortcuts,
+  onOpenSettings,
+}) => {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [desktopInfo, setDesktopInfo] = useState<{ isDesktop: boolean; version: string | null }>({
     isDesktop: false,
     version: null,
@@ -35,41 +56,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
 
   useEffect(() => {
     setDesktopInfo(getDesktopInfo());
-  }, []);
-
-  useEffect(() => {
     try {
       const cached = localStorage.getItem('teader_user');
       if (cached) setCurrentUser(JSON.parse(cached));
     } catch {}
 
-    fetch('/api/auth/me')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) {
-          setCurrentUser(data.user);
-          try {
-            localStorage.setItem('teader_user', JSON.stringify(data.user));
-          } catch {}
-        } else if (pathname !== '/login' && pathname !== '/register') {
-          try {
-            localStorage.removeItem('teader_user');
-            localStorage.removeItem('teader_token');
-          } catch {}
-          router.push('/login');
-        }
-      })
+    const handleUserUpdate = (e: any) => {
+      if (e.detail) setCurrentUser(e.detail);
+    };
+    window.addEventListener('teader_user_updated', handleUserUpdate);
+    return () => window.removeEventListener('teader_user_updated', handleUserUpdate);
+  }, []);
 
-      .catch(() => {
-        if (pathname !== '/login' && pathname !== '/register') {
-          try {
-            localStorage.removeItem('teader_user');
-            localStorage.removeItem('teader_token');
-          } catch {}
-          router.push('/login');
-        }
-      });
-  }, [pathname, router]);
+  useEffect(() => {
+    fetch('/api/projects')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (Array.isArray(data)) setProjects(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -86,84 +92,177 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
     }
   };
 
-
-  const pages = [
+  const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/projects', label: 'Projects', icon: FolderKanban },
+    { href: '/my-work', label: 'My Work', icon: CheckSquare },
+    { href: '/initiatives', label: 'Initiatives', icon: Layers },
+    { href: '/conversations', label: 'Conversations', icon: MessageSquare },
+    { href: '/documentation', label: 'Documentation', icon: BookOpen },
   ];
 
-
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-
   return (
-    <>
-      <aside
-        className={`h-full bg-[var(--bg-sidebar)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-all duration-200 ${
-          collapsed ? 'w-16' : 'w-60'
-        } shrink-0 overflow-hidden text-xs font-sans border-r border-[var(--border-primary)]`}
-      >
-        <div className="flex flex-col p-2 space-y-4">
-          {/* Top App Header */}
-          <div className="flex items-center justify-between px-2 py-2 border-b border-[var(--border-primary)]/50">
-            <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)]">
-              {!collapsed && (
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                  <span className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-1">
-                    Teader <ChevronDown size={12} className="text-[var(--text-muted)]" />
+    <aside
+      className={`h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-all duration-150 ${
+        collapsed ? 'w-14' : 'w-60'
+      } shrink-0 overflow-hidden text-xs font-sans border-r border-[var(--border-primary)] z-30`}
+    >
+      {/* Top Header & Links */}
+      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+        {/* Workspace Brand Row */}
+        <div className="h-11 px-3 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 text-white font-semibold tracking-tight hover:opacity-80 transition-opacity min-w-0"
+            title="Teader Workspace"
+          >
+            <div className="w-6 h-6 rounded bg-white text-black font-bold flex items-center justify-center shrink-0 text-xs">
+              T
+            </div>
+            {!collapsed && (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate text-xs font-medium text-white">Teader</span>
+                {desktopInfo.isDesktop && desktopInfo.version && (
+                  <span className="text-[9px] font-mono font-medium px-1 py-0.2 rounded bg-[var(--ramp-2)] text-[var(--text-muted)] border border-[var(--border-primary)]">
+                    v{desktopInfo.version}
                   </span>
-                  {desktopInfo.isDesktop && desktopInfo.version && (
-                    <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded bg-[var(--bg-input)] text-[var(--accent-yellow)] border border-[var(--border-primary)]">
-                      v{desktopInfo.version}
-                    </span>
-                  )}
-                </div>
-              )}
-            </Link>
+                )}
+              </div>
+            )}
+          </Link>
+
+          <button
+            onClick={onToggleCollapse}
+            className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-2)] transition-colors shrink-0"
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
+          </button>
+        </div>
+
+        {/* Quick Action: New Issue */}
+        {onOpenNewIssue && (
+          <div className="p-2 shrink-0">
+            <button
+              onClick={onOpenNewIssue}
+              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-white text-black hover:bg-neutral-200 transition-colors font-medium text-xs shadow-sm ${
+                collapsed ? 'justify-center px-0' : ''
+              }`}
+              title="New Issue (C)"
+            >
+              <Plus size={14} className="shrink-0" />
+              {!collapsed && <span>New Issue</span>}
+            </button>
           </div>
+        )}
 
-
-        {/* Sidebar Navigation Links */}
-        <div className="space-y-1">
-          {pages.map((page) => {
-            const Icon = page.icon;
-            const isActive = pathname === page.href || (pathname === '/' && page.href === '/dashboard');
+        {/* Primary Navigation Links */}
+        <div className="p-2 space-y-0.5 shrink-0">
+          {navLinks.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              pathname === item.href ||
+              (item.href === '/dashboard' && pathname === '/');
             return (
               <Link
-                key={page.href}
-                href={page.href}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                key={item.href}
+                href={item.href}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded transition-colors text-xs ${
                   isActive
-                    ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-primary)]'
-                    : 'hover:bg-[var(--bg-input)] hover:text-[var(--text-primary)]'
-                }`}
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                } ${collapsed ? 'justify-center px-0' : ''}`}
+                title={item.label}
               >
-                <Icon size={16} className={isActive ? 'text-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'} />
-                {!collapsed && <span>{page.label}</span>}
+                <Icon size={14} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
+                {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
           })}
         </div>
+
+        {/* Projects Section */}
+        <div className="px-2 pt-2 pb-1 border-t border-[var(--border-subtle)] flex-1 min-h-0 flex flex-col">
+          <div className="flex items-center justify-between px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider shrink-0">
+            {!collapsed && <span>Projects</span>}
+            <Link
+              href="/projects"
+              className="hover:text-white transition-colors"
+              title="View all projects"
+            >
+              <FolderKanban size={13} />
+            </Link>
+          </div>
+
+          <div className="space-y-0.5 overflow-y-auto flex-1 pr-0.5">
+            {projects.map((proj) => {
+              const projHref = `/projects/${proj.id}`;
+              const isProjActive = pathname.startsWith(projHref);
+              return (
+                <Link
+                  key={proj.id}
+                  href={projHref}
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
+                    isProjActive
+                      ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                  } ${collapsed ? 'justify-center px-0' : ''}`}
+                  title={proj.name}
+                >
+                  <span className="w-4 h-4 rounded bg-[var(--ramp-3)] text-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0">
+                    {proj.key ? proj.key.slice(0, 2) : 'P'}
+                  </span>
+                  {!collapsed && <span className="truncate">{proj.name}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Logged in User Profile Footer */}
-      {currentUser && (
-        <div className="p-3 border-t border-[var(--border-primary)] bg-[var(--bg-main)] space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-7 h-7 rounded-full bg-[var(--accent-yellow)] text-[var(--bg-sidebar)] font-bold text-xs flex items-center justify-center shrink-0">
-                {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
-              </div>
+      {/* Bottom Footer Section */}
+      <div className="p-2 border-t border-[var(--border-primary)] bg-[var(--bg-canvas)] space-y-1 shrink-0">
+        {onOpenSettings && (
+          <button
+            onClick={onOpenSettings}
+            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-xs text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)] transition-colors ${
+              collapsed ? 'justify-center px-0' : ''
+            }`}
+            title="Settings"
+          >
+            <Settings size={14} className="shrink-0 text-[var(--text-muted)]" />
+            {!collapsed && <span>Settings</span>}
+          </button>
+        )}
+
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded text-xs text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)] transition-colors ${
+              collapsed ? 'justify-center px-0' : ''
+            }`}
+            title="Keyboard Shortcuts (?)"
+          >
+            <Keyboard size={14} className="shrink-0 text-[var(--text-muted)]" />
+            {!collapsed && <span>Shortcuts</span>}
+          </button>
+        )}
+
+        {currentUser && (
+          <div
+            className={`flex items-center gap-2 p-1.5 rounded hover:bg-[var(--ramp-1)] transition-colors ${
+              collapsed ? 'justify-center p-1' : 'justify-between'
+            }`}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Avatar user={currentUser} size="xs" />
               {!collapsed && (
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-[var(--text-primary)] truncate">{currentUser.name}</span>
-                  <span className="text-[10px] text-[var(--text-muted)] font-mono capitalize flex items-center gap-1">
-                    {currentUser.role === 'owner' ? (
-                      <ShieldCheck size={10} className="text-[var(--success)]" />
-                    ) : (
-                      <User size={10} className="text-[var(--accent-yellow)]" />
-                    )}
-                    {currentUser.role === 'owner' ? 'Project Owner' : 'Team Member'}
-                  </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-white truncate leading-tight">
+                    {currentUser.name || 'User'}
+                  </p>
+                  <p className="text-[10px] text-[var(--text-muted)] truncate leading-tight">
+                    {currentUser.role || 'Member'}
+                  </p>
                 </div>
               )}
             </div>
@@ -171,17 +270,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
             {!collapsed && (
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-[var(--text-muted)] hover:text-[var(--danger)] hover:bg-[var(--bg-card)] rounded-lg transition-colors"
-                title="Log Out"
+                className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white transition-colors"
+                title="Sign out"
               >
-                <LogOut size={14} />
+                <LogOut size={13} />
               </button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
-    </>
   );
 };
-

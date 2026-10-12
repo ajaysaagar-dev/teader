@@ -89,7 +89,7 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
       {/* Header */}
       <div className="px-2.5 py-1.5 border-b border-[var(--border-primary)] flex items-center justify-between mb-1 text-[11px]">
         <span className="font-bold text-white truncate max-w-[120px]">{project.name}</span>
-        <span className="font-mono text-[var(--accent-yellow)] font-bold text-[10px]">{project.key}</span>
+        <span className="font-mono text-white font-bold text-[10px]">{project.key}</span>
       </div>
 
       {/* 1. Open Board */}
@@ -100,7 +100,7 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
         }}
         className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left font-medium"
       >
-        <FolderKanban size={13} className="text-[var(--accent-yellow)]" />
+        <FolderKanban size={13} className="text-[var(--text-muted)]" />
         <span>Open Project Board</span>
       </button>
 

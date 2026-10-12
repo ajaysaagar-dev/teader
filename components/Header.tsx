@@ -85,15 +85,15 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
           <span className="text-[var(--border-secondary)]">/</span>
           {activeIssue && (
-            <div className="flex items-center gap-1.5 font-mono text-[var(--accent-yellow)] font-semibold bg-[var(--accent-yellow-subtle)] px-2 py-0.5 rounded border border-[var(--accent-yellow-dark)]/40">
+            <div className="flex items-center gap-1.5 font-mono text-white font-semibold bg-[var(--fill-quaternary)] px-2 py-0.5 rounded border border-[var(--border-secondary)]">
               <span>{activeIssue.key}</span>
               <button
                 onClick={onToggleFavorite}
-                className="ml-1 text-[var(--accent-yellow)] hover:scale-110 transition-transform"
+                className="ml-1 text-white hover:scale-110 transition-transform"
               >
                 <Star
                   size={12}
-                  className={activeIssue.isFavorite ? 'fill-[var(--accent-yellow)]' : 'text-[var(--text-muted)]'}
+                  className={activeIssue.isFavorite ? 'fill-white text-white' : 'text-[var(--text-muted)]'}
                 />
               </button>
             </div>
@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onSelectView(v.id as any)}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all ${
                 isActive
-                  ? 'bg-[var(--bg-hover)] text-[var(--accent-yellow)] border border-[var(--border-primary)] shadow-sm'
+                  ? 'bg-[var(--bg-active)] text-white border border-[var(--border-secondary)] shadow-sm'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-input)]'
               }`}
             >

@@ -52,7 +52,9 @@ import {
   Workflow,
   Radio,
   AppWindow,
-  Blocks
+  Blocks,
+  MoreHorizontal,
+  LogOut
 } from 'lucide-react';
 
 
@@ -138,6 +140,10 @@ const ImportTasksModal = dynamic(
   () => import('@/components/ImportTasksModal').then((m) => ({ default: m.ImportTasksModal })),
   { ssr: false }
 );
+const AutomationsModal = dynamic(
+  () => import('@/components/AutomationsModal').then((m) => ({ default: m.AutomationsModal })),
+  { ssr: false }
+);
 
 interface ProjectItem {
   id: string | number;
@@ -217,6 +223,11 @@ export default function SingleProjectPage() {
   const [taskViewMode, setTaskViewMode] = useState<TaskViewMode>(() =>
     parseTaskMode(viewParam, searchParams?.get('mode'))
   );
+  const [docsSubView, setDocsSubView] = useState<'docs' | 'charts'>('docs');
+  const [settingsSubView, setSettingsSubView] = useState<'general' | 'apps' | 'plugins'>('general');
+  const [overviewSubView, setOverviewSubView] = useState<'summary' | 'activity'>('summary');
+  const [isAutomationsModalOpen, setIsAutomationsModalOpen] = useState(false);
+  const [taskFilterSearch, setTaskFilterSearch] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(
     () =>
       searchParams?.get('chat') === 'open' ||
@@ -307,6 +318,42 @@ export default function SingleProjectPage() {
     },
     [projectIdParam]
   );
+
+  // Keyboard shortcut V to cycle task view modes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const isEditable =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        (e.target as HTMLElement)?.isContentEditable;
+      if (isEditable) return;
+
+      if (e.key === '1' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('overview');
+      } else if (e.key === '2' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('tasks');
+      } else if (e.key === '3' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('docs');
+      } else if (e.key === '4' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('settings');
+      } else if (e.key.toLowerCase() === 'v' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (activeTab === 'tasks') {
+          e.preventDefault();
+          const modes: TaskViewMode[] = ['board', 'list', 'structure', 'timeline', 'dependencies'];
+          const nextIdx = (modes.indexOf(taskViewMode) + 1) % modes.length;
+          handleTaskModeSwitch(modes[nextIdx]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTab, taskViewMode, handleTaskModeSwitch, handleTabSwitch]);
 
   useEffect(() => {
     const handleSwitchTabEvent = (e: any) => {
@@ -864,6 +911,16 @@ export default function SingleProjectPage() {
         (i.project || '').toLowerCase() === project.name.toLowerCase()
     );
   }, [issues, project]);
+
+  const filteredProjectIssues = useMemo(() => {
+    if (!taskFilterSearch.trim()) return projectIssues;
+    const q = taskFilterSearch.toLowerCase();
+    return projectIssues.filter(
+      (i) =>
+        (i.title && i.title.toLowerCase().includes(q)) ||
+        (i.key && i.key.toLowerCase().includes(q))
+    );
+  }, [projectIssues, taskFilterSearch]);
 
   const selectedIssue = useMemo(() => {
     return issues.find((i) => i.id === selectedIssueId) || null;
@@ -1756,318 +1813,354 @@ export default function SingleProjectPage() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans">
-        {/* 1. Main Workspace Top Header: Project Identity, Info & Global Actions */}
-        <div className="h-13 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none">
-          {/* Left: Breadcrumbs & Project Identity */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              onClick={() => router.push('/projects')}
-              className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-secondary)] flex items-center gap-1 transition-colors shrink-0"
-              title="Back to Projects"
-            >
-              <ArrowLeft size={13} />
-              <span>Projects</span>
-            </button>
-            <span className="text-[#3E3E3E]">/</span>
-
-            <div className="flex items-center gap-1.5 min-w-0">
-              <FolderKanban size={14} className="text-white shrink-0" />
-              <span className="text-sm font-bold text-[var(--text-secondary)] truncate max-w-[160px] md:max-w-[240px]" title={project?.name}>
-                {project?.name}
-              </span>
-
-              {isCreator && (
-                <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => {
-                      if (project) {
-                        setEditName(project.name);
-                        setEditDesc(project.description || '');
-                        setIsEditProjectModalOpen(true);
-                      }
-                    }}
-                    className="p-1 text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-canvas)] rounded transition-colors"
-                    title="Edit Project Details (Creator Only)"
-                  >
-                    <Pencil size={12} />
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (project) {
-                        setConfirmDeleteName('');
-                        setConfirmDeleteKey('');
-                        setIsDeleteProjectModalOpen(true);
-                      }
-                    }}
-                    className="p-1 text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-canvas)] rounded transition-colors"
-                    title="Delete Project (Creator Only)"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              )}
+        {/* 1. Main Workspace Top Header: 1 Calm Row with Project Identity & More Menu */}
+        <div className="h-11 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none">
+          {/* Left: Project Icon, Name & Key */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-5 h-5 rounded bg-[var(--ramp-2)] text-white font-mono text-[10px] font-bold flex items-center justify-center border border-[var(--border-secondary)] shrink-0">
+              {project?.key ? project.key.slice(0, 2) : 'P'}
             </div>
-
-
-            {/* Compact Copyable Project Key Pill */}
+            <span className="text-xs font-semibold text-white truncate max-w-[200px] md:max-w-[320px]" title={project?.name}>
+              {project?.name}
+            </span>
             {project && (
               <button
                 onClick={handleCopyProjectKey}
-                className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded text-xs font-mono text-white transition-all group shrink-0"
-                title={`Click to copy Project Key: ${project.key}`}
+                className="flex items-center gap-1 px-1.5 py-0.5 bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] border border-[var(--border-primary)] rounded text-[10px] font-mono text-[var(--text-secondary)] hover:text-white transition-colors"
+                title={`Click to copy key: ${project.key}`}
               >
-                <Key size={10} className="text-[var(--text-secondary)] group-hover:text-white" />
-                <span className="font-bold truncate max-w-[90px] md:max-w-[120px]">{project.key}</span>
-                {copiedKey ? (
-                  <Check size={11} className="text-white" />
-                ) : (
-                  <Copy size={10} className="text-[var(--text-secondary)] group-hover:text-white" />
-                )}
+                <Key size={10} />
+                <span>{project.key}</span>
+                {copiedKey && <Check size={10} className="text-white" />}
               </button>
             )}
+            <div className="hidden sm:flex items-center pl-1">
+              <RealtimeBadge />
+            </div>
           </div>
 
-          {/* Right: Creator, Stacked Members, Sync Pulse & Action Buttons */}
+          {/* Right: Creator, Members, and More (⋯) Dropdown Menu */}
           <div className="flex items-center gap-2 text-xs shrink-0">
-            {/* Project Creator Pill */}
-            <div className="hidden lg:flex items-center gap-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-md px-2 py-0.5 text-xs">
-              <Crown size={11} className={isCreator ? 'text-white' : 'text-[var(--text-secondary)]'} />
-              <span className="text-[var(--text-secondary)]">by</span>
-              <span className="font-semibold text-[var(--text-secondary)] truncate max-w-[70px]">{project?.ownerName || 'karri'}</span>
-            </div>
-
-            {/* Stacked Project Members */}
             {joinedMembers.length > 0 && (
-              <div
-                className="hidden md:flex items-center -space-x-1.5 pl-1"
-                title={`Joined Members (${joinedMembers.length}): ${joinedMembers.map((m) => m.name).join(', ')}`}
-              >
+              <div className="hidden md:flex items-center -space-x-1.5 pr-1">
                 {joinedMembers.slice(0, 3).map((m) => (
-                  <div key={m.id} className="ring-1 ring-[#141414] rounded-full">
+                  <div key={m.id} className="ring-1 ring-black rounded-full">
                     <Avatar user={{ id: String(m.id), name: m.name, avatar: m.avatar, email: m.email, role: '' }} size="xs" />
                   </div>
                 ))}
                 {joinedMembers.length > 3 && (
-                  <div className="w-5 h-5 rounded-full bg-[#222222] border border-[#141414] flex items-center justify-center text-[9px] font-mono text-[var(--text-secondary)]">
+                  <div className="w-5 h-5 rounded-full bg-[var(--ramp-2)] border border-[var(--border-primary)] flex items-center justify-center text-[9px] font-mono text-[var(--text-muted)]">
                     +{joinedMembers.length - 3}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Live Sync WebSocket Indicator */}
-            <div className="hidden xl:flex items-center pl-1">
-              <RealtimeBadge />
-            </div>
-
-            {/* Import Tasks Button */}
-            <button
-              onClick={() => setIsImportTasksModalOpen(true)}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-all"
-              title="Import Tasks from CSV / JSON"
-            >
-              <Upload size={12} />
-              <span className="hidden md:inline">Import</span>
-            </button>
-
-            {/* Export Project Button */}
-            <button
-              onClick={handleExportProject}
-              className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-all"
-              title="Export Encrypted Project Dump (.teaderdumpfile)"
-            >
-              <Download size={12} />
-              <span className="hidden md:inline">Export</span>
-            </button>
+            {/* Project More Actions Menu */}
+            <CustomDropdown
+              options={[
+                ...(isCreator ? [{ value: 'edit', label: 'Edit project details', icon: <Pencil size={13} /> }] : []),
+                { value: 'import', label: 'Import tasks (CSV/JSON)...', icon: <Upload size={13} /> },
+                { value: 'export', label: 'Export project data', icon: <Download size={13} /> },
+                { value: 'calendar', label: 'Export calendar (.ics)', icon: <Calendar size={13} /> },
+                { value: 'automations', label: 'Automations...', icon: <Zap size={13} /> },
+                { value: 'copy_key', label: `Copy key (${project?.key})`, icon: <Copy size={13} /> },
+                { value: 'leave', label: 'Leave project', icon: <LogOut size={13} /> },
+                ...(isCreator ? [{ value: 'delete', label: 'Delete project', icon: <Trash2 size={13} /> }] : []),
+              ]}
+              onChange={(action) => {
+                if (action === 'edit' && project) {
+                  setEditName(project.name);
+                  setEditDesc(project.description || '');
+                  setIsEditProjectModalOpen(true);
+                } else if (action === 'import') {
+                  setIsImportTasksModalOpen(true);
+                } else if (action === 'export') {
+                  handleExportProject();
+                } else if (action === 'calendar' && project) {
+                  window.open(`/api/projects/${project.id}/calendar.ics`, '_blank');
+                } else if (action === 'automations') {
+                  setIsAutomationsModalOpen(true);
+                } else if (action === 'copy_key') {
+                  handleCopyProjectKey();
+                } else if (action === 'leave') {
+                  setIsLeaveProjectModalOpen(true);
+                } else if (action === 'delete') {
+                  setConfirmDeleteName('');
+                  setConfirmDeleteKey('');
+                  setIsDeleteProjectModalOpen(true);
+                }
+              }}
+              renderTrigger={() => (
+                <button
+                  className="w-6 h-6 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-2)] border border-transparent hover:border-[var(--border-primary)] transition-colors"
+                  title="Project options"
+                >
+                  <MoreHorizontal size={14} />
+                </button>
+              )}
+              align="right"
+              size="sm"
+            />
           </div>
         </div>
 
-        {/* 2. 4-Page Primary Navigation Bar (Overview | Tasks | Docs | Settings + Chat Drawer Toggle) */}
-        <div className="h-12 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between overflow-x-auto shrink-0 select-none custom-scrollbar gap-3 overscroll-x-contain touch-pan-x">
-          <div className="flex items-center gap-1 bg-[#111111] p-1 rounded-xl border border-[#141414]">
+        {/* 2. 4 Primary Tabs Bar (Overview, Tasks, Docs, Settings) + Sub-views / Tasks Toolbar */}
+        <div className="h-10 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none gap-3">
+          {/* Left: 4 Primary Tabs */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => handleTabSwitch('overview')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
+                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
               }`}
-              title="Project Overview & Analytics"
             >
-              <BarChart3 size={13} />
-              <span>Overview</span>
+              Overview
             </button>
-
             <button
               onClick={() => handleTabSwitch('tasks')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'tasks'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
+                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
               }`}
-              title="Project Tasks & Views (Board, List, Tree, Timeline, Dependencies)"
             >
-              <LayoutGrid size={13} />
               <span>Tasks</span>
-              <span className="text-xs font-mono opacity-80">({projectIssues.length})</span>
+              <span className="font-mono text-[10px] text-[var(--text-muted)]">({projectIssues.length})</span>
             </button>
-
             <button
               onClick={() => handleTabSwitch('docs')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'docs'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
+                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
               }`}
-              title="Project Wiki & Specs"
             >
-              <BookOpen size={13} />
-              <span>Docs</span>
+              Docs
             </button>
-
-            <button
-              onClick={() => handleTabSwitch('charts')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'charts'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project Diagrams, Flowcharts & Architecture Canvases"
-            >
-              <Workflow size={13} />
-              <span>Charts</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('meeting')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'meeting'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : isInMeeting
-                  ? 'text-white bg-[var(--ramp-3)]/10 hover:bg-[var(--ramp-3)]/20'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project Group Audio Meeting & Voice Call"
-            >
-              <Radio
-                size={13}
-                className={
-                  activeTab === 'meeting' || isInMeeting
-                    ? 'text-white animate-pulse'
-                    : ''
-                }
-              />
-              <span>Meeting</span>
-              {isInMeeting && (
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--ramp-3)] animate-ping" />
-              )}
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('chats')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'chats'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project Team Conversations & Chat Channels"
-            >
-              <MessageSquare size={13} />
-              <span>Chats</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('apps')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'apps'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project External Apps, Tools & Web Integrations"
-            >
-              <AppWindow size={13} />
-              <span>Apps</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('history')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'history'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project Activity History & Audit Log"
-            >
-              <Clock size={13} />
-              <span>History</span>
-            </button>
-
             <button
               onClick={() => handleTabSwitch('settings')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
+              className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'settings'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
               }`}
-              title="Project Settings & Danger Zone"
             >
-              <Settings size={13} />
-              <span>Settings</span>
-            </button>
-
-            <button
-              onClick={() => handleTabSwitch('plugins')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'plugins'
-                  ? 'bg-[#222222] text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-              }`}
-              title="Project Plugins & Version Control Tools"
-            >
-              <Blocks size={13} />
-              <span>Plugins</span>
+              Settings
             </button>
           </div>
 
-          {/* Quick Chat Drawer Toggle Button */}
-          <button
-            onClick={() => setIsChatOpen((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-xl border transition-all ${
-              isChatOpen
-                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)] shadow-sm'
-                : 'bg-[#111111] text-[var(--text-muted)] hover:text-[var(--text-secondary)] border-[#141414]'
-            }`}
-            title="Toggle Team Conversation Drawer"
-          >
-            <MessageSquare size={13} className={isChatOpen ? 'text-white' : ''} />
-            <span>Chat</span>
-          </button>
+          {/* Right: Contextual Toolbar depending on activeTab */}
+          {activeTab === 'tasks' && (
+            <div className="flex items-center gap-2">
+              {/* Single View Mode Dropdown Button */}
+              <CustomDropdown<TaskViewMode>
+                value={taskViewMode}
+                onChange={(mode) => handleTaskModeSwitch(mode)}
+                options={[
+                  { value: 'board', label: 'Board', icon: <LayoutGrid size={13} /> },
+                  { value: 'list', label: 'List', icon: <List size={13} /> },
+                  { value: 'structure', label: 'Tree Structure', icon: <FolderTree size={13} /> },
+                  { value: 'timeline', label: 'Timeline & Calendar', icon: <Calendar size={13} /> },
+                  { value: 'dependencies', label: 'Dependency Graph', icon: <GitFork size={13} /> },
+                ]}
+                renderTrigger={(selected) => (
+                  <button
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--ramp-1)] hover:bg-[var(--ramp-2)] border border-[var(--border-primary)] text-xs text-white transition-colors"
+                    title="Change Task View Mode (V)"
+                  >
+                    {selected?.icon}
+                    <span>{selected?.label || 'Board'}</span>
+                  </button>
+                )}
+                size="sm"
+                align="right"
+              />
+
+              {/* Task Search Filter */}
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Filter tasks... (V to cycle)"
+                  value={taskFilterSearch}
+                  onChange={(e) => setTaskFilterSearch(e.target.value)}
+                  className="w-36 sm:w-44 px-2.5 py-1 bg-[var(--ramp-1)] hover:bg-[var(--ramp-2)] focus:bg-[var(--ramp-2)] border border-[var(--border-primary)] focus:border-[var(--border-secondary)] rounded text-xs text-white placeholder-[var(--text-muted)] outline-none transition-colors"
+                />
+                {taskFilterSearch && (
+                  <button
+                    onClick={() => setTaskFilterSearch('')}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-white"
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+
+              {/* + New Task Button */}
+              <button
+                onClick={() => setIsNewIssueModalOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded bg-white text-black hover:bg-neutral-200 text-xs font-medium transition-colors shadow-sm"
+              >
+                <Plus size={13} />
+                <span>New task</span>
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'overview' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setOverviewSubView('summary')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  overviewSubView === 'summary'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Summary
+              </button>
+              <button
+                onClick={() => setOverviewSubView('activity')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  overviewSubView === 'activity'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Activity
+              </button>
+              <button
+                onClick={() => handleTabSwitch('meeting')}
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+              >
+                <Radio size={11} />
+                <span>Meeting</span>
+              </button>
+              <button
+                onClick={() => setIsChatOpen((prev) => !prev)}
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+              >
+                <MessageSquare size={11} />
+                <span>Chat</span>
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'docs' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setDocsSubView('docs')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  docsSubView === 'docs'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Docs
+              </button>
+              <button
+                onClick={() => setDocsSubView('charts')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  docsSubView === 'charts'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Charts
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSettingsSubView('general')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  settingsSubView === 'general'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                General
+              </button>
+              <button
+                onClick={() => setSettingsSubView('apps')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  settingsSubView === 'apps'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Apps & Integrations
+              </button>
+              <button
+                onClick={() => setSettingsSubView('plugins')}
+                className={`px-2.5 py-0.5 text-xs rounded transition-colors ${
+                  settingsSubView === 'plugins'
+                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-primary)]'
+                    : 'text-[var(--text-muted)] hover:text-white'
+                }`}
+              >
+                Plugins
+              </button>
+              <button
+                onClick={() => setIsAutomationsModalOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-[var(--ramp-1)] transition-colors"
+              >
+                <Zap size={11} />
+                <span>Automations</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Workspace Content Area */}
         <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden relative">
           <ErrorBoundary>
             {activeTab === 'overview' ? (
-              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-                <ProjectOverviewView
-                  issues={projectIssues}
-                  project={project}
-                  members={joinedMembers}
-                  onNavigateTab={(tab, mode) =>
-                    handleTabSwitch(tab, mode === 'tree' ? 'structure' : (mode as TaskViewMode))
-                  }
-                  onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-                />
-              </div>
+              overviewSubView === 'activity' ? (
+                <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                  <ProjectHistoryView
+                    projectId={project?.id || projectIdParam || 1}
+                    projectKey={project?.key || ''}
+                    canEditHistory={isCreator || Boolean(userPermissions?.can_edit_history)}
+                    canDeleteHistory={isCreator || Boolean(userPermissions?.can_delete_history)}
+                    onNavigateTask={(taskId) => handleSelectIssue(taskId)}
+                  />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                  <ProjectOverviewView
+                    issues={projectIssues}
+                    project={project}
+                    members={joinedMembers}
+                    onNavigateTab={(tab, mode) =>
+                      handleTabSwitch(tab, mode === 'tree' ? 'structure' : (mode as TaskViewMode))
+                    }
+                    onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+                  />
+                </div>
+              )
             ) : activeTab === 'docs' ? (
-              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-                <ProjectDocsView
-                  projectId={project?.id || projectIdParam || 1}
-                  projectName={project?.name}
-                  projectKey={project?.key}
-                />
-              </div>
+              docsSubView === 'charts' ? (
+                <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
+                  <ProjectChartsView
+                    projectId={project?.id || projectIdParam || 1}
+                    projectName={project?.name}
+                    projectKey={project?.key}
+                  />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                  <ProjectDocsView
+                    projectId={project?.id || projectIdParam || 1}
+                    projectName={project?.name}
+                    projectKey={project?.key}
+                  />
+                </div>
+              )
             ) : activeTab === 'charts' ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
                 <ProjectChartsView
@@ -2077,7 +2170,13 @@ export default function SingleProjectPage() {
                 />
               </div>
             ) : activeTab === 'meeting' ? (
-              null
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectMeetingView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name || ''}
+                  currentUser={currentUser}
+                />
+              </div>
             ) : activeTab === 'chats' ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
                 <ProjectConversationView
@@ -2095,125 +2194,65 @@ export default function SingleProjectPage() {
                 />
               </div>
             ) : activeTab === 'history' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectHistoryView
-                projectId={project?.id || projectIdParam || 1}
-                projectKey={project?.key || ''}
-                canEditHistory={isCreator || Boolean(userPermissions?.can_edit_history)}
-                canDeleteHistory={isCreator || Boolean(userPermissions?.can_delete_history)}
-                onNavigateTask={(taskId) => handleSelectIssue(taskId)}
-              />
-            </div>
-          ) : activeTab === 'settings' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectSettingsView
-                project={project}
-                members={joinedMembers}
-                isCreator={isCreator}
-                currentUser={currentUser}
-                onOpenDeleteModal={() => {
-                  setConfirmDeleteName('');
-                  setConfirmDeleteKey('');
-                  setIsDeleteProjectModalOpen(true);
-                }}
-                onOpenLeaveModal={() => {
-                  setIsLeaveProjectModalOpen(true);
-                }}
-                onOpenEditModal={() => {
-                  if (project) {
-                    setEditName(project.name);
-                    setEditDesc(project.description || '');
-                    setIsEditProjectModalOpen(true);
-                  }
-                }}
-                onMemberKicked={(userId) => setJoinedMembers((members) => members.filter((member) => String(member.id) !== String(userId)))}
-                onMembersUpdated={setJoinedMembers}
-              />
-            </div>
-          ) : activeTab === 'plugins' ? (
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              <ProjectPluginsView
-                projectId={project?.id || projectIdParam || 1}
-                projectName={project?.name}
-                projectKey={project?.key}
-              />
-            </div>
-          ) : (
-            /* Tasks Page (5 View Modes: Structure | Board | Timeline | List | Dependencies) */
-            <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-              {/* Secondary Task View Mode Segmented Switcher (Structure | Board | Timeline | List | Dependencies) */}
-              <div className="px-4 py-2 border-b border-[#141414] bg-[var(--bg-panel)] flex items-center justify-between gap-3 shrink-0">
-                <div className="flex items-center bg-[#141414] p-0.5 rounded-lg border border-[var(--border-primary)] text-sm">
-                  <button
-                    onClick={() => handleTaskModeSwitch('structure')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'structure'
-                        ? 'bg-[#222222] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    title="Hierarchical Project Structure & Tree Explorer"
-                  >
-                    <FolderTree size={12} />
-                    <span>Structure</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTaskModeSwitch('board')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'board'
-                        ? 'bg-[#222222] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    title="Kanban Board View"
-                  >
-                    <LayoutGrid size={12} />
-                    <span>Board</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTaskModeSwitch('timeline')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'timeline'
-                        ? 'bg-[#222222] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    title="Timeline & Calendar View"
-                  >
-                    <Calendar size={12} />
-                    <span>Timeline</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTaskModeSwitch('list')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'list'
-                        ? 'bg-[#222222] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    title="Compact List View"
-                  >
-                    <List size={12} />
-                    <span>List</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleTaskModeSwitch('dependencies')}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md font-semibold transition-all ${
-                      taskViewMode === 'dependencies'
-                        ? 'bg-[#222222] text-white shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
-                    }`}
-                    title="DAG Dependency Graph View"
-                  >
-                    <GitFork size={12} />
-                    <span>Dependencies</span>
-                  </button>
-                </div>
-
-                <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--text-secondary)] font-mono">
-                  <span>{projectIssues.length} tasks</span>
-                </div>
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectHistoryView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectKey={project?.key || ''}
+                  canEditHistory={isCreator || Boolean(userPermissions?.can_edit_history)}
+                  canDeleteHistory={isCreator || Boolean(userPermissions?.can_delete_history)}
+                  onNavigateTask={(taskId) => handleSelectIssue(taskId)}
+                />
               </div>
+            ) : activeTab === 'settings' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                {settingsSubView === 'apps' ? (
+                  <ProjectAppsView
+                    projectId={project?.id || projectIdParam || 1}
+                    projectName={project?.name}
+                  />
+                ) : settingsSubView === 'plugins' ? (
+                  <ProjectPluginsView
+                    projectId={project?.id || projectIdParam || 1}
+                    projectName={project?.name}
+                    projectKey={project?.key}
+                  />
+                ) : (
+                  <ProjectSettingsView
+                    project={project}
+                    members={joinedMembers}
+                    isCreator={isCreator}
+                    currentUser={currentUser}
+                    onOpenDeleteModal={() => {
+                      setConfirmDeleteName('');
+                      setConfirmDeleteKey('');
+                      setIsDeleteProjectModalOpen(true);
+                    }}
+                    onOpenLeaveModal={() => {
+                      setIsLeaveProjectModalOpen(true);
+                    }}
+                    onOpenEditModal={() => {
+                      if (project) {
+                        setEditName(project.name);
+                        setEditDesc(project.description || '');
+                        setIsEditProjectModalOpen(true);
+                      }
+                    }}
+                    onMemberKicked={(userId) => setJoinedMembers((members) => members.filter((member) => String(member.id) !== String(userId)))}
+                    onMembersUpdated={setJoinedMembers}
+                  />
+                )}
+              </div>
+            ) : activeTab === 'plugins' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
+                <ProjectPluginsView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
+                  projectKey={project?.key}
+                />
+              </div>
+            ) : (
+              /* Tasks Page */
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
 
               {/* Render Active Task View Component */}
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
@@ -2418,6 +2457,16 @@ export default function SingleProjectPage() {
             projectId={project.id}
             projectName={project.name}
             onImportSuccess={(newlyImported) => setIssues((prev) => [...newlyImported, ...prev])}
+          />
+        )}
+
+        {/* Automations Modal */}
+        {project && (
+          <AutomationsModal
+            isOpen={isAutomationsModalOpen}
+            onClose={() => setIsAutomationsModalOpen(false)}
+            projectId={project.id}
+            projectName={project.name}
           />
         )}
 

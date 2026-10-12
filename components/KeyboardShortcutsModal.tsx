@@ -20,18 +20,19 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       title: 'Global Navigation',
       shortcuts: [
         { keys: ['⌘', 'K'], label: 'Open Command Palette & Fuzzy Search' },
-        { keys: ['C'], label: 'Create New Issue' },
+        { keys: ['C'], label: 'Create New Task' },
         { keys: ['?'], label: 'Open Keyboard Shortcuts Help' },
         { keys: ['Esc'], label: 'Close Active Modal / Panel' },
       ],
     },
     {
-      title: 'Views & Issue Navigation',
+      title: 'Project Navigation & Views',
       shortcuts: [
-        { keys: ['1'], label: 'Switch to Issue Details View' },
-        { keys: ['2'], label: 'Switch to Kanban Board View' },
-        { keys: ['3'], label: 'Switch to Timeline / Gantt View' },
-        { keys: ['4'], label: 'Switch to Velocity Pulse & Metrics' },
+        { keys: ['1'], label: 'Switch to Overview' },
+        { keys: ['2'], label: 'Switch to Tasks' },
+        { keys: ['3'], label: 'Switch to Docs' },
+        { keys: ['4'], label: 'Switch to Settings' },
+        { keys: ['V'], label: 'Cycle Task Views (Board → List → Structure → Timeline → Dependencies)' },
       ],
     },
   ];

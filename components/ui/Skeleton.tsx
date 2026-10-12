@@ -114,7 +114,7 @@ import { RandomLoadingText } from './RandomLoadingText';
 export function Spinner({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
     <div
-      className={`rounded-full border-2 border-[var(--accent-yellow)] border-t-transparent animate-spin ${className}`}
+      className={`rounded-full border-2 border-white border-t-transparent animate-spin ${className}`}
       style={{ width: size, height: size }}
       aria-label="Loading…"
     />

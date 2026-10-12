@@ -39,7 +39,7 @@ describe('Monochrome UI Guard', () => {
 
     for (const file of allFiles) {
       const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
-      if ((allowlist.allowlistFiles || []).includes(rel)) continue;
+      if (((allowlist.allowlistFiles || []) as string[]).includes(rel)) continue;
 
       const content = fs.readFileSync(file, 'utf8');
       let m: RegExpExecArray | null;
@@ -72,7 +72,7 @@ describe('Monochrome UI Guard', () => {
 
     for (const file of allFiles) {
       const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
-      if ((allowlist.allowlistFiles || []).includes(rel)) continue;
+      if (((allowlist.allowlistFiles || []) as string[]).includes(rel)) continue;
 
       const content = fs.readFileSync(file, 'utf8');
       let m: RegExpExecArray | null;

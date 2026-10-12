@@ -16,8 +16,11 @@ import {
   Clock,
   Play,
   RotateCcw,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
+import { StatusIcon } from '@/components/ui/StatusIcon';
+import { PriorityIcon } from '@/components/ui/PriorityIcon';
 import { getTaskShortId, formatAddedTiming, formatExactDateTime } from '@/lib/task-id';
 
 interface CompactListViewProps {
@@ -218,12 +221,12 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
       {/* Main List Table */}
       <div className="flex-1 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl overflow-hidden flex flex-col min-h-0 shadow-lg">
         {/* Table Header */}
-        <div className="px-4 py-2 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] grid grid-cols-12 text-[10px] font-mono text-[var(--text-muted)] uppercase tracking-wider items-center">
-          <div className="col-span-1">Key</div>
+        <div className="px-4 py-2 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] grid grid-cols-12 text-xs text-[var(--text-muted)] font-medium items-center">
+          <div className="col-span-1 font-mono">Key</div>
           <div className="col-span-4">Title</div>
           <div className="col-span-2">Status</div>
           <div className="col-span-1">Priority</div>
-          <div className="col-span-2">Added</div>
+          <div className="col-span-2">Updated</div>
           <div className="col-span-2 text-right">Assignee</div>
         </div>
 
@@ -303,92 +306,71 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                       issue,
                     });
                   }}
-                  className={`relative px-4 py-2.5 grid grid-cols-12 items-center hover:bg-[var(--bg-canvas)] cursor-grab active:cursor-grabbing transition-all text-xs group select-none ${
+                  className={`relative px-4 h-10 min-h-[40px] grid grid-cols-12 items-center hover:bg-[var(--bg-hover)] cursor-pointer transition-colors text-xs group select-none ${
                     isDragging ? 'opacity-30 bg-[var(--bg-canvas)]' : ''
                   }`}
                 >
                   {/* Top Drop Indicator Line */}
                   {isOverThis && dropPosition === 'before' && (
-                    <div className="absolute -top-0.5 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
+                    <div className="absolute -top-0.5 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
                   )}
 
                   {/* Bottom Drop Indicator Line */}
                   {isOverThis && dropPosition === 'after' && (
-                    <div className="absolute -bottom-0.5 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
+                    <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
                   )}
 
                   {/* Key (T1, T2... Tn) */}
-                  <div className="col-span-1 flex items-center gap-1.5 font-mono font-bold text-white text-[11px]">
+                  <div className="col-span-1 flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
                     <GripVertical size={12} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
-                    <span className="bg-white text-black/10 px-1.5 py-0.5 rounded border border-[var(--border-secondary)]">
-                      {getTaskShortId(issue, issues)}
-                    </span>
+                    <span>{getTaskShortId(issue, issues)}</span>
                   </div>
 
-                  {/* Title & Folder Tag & Related Task Pills */}
+                  {/* Title & Folder Tag */}
                   <div className="col-span-4 flex items-center gap-2 pr-3 truncate">
                     {(issue.epic || issue.title.startsWith('📁 ')) && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-mono text-white bg-white text-black/10 px-1.5 py-0.5 rounded border border-[var(--border-secondary)] shrink-0">
-                        <Folder size={10} className="shrink-0" />
-                        <span className="truncate max-w-[80px]">{issue.epic || issue.title.replace(/^📁\s*/, '')}</span>
+                      <span className="text-xs text-[var(--text-muted)] truncate shrink-0">
+                        📁 {issue.epic || issue.title.replace(/^📁\s*/, '')}
                       </span>
                     )}
-                    <span className="text-[var(--text-secondary)] group-hover:text-white font-medium truncate">
+                    <span className="text-[var(--text-primary)] group-hover:text-white font-medium truncate text-xs">
                       {issue.title}
                     </span>
-                    {issue.tags && issue.tags.length > 0 && (
-                      <div className="hidden md:flex items-center gap-1 shrink-0 ml-1">
-                        {issue.tags.slice(0, 2).map((t, idx) => (
-                          <span key={idx} className="text-[9px] font-mono text-white bg-[var(--ramp-3)]/10 border border-[var(--border-secondary)] px-1 py-0.2 rounded">
-                            @{t.replace(/^@/, '')}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Status */}
-                  <div className="col-span-2 flex items-center">
-                    <span
-                      className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full capitalize ${
-                        issue.status === 'done'
-                          ? 'bg-[var(--ramp-3)]/15 text-white border border-[var(--border-secondary)]'
-                          : issue.status === 'in_progress'
-                          ? 'bg-white text-black/15 text-white border border-[var(--border-secondary)]'
-                          : issue.status === 'needs_review'
-                          ? 'bg-[#FFFFFF]/15 text-white border border-[#FFFFFF]/30'
-                          : 'bg-[#222222] text-[var(--text-muted)]'
-                      }`}
-                    >
-                      {issue.status.replace('_', ' ')}
-                    </span>
+                  {/* Status Icon & Label */}
+                  <div className="col-span-2 flex items-center gap-1.5 text-xs text-[var(--text-secondary)]">
+                    <StatusIcon status={issue.status} size={14} className="shrink-0" />
+                    <span className="capitalize">{issue.status.replace('_', ' ')}</span>
                   </div>
 
-                  {/* Priority */}
-                  <div className="col-span-1">
-                    <span
-                      className={`text-[10px] font-mono uppercase font-semibold ${
-                        issue.priority === 'critical'
-                          ? 'text-[#FFFFFF]'
-                          : issue.priority === 'high'
-                          ? 'text-white'
-                          : 'text-[var(--text-muted)]'
-                      }`}
-                    >
-                      {issue.priority}
-                    </span>
+                  {/* Priority Icon */}
+                  <div className="col-span-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                    <PriorityIcon priority={issue.priority} size={14} className="shrink-0" />
                   </div>
 
-                  {/* Added Timing */}
-                  <div className="col-span-2 flex items-center gap-1 font-mono text-[11px] text-[var(--text-muted)]" title={formatExactDateTime(issue.createdAt)}>
-                    <Clock size={11} className="text-white shrink-0" />
+                  {/* Added / Updated Timing */}
+                  <div className="col-span-2 flex items-center gap-1 font-mono text-xs text-[var(--text-muted)]" title={formatExactDateTime(issue.createdAt)}>
+                    <Clock size={11} className="text-[var(--text-muted)] shrink-0" />
                     <span>{formatAddedTiming(issue.createdAt)}</span>
                   </div>
 
-                  {/* Assignee */}
+                  {/* Assignee & Hover Actions */}
                   <div className="col-span-2 flex items-center justify-end gap-2">
+                    {canDelete && onDeleteIssue && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteIssue(issue.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-muted)] hover:text-white rounded transition-opacity"
+                        title="Delete task"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                     <Avatar user={assigneeUser} size="xs" />
-                    <span className="text-[11px] text-[var(--text-muted)] font-mono truncate max-w-[80px]">
+                    <span className="text-xs text-[var(--text-muted)] font-mono truncate max-w-[80px]">
                       {assigneeUser.name}
                     </span>
                     <ChevronRight size={13} className="text-[var(--text-muted)] group-hover:text-white shrink-0" />
