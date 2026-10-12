@@ -95,7 +95,7 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
       {/* ── Header Bar ─────────────────────────────────────────── */}
       <div className="h-14 px-6 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 bg-[var(--bg-panel)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
+          <div className="w-8 h-8 rounded-lg bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Blocks size={16} />
           </div>
           <div>
@@ -194,7 +194,7 @@ export function ProjectPluginsView({ projectId, projectName }: ProjectPluginsVie
 
               <h3 className="text-lg font-bold text-white mb-1">{selectedPlugin.name}</h3>
               {selectedPlugin.badge && (
-                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white text-black/10 text-white border border-[var(--border-secondary)] font-medium mb-3">
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-white/10 text-white border border-[var(--border-secondary)] font-medium mb-3">
                   {selectedPlugin.badge}
                 </span>
               )}

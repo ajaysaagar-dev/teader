@@ -210,7 +210,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
 
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all"
           >
             <Plus size={13} />
             <span>New Task</span>

@@ -84,7 +84,7 @@ export const TaskMentionPopover: React.FC<TaskMentionPopoverProps> = ({
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="font-mono font-bold text-white bg-white text-black/10 px-1.5 py-0.2 rounded text-[10px] border border-[var(--border-secondary)] shrink-0">
+                <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.2 rounded text-[10px] border border-[var(--border-secondary)] shrink-0">
                   {item.shortId}
                 </span>
                 <span className="truncate text-xs">{item.title}</span>

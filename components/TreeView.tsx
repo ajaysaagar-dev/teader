@@ -66,7 +66,7 @@ interface TreeViewProps {
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string; icon: any }> = {
   todo: { label: 'Todo', bg: 'bg-[#666666]/10', text: 'text-[var(--text-muted)]', border: 'border-[#666666]/30', icon: Circle },
-  in_progress: { label: 'In Progress', bg: 'bg-white text-black/10', text: 'text-white', border: 'border-[var(--border-secondary)]', icon: Clock },
+  in_progress: { label: 'In Progress', bg: 'bg-white/10', text: 'text-white', border: 'border-[var(--border-secondary)]', icon: Clock },
   needs_review: { label: 'Needs Review', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]', icon: AlertCircle },
   done: { label: 'Done', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]', icon: CheckCircle2 },
   blocked: { label: 'Blocked', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]', icon: AlertCircle },
@@ -680,7 +680,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               </button>
               <button
                 onClick={onOpenNewIssue}
-                className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs rounded shadow-sm transition-all shrink-0"
+                className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs rounded shadow-sm transition-all shrink-0"
               >
                 <Plus size={13} />
                 <span>New Task</span>
@@ -696,7 +696,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
           
           {/* ROOT NODE: Project Card */}
           <div className="relative flex items-center gap-3 p-3 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl shadow-lg group">
-            <div className="w-8 h-8 rounded-lg bg-white text-black/15 border border-[var(--border-secondary)] flex items-center justify-center text-white shadow-inner shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-white/15 border border-[var(--border-secondary)] flex items-center justify-center text-white shadow-inner shrink-0">
               <Layers size={18} />
             </div>
 
@@ -749,14 +749,14 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               const isAllDone = epicTotal > 0 && epicDone === epicTotal;
 
               let folderCardClasses = 'bg-[var(--bg-canvas)] hover:bg-[var(--bg-card)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)]';
-              let folderIconClasses = 'bg-white text-black/10 text-white';
+              let folderIconClasses = 'bg-white/10 text-white';
 
               if (dragOverEpic === folder.id) {
-                folderCardClasses = 'bg-white text-black/20 border-2 border-dashed border-[var(--border-secondary)] scale-[1.01]';
+                folderCardClasses = 'bg-white/20 border-2 border-dashed border-[var(--border-secondary)] scale-[1.01]';
               } else if (isNoneDone) {
                 // Highlight with Amber / Warm Orange alert when all tasks in folder are not done yet
                 folderCardClasses = 'bg-[#121212] hover:bg-[#171717] border border-[#FFFFFF]/40 shadow-[inset_3px_0_0_#FFFFFF]';
-                folderIconClasses = 'bg-white text-black/15 text-white';
+                folderIconClasses = 'bg-white/15 text-white';
               } else if (isPartiallyDone) {
                 // Highlight with Electric Cyan / Sky Blue progress when some tasks are completed but not all
                 folderCardClasses = 'bg-[#141414] hover:bg-[#1A1A1A] border border-[#FFFFFF]/45 shadow-[inset_3px_0_0_#FFFFFF]';
@@ -770,7 +770,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
               return (
                 <div key={folder.id} className="relative group/epic">
                   {/* Branch Connector Guide */}
-                  <div className="absolute -left-4 sm:-left-6 top-4 w-4 sm:w-6 h-[2px] bg-[#222222] group-hover/epic:bg-white text-black/60 transition-colors" />
+                  <div className="absolute -left-4 sm:-left-6 top-4 w-4 sm:w-6 h-[2px] bg-[#222222] group-hover/epic:bg-white/60 transition-colors" />
 
                   {/* Epic / Folder Node Banner */}
                   <div
@@ -870,7 +870,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                           )}
 
                           {isGeneralFolder ? (
-                            <span className="text-[9px] font-mono text-white bg-white text-black/10 border border-[var(--border-secondary)] px-1.5 py-0.2 rounded font-bold shrink-0">
+                            <span className="text-[9px] font-mono text-white bg-white/10 border border-[var(--border-secondary)] px-1.5 py-0.2 rounded font-bold shrink-0">
                               DEFAULT
                             </span>
                           ) : (
@@ -892,7 +892,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       {/* Folder Tasks Status / Completion Highlight Badge */}
                       {isNoneDone ? (
                         <span
-                          className="text-[10px] font-mono font-bold text-white bg-white text-black/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/35 flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0"
+                          className="text-[10px] font-mono font-bold text-white bg-white/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/35 flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0"
                           title="All tasks in this folder are not done yet (0% completed)"
                         >
                           <Circle size={10} className="text-white" />
@@ -990,7 +990,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               setInlineMentionState((prev) => ({ ...prev, active: false }));
                             }
                           }}
-                          className="px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs rounded transition-colors cursor-pointer"
+                          className="px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs rounded transition-colors cursor-pointer"
                         >
                           Add Task
                         </button>
@@ -1072,7 +1072,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                             }}
                             className={`py-3 px-3 border border-dashed rounded-lg text-center text-xs font-mono transition-all ${
                               dragOverEpic === folder.id
-                                ? 'border-[var(--border-secondary)] bg-white text-black/10 text-white'
+                                ? 'border-[var(--border-secondary)] bg-white/10 text-white'
                                 : 'border-[var(--border-primary)] text-[var(--text-muted)]'
                             }`}
                           >
@@ -1104,7 +1104,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                               )}
 
                               {/* Branch Connector Guide */}
-                              <div className="absolute -left-5 sm:-left-7 top-4 w-5 sm:w-7 h-[2px] bg-[#222222] group-hover/task:bg-white text-black/70 transition-colors" />
+                              <div className="absolute -left-5 sm:-left-7 top-4 w-5 sm:w-7 h-[2px] bg-[#222222] group-hover/task:bg-white/70 transition-colors" />
 
                               {/* Task Card Leaf Node */}
                               <div
@@ -1160,7 +1160,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                 }}
                                 className={`bg-[var(--bg-panel)] border transition-all shadow-sm rounded-lg p-2.5 select-none cursor-pointer ${
                                   isHoveredBefore || isHoveredAfter
-                                    ? 'border-[var(--border-secondary)] bg-white text-black/10'
+                                    ? 'border-[var(--border-secondary)] bg-white/10'
                                     : 'border-[var(--border-primary)] hover:border-[var(--border-secondary)] hover:bg-[#1F1F1F]'
                                 }`}
                                 onClick={() => {
@@ -1181,7 +1181,7 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                                         e.stopPropagation();
                                         onSelectIssue(issue.id);
                                       }}
-                                      className="text-xs font-mono font-bold text-white hover:underline shrink-0 bg-white text-black/10 px-1.5 py-0.5 rounded border border-[var(--border-secondary)]"
+                                      className="text-xs font-mono font-bold text-white hover:underline shrink-0 bg-white/10 px-1.5 py-0.5 rounded border border-[var(--border-secondary)]"
                                       title={`Inspect Task Details (${issue.key})`}
                                     >
                                       {getTaskShortId(issue, issues)}
@@ -1421,13 +1421,13 @@ export const TreeView: React.FC<TreeViewProps> = React.memo(({
                       }}
                       className="flex items-start gap-3 p-3 bg-[var(--bg-panel)] hover:bg-[var(--bg-card)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-xl transition-all text-left group cursor-pointer"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-white text-black/10 text-white flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
+                      <div className="w-7 h-7 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-105 transition-transform">
                         <FolderOpen size={15} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-bold text-white group-hover:text-white transition-colors flex items-center gap-1.5 flex-wrap">
                           <span>Delete Folder Only</span>
-                          <span className="text-[10px] font-mono bg-white text-black/15 text-white px-1.5 py-0.2 rounded font-bold">Recommended</span>
+                          <span className="text-[10px] font-mono bg-white/15 text-white px-1.5 py-0.2 rounded font-bold">Recommended</span>
                         </div>
                         <p className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">
                           Keep all {folderToDelete.taskCount} task(s) and move them safely into the <strong className="text-[var(--text-secondary)]">General</strong> folder.

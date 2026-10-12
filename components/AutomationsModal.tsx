@@ -116,7 +116,7 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-primary)] bg-[var(--bg-panel)]">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-white text-black/15 text-white border border-[var(--border-secondary)] flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-white/15 text-white border border-[var(--border-secondary)] flex items-center justify-center">
                 <Zap size={15} />
               </div>
               <div>
@@ -128,7 +128,7 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsAddingRule((prev) => !prev)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] rounded-lg text-xs font-bold transition-all shadow-sm"
               >
                 <Plus size={13} />
                 <span>New Rule</span>
@@ -206,7 +206,7 @@ export const AutomationsModal: React.FC<AutomationsModalProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-2 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs rounded-lg transition-all"
+                  className="w-full py-2 bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs rounded-lg transition-all"
                 >
                   Save Automation Rule
                 </button>

@@ -1647,7 +1647,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   }, [docs, customFolders, searchQuery]);
 
   return (
-    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white text-black/30 selection:text-white overflow-hidden overscroll-none">
+    <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white/30 selection:text-white overflow-hidden overscroll-none">
       {/* ─── Main Two-Column Layout ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* ─── Left Sidebar: Folders & Markdown Files (Drag and Drop) ─────── */}
@@ -1674,7 +1674,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     setActiveFolderForCreation(DEFAULT_FOLDER);
                     setIsCreatingNew(true);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs transition-transform hover:scale-105 shadow-sm"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs transition-transform hover:scale-105 shadow-sm"
                   title="Create New Document in Start folder"
                 >
                   <Plus size={13} />
@@ -1714,7 +1714,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 />
                 <button
                   type="submit"
-                  className="px-2.5 py-1.5 bg-white text-black text-[#000000] font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
+                  className="px-2.5 py-1.5 bg-white text-black font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
                 >
                   Add
                 </button>
@@ -1762,7 +1762,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 />
                 <button
                   type="submit"
-                  className="px-2.5 py-1.5 bg-white text-black text-[#000000] font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
+                  className="px-2.5 py-1.5 bg-white text-black font-bold rounded-lg text-xs hover:bg-[#FFFFFF]"
                 >
                   Create
                 </button>
@@ -1833,7 +1833,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     isFolderBeingDragged ? 'opacity-40 border-dashed border-[var(--border-secondary)]' : ''
                   } ${
                     isDragOverFolderBox
-                      ? 'border-[var(--border-secondary)] bg-white text-black/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
+                      ? 'border-[var(--border-secondary)] bg-white/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
                       : 'border-[#141414] bg-[var(--bg-panel)]/50'
                   }`}
                 >
@@ -1925,7 +1925,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       {items.length === 0 ? (
                         <div
                           className={`p-3 text-center border border-dashed rounded-lg text-[11px] font-mono transition-all ${
-                            isDragOverFolderBox ? 'border-[var(--border-secondary)] text-white bg-white text-black/5' : 'border-[var(--border-primary)] text-[var(--text-muted)]'
+                            isDragOverFolderBox ? 'border-[var(--border-secondary)] text-white bg-white/5' : 'border-[var(--border-primary)] text-[var(--text-muted)]'
                           }`}
                         >
                           {isDragOverFolderBox ? 'Drop file here to move' : 'Empty folder — drag .md files here'}
@@ -2299,7 +2299,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   <button
                     onClick={() => performManualSave()}
                     disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-panel)] text-[#000000] disabled:text-[var(--text-muted)] font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-default"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-default"
                     title="Manual Save (Ctrl + S)"
                   >
                     <Save size={13} />
@@ -2425,7 +2425,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                   setActiveFolderForCreation(DEFAULT_FOLDER);
                   setIsCreatingNew(true);
                 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-black text-[#000000] font-bold text-xs hover:bg-[#FFFFFF] transition-transform hover:scale-105"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-[#FFFFFF] transition-transform hover:scale-105"
               >
                 <Plus size={14} />
                 <span>Create in Start Folder</span>

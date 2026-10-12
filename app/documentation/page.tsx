@@ -302,7 +302,7 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
 
 function NoteCallout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="my-4 bg-white text-black/10 border border-[var(--border-secondary)] rounded-xl p-4 flex gap-3 text-xs text-[#EDEDED] leading-relaxed">
+    <div className="my-4 bg-white/10 border border-[var(--border-secondary)] rounded-xl p-4 flex gap-3 text-xs text-[#EDEDED] leading-relaxed">
       <Info size={16} className="text-white shrink-0 mt-0.5" />
       <div>{children}</div>
     </div>
@@ -388,7 +388,7 @@ export default function DocumentationPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white text-black/30 selection:text-white">
+    <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white/30 selection:text-white">
       {/* ─── Top Header ────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[var(--bg-canvas)]/90 border-b border-[#141414]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -418,7 +418,7 @@ export default function DocumentationPage() {
 
             <Link
               href="/dashboard"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-xs transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs transition-all shadow-sm"
             >
               <span>Launch App</span>
               <ArrowRight size={13} />
@@ -487,7 +487,7 @@ export default function DocumentationPage() {
                               w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between
                               ${
                                 isActive
-                                  ? 'bg-white text-black/15 text-white font-semibold border-l-2 border-[var(--border-secondary)]'
+                                  ? 'bg-white/15 text-white font-semibold border-l-2 border-[var(--border-secondary)]'
                                   : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#191919]'
                               }
                             `}
@@ -508,7 +508,7 @@ export default function DocumentationPage() {
         <main className="flex-1 min-w-0 py-8 lg:pl-10 max-w-4xl">
           {/* Header Banner */}
           <div className="mb-12 p-8 rounded-2xl bg-gradient-to-br from-[#191919] via-[#141414] to-[#0F0F0F] border border-[var(--border-primary)] relative overflow-hidden">
-            <div className="absolute -right-10 -top-10 w-64 h-64 bg-white text-black/5 blur-[80px] rounded-full pointer-events-none" />
+            <div className="absolute -right-10 -top-10 w-64 h-64 bg-white/5 blur-[80px] rounded-full pointer-events-none" />
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#222222] border border-[#222222] text-[11px] text-white font-mono mb-4">
               <Sparkles size={12} />
               <span>Official Step-by-Step Technical Manual</span>
@@ -1029,7 +1029,7 @@ git push origin feature/TED-104-add-oauth2-provider`}
                 </div>
                 <div className="p-3 rounded-xl bg-[#161616] border border-[#272727] font-mono text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-white text-black/15 text-white font-bold">PATCH</span>
+                    <span className="px-2 py-0.5 rounded bg-white/15 text-white font-bold">PATCH</span>
                     <span className="text-white">/api/issues/:id</span>
                   </div>
                   <span className="text-[var(--text-muted)] text-[11px]">Update task fields</span>

@@ -463,7 +463,7 @@ export default function ConversationsPage() {
                         onClick={() => setActiveChannel(ch.name)}
                         className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left truncate ${
                           isActive
-                            ? 'bg-white text-black/15 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
+                            ? 'bg-white/15 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
                             : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#181818]'
                         }`}
                         title={ch.desc || ch.name}
@@ -529,7 +529,7 @@ export default function ConversationsPage() {
 
             <div className="flex items-center gap-2">
               {isUserAdmin && (
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-white text-black/15 text-white border border-[var(--border-secondary)]">
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-white/15 text-white border border-[var(--border-secondary)]">
                   ADMIN ACCESS
                 </span>
               )}
@@ -611,7 +611,7 @@ export default function ConversationsPage() {
                           </span>
 
                           {isOwner && (
-                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-white text-black/15 text-white border border-[var(--border-secondary)]">
+                            <span className="px-1 py-0.1 rounded text-[10px] font-mono font-bold bg-white/15 text-white border border-[var(--border-secondary)]">
                               OWNER
                             </span>
                           )}
@@ -635,7 +635,7 @@ export default function ConversationsPage() {
                         <div
                           className={`relative px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                             isMe
-                              ? 'bg-white text-black/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
+                              ? 'bg-white/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
                               : 'bg-[#181818] text-[var(--text-secondary)] border border-[#292929] rounded-tl-xs'
                           }`}
                         >
@@ -713,7 +713,7 @@ export default function ConversationsPage() {
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   className={`p-1.5 rounded-lg transition-colors ${
                     showEmojiPicker
-                      ? 'bg-white text-black/20 text-white'
+                      ? 'bg-white/20 text-white'
                       : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-card)]'
                   }`}
                   title="Add emoji"
@@ -725,7 +725,7 @@ export default function ConversationsPage() {
                   type="button"
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isSending}
-                  className="p-2 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] text-[#000000] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md"
+                  className="p-2 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md"
                   title="Send message (Enter)"
                 >
                   <Send size={14} />
@@ -795,7 +795,7 @@ export default function ConversationsPage() {
                         <span
                           className={`text-[11px] font-mono uppercase font-bold px-1.5 py-0.2 rounded border ${
                             isOwner
-                              ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
+                              ? 'bg-white/15 text-white border-[var(--border-secondary)]'
                               : isAdmin
                               ? 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]'
                               : 'bg-[#232323] text-[var(--text-secondary)] border-[#313131]'
@@ -841,7 +841,7 @@ export default function ConversationsPage() {
             <div className="w-full max-w-md bg-[#141414] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-white text-black/15 text-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center">
                     <Hash size={16} />
                   </div>
                   <div>
@@ -896,7 +896,7 @@ export default function ConversationsPage() {
                   <button
                     type="submit"
                     disabled={!newChannelName.trim() || isCreatingChannel}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] text-[#000000] disabled:text-[var(--text-muted)] rounded-xl text-sm font-bold shadow-md transition-all"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] disabled:text-[var(--text-muted)] rounded-xl text-sm font-bold shadow-md transition-all"
                   >
                     {isCreatingChannel ? (
                       <>

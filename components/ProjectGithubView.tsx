@@ -959,7 +959,7 @@ export function ProjectGithubView({
                 <button
                   type="button"
                   onClick={toggleSelectAll}
-                  className="px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white text-black/10 rounded-lg transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                 >
                   {selectedRepoFullNames.size > 0 ? 'Clear All' : 'Select All'}
                 </button>
@@ -994,7 +994,7 @@ export function ProjectGithubView({
                         isAdded
                           ? 'bg-[#1A1A1A]/50 border-[var(--border-primary)] opacity-60 cursor-not-allowed'
                           : isSelected
-                          ? 'bg-white text-black/10 border-[var(--border-secondary)] cursor-pointer'
+                          ? 'bg-white/10 border-[var(--border-secondary)] cursor-pointer'
                           : 'bg-[#1A1A1A] hover:bg-[#232323] border-[var(--border-primary)] cursor-pointer'
                       }`}
                     >

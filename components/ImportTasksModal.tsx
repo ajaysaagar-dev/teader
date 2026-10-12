@@ -179,7 +179,7 @@ export const ImportTasksModal: React.FC<ImportTasksModalProps> = ({
               <button
                 onClick={handleExecuteImport}
                 disabled={isImporting || parsedPreview.length === 0}
-                className="px-5 py-2 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-xl font-bold transition-all disabled:opacity-50"
+                className="px-5 py-2 bg-white text-black hover:bg-[#FFFFFF] rounded-xl font-bold transition-all disabled:opacity-50"
               >
                 {isImporting ? 'Importing...' : `Import ${parsedPreview.length} Tasks`}
               </button>

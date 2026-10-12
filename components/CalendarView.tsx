@@ -148,7 +148,7 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
         {onOpenNewIssue && (
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-md text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1 px-2.5 py-1 bg-white text-black hover:bg-[#FFFFFF] rounded-md text-xs font-bold shadow-sm transition-all"
           >
             <Plus size={13} />
             <span>New Task</span>
@@ -182,7 +182,7 @@ export const CalendarView: React.FC<CalendarViewProps> = React.memo(({
                 <span
                   className={`text-xs font-mono font-semibold px-1.5 py-0.5 rounded-full ${
                     isToday
-                      ? 'bg-white text-black text-[#000000] font-bold'
+                      ? 'bg-white text-black font-bold'
                       : 'text-[var(--text-muted)]'
                   }`}
                 >

@@ -25,7 +25,7 @@ export default function GlobalError({
           </div>
           <button
             onClick={() => reset()}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-xl text-xs font-bold transition-all shadow-md"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-black hover:bg-[#FFFFFF] rounded-xl text-xs font-bold transition-all shadow-md"
           >
             <RefreshCw size={14} />
             <span>Reload Application</span>

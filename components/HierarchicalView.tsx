@@ -211,7 +211,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
           {/* New Task Button */}
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1.5 px-3 py-1 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-md font-bold text-xs transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1 bg-white text-black hover:bg-[#FFFFFF] rounded-md font-bold text-xs transition-colors shadow-sm"
           >
             <Plus size={13} className="stroke-[2.5]" />
             <span>New Task</span>
@@ -238,11 +238,11 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
             const isAllDone = group.issues.length > 0 && completedCount === group.issues.length;
 
             let headerBg = 'bg-[#141414] hover:bg-[#141414] border-[var(--border-primary)]';
-            let iconBox = 'bg-white text-black/10 border-[var(--border-secondary)] text-white';
+            let iconBox = 'bg-white/10 border-[var(--border-secondary)] text-white';
 
             if (isNoneDone) {
               headerBg = 'bg-[#121212] hover:bg-[#171717] border-[#FFFFFF]/40 shadow-[inset_3px_0_0_#FFFFFF]';
-              iconBox = 'bg-white text-black/15 border-[#FFFFFF]/35 text-white';
+              iconBox = 'bg-white/15 border-[#FFFFFF]/35 text-white';
             } else if (isPartiallyDone) {
               headerBg = 'bg-[#141414] hover:bg-[#1A1A1A] border-[#FFFFFF]/45 shadow-[inset_3px_0_0_#FFFFFF]';
               iconBox = 'bg-[#FFFFFF]/15 border-[#FFFFFF]/40 text-white';
@@ -292,7 +292,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                   {/* Right: Progress Meter & Stats */}
                   <div className="flex items-center gap-3 shrink-0">
                     {isNoneDone ? (
-                      <span className="text-[10px] font-mono font-bold text-white bg-white text-black/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/35 flex items-center gap-1">
+                      <span className="text-[10px] font-mono font-bold text-white bg-white/15 px-2 py-0.5 rounded-full border border-[#FFFFFF]/35 flex items-center gap-1">
                         0/{group.issues.length} Done (Pending)
                       </span>
                     ) : isPartiallyDone ? (
@@ -374,7 +374,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                                   issue.status === 'done'
                                     ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)]'
                                     : issue.status === 'in_progress'
-                                    ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
+                                    ? 'bg-white/15 text-white border-[var(--border-secondary)]'
                                     : issue.status === 'needs_review'
                                     ? 'bg-[#FFFFFF]/15 text-white border-[#FFFFFF]/30'
                                     : 'bg-[#222222] text-[var(--text-muted)] border-[var(--border-primary)]'
@@ -390,7 +390,7 @@ export const HierarchicalView: React.FC<HierarchicalViewProps> = React.memo(({
                                   issue.priority === 'critical'
                                     ? 'bg-[#FFFFFF]/20 text-[#FFFFFF]'
                                     : issue.priority === 'high'
-                                    ? 'bg-white text-black/20 text-white'
+                                    ? 'bg-white/20 text-white'
                                     : 'bg-[#222222] text-[var(--text-muted)]'
                                 }`}
                               >

@@ -548,7 +548,7 @@ export default function DashboardPage() {
                   onClick={() => setActiveFilter('in_progress')}
                   className={`px-3 py-1.5 rounded font-medium transition-all ${
                     activeFilter === 'in_progress'
-                      ? 'bg-white text-black/20 text-white'
+                      ? 'bg-white/20 text-white'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-secondary)]'
                   }`}
                 >
@@ -610,7 +610,7 @@ export default function DashboardPage() {
                           iss.priority === 'critical'
                             ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)]'
                             : iss.priority === 'high'
-                            ? 'bg-white text-black/20 text-white'
+                            ? 'bg-white/20 text-white'
                             : 'bg-[#212121] text-[var(--text-secondary)]'
                         }`}
                       >
@@ -625,7 +625,7 @@ export default function DashboardPage() {
                             : isBlocked
                             ? 'bg-[var(--ramp-3)]/15 text-white'
                             : iss.status === 'in_progress'
-                            ? 'bg-white text-black/15 text-white'
+                            ? 'bg-white/15 text-white'
                             : 'bg-[var(--bg-panel)] text-[var(--text-secondary)]'
                         }`}
                       >

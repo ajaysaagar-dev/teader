@@ -32,7 +32,7 @@ export default function Error({
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <button
             onClick={() => reset()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-xl text-xs font-bold transition-all shadow-md"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black hover:bg-[#FFFFFF] rounded-xl text-xs font-bold transition-all shadow-md"
           >
             <RefreshCw size={14} />
             <span>Try Again</span>

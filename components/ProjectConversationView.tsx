@@ -376,7 +376,7 @@ export function ProjectConversationView({
         <div className="flex flex-col h-full min-h-0">
           <div className="p-3.5 border-b border-[#141414] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-white text-black/15 text-white flex items-center justify-center">
+              <div className="w-6 h-6 rounded-lg bg-white/15 text-white flex items-center justify-center">
                 <Hash size={13} />
               </div>
               <span className="text-xs font-bold text-white tracking-tight">Channels</span>
@@ -407,7 +407,7 @@ export function ProjectConversationView({
                     }}
                     className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left truncate cursor-pointer ${
                       isActive
-                        ? 'bg-white text-black/15 text-white border border-[var(--border-secondary)] font-bold shadow-sm'
+                        ? 'bg-white/15 text-white border border-[var(--border-secondary)] font-bold shadow-sm'
                         : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#181818]'
                     }`}
                     title={ch.desc || ch.name}
@@ -517,7 +517,7 @@ export function ProjectConversationView({
                       <span
                         className={`text-[8px] font-mono uppercase font-bold px-1 py-0.2 rounded border ${
                           isOwner
-                            ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
+                            ? 'bg-white/15 text-white border-[var(--border-secondary)]'
                             : isAdmin
                             ? 'bg-[var(--ramp-2)] text-white border-[var(--border-secondary)]'
                             : 'bg-[#232323] text-[var(--text-secondary)] border-[#313131]'
@@ -657,7 +657,7 @@ export function ProjectConversationView({
                         </span>
 
                         {isOwner && (
-                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-white text-black/15 text-white border border-[var(--border-secondary)]">
+                          <span className="px-1 py-0.1 rounded text-[8px] font-mono font-bold bg-white/15 text-white border border-[var(--border-secondary)]">
                             OWNER
                           </span>
                         )}
@@ -682,7 +682,7 @@ export function ProjectConversationView({
                       <div
                         className={`relative px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed break-words whitespace-pre-wrap shadow-sm transition-all ${
                           isMe
-                            ? 'bg-white text-black/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
+                            ? 'bg-white/10 text-white border border-[var(--border-secondary)] rounded-tl-xs'
                             : 'bg-[#181818] text-[var(--text-secondary)] border border-[#292929] rounded-tl-xs'
                         }`}
                       >
@@ -761,7 +761,7 @@ export function ProjectConversationView({
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                   showEmojiPicker
-                    ? 'bg-white text-black/20 text-white'
+                    ? 'bg-white/20 text-white'
                     : 'text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-card)]'
                 }`}
                 title="Insert emoji"
@@ -773,7 +773,7 @@ export function ProjectConversationView({
                 type="button"
                 onClick={handleSendMessage}
                 disabled={!inputValue.trim() || isSending}
-                className="p-2 rounded-xl bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] text-[#000000] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
+                className="p-2 rounded-xl bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-card)] disabled:text-[var(--text-muted)] font-bold transition-all shadow-md cursor-pointer disabled:cursor-not-allowed"
                 title="Send (Enter)"
               >
                 <Send size={13} />
@@ -789,7 +789,7 @@ export function ProjectConversationView({
           <div className="w-full max-w-md bg-[#141414] border border-[var(--border-primary)] rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border-primary)]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white text-black/15 text-white flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center">
                   <Hash size={16} />
                 </div>
                 <div>
@@ -844,7 +844,7 @@ export function ProjectConversationView({
                 <button
                   type="submit"
                   disabled={!newChannelName.trim() || isCreatingChannel}
-                  className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] text-[#000000] disabled:text-[var(--text-muted)] rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[#222222] disabled:text-[var(--text-muted)] rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer"
                 >
                   {isCreatingChannel ? (
                     <>

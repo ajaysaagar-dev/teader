@@ -474,7 +474,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
   const priorityColor: Record<Priority, string> = {
     critical: 'bg-[var(--ramp-3)]/20 text-white border-[var(--border-secondary)]',
     high: 'bg-[#FFFFFF]/20 text-[#FFFFFF] border-[#FFFFFF]/40',
-    medium: 'bg-white text-black/20 text-white border-[var(--border-secondary)]',
+    medium: 'bg-white/20 text-white border-[var(--border-secondary)]',
     low: 'bg-[#FFFFFF]/20 text-white border-[#FFFFFF]/40',
     none: 'bg-[#222222] text-[var(--text-muted)] border-[var(--border-primary)]',
   };
@@ -551,7 +551,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 onClick={() => setFormView('quick')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                   formView === 'quick'
-                    ? 'bg-white text-black text-[#000000] shadow-sm'
+                    ? 'bg-white text-black shadow-sm'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
@@ -563,7 +563,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 onClick={() => setFormView('advanced')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-bold transition-all ${
                   formView === 'advanced'
-                    ? 'bg-white text-black text-[#000000] shadow-sm'
+                    ? 'bg-white text-black shadow-sm'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
                 }`}
               >
@@ -970,7 +970,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                                   folderColor === col ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-[#141414]' : 'opacity-70 hover:opacity-100'
                                 }`}
                               >
-                                {folderColor === col && <Check size={12} className="text-[#000000] stroke-[3]" />}
+                                {folderColor === col && <Check size={12} className=" stroke-[3]" />}
                               </button>
                             ))}
                           </div>
@@ -1027,7 +1027,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                             <button
                               type="button"
                               onClick={handleAddFolderTask}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg font-bold"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] rounded-lg font-bold"
                             >
                               <Plus size={13} />
                               <span>Add Task</span>
@@ -1234,7 +1234,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-1.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-1.5 bg-white text-black hover:bg-[#FFFFFF] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {creationMode === 'task' ? (
                     <>

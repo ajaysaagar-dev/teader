@@ -523,7 +523,7 @@ export function renderGithubMarkdown(
               <span>Copy</span>
             </button>
           </div>
-          <pre className="p-4 text-xs font-mono text-[#EDEDED] overflow-x-auto leading-relaxed selection:bg-white text-black/30">
+          <pre className="p-4 text-xs font-mono text-[#EDEDED] overflow-x-auto leading-relaxed selection:bg-white/30">
             <code>{codeString}</code>
           </pre>
         </div>

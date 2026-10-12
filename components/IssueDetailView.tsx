@@ -41,7 +41,7 @@ interface IssueDetailViewProps {
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; border: string }> = {
   todo: { label: 'Todo', bg: 'bg-[#666666]/10', text: 'text-[var(--text-muted)]', border: 'border-[#666666]/30' },
-  in_progress: { label: 'In Progress', bg: 'bg-white text-black/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
+  in_progress: { label: 'In Progress', bg: 'bg-white/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
   needs_review: { label: 'Needs Review', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
   done: { label: 'Done', bg: 'bg-[var(--ramp-3)]/10', text: 'text-white', border: 'border-[var(--border-secondary)]' },
 };
@@ -279,7 +279,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-xs font-bold text-white bg-white text-black/10 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
+                <span className="font-mono text-xs font-bold text-white bg-white/10 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
                   {getTaskShortId(issue, allIssues)}
                 </span>
                 <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-panel)] border border-[var(--border-primary)] px-2 py-0.5 rounded">
@@ -374,7 +374,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         toast.error('Network error syncing description');
                       }
                     }}
-                    className="px-2.5 py-0.5 bg-white text-black text-[#000000] font-bold text-xs rounded transition-all cursor-pointer"
+                    className="px-2.5 py-0.5 bg-white text-black font-bold text-xs rounded transition-all cursor-pointer"
                   >
                     Save
                   </button>
@@ -443,7 +443,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         {/* Card Header: Tag Badge & Status & Remove button */}
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-white bg-white text-black/15 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs font-bold text-white bg-white/15 border border-[var(--border-secondary)] px-2 py-0.5 rounded">
                               {shortId}
                             </span>
                             {found?.key && (
@@ -497,7 +497,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                               toast.info(`Tagged task ${displayTag}`);
                             }
                           }}
-                          className="flex items-center gap-1 text-xs font-bold text-white hover:text-white bg-[var(--ramp-3)]/10 hover:bg-[var(--ramp-3)] hover:text-[#000000] px-2.5 py-1 rounded-md transition-all cursor-pointer"
+                          className="flex items-center gap-1 text-xs font-bold text-white hover:text-white bg-[var(--ramp-3)]/10 hover:bg-[var(--ramp-3)] hover: px-2.5 py-1 rounded-md transition-all cursor-pointer"
                         >
                           <span>Open Task</span>
                           <ExternalLink size={11} />
@@ -597,7 +597,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <span className="font-mono font-bold text-white bg-white text-black/10 px-1.5 py-0.5 rounded text-[11px] border border-[var(--border-secondary)] shrink-0">
+                          <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.5 rounded text-[11px] border border-[var(--border-secondary)] shrink-0">
                             {shortId}
                           </span>
                           <span className="truncate text-xs">{t.title}</span>
@@ -802,7 +802,7 @@ export const IssueDetailView: React.FC<IssueDetailViewProps> = ({
                 <div className="flex items-center gap-2">
                   <Tag size={14} className="text-white" />
                   <span className="text-xs font-mono text-white font-bold">Tagged Task View:</span>
-                  <span className="font-mono text-xs font-bold text-white bg-white text-black/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
+                  <span className="font-mono text-xs font-bold text-white bg-white/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
                     {getTaskShortId(overlayIssue, allIssues)}
                   </span>
                   <span className="font-bold text-white text-xs truncate max-w-[200px] sm:max-w-[320px]">

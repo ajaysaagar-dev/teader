@@ -409,7 +409,7 @@ export function ProjectSettingsView({
                 <Clock size={16} className="text-white" />
                 <h3 className="text-sm font-bold text-white">Pending Join Requests</h3>
               </div>
-              <span className="text-xs font-mono text-white bg-white text-black/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
+              <span className="text-xs font-mono text-white bg-white/10 px-2 py-0.5 rounded border border-[var(--border-secondary)]">
                 {joinRequests.length} pending
               </span>
             </div>
@@ -511,7 +511,7 @@ export function ProjectSettingsView({
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-bold text-white truncate">{m.name}</p>
                         {isCurrentUser && (
-                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-white text-black/20 text-white border border-[var(--border-secondary)]">
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-white/20 text-white border border-[var(--border-secondary)]">
                             You
                           </span>
                         )}

@@ -67,7 +67,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, onSelectIssu
                     className={`h-5 rounded-md px-2.5 flex items-center text-[10px] font-medium shadow-sm transition-all ${
                       issue.status === 'done'
                         ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)]'
-                        : 'bg-white text-black/20 text-white border border-[var(--border-secondary)]'
+                        : 'bg-white/20 text-white border border-[var(--border-secondary)]'
                     }`}
                     style={{
                       marginLeft: `${(startCol / 7) * 100}%`,

@@ -6,10 +6,10 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans flex flex-col justify-center items-center p-6 select-none relative overflow-hidden">
       {/* Glow Effect */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white text-black/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-8 text-center space-y-6 shadow-2xl relative z-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white text-black/10 text-white border border-[var(--border-secondary)]">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 text-white border border-[var(--border-secondary)]">
           <Compass size={32} className="animate-spin" style={{ animationDuration: '12s' }} />
         </div>
 
@@ -28,7 +28,7 @@ export default function NotFound() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Link
             href="/projects"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black hover:bg-[#FFFFFF] text-[#000000] rounded-xl text-xs font-bold transition-all shadow-md"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-black hover:bg-[#FFFFFF] rounded-xl text-xs font-bold transition-all shadow-md"
           >
             <FolderKanban size={14} />
             <span>Go to Projects</span>

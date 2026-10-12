@@ -691,7 +691,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
         {/* Left: Brand & Axis Legend */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-white text-black/15 border border-[var(--border-secondary)] flex items-center justify-center text-white">
+            <div className="w-6 h-6 rounded-lg bg-white/15 border border-[var(--border-secondary)] flex items-center justify-center text-white">
               <GitFork size={14} className="stroke-[2.5]" />
             </div>
             <div>
@@ -1084,7 +1084,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                   style={{ backgroundColor: track.color }}
                 />
                 <span className="font-bold text-white truncate max-w-[110px]">{track.name}</span>
-                <span className="text-[9px] text-white px-1 py-0.2 bg-white text-black/10 rounded border border-[var(--border-secondary)] shrink-0">Creator</span>
+                <span className="text-[9px] text-white px-1 py-0.2 bg-white/10 rounded border border-[var(--border-secondary)] shrink-0">Creator</span>
               </div>
             ))}
 
@@ -1208,7 +1208,7 @@ export const DependencyGraphView: React.FC<DependencyGraphViewProps> = React.mem
                     className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
                       hoveredEdge.isCompleted
                         ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)]'
-                        : 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
+                        : 'bg-white/15 text-white border-[var(--border-secondary)]'
                     }`}
                   >
                     {hoveredEdge.isCompleted ? '✓ Completed' : 'In Progress'}

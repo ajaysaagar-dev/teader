@@ -231,7 +231,7 @@ export function CustomDropdown<T extends string | number = string>({
                     option.disabled
                       ? 'opacity-40 cursor-not-allowed text-[var(--text-secondary)]'
                       : isSelected
-                      ? 'bg-white text-black/10 text-white font-semibold hover:bg-white text-black/15'
+                      ? 'bg-white/10 text-white font-semibold hover:bg-white/15'
                       : 'text-[#EDEDED] hover:bg-[#222222] hover:text-white cursor-pointer'
                   } ${optionClassName} ${option.className || ''}`}
                 >

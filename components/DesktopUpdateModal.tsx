@@ -81,7 +81,7 @@ export const DesktopUpdateModal: React.FC = () => {
     <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-200 select-none">
       <div className="w-full max-w-md bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-6 shadow-2xl relative text-left">
         {/* Header Icon */}
-        <div className="w-12 h-12 rounded-xl bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white mb-4">
+        <div className="w-12 h-12 rounded-xl bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white mb-4">
           <Download className="w-6 h-6 animate-bounce" />
         </div>
 

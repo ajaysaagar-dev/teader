@@ -826,7 +826,7 @@ export function ProjectGithubRepoDetailView({
                       <GitBranch size={15} className={isSelected ? 'text-white' : 'text-[var(--text-muted)]'} />
                       <span className="text-xs font-semibold text-white font-mono truncate">{b.name}</span>
                       {isDefault && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white text-black/10 text-white border border-[var(--border-secondary)] font-medium">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white border border-[var(--border-secondary)] font-medium">
                           default
                         </span>
                       )}
@@ -846,7 +846,7 @@ export function ProjectGithubRepoDetailView({
                         }}
                         className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-white text-black text-black'
+                            ? 'bg-white text-black'
                             : 'bg-[var(--bg-card)] hover:bg-[#222222] text-[var(--text-secondary)]'
                         }`}
                       >
@@ -1043,7 +1043,7 @@ export function ProjectGithubRepoDetailView({
             <div className="p-5 border-b border-[var(--border-primary)] bg-[#1A1A1A] flex items-start justify-between gap-4 shrink-0">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded bg-white text-black/10 text-white font-mono text-[11px] font-bold border border-[var(--border-secondary)]">
+                  <span className="px-2 py-0.5 rounded bg-white/10 text-white font-mono text-[11px] font-bold border border-[var(--border-secondary)]">
                     {selectedCommit.shortSha}
                   </span>
                   <span className="text-xs text-[var(--text-muted)]">

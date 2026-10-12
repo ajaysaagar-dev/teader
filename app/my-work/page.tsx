@@ -215,7 +215,7 @@ export default function MyWorkPage() {
         <div className="px-6 py-5 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] flex items-center justify-between flex-wrap gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-white text-black/10 text-white border border-[var(--border-secondary)] flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-xl bg-white/10 text-white border border-[var(--border-secondary)] flex items-center justify-center font-bold">
                 <UserCheck size={18} />
               </div>
               <h1 className="text-xl font-bold text-white tracking-tight">My Work & Focus Workspace</h1>
@@ -352,7 +352,7 @@ export default function MyWorkPage() {
                           }}
                           className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-sm ${
                             isCurrentFocus
-                              ? 'bg-white text-black text-[#000000]'
+                              ? 'bg-white text-black'
                               : 'bg-[var(--bg-canvas)] hover:bg-[#222222] text-[var(--text-secondary)] border border-[var(--border-primary)]'
                           }`}
                         >
@@ -407,7 +407,7 @@ export default function MyWorkPage() {
                   className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md ${
                     isPomodoroRunning
                       ? 'bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white'
-                      : 'bg-white text-black hover:bg-[#FFFFFF] text-[#000000]'
+                      : 'bg-white text-black hover:bg-[#FFFFFF]'
                   }`}
                 >
                   {isPomodoroRunning ? <Square size={13} /> : <Play size={13} />}

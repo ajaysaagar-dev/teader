@@ -2084,7 +2084,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
             disabled={isSaving || (!hasUnsavedChanges && !isJustSaved)}
             className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
               hasUnsavedChanges
-                ? 'bg-white text-black text-black border-[var(--border-secondary)] shadow-sm hover:bg-[#FFFFFF] cursor-pointer'
+                ? 'bg-white text-black border-[var(--border-secondary)] shadow-sm hover:bg-[#FFFFFF] cursor-pointer'
                 : 'bg-[#191919] text-[var(--text-muted)] border-[#2A2A2A] opacity-80 cursor-default'
             }`}
             title="Save Diagram to Server (Ctrl+S)"
@@ -2298,7 +2298,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               onClick={() => setActiveTool('select')}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'select'
-                  ? 'bg-white text-black text-black shadow-sm font-semibold'
+                  ? 'bg-white text-black shadow-sm font-semibold'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Select & Move Tool (V)"
@@ -2313,7 +2313,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               }}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'link'
-                  ? 'bg-white text-black text-black shadow-sm font-semibold'
+                  ? 'bg-white text-black shadow-sm font-semibold'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Connector Link Tool (L) - Link shapes together"
@@ -2325,7 +2325,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               onClick={() => setActiveTool('pan')}
               className={`p-2 rounded-lg transition-colors ${
                 activeTool === 'pan'
-                  ? 'bg-white text-black text-black shadow-sm font-semibold'
+                  ? 'bg-white text-black shadow-sm font-semibold'
                   : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626]'
               }`}
               title="Pan Tool (Hand / Middle click)"
@@ -2339,7 +2339,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                 onClick={() => setIsSnapMenuOpen((prev) => !prev)}
                 className={`p-2 rounded-lg transition-all flex items-center gap-1.5 ${
                   snapSettings.enabled
-                    ? 'bg-white text-black/20 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
+                    ? 'bg-white/20 text-white border border-[var(--border-secondary)] font-semibold shadow-sm'
                     : 'text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] border border-transparent'
                 }`}
                 title="Snap Options (Snap to Grid & Nearby Elements)"
@@ -2369,7 +2369,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         onClick={() => updateSnapSettings({ enabled: !snapSettings.enabled })}
                         className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
                           snapSettings.enabled
-                            ? 'bg-white text-black text-black'
+                            ? 'bg-white text-black'
                             : 'bg-[#2A2A2A] text-[var(--text-secondary)] hover:text-white'
                         }`}
                       >
@@ -2426,7 +2426,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                             onClick={() => updateSnapSettings({ gridSize: size })}
                             className={`py-1 text-xs font-mono rounded transition-colors ${
                               snapSettings.gridSize === size
-                                ? 'bg-white text-black text-black font-bold shadow-sm'
+                                ? 'bg-white text-black font-bold shadow-sm'
                                 : 'bg-[#222222] text-[#A1A1A1] hover:bg-[#2F2F2F] hover:text-white'
                             }`}
                           >
@@ -2601,7 +2601,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                     height: `${Math.abs(selectionBox.currentY - selectionBox.startY)}px`,
                     pointerEvents: 'none',
                   }}
-                  className="border border-[var(--border-secondary)] bg-white text-black/15 rounded-sm z-50 border-dashed pointer-events-none"
+                  className="border border-[var(--border-secondary)] bg-white/15 rounded-sm z-50 border-dashed pointer-events-none"
                 />
               )}
 
@@ -3033,7 +3033,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                         >
                           <div
                             className={`w-1 h-1 rounded-full ${
-                              isSnapped ? 'bg-black' : isAvailableTarget ? 'bg-white text-black' : 'bg-white group-hover:bg-white text-black'
+                              isSnapped ? 'bg-black' : isAvailableTarget ? 'bg-white text-black' : 'bg-white group-hover:bg-neutral-200'
                             }`}
                           />
                         </div>

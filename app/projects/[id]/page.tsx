@@ -1791,7 +1791,7 @@ export default function SingleProjectPage() {
           <div className="flex items-center gap-3 pt-2">
             <button
               onClick={() => router.push('/projects')}
-              className="px-4 py-2 bg-white text-black text-[#000000] text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors"
+              className="px-4 py-2 bg-white text-black text-xs font-bold rounded-xl hover:bg-[#FFFFFF] transition-colors"
             >
               Back to My Projects
             </button>
@@ -1799,7 +1799,7 @@ export default function SingleProjectPage() {
         </div>
       ) : project?.joinStatus === 'pending' ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-[var(--bg-canvas)] text-[var(--text-secondary)]">
-          <div className="w-14 h-14 rounded-2xl bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
+          <div className="w-14 h-14 rounded-2xl bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
             <Clock size={28} />
           </div>
           <h2 className="text-lg font-bold text-white">Joining Request Pending Approval</h2>
@@ -2364,7 +2364,7 @@ export default function SingleProjectPage() {
                 {/* Task Details View Header Bar */}
                 <div className="h-12 px-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-sm font-mono font-bold px-2 py-0.5 rounded bg-white text-black/15 text-white border border-[var(--border-secondary)] shrink-0">
+                    <span className="text-sm font-mono font-bold px-2 py-0.5 rounded bg-white/15 text-white border border-[var(--border-secondary)] shrink-0">
                       {getTaskShortId(selectedIssue, issues)}
                     </span>
                     <span className="text-sm font-mono text-[var(--text-secondary)] bg-[var(--bg-canvas)] border border-[var(--border-primary)] px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
@@ -2531,7 +2531,7 @@ export default function SingleProjectPage() {
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-4 py-2 text-sm font-semibold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-50"
+                        className="px-4 py-2 text-sm font-semibold bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-50"
                       >
                         Save Changes
                       </button>
@@ -2707,7 +2707,7 @@ export default function SingleProjectPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)] bg-[#141414]">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-white text-black/15 text-white flex items-center justify-center font-bold">
+                    <div className="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center font-bold">
                       <Lock size={16} />
                     </div>
                     <div>
@@ -2728,7 +2728,7 @@ export default function SingleProjectPage() {
                   {/* File Target Info */}
                   <div className="p-3.5 rounded-xl bg-[#121212] border border-[#272727] flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white shrink-0">
+                      <div className="w-9 h-9 rounded-lg bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white shrink-0">
                         <FileText size={18} />
                       </div>
                       <div className="min-w-0">
@@ -2801,7 +2801,7 @@ export default function SingleProjectPage() {
                   <button
                     onClick={handleTriggerDownload}
                     disabled={exportStep !== 'ready' || !exportBlobUrl}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-[#FFFFFF] text-[#000000] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-black hover:bg-[#FFFFFF] font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]"
                   >
                     <Download size={15} className="stroke-[2.5]" />
                     <span>Download Teader Dump File</span>

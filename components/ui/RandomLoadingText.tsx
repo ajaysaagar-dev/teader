@@ -77,7 +77,7 @@ export function RandomLoadingText({
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
       case 'fact':
-        return 'bg-white text-black/10 text-white border-[var(--border-secondary)]';
+        return 'bg-white/10 text-white border-[var(--border-secondary)]';
       case 'tip':
         return 'bg-[#FFFFFF]/10 text-white border-[#FFFFFF]/30';
       case 'dev':

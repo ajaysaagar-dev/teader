@@ -77,7 +77,7 @@ export function ConversationDrawer({
               {/* Drawer Top Controls */}
               <div className="h-11 px-3 bg-[#191919] border-b border-[#292929] flex items-center justify-between shrink-0 select-none text-xs">
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded bg-white text-black/15 text-white flex items-center justify-center">
+                  <div className="w-5 h-5 rounded bg-white/15 text-white flex items-center justify-center">
                     <MessageSquare size={12} />
                   </div>
                   <span className="font-bold text-white tracking-tight">Team Chat</span>

@@ -269,7 +269,7 @@ export function ProjectAppsView({ projectId, projectName }: ProjectAppsViewProps
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 px-2 py-0.5 bg-[#222222] hover:bg-white text-black hover:text-black text-[11px] font-medium text-[var(--text-secondary)] rounded transition-colors cursor-pointer"
+                  className="absolute right-1.5 px-2 py-0.5 bg-[#222222] hover:bg-neutral-200 hover:text-black text-[11px] font-medium text-[var(--text-secondary)] rounded transition-colors cursor-pointer"
                 >
                   Go
                 </button>

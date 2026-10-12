@@ -181,7 +181,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
 
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-xl transition-all shadow-md"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white text-black hover:bg-[#FFFFFF] rounded-xl transition-all shadow-md"
           >
             <Sparkles size={13} />
             <span>New Task</span>
@@ -189,7 +189,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         </div>
 
         {/* Ambient Glow */}
-        <div className="absolute right-0 top-0 w-80 h-80 bg-white text-black/5 blur-3xl pointer-events-none rounded-full" />
+        <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 blur-3xl pointer-events-none rounded-full" />
       </div>
 
       {/* ─── Top KPI Metric Cards ─────────────────────────────────────────── */}
@@ -220,7 +220,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)]">In Progress</span>
-            <div className="w-7 h-7 rounded-lg bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
+            <div className="w-7 h-7 rounded-lg bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
               <Clock size={15} />
             </div>
           </div>

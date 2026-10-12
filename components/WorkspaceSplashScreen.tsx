@@ -23,7 +23,7 @@ export const WorkspaceSplashScreen: React.FC = () => {
       >
         <div className="relative flex items-center justify-center">
           {/* Subtle Glow Behind Text */}
-          <div className="absolute -inset-4 bg-white text-black/20 blur-2xl rounded-full pointer-events-none" />
+          <div className="absolute -inset-4 bg-white/20 blur-2xl rounded-full pointer-events-none" />
 
           {/* TEADER Bold Text */}
           <h1 className="relative text-4xl sm:text-5xl md:text-6xl font-black tracking-[0.3em] pl-[0.3em] font-mono text-transparent bg-clip-text bg-gradient-to-b from-white via-[#FFFFFF] to-[#FFFFFF] drop-shadow-2xl">

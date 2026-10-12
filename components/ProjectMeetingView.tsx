@@ -1663,7 +1663,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
       {/* ── Top Meeting Header ── */}
       <div className="h-14 px-6 border-b border-[#141414] bg-[#141414]/95 flex items-center justify-between shrink-0 z-20 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-white text-black/10 text-white border border-[var(--border-secondary)]">
+          <div className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white border border-[var(--border-secondary)]">
             <Radio
               size={16}
               className={
@@ -1688,7 +1688,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 </span>
               )}
               {currentUserIsAdmin && (
-                <span className="px-2 py-0.5 rounded-full bg-white text-black/15 text-white text-[10px] font-mono font-bold border border-[var(--border-secondary)] flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-full bg-white/15 text-white text-[10px] font-mono font-bold border border-[var(--border-secondary)] flex items-center gap-1">
                   <Shield size={10} />
                   ADMIN
                 </span>
@@ -1724,7 +1724,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
               showDeviceSettings
-                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)] shadow-sm'
+                ? 'bg-white/15 text-white border-[var(--border-secondary)] shadow-sm'
                 : 'bg-[#1A1A1A] text-[var(--text-secondary)] hover:text-white border-[var(--border-primary)]'
             }`}
             title="Configure Audio Devices"
@@ -1755,7 +1755,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 e.stopPropagation();
                 handleAdminCloseCall();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-black hover:bg-white text-black text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-black hover:bg-neutral-200 text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
               title="Close meeting for all participants and return to overview"
             >
               <PowerOff size={14} />
@@ -1789,7 +1789,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
               <Volume2 size={16} className="text-white shrink-0" />
               <span>Browser blocked audio playback. Click anywhere to listen to the call.</span>
             </div>
-            <button className="px-3 py-1 bg-white text-black text-black rounded-lg font-bold text-[11px] shrink-0 cursor-pointer">
+            <button className="px-3 py-1 bg-white text-black rounded-lg font-bold text-[11px] shrink-0 cursor-pointer">
               Enable Audio
             </button>
           </div>
@@ -1885,7 +1885,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                             ? 'bg-[var(--ramp-2)] border-[var(--border-secondary)] ring-1 ring-white/30 shadow-sm shadow-purple-500/20'
                             : mode === 'high'
                             ? 'bg-[var(--ramp-2)] border-[var(--border-secondary)] ring-1 ring-white/30'
-                            : 'bg-white text-black/10 border-[var(--border-secondary)] ring-1 ring-[#FFFFFF]/30'
+                            : 'bg-white/10 border-[var(--border-secondary)] ring-1 ring-[#FFFFFF]/30'
                           : 'bg-[#1D1D1D] border-[#2F2F2F] hover:border-[var(--border-secondary)]'
                       }`}
                     >
@@ -2031,7 +2031,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                               <Avatar user={{ name: p.name, avatar: p.avatar }} size="xs" />
                               <span className="truncate max-w-[120px] font-semibold text-xs">{p.name}</span>
                               {p.isLocal && (
-                                <span className="px-1.5 rounded bg-white text-black/20 text-white font-mono text-[9px] font-bold">
+                                <span className="px-1.5 rounded bg-white/20 text-white font-mono text-[9px] font-bold">
                                   YOU
                                 </span>
                               )}
@@ -2143,7 +2143,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                               {p.name}
                             </span>
                             {p.isLocal && (
-                              <span className="px-2 py-0.5 rounded-md bg-white text-black/20 text-white font-mono text-[10px] sm:text-xs font-bold border border-[var(--border-secondary)]">
+                              <span className="px-2 py-0.5 rounded-md bg-white/20 text-white font-mono text-[10px] sm:text-xs font-bold border border-[var(--border-secondary)]">
                                 YOU
                               </span>
                             )}
@@ -2347,7 +2347,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 : noiseSuppressionMode === 'high'
                 ? 'bg-[var(--ramp-3)]/15 text-white border-[var(--border-secondary)] hover:bg-[var(--ramp-3)]/25 shadow-sm'
                 : noiseSuppressionMode === 'standard'
-                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)] hover:bg-white text-black/25 shadow-sm'
+                ? 'bg-white/15 text-white border-[var(--border-secondary)] hover:bg-white/25 shadow-sm'
                 : 'bg-[#181818] hover:bg-[#262626] text-[var(--text-secondary)] border-[#2D2D2D]'
             }`}
             title={`Noise suppression: ${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].label} (+${NOISE_SUPPRESSION_CONFIG[noiseSuppressionMode].addedLatency} latency) — Click to cycle`}
@@ -2382,7 +2382,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             onClick={handleToggleVoiceNormalization}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
               voiceNormalizationEnabled
-                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)] hover:bg-white text-black/25 shadow-sm'
+                ? 'bg-white/15 text-white border-[var(--border-secondary)] hover:bg-white/25 shadow-sm'
                 : 'bg-[#181818] hover:bg-[#262626] text-[var(--text-secondary)] border-[#2D2D2D]'
             }`}
             title={
@@ -2403,7 +2403,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             onClick={() => setShowDeviceSettings((prev) => !prev)}
             className={`flex items-center gap-2 px-3.5 py-2.5 rounded-2xl font-semibold text-xs transition-all border cursor-pointer ${
               showDeviceSettings
-                ? 'bg-white text-black/15 text-white border-[var(--border-secondary)]'
+                ? 'bg-white/15 text-white border-[var(--border-secondary)]'
                 : 'bg-[#181818] hover:bg-[#262626] text-[var(--text-secondary)] border-[#2D2D2D]'
             }`}
             title="Audio Input / Output Device Preferences"
@@ -2426,7 +2426,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {currentUserIsAdmin && (
             <button
               onClick={handleAdminCloseCall}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-white text-black hover:bg-white text-black text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer border border-[var(--border-secondary)]"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-white text-black hover:bg-neutral-200 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer border border-[var(--border-secondary)]"
               title="Close meeting for everyone and return to overview"
             >
               <PowerOff size={16} />
@@ -2443,7 +2443,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-[#242424]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white text-black/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
+                <div className="w-8 h-8 rounded-xl bg-white/10 border border-[var(--border-secondary)] flex items-center justify-center text-white">
                   <ScreenShare size={16} />
                 </div>
                 <div>
@@ -2479,12 +2479,12 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                       onClick={() => setSelectedResolution(item.value as ScreenResolution)}
                       className={`relative flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-white text-black/15 border-[var(--border-secondary)] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
+                          ? 'bg-white/15 border-[var(--border-secondary)] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
                           : 'bg-[#1B1B1B] border-[#303030] text-[var(--text-secondary)] hover:bg-[#222222] hover:text-white'
                       }`}
                     >
                       {item.badge && (
-                        <span className="absolute -top-2 px-1.5 py-0.5 rounded-full bg-white text-black text-black text-[8px] font-bold uppercase tracking-wider">
+                        <span className="absolute -top-2 px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-bold uppercase tracking-wider">
                           {item.badge}
                         </span>
                       )}
@@ -2601,17 +2601,17 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                       }}
                       className={`relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-white text-black/10 border-[var(--border-secondary)] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
+                          ? 'bg-white/10 border-[var(--border-secondary)] text-white shadow-[0_0_15px_rgba(220,176,1,0.15)]'
                           : 'bg-[#1B1B1B] border-[#303030] text-[var(--text-secondary)] hover:bg-[#222222] hover:text-white'
                       }`}
                     >
                       {isRecommended && (
-                        <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full bg-white text-black text-black text-[8px] font-bold uppercase tracking-wider">
+                        <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded-full bg-white text-black text-[8px] font-bold uppercase tracking-wider">
                           Recommended
                         </span>
                       )}
                       <div className={`p-2 rounded-lg shrink-0 ${
-                        isSelected ? 'bg-white text-black/20 text-white' : 'bg-[#262626] text-[var(--text-muted)]'
+                        isSelected ? 'bg-white/20 text-white' : 'bg-[#262626] text-[var(--text-muted)]'
                       }`}>
                         {mode === 'detail' ? <Monitor size={18} /> : <Zap size={18} />}
                       </div>
@@ -2713,7 +2713,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                     {fullscreenParticipant.name}'s Stream
                   </h3>
                   {fullscreenParticipant.isLocal && (
-                    <span className="px-1.5 py-0.5 rounded bg-white text-black/15 text-white font-mono text-[9px] font-bold border border-[var(--border-secondary)]">
+                    <span className="px-1.5 py-0.5 rounded bg-white/15 text-white font-mono text-[9px] font-bold border border-[var(--border-secondary)]">
                       YOU
                     </span>
                   )}

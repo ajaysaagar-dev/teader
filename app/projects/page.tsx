@@ -412,7 +412,7 @@ export default function ProjectsPage() {
               {!searchQuery && (
                 <button
                   onClick={handleOpenCreateModal}
-                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-xs font-bold bg-white text-black hover:bg-[#FFFFFF] rounded-lg transition-colors"
                 >
                   <Plus size={14} />
                   Create Project
@@ -456,7 +456,7 @@ export default function ProjectsPage() {
                       </span>
                       <div className="flex items-center gap-2">
                         {isPending && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-[var(--border-secondary)] bg-white text-black/10 text-white">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-[var(--border-secondary)] bg-white/10 text-white">
                             Pending Request
                           </span>
                         )}
@@ -611,7 +611,7 @@ export default function ProjectsPage() {
                       <button
                         type="submit"
                         disabled={!isFormValid}
-                        className="px-5 py-2.5 text-sm font-semibold text-[#000000] bg-[var(--ramp-3)] hover:bg-[#FFFFFF] border border-[var(--border-secondary)] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                        className="px-5 py-2.5 text-sm font-semibold bg-[var(--ramp-3)] hover:bg-[#FFFFFF] border border-[var(--border-secondary)] rounded-lg shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                       >
                         Create Project
                       </button>
@@ -675,7 +675,7 @@ export default function ProjectsPage() {
                       <button
                         type="submit"
                         disabled={!joinKeyInput.trim() || isJoining}
-                        className="px-5 py-2.5 text-sm font-semibold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 transition-all"
+                        className="px-5 py-2.5 text-sm font-semibold bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm disabled:opacity-40 transition-all"
                       >
                         Join Project
                       </button>
@@ -832,7 +832,7 @@ export default function ProjectsPage() {
                       <button
                         type="submit"
                         disabled={!editName.trim() || isSavingEdit}
-                        className="px-5 py-2.5 text-sm font-semibold text-[#000000] bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm"
+                        className="px-5 py-2.5 text-sm font-semibold bg-white text-black hover:bg-[#FFFFFF] rounded-lg shadow-sm"
                       >
                         Save Changes
                       </button>
