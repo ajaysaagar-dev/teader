@@ -364,7 +364,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
             {/* Active Meeting Widget in App Header */}
             {activeMeeting && !isFullMeetingView && (
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[var(--ramp-2)] border border-[var(--border-secondary)] select-none">
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[var(--bg-panel)] border border-[var(--border-primary)] select-none">
                 <div
                   onClick={handleOpenMeeting}
                   className="flex items-center gap-2 cursor-pointer group"
@@ -385,7 +385,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={handleToggleMeetingMute}
-                    className="p-1 rounded text-white hover:bg-[var(--ramp-3)] transition-colors"
+                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
                     title={activeMeeting.isMuted ? "Unmute" : "Mute"}
                   >
                     {activeMeeting.isMuted ? <MicOff size={13} /> : <Mic size={13} />}
@@ -393,7 +393,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={handleOpenMeeting}
-                    className="p-1 rounded text-white hover:bg-[var(--ramp-3)] transition-colors"
+                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
                     title="Open Meeting"
                   >
                     <Maximize2 size={13} />
@@ -401,7 +401,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   <button
                     type="button"
                     onClick={handleLeaveMeeting}
-                    className="p-1 rounded text-white hover:bg-[var(--ramp-3)] transition-colors"
+                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
                     title="Leave Meeting"
                   >
                     <PhoneOff size={13} />
@@ -414,19 +414,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsCommandPaletteOpen(true)}
-                className="flex items-center gap-2 px-2.5 py-1 bg-[var(--ramp-1)] hover:bg-[var(--ramp-2)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-white rounded text-xs transition-colors"
+                className="flex items-center gap-2 px-2.5 py-1 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-white rounded text-xs transition-colors"
                 title="Quick Search (⌘K)"
               >
                 <Search size={13} />
-                <span className="font-mono text-[11px] hidden sm:inline">Search...</span>
-                <kbd className="px-1.5 py-0.2 text-[10px] font-mono bg-[var(--ramp-2)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
+                <span className="text-[11px] hidden sm:inline">Search...</span>
+                <kbd className="px-1.5 py-0.2 text-[10px] font-mono bg-white/5 border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
                   ⌘K
                 </kbd>
               </button>
 
               <button
                 onClick={() => setIsNewIssueModalOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-white border border-[var(--border-secondary)] transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded bg-white text-black hover:bg-[#E5E5E5] transition-colors"
                 title="Create Task (C)"
               >
                 <Plus size={14} />
@@ -434,7 +434,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
               <button
                 onClick={() => setIsShortcutsModalOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-2)] transition-colors"
+                className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-hover)] transition-colors"
                 title="Keyboard Shortcuts (?)"
               >
                 <HelpCircle size={14} />
@@ -469,8 +469,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
           </div>
         ) : !currentUser ? null : (
-          <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none">
-            {children}
+          <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none p-2 bg-[var(--bg-canvas)]">
+            <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg shadow-sm">
+              {children}
+            </div>
           </main>
         )}
       </div>
