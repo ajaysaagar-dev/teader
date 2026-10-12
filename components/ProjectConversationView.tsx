@@ -570,7 +570,7 @@ export function ProjectConversationView({
         </div>
 
         {/* Messages Feed Area */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4 space-y-3.5 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-4 space-y-3.5 custom-scrollbar bg-[#1e1e1e]">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-full text-xs font-mono text-[var(--text-muted)] space-y-2">
               <Loader2 size={20} className="animate-spin text-white" />

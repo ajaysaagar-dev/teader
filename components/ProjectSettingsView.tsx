@@ -292,7 +292,7 @@ export function ProjectSettingsView({
   if (!project) return null;
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#000000] text-[var(--text-secondary)] p-6 lg:p-10 select-none">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#1e1e1e30] text-[var(--text-secondary)] p-6 lg:p-10 select-none">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header Title */}
         <div className="flex items-center justify-between pb-5 border-b border-[#141414]">

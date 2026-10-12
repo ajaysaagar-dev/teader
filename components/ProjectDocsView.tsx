@@ -2074,7 +2074,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 tabsContainerRef.current.scrollLeft += e.deltaY;
               }
             }}
-            className="bg-[#000000] border-b border-[#141414] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
+            className="bg-[var(--bg-main)] border-b border-[#141414] flex items-center h-10 px-2 gap-1 overflow-x-auto select-none custom-scrollbar shrink-0"
           >
             {openDocIds.length === 0 ? (
               <div className="flex items-center gap-2 px-2 text-xs text-[var(--text-muted)] font-mono">
@@ -2225,44 +2225,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           {selectedDoc ? (
             <>
               {/* Document Header & Mode Controls */}
-              <div className="h-14 px-6 border-b border-[#141414] bg-[#101010] flex items-center justify-between gap-4 shrink-0">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-8 h-8 rounded-lg bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white shrink-0">
-                    <FileCode2 size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <input
-                      type="text"
-                      value={activeTitle}
-                      onChange={(e) => handleTitleChange(e.target.value)}
-                      placeholder="Untitled Document..."
-                      className="w-full bg-transparent border-b border-transparent hover:border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-sm sm:text-base font-bold text-white outline-none font-prompt transition-colors truncate"
-                      title="Click to rename document title"
-                    />
-                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] truncate">
-                      <span>{selectedDoc.folder || DEFAULT_FOLDER} / {selectedDoc.fileName}</span>
-                      <span>•</span>
-                      <span className="font-mono text-[11px]">Ln {cursorPos.lineIndex + 1}, Col {cursorPos.col || 1} ({cursorPos.offset || 0} ch)</span>
-                      <span>•</span>
-                      <span>{isAutoSaving ? 'Saving...' : hasUnsavedChanges ? 'Unsaved' : 'Synced'}</span>
-                      <span>•</span>
-                      <RealtimeBadge />
-                    </div>
-                  </div>
-                </div>
+              <div className="h-14 px-6 border-b border-[#141414] flex items-center justify-between gap-4 shrink-0">
 
                 {/* Top Action Buttons: Save & View Mode */}
                 <div className="flex items-center gap-2.5">
-                  {/* Manual Save Button */}
-                  <button
-                    onClick={() => performManualSave()}
-                    disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#E5E5E5] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-medium text-xs transition-colors shadow-sm cursor-pointer disabled:cursor-default"
-                    title="Manual Save (Ctrl + S)"
-                  >
-                    <Save size={13} />
-                    <span>{isSaving ? 'Saving...' : isJustSaved ? 'Saved' : 'Save'}</span>
-                  </button>
 
                   {/* View Mode Toggle */}
                   <div className="flex items-center bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg p-0.5 text-xs">
@@ -2326,7 +2292,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                 {(viewMode === 'preview' || viewMode === 'split') && (
                   <div
                     ref={previewContainerRef}
-                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#000000] custom-scrollbar scroll-smooth"
+                    className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#1e1e1e50] custom-scrollbar scroll-smooth"
                   >
                     <div className="max-w-3xl mx-auto space-y-4 text-[var(--text-secondary)] font-sans">
                       {viewMode === 'split' && (

@@ -1687,12 +1687,6 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                   LIVE
                 </span>
               )}
-              {currentUserIsAdmin && (
-                <span className="px-2 py-0.5 rounded-full bg-white/15 text-white text-[10px] font-mono font-bold border border-[var(--border-secondary)] flex items-center gap-1">
-                  <Shield size={10} />
-                  ADMIN
-                </span>
-              )}
             </div>
             <p className="text-[11px] text-[var(--text-muted)] flex items-center gap-2">
               <span>{participants.length} in call</span>
@@ -2262,7 +2256,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
         </div>
 
         {/* ── Bottom Controls Dock ── */}
-        <div className="h-20 border-t border-[#1F1F1F] bg-[#000000]/95 backdrop-blur-xl flex items-center justify-center gap-3 px-6 z-30 shadow-2xl flex-wrap">
+        <div className="h-20 border-t border-[#1F1F1F] bg-[#1e1e1e] backdrop-blur-xl flex items-center justify-center gap-3 px-6 z-30 shadow-2xl flex-wrap">
           {/* Mute Button */}
           <button
             onClick={handleToggleMute}

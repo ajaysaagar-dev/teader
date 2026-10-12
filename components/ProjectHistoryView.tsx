@@ -219,7 +219,7 @@ export function ProjectHistoryView({
   };
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[#000000] text-[var(--text-secondary)] p-4 lg:p-8 select-none">
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[var(--bg-main)] text-[var(--text-secondary)] p-4 lg:p-8 select-none">
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#141414] gap-4">

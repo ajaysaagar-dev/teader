@@ -1798,89 +1798,43 @@ export default function SingleProjectPage() {
 
         {/* 2. 4 Primary Tabs Bar (Overview, Tasks, Docs, Settings) + Sub-views / Tasks Toolbar */}
         <div className="h-10 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none gap-3">
-          {/* Left: 4 Primary Tabs */}
+          {/* Left: Primary Tabs */}
           <div className="flex items-center gap-2 h-full">
-            <button
-              onClick={() => handleTabSwitch('overview')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'overview'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => handleTabSwitch('tasks')}
-              className={`flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative ${
-                activeTab === 'tasks'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              <span>Tasks</span>
-              <span className="font-mono text-[10px] text-[var(--text-muted)]">({projectIssues.length})</span>
-            </button>
-            <button
-              onClick={() => handleTabSwitch('docs')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'docs'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Docs
-            </button>
-            <button
-              onClick={() => handleTabSwitch('charts')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'charts'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Charts
-            </button>
-            <button
-              onClick={() => handleTabSwitch('chats')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'chats'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Conversations
-            </button>
-            <button
-              onClick={() => handleTabSwitch('meeting')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'meeting'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Meetings
-            </button>
-            <button
-              onClick={() => handleTabSwitch('history')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'history'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              History
-            </button>
-            <button
-              onClick={() => handleTabSwitch('settings')}
-              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
-                activeTab === 'settings'
-                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
-                  : 'text-[var(--text-secondary)] hover:text-white'
-              }`}
-            >
-              Settings
-            </button>
+            {[
+              { id: 'overview', label: 'Overview' },
+              { id: 'tasks', label: 'Tasks', badge: `(${projectIssues.length})` },
+              { id: 'docs', label: 'Docs' },
+              { id: 'charts', label: 'Charts' },
+              { id: 'chats', label: 'Conversations' },
+              { id: 'meeting', label: 'Meetings' },
+              { id: 'history', label: 'History' },
+              { id: 'settings', label: 'Settings' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabSwitch(tab.id as ProjectTab)}
+                  className={`flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative ${
+                    isActive
+                      ? 'text-white font-medium'
+                      : 'text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span className="font-mono text-[10px] text-[var(--text-muted)]">{tab.badge}</span>
+                  )}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTabUnderline"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-white pointer-events-none"
+                      transition={{ type: 'tween', ease: 'easeInOut', duration: 0.25 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Right: Contextual Toolbar depending on activeTab */}

@@ -1998,7 +1998,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   return (
     <div className="flex flex-col h-full max-h-full w-full bg-[#000000] text-[#E3E3E3] overflow-hidden overscroll-none select-none">
       {/* ── Top Bar: Tabs & Canvas Action Controls ── */}
-      <div className="h-10 bg-[#000000] border-b border-[#141414] flex items-center justify-between px-2 shrink-0 z-20 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
+      <div className="h-10 bg-[#000000] border-0 bg-[var(--bg-main)] flex items-center justify-between px-2 shrink-0 z-20 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
         {/* Tab Switcher */}
         <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
           {openChartIds.length === 0 ? (
