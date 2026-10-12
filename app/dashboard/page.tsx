@@ -260,9 +260,8 @@ export default function DashboardPage() {
   if (loading && issues.length === 0) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#111111] text-[var(--text-secondary)] p-6 space-y-4">
-          <div className="w-10 h-10 border-2 border-[var(--border-secondary)] border-t-transparent rounded-full animate-spin" />
-          <RandomLoadingText />
+        <div className="flex-1 flex items-center justify-center h-full p-6">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
         </div>
       </AppLayout>
     );
