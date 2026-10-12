@@ -102,7 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-all duration-150 ${
+      className={`h-full bg-[var(--bg-sidebar)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-all duration-150 ${
         collapsed ? 'w-14' : 'w-60'
       } shrink-0 overflow-hidden text-xs font-sans border-r border-[var(--border-primary)] z-30`}
     >
@@ -115,14 +115,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-2 text-white font-semibold tracking-tight hover:opacity-80 transition-opacity min-w-0"
             title="Teader Workspace"
           >
-            <div className="w-6 h-6 rounded bg-[#3B82F6] text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-sm shadow-[#3B82F6]/30">
+            <div className="w-6 h-6 rounded bg-white text-black font-bold flex items-center justify-center shrink-0 text-xs">
               T
             </div>
             {!collapsed && (
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="truncate text-xs font-medium text-white">Teader</span>
+                <span className="truncate text-xs font-semibold text-white">Teader</span>
                 {desktopInfo.isDesktop && desktopInfo.version && (
-                  <span className="text-[9px] font-mono font-medium px-1 py-0.2 rounded bg-[var(--ramp-2)] text-[var(--text-muted)] border border-[var(--border-primary)]">
+                  <span className="text-[11px] text-[var(--text-muted)] font-normal">
                     v{desktopInfo.version}
                   </span>
                 )}
@@ -132,7 +132,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <button
             onClick={onToggleCollapse}
-            className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-[var(--ramp-2)] transition-colors shrink-0"
+            className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/5 transition-colors shrink-0"
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-2 shrink-0">
             <button
               onClick={onOpenNewIssue}
-              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors font-medium text-xs shadow-sm shadow-[#3B82F6]/25 ${
+              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-white text-black hover:bg-[#E5E5E5] active:bg-[#D4D4D4] transition-colors font-medium text-xs ${
                 collapsed ? 'justify-center px-0' : ''
               }`}
               title="New Issue (C)"
@@ -166,14 +166,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded transition-colors text-xs ${
+                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded transition-colors text-xs relative ${
                   isActive
-                    ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                    ? 'bg-white/10 text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                 } ${collapsed ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
-                <Icon size={14} className={isActive ? 'text-[#3B82F6] shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
+                <Icon size={14} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
                 {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
@@ -182,11 +182,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Projects Section */}
         <div className="px-2 pt-2 pb-1 border-t border-[var(--border-subtle)] flex-1 min-h-0 flex flex-col">
-          <div className="flex items-center justify-between px-2 py-1 text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider shrink-0">
+          <div className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] shrink-0">
             {!collapsed && <span>Projects</span>}
             <Link
               href="/projects"
-              className="hover:text-white transition-colors"
+              className="text-[var(--text-muted)] hover:text-white transition-colors"
               title="View all projects"
             >
               <FolderKanban size={13} />
@@ -201,14 +201,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Link
                   key={proj.id}
                   href={projHref}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors relative ${
                     isProjActive
-                      ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                      ? 'bg-white/10 text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                   title={proj.name}
                 >
-                  <span className={`w-4 h-4 rounded ${isProjActive ? 'bg-[#3B82F6] text-white' : 'bg-neutral-800 text-neutral-300'} flex items-center justify-center font-mono text-[9px] font-bold shrink-0`}>
+                  <span className={`w-4 h-4 rounded ${isProjActive ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-300'} flex items-center justify-center font-mono text-[9px] font-bold shrink-0`}>
                     {proj.key ? proj.key.slice(0, 2) : 'P'}
                   </span>
                   {!collapsed && <span className="truncate">{proj.name}</span>}
@@ -220,7 +220,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Footer Section */}
-      <div className="p-2 border-t border-[var(--border-primary)] bg-[var(--bg-canvas)] space-y-1 shrink-0">
+      <div className="p-2 border-t border-[var(--border-primary)] bg-[var(--bg-sidebar)] space-y-1 shrink-0">
         {onOpenSettings && (
           <button
             onClick={onOpenSettings}
