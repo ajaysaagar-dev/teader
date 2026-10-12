@@ -20,6 +20,20 @@ export default function LoginPage() {
     let isMounted = true;
 
     async function checkRememberedSession() {
+      // Loop guard: if an auto-redirect attempt redirected right back to /login within 4 seconds, break the loop
+      try {
+        const lastAttempt = sessionStorage.getItem('teader_auto_login_attempt');
+        const now = Date.now();
+        if (lastAttempt && now - Number(lastAttempt) < 4000) {
+          console.warn('[Auth] Redirect loop detected. Clearing stored credentials and showing login form.');
+          sessionStorage.removeItem('teader_auto_login_attempt');
+          localStorage.removeItem('teader_token');
+          localStorage.removeItem('teader_user');
+          if (isMounted) setIsCheckingAutoLogin(false);
+          return;
+        }
+      } catch {}
+
       try {
         const savedToken = localStorage.getItem('teader_token');
         const savedUser = localStorage.getItem('teader_user');
@@ -35,6 +49,11 @@ export default function LoginPage() {
               if (savedToken) localStorage.setItem('teader_token', savedToken);
               localStorage.setItem('teader_user', JSON.stringify(data.user));
 
+              // Record timestamp to catch rapid bounce loops
+              try {
+                sessionStorage.setItem('teader_auto_login_attempt', String(Date.now()));
+              } catch {}
+
               // Auto-redirect to target dashboard
               let target = '/dashboard';
               if (typeof window !== 'undefined') {
@@ -48,10 +67,26 @@ export default function LoginPage() {
               }
               router.push(target);
               return;
+            } else {
+              // Stored session is not valid — clear stale local storage
+              try {
+                localStorage.removeItem('teader_token');
+                localStorage.removeItem('teader_user');
+              } catch {}
             }
+          } else {
+            try {
+              localStorage.removeItem('teader_token');
+              localStorage.removeItem('teader_user');
+            } catch {}
           }
         }
-      } catch {}
+      } catch {
+        try {
+          localStorage.removeItem('teader_token');
+          localStorage.removeItem('teader_user');
+        } catch {}
+      }
 
       if (isMounted) {
         setIsCheckingAutoLogin(false);

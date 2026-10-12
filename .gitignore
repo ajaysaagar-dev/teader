@@ -41,7 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 # scripts
-/scripts
+/scripts/*
+!/scripts/db-seed.ts
 
 # large release archives
 public/releases/*.7z
