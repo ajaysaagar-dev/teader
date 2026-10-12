@@ -113,7 +113,7 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
           }}
           className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left"
         >
-          <Pencil size={13} className="text-[var(--cyan)]" />
+          <Pencil size={13} className="text-[var(--text-muted)]" />
           <span>Edit Project</span>
         </button>
       )}
@@ -147,7 +147,7 @@ export const ProjectContextMenu: React.FC<ProjectContextMenuProps> = ({
               onDelete?.(project);
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--danger-bg)] text-[var(--danger)] transition-colors text-left font-semibold"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-white transition-colors text-left font-medium"
           >
             <Trash2 size={13} />
             <span>Delete Project</span>

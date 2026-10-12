@@ -7,15 +7,10 @@ import {
   Trash2, 
   Copy, 
   Link as LinkIcon, 
-  CheckCircle2, 
-  Clock, 
-  AlertTriangle, 
   ChevronRight,
-  ExternalLink,
-  Tag,
-  Flame,
-  ShieldAlert
 } from 'lucide-react';
+import { StatusIcon } from '@/components/ui/StatusIcon';
+import { PriorityIcon } from '@/components/ui/PriorityIcon';
 import { toast } from 'sonner';
 
 export interface TaskContextMenuProps {
@@ -80,18 +75,18 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
   const left = Math.min(position.x, screenWidth - menuWidth - 10);
   const top = Math.min(position.y, screenHeight - menuHeight - 10);
 
-  const statuses: { id: Status; label: string; color: string }[] = [
-    { id: 'todo', label: 'Todo', color: 'var(--status-todo, #666666)' },
-    { id: 'in_progress', label: 'In Progress', color: 'var(--status-inprogress, #FFFFFF)' },
-    { id: 'needs_review', label: 'Needs Review', color: 'var(--status-review, #FFFFFF)' },
-    { id: 'done', label: 'Done', color: 'var(--status-done, #FFFFFF)' },
+  const statuses: { id: Status; label: string }[] = [
+    { id: 'todo', label: 'Todo' },
+    { id: 'in_progress', label: 'In Progress' },
+    { id: 'needs_review', label: 'Needs Review' },
+    { id: 'done', label: 'Done' },
   ];
 
-  const priorities: { id: Priority; label: string; color: string }[] = [
-    { id: 'critical', label: 'Critical (P0)', color: 'var(--priority-critical, #FFFFFF)' },
-    { id: 'high', label: 'High (P1)', color: 'var(--priority-high, #FFFFFF)' },
-    { id: 'medium', label: 'Medium (P2)', color: 'var(--priority-medium, #FFFFFF)' },
-    { id: 'low', label: 'Low (P3)', color: 'var(--priority-low, #A0A0A0)' },
+  const priorities: { id: Priority; label: string }[] = [
+    { id: 'critical', label: 'Critical (P0)' },
+    { id: 'high', label: 'High (P1)' },
+    { id: 'medium', label: 'Medium (P2)' },
+    { id: 'low', label: 'Low (P3)' },
   ];
 
   const handleCopyKey = () => {
@@ -142,7 +137,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       >
         <button className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left font-medium">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={13} className="text-[var(--info)]" />
+            <StatusIcon status={issue.status} size={13} />
             <span>Change Status</span>
           </div>
           <ChevronRight size={12} className="text-[var(--text-muted)]" />
@@ -169,7 +164,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
                   } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: st.color }} />
+                    <StatusIcon status={st.id} size={13} />
                     <span>{st.label}</span>
                   </div>
                   {isDisabled && <span className="text-[9px] font-mono text-[var(--text-muted)]">(Locked)</span>}
@@ -191,7 +186,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
       >
         <button className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] hover:text-white transition-colors text-left font-medium">
           <div className="flex items-center gap-2">
-            <Flame size={13} className="text-[var(--priority-high)]" />
+            <PriorityIcon priority={issue.priority} size={13} />
             <span>Change Priority</span>
           </div>
           <ChevronRight size={12} className="text-[var(--text-muted)]" />
@@ -210,7 +205,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
                   issue.priority === pr.id ? 'text-white font-bold bg-[var(--bg-hover)]' : 'text-[var(--text-primary)]'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pr.color }} />
+                <PriorityIcon priority={pr.id} size={13} />
                 <span>{pr.label}</span>
               </button>
             ))}
@@ -247,7 +242,7 @@ export const TaskContextMenu: React.FC<TaskContextMenuProps> = ({
               onDelete?.(issue.id);
               onClose();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--danger-bg)] text-[var(--danger)] transition-colors text-left font-semibold"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-white transition-colors text-left font-medium"
           >
             <Trash2 size={13} />
             <span>Delete Task</span>

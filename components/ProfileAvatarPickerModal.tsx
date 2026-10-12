@@ -99,7 +99,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)] bg-[#141414]">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[var(--purple)]/15 text-[var(--purple)] flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-lg bg-[var(--accent-subtle)] text-white flex items-center justify-center font-bold">
                 <Sparkles size={16} />
               </div>
               <div>
@@ -121,7 +121,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
           {/* Active Preview Bar */}
           <div className="px-6 py-3 bg-[#151515] border-b border-[#272727] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-[var(--purple)] shadow-md shadow-[var(--purple)]/20">
+              <div className="relative w-11 h-11 rounded-xl overflow-hidden border-2 border-white shadow-md">
                 <img
                   src={selectedAvatar}
                   alt="Selected avatar"
@@ -139,7 +139,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
             </div>
 
             {selectedAvatar === currentAvatar && (
-              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]">
+              <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[var(--ramp-2)] text-black border border-[var(--border-secondary)]">
                 Current Avatar
               </span>
             )}
@@ -158,7 +158,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
                     onClick={() => handleSelect(imgUrl)}
                     className={`relative group aspect-square rounded-xl p-1 transition-all flex items-center justify-center border ${
                       isSelected
-                        ? 'border-[var(--purple)] bg-[var(--purple)]/15 ring-2 ring-[var(--purple)]/40 shadow-lg shadow-[var(--purple)]/20 scale-105'
+                        ? 'border-white bg-[var(--accent-subtle)] ring-2 ring-white/20 shadow-lg scale-105'
                         : isCurrent
                         ? 'border-[var(--border-secondary)] bg-[var(--ramp-2)] hover:border-[var(--border-secondary)]'
                         : 'border-[var(--border-primary)] bg-[var(--bg-panel)] hover:border-[#2C2C2C] hover:bg-[#1D1D1D]'
@@ -173,13 +173,13 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
 
                     {/* Indicator Badges */}
                     {isSelected && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--purple)] text-white flex items-center justify-center shadow-md">
+                      <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white text-black flex items-center justify-center shadow-md">
                         <Check size={12} strokeWidth={3} />
                       </span>
                     )}
 
                     {!isSelected && isCurrent && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-black text-white flex items-center justify-center text-[8px] font-bold shadow-sm">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-black flex items-center justify-center text-[8px] font-bold shadow-sm">
                         •
                       </span>
                     )}
@@ -208,7 +208,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
               type="button"
               onClick={handleSave}
               disabled={isSaving || !selectedAvatar}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--purple)] hover:bg-[var(--purple-hover)] text-white text-xs font-bold transition-all shadow-md shadow-[var(--purple)]/20 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black text-xs font-bold transition-all shadow-md disabled:opacity-50"
             >
               {isSaving ? (
                 <>
