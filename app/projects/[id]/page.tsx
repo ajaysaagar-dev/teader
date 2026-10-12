@@ -1826,12 +1826,12 @@ export default function SingleProjectPage() {
             {project && (
               <button
                 onClick={handleCopyProjectKey}
-                className="flex items-center gap-1 px-1.5 py-0.5 bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] border border-[var(--border-primary)] rounded text-[10px] font-mono text-[var(--text-secondary)] hover:text-white transition-colors"
+                className="flex items-center gap-1 text-[11px] font-mono text-[var(--text-muted)] hover:text-white transition-colors"
                 title={`Click to copy key: ${project.key}`}
               >
-                <Key size={10} />
-                <span>{project.key}</span>
-                {copiedKey && <Check size={10} className="text-white" />}
+                <Copy size={11} className="shrink-0" />
+                <span className="truncate max-w-[140px]">{project.key}</span>
+                {copiedKey && <Check size={11} className="text-white" />}
               </button>
             )}
             <div className="hidden sm:flex items-center pl-1">
@@ -1908,23 +1908,23 @@ export default function SingleProjectPage() {
         {/* 2. 4 Primary Tabs Bar (Overview, Tasks, Docs, Settings) + Sub-views / Tasks Toolbar */}
         <div className="h-10 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none gap-3">
           {/* Left: 4 Primary Tabs */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 h-full">
             <button
               onClick={() => handleTabSwitch('overview')}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
                 activeTab === 'overview'
-                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
               }`}
             >
               Overview
             </button>
             <button
               onClick={() => handleTabSwitch('tasks')}
-              className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded transition-colors ${
+              className={`flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative ${
                 activeTab === 'tasks'
-                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
               }`}
             >
               <span>Tasks</span>
@@ -1932,20 +1932,20 @@ export default function SingleProjectPage() {
             </button>
             <button
               onClick={() => handleTabSwitch('docs')}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
                 activeTab === 'docs'
-                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
               }`}
             >
               Docs
             </button>
             <button
               onClick={() => handleTabSwitch('settings')}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 h-full flex items-center text-xs transition-colors relative ${
                 activeTab === 'settings'
-                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
+                  ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                  : 'text-[var(--text-secondary)] hover:text-white'
               }`}
             >
               Settings

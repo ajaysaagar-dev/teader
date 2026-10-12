@@ -20,7 +20,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }[size];
 
     const variantClasses = {
-      primary: 'bg-[#3B82F6] text-white hover:bg-[#2563EB] active:bg-[#1D4ED8] shadow-sm shadow-[#3B82F6]/25',
+      primary: 'bg-white text-black hover:bg-[#E5E5E5] active:bg-[#D4D4D4] shadow-sm',
       secondary:
         'bg-transparent text-[var(--text-primary)] border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-secondary)] active:bg-[var(--bg-active)]',
       ghost:

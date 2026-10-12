@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { useRealtimeStatus } from '@/lib/useRealtime';
@@ -10,12 +10,12 @@ export const RealtimeBadge: React.FC<{ minimal?: boolean }> = ({ minimal = false
   if (minimal) {
     return (
       <div
-        className="flex items-center gap-1 text-[10px] font-mono"
-        title={isConnected ? 'Real-time WebSocket Live' : 'Real-time Reconnecting...'}
+        className="flex items-center gap-1 text-[11px]"
+        title={isConnected ? 'Live' : 'Reconnecting...'}
       >
         <span
-          className={`w-2 h-2 rounded-full ${
-            isConnected ? 'bg-[var(--ramp-3)] shadow-[0_0_8px_#FFFFFF] animate-pulse' : 'bg-[var(--ramp-3)]'
+          className={`w-1.5 h-1.5 rounded-full ${
+            isConnected ? 'bg-white' : 'bg-[var(--text-muted)]'
           }`}
         />
       </div>
@@ -24,23 +24,19 @@ export const RealtimeBadge: React.FC<{ minimal?: boolean }> = ({ minimal = false
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border transition-all select-none ${
-        isConnected
-          ? 'bg-[var(--ramp-3)]/10 border-[var(--border-secondary)] text-white'
-          : 'bg-[var(--ramp-3)]/10 border-[var(--border-secondary)] text-white'
-      }`}
+      className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] select-none"
       title={
         isConnected
-          ? 'Connected to Real-time WebSocket: Data and alignments update instantly across all users'
-          : 'Realtime WebSocket disconnected: Attempting auto-reconnect...'
+          ? 'Connected: Data updates in real time'
+          : 'Disconnected: Attempting to reconnect...'
       }
     >
       <span
         className={`w-1.5 h-1.5 rounded-full ${
-          isConnected ? 'bg-[var(--ramp-3)] animate-pulse shadow-[0_0_6px_#FFFFFF]' : 'bg-[var(--ramp-3)]'
+          isConnected ? 'bg-white' : 'bg-[var(--text-muted)]'
         }`}
       />
-      <span>{isConnected ? 'LIVE SYNC' : 'RECONNECTING'}</span>
+      <span className="text-[11px] font-sans text-[var(--text-secondary)]">{isConnected ? 'Live' : 'Reconnecting'}</span>
     </div>
   );
 };

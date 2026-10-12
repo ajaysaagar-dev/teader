@@ -1657,14 +1657,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <BookOpen size={15} className="text-white" />
-                <span className="font-bold text-xs text-white uppercase tracking-wider font-mono">
-                  Documentation Tree
+                <span className="font-semibold text-xs text-white">
+                  Documentation tree
                 </span>
               </div>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsCreatingFolder(true)}
-                  className="p-1.5 rounded-lg bg-[#1B1B1B] hover:bg-[#262626] text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] transition-colors"
+                  className="p-1.5 rounded-lg bg-[var(--bg-panel)] hover:bg-white/5 text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] transition-colors"
                   title="Create New Folder"
                 >
                   <FolderPlus size={13} />
@@ -1674,7 +1674,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     setActiveFolderForCreation(DEFAULT_FOLDER);
                     setIsCreatingNew(true);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#FFFFFF] font-bold text-xs transition-transform hover:scale-105 shadow-sm"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#E5E5E5] font-medium text-xs transition-colors shadow-sm"
                   title="Create New Document in Start folder"
                 >
                   <Plus size={13} />
@@ -1829,25 +1829,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       setDraggingDocId(null);
                     }
                   }}
-                  className={`relative rounded-xl border transition-all ${
-                    isFolderBeingDragged ? 'opacity-40 border-dashed border-[var(--border-secondary)]' : ''
+                  className={`relative select-none transition-all ${
+                    isFolderBeingDragged ? 'opacity-40' : ''
                   } ${
                     isDragOverFolderBox
-                      ? 'border-[var(--border-secondary)] bg-white/10 shadow-[0_0_12px_rgba(220,176,1,0.2)]'
-                      : 'border-[#141414] bg-[var(--bg-panel)]/50'
+                      ? 'bg-white/5 rounded-lg'
+                      : ''
                   }`}
                 >
                   {/* Top Drop Indicator for Folder */}
                   {isFolderOverThis && folderPos === 'before' && (
-                    <div className="absolute -top-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-30" />
+                    <div className="absolute -top-1 left-0 right-0 h-0.5 bg-white rounded-full shadow-[0_0_6px_#FFFFFF] z-30" />
                   )}
 
                   {/* Bottom Drop Indicator for Folder */}
                   {isFolderOverThis && folderPos === 'after' && (
-                    <div className="absolute -bottom-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-30" />
+                    <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white rounded-full shadow-[0_0_6px_#FFFFFF] z-30" />
                   )}
 
-                  {/* Folder Header */}
+                  {/* Folder Header Row (32-36px flat row) */}
                   <div
                     draggable={!isDefault}
                     onDragStart={(e) => {
@@ -1861,19 +1861,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       setDragOverFolderTarget(null);
                     }}
                     onClick={() => setOpenFolders((prev) => ({ ...prev, [folder]: !isOpen }))}
-                    className={`flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#1D1D1D] rounded-t-xl transition-colors group ${
+                    className={`h-8.5 min-h-[34px] px-2 py-1 rounded flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors group ${
                       !isDefault ? 'cursor-grab active:cursor-grabbing' : ''
                     }`}
                   >
-                    <div className="flex items-center gap-2 font-mono text-xs font-bold text-white min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-white min-w-0 flex-1">
                       {!isDefault && (
                         <GripVertical
                           size={12}
-                          className="text-[var(--text-muted)] opacity-30 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab"
+                          className="text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-grab"
                         />
                       )}
                       {isOpen ? (
-                        <ChevronDown size={13} className="text-white shrink-0" />
+                        <ChevronDown size={13} className="text-[var(--text-muted)] shrink-0" />
                       ) : (
                         <ChevronRight size={13} className="text-[var(--text-muted)] shrink-0" />
                       )}
@@ -1883,15 +1883,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         <Folder size={14} className="text-[var(--text-muted)] shrink-0" />
                       )}
                       <span className="truncate">{folder}</span>
-                      {isDefault && (
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#222222] text-white border border-[#222222] shrink-0">
-                          Default
-                        </span>
-                      )}
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <span className="text-[10px] font-mono text-[var(--text-muted)] px-1.5 py-0.5 rounded bg-[#191919]">
+                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[11px] text-[var(--text-muted)] font-normal">
                         {items.length}
                       </span>
                       <button
@@ -1901,7 +1896,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                           setActiveFolderForCreation(folder);
                           setIsCreatingNew(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
                         title={`Add doc inside ${folder}`}
                       >
                         <Plus size={12} />
@@ -1910,7 +1905,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                         <button
                           type="button"
                           onClick={(e) => handleDeleteFolder(folder, e)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-white text-[var(--text-muted)] rounded transition-opacity"
                           title={`Delete folder "${folder}"`}
                         >
                           <Trash2 size={12} />
@@ -1919,16 +1914,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Folder Items (Collapsible) */}
+                  {/* Folder Items (Collapsible with 12px indent guides) */}
                   {isOpen && (
-                    <div className="p-1 space-y-1">
+                    <div className="pl-3 ml-3 border-l border-[var(--border-primary)] space-y-0.5 mt-0.5">
                       {items.length === 0 ? (
                         <div
-                          className={`p-3 text-center border border-dashed rounded-lg text-[11px] font-mono transition-all ${
-                            isDragOverFolderBox ? 'border-[var(--border-secondary)] text-white bg-white/5' : 'border-[var(--border-primary)] text-[var(--text-muted)]'
+                          className={`p-2 text-center text-[11px] font-mono transition-all ${
+                            isDragOverFolderBox ? 'text-white bg-white/5' : 'text-[var(--text-muted)]'
                           }`}
                         >
-                          {isDragOverFolderBox ? 'Drop file here to move' : 'Empty folder — drag .md files here'}
+                          {isDragOverFolderBox ? 'Drop file here to move' : 'Empty folder'}
                         </div>
                       ) : (
                         items.map((doc) => {
@@ -1988,26 +1983,26 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                 if (isRenaming) return;
                                 handleOpenDoc(String(doc.id));
                               }}
-                              className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-all border ${
+                              className={`group relative h-8.5 min-h-[34px] flex items-center justify-between px-2 py-1 rounded cursor-pointer transition-colors text-xs ${
                                 isSelected
-                                  ? 'bg-[#222222] border-[var(--border-secondary)] text-white shadow-sm'
-                                  : 'hover:bg-[#191919] border-transparent text-[var(--text-secondary)]'
-                              } ${isDocDragging ? 'opacity-30 bg-[var(--bg-panel)]' : ''}`}
+                                  ? 'bg-white/10 text-white font-medium before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                                  : 'hover:bg-white/5 text-[var(--text-secondary)] hover:text-white'
+                              } ${isDocDragging ? 'opacity-30' : ''}`}
                             >
                               {/* Top Drop Indicator Line for Doc */}
                               {isDocOverThis && docPos === 'before' && (
-                                <div className="absolute -top-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
+                                <div className="absolute -top-1 left-0 right-0 h-0.5 bg-white rounded-full shadow-[0_0_6px_#FFFFFF] z-20" />
                               )}
 
                               {/* Bottom Drop Indicator Line for Doc */}
                               {isDocOverThis && docPos === 'after' && (
-                                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-white text-black rounded-full shadow-[0_0_8px_#FFFFFF] z-20" />
+                                <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white rounded-full shadow-[0_0_6px_#FFFFFF] z-20" />
                               )}
 
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                 <GripVertical
                                   size={11}
-                                  className="text-[var(--text-muted)] opacity-40 group-hover:opacity-100 cursor-grab shrink-0"
+                                  className="text-[var(--text-muted)] opacity-0 group-hover:opacity-100 cursor-grab shrink-0"
                                 />
                                 <FileText
                                   size={13}
@@ -2025,16 +2020,16 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                       if (e.key === 'Escape') setRenamingDocId(null);
                                     }}
                                     autoFocus
-                                    className="px-1.5 py-0.5 bg-[#0F0F0F] border border-[var(--border-secondary)] rounded text-xs text-white outline-none w-full font-mono"
+                                    className="px-1.5 py-0.5 bg-[#0A0A0A] border border-[var(--border-secondary)] rounded text-xs text-white outline-none w-full font-mono"
                                   />
                                 ) : (
                                   <div
                                     onDoubleClick={(e) => handleStartRename(doc, e)}
-                                    className="truncate text-xs font-medium flex-1"
+                                    className="truncate text-xs flex-1"
                                     title="Double-click to rename"
                                   >
                                     <span>{cleanTitle}</span>
-                                    <span className="text-[10px] text-[var(--text-muted)] font-mono ml-1 opacity-60">.md</span>
+                                    <span className="text-[10px] text-[var(--text-muted)] font-mono ml-1 opacity-50">.md</span>
                                   </div>
                                 )}
                               </div>
@@ -2044,14 +2039,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
                                     onClick={(e) => handleStartRename(doc, e)}
-                                    className="p-1 hover:text-white text-[var(--text-muted)] transition-colors"
+                                    className="p-0.5 hover:text-white text-[var(--text-muted)] transition-colors"
                                     title="Rename File"
                                   >
                                     <Edit3 size={11} />
                                   </button>
                                   <button
                                     onClick={(e) => handleDeleteDoc(doc.id, doc.fileName, e)}
-                                    className="p-1 hover:text-white text-[var(--text-muted)] transition-colors"
+                                    className="p-0.5 hover:text-white text-[var(--text-muted)] transition-colors"
                                     title="Delete File"
                                   >
                                     <Trash2 size={11} />
@@ -2151,32 +2146,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       e.preventDefault();
                       setTabContextMenu({ docId: tabId, x: e.clientX, y: e.clientY });
                     }}
-                    className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[190px] sm:max-w-[240px] ${
+                    className={`group relative flex items-center gap-2 px-3 h-full text-xs font-mono cursor-pointer transition-colors shrink-0 max-w-[190px] sm:max-w-[240px] ${
                       isDraggingThis ? 'opacity-40' : ''
                     } ${
-                      isDragOverThis ? 'border-r-2 border-r-[#FFFFFF]' : ''
+                      isDragOverThis ? 'border-r-2 border-r-white' : ''
                     } ${
                       isActive
-                        ? 'bg-[#181818] text-white border-t-[#FFFFFF] border-x border-x-[#2A2A2A] border-b border-b-[#181818] shadow-sm font-medium'
-                        : 'bg-[#000000] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#161616] border-t-transparent border-x border-x-[#141414] border-b border-b-[#141414]'
+                        ? 'text-white font-medium after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-white'
+                        : 'text-[var(--text-secondary)] hover:text-white'
                     }`}
                     title={`${doc?.folder ? `[${doc.folder}] ` : ''}${cleanTitle}.md\nClick to switch • Middle-click to close • Right-click for options`}
                   >
                     <FileText
                       size={13}
-                      className={`shrink-0 ${isActive ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-[#A7A7A7]'}`}
+                      className={`shrink-0 ${isActive ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-white'}`}
                     />
 
                     <span className="truncate flex-1 font-medium text-[11px] sm:text-xs">
                       {cleanTitle}
                     </span>
-
-                    {/* Folder badge for context */}
-                    {doc?.folder && doc.folder !== DEFAULT_FOLDER && (
-                      <span className="hidden xl:inline-block text-[9px] px-1 py-0.2 rounded bg-[#1D1D1D] text-[var(--text-muted)] truncate max-w-[55px]">
-                        {doc.folder}
-                      </span>
-                    )}
 
                     {/* Close Tab / Dirty Indicator */}
                     <div className="flex items-center shrink-0 ml-0.5">
@@ -2252,54 +2240,25 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                       className="w-full bg-transparent border-b border-transparent hover:border-[var(--border-primary)] focus:border-[var(--border-secondary)] text-sm sm:text-base font-bold text-white outline-none font-prompt transition-colors truncate"
                       title="Click to rename document title"
                     />
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--text-muted)]">
-                      <span>Folder: <strong className="text-white">{selectedDoc.folder || DEFAULT_FOLDER}</strong></span>
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] truncate">
+                      <span>{selectedDoc.folder || DEFAULT_FOLDER} / {selectedDoc.fileName}</span>
                       <span>•</span>
-                      <span>File: {selectedDoc.fileName}</span>
+                      <span className="font-mono text-[11px]">Ln {cursorPos.lineIndex + 1}, Col {cursorPos.col || 1} ({cursorPos.offset || 0} ch)</span>
+                      <span>•</span>
+                      <span>{isAutoSaving ? 'Saving...' : hasUnsavedChanges ? 'Unsaved' : 'Synced'}</span>
+                      <span>•</span>
+                      <RealtimeBadge />
                     </div>
                   </div>
                 </div>
 
-                {/* Top Action Buttons */}
+                {/* Top Action Buttons: Save & View Mode */}
                 <div className="flex items-center gap-2.5">
-                  {/* Autosave Status Indicator */}
-                  <div className="hidden sm:flex items-center select-none font-mono text-xs">
-                    {isAutoSaving ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-lg text-[11px] text-white">
-                        <Loader2 size={11} className="animate-spin text-white" />
-                        <span>Saving...</span>
-                      </div>
-                    ) : hasUnsavedChanges ? (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-lg text-[11px] text-[var(--text-muted)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white text-black animate-pulse" />
-                        <span>Unsaved</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[var(--bg-canvas)] border border-[var(--border-secondary)] rounded-lg text-[11px] text-white">
-                        <CheckCircle2 size={11} className="text-white" />
-                        <span>Synced</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="hidden md:flex">
-                    <RealtimeBadge />
-                  </div>
-
-                  {/* Realtime Live Cursor Position Indicator */}
-                  <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg text-[11px] font-mono text-[var(--text-secondary)]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white text-black animate-pulse shadow-[0_0_6px_#FFFFFF]" />
-                    <span className="text-white font-bold">Ln {cursorPos.lineIndex + 1}</span>
-                    <span className="text-[var(--text-muted)]">:</span>
-                    <span className="text-white font-bold">Col {cursorPos.col || 1}</span>
-                    <span className="text-[var(--text-muted)] ml-1">({cursorPos.offset || 0} ch)</span>
-                  </div>
-
                   {/* Manual Save Button */}
                   <button
                     onClick={() => performManualSave()}
                     disabled={isSaving || isAutoSaving || !hasUnsavedChanges}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#FFFFFF] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-bold text-xs transition-all shadow-sm cursor-pointer disabled:cursor-default"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-[#E5E5E5] disabled:bg-[var(--bg-panel)] disabled:text-[var(--text-muted)] font-medium text-xs transition-colors shadow-sm cursor-pointer disabled:cursor-default"
                     title="Manual Save (Ctrl + S)"
                   >
                     <Save size={13} />
@@ -2370,36 +2329,31 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     ref={previewContainerRef}
                     className="flex-1 h-full min-h-0 overflow-y-auto p-6 pb-20 bg-[#000000] custom-scrollbar scroll-smooth"
                   >
-                    <div className="max-w-4xl mx-auto space-y-2 text-[var(--text-secondary)] font-sans">
+                    <div className="max-w-3xl mx-auto space-y-4 text-[var(--text-secondary)] font-sans">
                       {viewMode === 'split' && (
-                        <div className="flex items-center justify-between pb-2 text-[11px] font-mono text-[var(--text-muted)] border-b border-[#141414] mb-4">
+                        <div className="flex items-center justify-between pb-2 text-xs text-[var(--text-muted)] border-b border-[var(--border-primary)] mb-4">
                           <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[var(--ramp-3)] animate-pulse shadow-[0_0_8px_#FFFFFF]" />
-                            <span className="text-[var(--text-secondary)] font-bold">SYNCHRONIZED PREVIEW</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                            <span className="text-[var(--text-secondary)] font-medium">Synchronized preview</span>
                             {Object.values(remoteCursors).length > 0 && (
                               <div className="flex items-center gap-1.5 ml-2">
                                 {Object.values(remoteCursors).map((rc) => (
                                   <span
                                     key={rc.userId}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border"
-                                    style={{
-                                      backgroundColor: `${rc.color}15`,
-                                      borderColor: `${rc.color}40`,
-                                      color: rc.color,
-                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border border-[var(--border-primary)] bg-white/5 text-white"
                                   >
-                                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: rc.color }} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-white" />
                                     <span>{rc.userName}</span>
                                   </span>
                                 ))}
                               </div>
                             )}
                           </div>
-                          <span>Ln {cursorPos.lineIndex + 1}:{cursorPos.col || 1}</span>
+                          <span className="font-mono text-[11px]">Ln {cursorPos.lineIndex + 1}:{cursorPos.col || 1}</span>
                         </div>
                       )}
 
-                      <div className="p-6 sm:p-8 bg-[var(--bg-panel)] border border-[#141414] rounded-2xl shadow-xl">
+                      <div className="py-2 text-[16px] leading-[1.7] text-[var(--text-secondary)]">
                         {activeContent || savedContent ? (
                           renderGithubMarkdown(activeContent || savedContent)
                         ) : (

@@ -145,37 +145,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="w-48 bg-[var(--bg-canvas)] border-r border-[var(--border-primary)] p-3 space-y-1 shrink-0 overflow-y-auto">
                   <button
                     onClick={() => setActiveTab('general')}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left relative focus:outline-none focus:ring-1 focus:ring-white ${
                       activeTab === 'general'
-                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                        ? 'bg-white/10 text-white before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Sliders size={14} className={activeTab === 'general' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
+                    <Sliders size={14} className={activeTab === 'general' ? 'text-white' : 'text-[var(--text-muted)]'} />
                     <span>General</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('account')}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left relative focus:outline-none focus:ring-1 focus:ring-white ${
                       activeTab === 'account'
-                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                        ? 'bg-white/10 text-white before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <User size={14} className={activeTab === 'account' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
+                    <User size={14} className={activeTab === 'account' ? 'text-white' : 'text-[var(--text-muted)]'} />
                     <span>Account</span>
                   </button>
 
                   <button
                     onClick={() => setActiveTab('shortcuts')}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left relative focus:outline-none focus:ring-1 focus:ring-white ${
                       activeTab === 'shortcuts'
-                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
-                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
+                        ? 'bg-white/10 text-white before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:bg-white'
+                        : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    <Keyboard size={14} className={activeTab === 'shortcuts' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
+                    <Keyboard size={14} className={activeTab === 'shortcuts' ? 'text-white' : 'text-[var(--text-muted)]'} />
                     <span>Shortcuts</span>
                   </button>
                 </div>
