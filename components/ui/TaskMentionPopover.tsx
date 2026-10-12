@@ -79,12 +79,12 @@ export const TaskMentionPopover: React.FC<TaskMentionPopoverProps> = ({
               onClick={() => onSelect(item)}
               className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-[var(--ramp-3)]/20 text-white border border-[var(--border-secondary)] shadow-sm'
+                  ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--bg-card)] border border-transparent'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <span className="font-mono font-bold text-white bg-white/10 px-1.5 py-0.2 rounded text-[10px] border border-[var(--border-secondary)] shrink-0">
+                <span className="font-mono font-bold text-[#60A5FA] bg-[#3B82F6]/10 px-1.5 py-0.2 rounded text-[10px] border border-[#3B82F6]/25 shrink-0">
                   {item.shortId}
                 </span>
                 <span className="truncate text-xs">{item.title}</span>

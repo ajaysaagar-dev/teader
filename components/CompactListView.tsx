@@ -210,7 +210,7 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
 
           <button
             onClick={onOpenNewIssue}
-            className="flex items-center gap-1 px-3 py-1.5 bg-white text-black hover:bg-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3B82F6] text-white hover:bg-[#2563EB] rounded-lg text-xs font-semibold shadow-sm shadow-[#3B82F6]/25 transition-all"
           >
             <Plus size={13} />
             <span>New Task</span>
@@ -312,24 +312,24 @@ export const CompactListView: React.FC<CompactListViewProps> = React.memo(({
                 >
                   {/* Top Drop Indicator Line */}
                   {isOverThis && dropPosition === 'before' && (
-                    <div className="absolute -top-0.5 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
+                    <div className="absolute -top-0.5 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                   )}
 
                   {/* Bottom Drop Indicator Line */}
                   {isOverThis && dropPosition === 'after' && (
-                    <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
+                    <div className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                   )}
 
                   {/* Key (T1, T2... Tn) */}
                   <div className="col-span-1 flex items-center gap-1.5 font-mono text-xs text-[var(--text-muted)]">
                     <GripVertical size={12} className="text-[var(--text-muted)] opacity-0 group-hover:opacity-80 transition-opacity shrink-0 cursor-grab" />
-                    <span>{getTaskShortId(issue, issues)}</span>
+                    <span className="group-hover:text-[#60A5FA] transition-colors">{getTaskShortId(issue, issues)}</span>
                   </div>
 
                   {/* Title & Folder Tag */}
                   <div className="col-span-4 flex items-center gap-2 pr-3 truncate">
                     {(issue.epic || issue.title.startsWith('📁 ')) && (
-                      <span className="text-xs text-[var(--text-muted)] truncate shrink-0">
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#3B82F6]/10 text-[#60A5FA] border border-[#3B82F6]/25 truncate shrink-0">
                         📁 {issue.epic || issue.title.replace(/^📁\s*/, '')}
                       </span>
                     )}

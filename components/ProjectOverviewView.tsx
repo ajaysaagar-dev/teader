@@ -126,10 +126,10 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
 
   // SVG Donut Chart Calculation for Status Breakdown
   const statusData = [
-    { label: 'Done', count: stats.done, color: '#FFFFFF' },
-    { label: 'In Progress', count: stats.inProgress, color: '#FFFFFF' },
-    { label: 'Review', count: stats.needsReview, color: '#FFFFFF' },
-    { label: 'Todo', count: stats.todo, color: '#666666' },
+    { label: 'Done', count: stats.done, color: '#10B981' },
+    { label: 'In Progress', count: stats.inProgress, color: '#F59E0B' },
+    { label: 'Review', count: stats.needsReview, color: '#8B5CF6' },
+    { label: 'Todo', count: stats.todo, color: '#64748B' },
   ];
 
   const totalForDonut = stats.total || 1;
@@ -371,14 +371,14 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
             {/* Critical */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white font-semibold flex items-center gap-1.5">
-                  <Flame size={12} /> Critical Priority
+                <span className="text-rose-400 font-semibold flex items-center gap-1.5">
+                  <Flame size={12} className="text-rose-500" /> Critical Priority
                 </span>
                 <span className="font-mono text-white font-bold">{stats.critical} tasks</span>
               </div>
               <div className="w-full h-2 bg-[var(--bg-canvas)] rounded-full overflow-hidden border border-[var(--border-primary)]">
                 <div
-                  className="h-full bg-[var(--ramp-3)] rounded-full transition-all duration-500"
+                  className="h-full bg-rose-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]"
                   style={{ width: `${stats.total > 0 ? (stats.critical / stats.total) * 100 : 0}%` }}
                 />
               </div>
@@ -387,14 +387,14 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
             {/* High */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#FFFFFF] font-semibold flex items-center gap-1.5">
-                  <AlertCircle size={12} /> High Priority
+                <span className="text-orange-400 font-semibold flex items-center gap-1.5">
+                  <AlertCircle size={12} className="text-orange-500" /> High Priority
                 </span>
                 <span className="font-mono text-white font-bold">{stats.high} tasks</span>
               </div>
               <div className="w-full h-2 bg-[var(--bg-canvas)] rounded-full overflow-hidden border border-[var(--border-primary)]">
                 <div
-                  className="h-full bg-[#FFFFFF] rounded-full transition-all duration-500"
+                  className="h-full bg-orange-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(249,115,22,0.3)]"
                   style={{ width: `${stats.total > 0 ? (stats.high / stats.total) * 100 : 0}%` }}
                 />
               </div>
@@ -403,14 +403,14 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
             {/* Medium */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-white font-semibold flex items-center gap-1.5">
-                  <Clock size={12} /> Medium Priority
+                <span className="text-amber-400 font-semibold flex items-center gap-1.5">
+                  <Clock size={12} className="text-amber-500" /> Medium Priority
                 </span>
                 <span className="font-mono text-white font-bold">{stats.medium} tasks</span>
               </div>
               <div className="w-full h-2 bg-[var(--bg-canvas)] rounded-full overflow-hidden border border-[var(--border-primary)]">
                 <div
-                  className="h-full bg-white text-black rounded-full transition-all duration-500"
+                  className="h-full bg-amber-500 rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
                   style={{ width: `${stats.total > 0 ? (stats.medium / stats.total) * 100 : 0}%` }}
                 />
               </div>
@@ -419,14 +419,14 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
             {/* Low */}
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-muted)] font-semibold flex items-center gap-1.5">
-                  <Circle size={12} /> Low Priority
+                <span className="text-slate-400 font-semibold flex items-center gap-1.5">
+                  <Circle size={12} className="text-slate-400" /> Low Priority
                 </span>
                 <span className="font-mono text-white font-bold">{stats.low} tasks</span>
               </div>
               <div className="w-full h-2 bg-[var(--bg-canvas)] rounded-full overflow-hidden border border-[var(--border-primary)]">
                 <div
-                  className="h-full bg-[#666666] rounded-full transition-all duration-500"
+                  className="h-full bg-slate-500 rounded-full transition-all duration-500"
                   style={{ width: `${stats.total > 0 ? (stats.low / stats.total) * 100 : 0}%` }}
                 />
               </div>

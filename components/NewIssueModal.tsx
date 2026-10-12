@@ -1234,7 +1234,7 @@ export const NewIssueModal: React.FC<NewIssueModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-1.5 bg-white text-black hover:bg-[#FFFFFF] rounded-lg font-bold transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-1.5 bg-[#3B82F6] text-white hover:bg-[#2563EB] rounded-lg font-bold transition-all shadow-md shadow-[#3B82F6]/25 disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {creationMode === 'task' ? (
                     <>

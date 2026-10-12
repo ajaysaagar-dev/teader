@@ -1913,8 +1913,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('overview')}
               className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
               }`}
             >
               Overview
@@ -1923,8 +1923,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('tasks')}
               className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'tasks'
-                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
               }`}
             >
               <span>Tasks</span>
@@ -1934,8 +1934,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('docs')}
               className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'docs'
-                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
               }`}
             >
               Docs
@@ -1944,8 +1944,8 @@ export default function SingleProjectPage() {
               onClick={() => handleTabSwitch('settings')}
               className={`px-3 py-1 text-xs rounded transition-colors ${
                 activeTab === 'settings'
-                  ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                  ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
               }`}
             >
               Settings

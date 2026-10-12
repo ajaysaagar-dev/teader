@@ -7,12 +7,30 @@ interface StatusIconProps {
   className?: string;
 }
 
+const statusColorMap: Record<string, string> = {
+  backlog: 'text-neutral-400',
+  todo: 'text-neutral-400',
+  in_progress: 'text-amber-500',
+  inprogress: 'text-amber-500',
+  needs_review: 'text-violet-400',
+  review: 'text-violet-400',
+  in_review: 'text-violet-400',
+  done: 'text-emerald-400',
+  blocked: 'text-rose-500',
+  cancelled: 'text-neutral-500',
+  canceled: 'text-neutral-500',
+  merged: 'text-blue-500',
+};
+
 export const StatusIcon: React.FC<StatusIconProps> = ({
   status,
   size = 14,
   className = '',
 }) => {
   const normalized = (status || 'todo').toLowerCase();
+  const defaultColor = statusColorMap[normalized] || 'text-neutral-400';
+  const hasTextColor = className.includes('text-');
+  const iconClass = `shrink-0 ${hasTextColor ? '' : defaultColor} ${className}`.trim();
 
   switch (normalized) {
     case 'backlog':
@@ -23,7 +41,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Backlog"
         >
           <circle
@@ -45,7 +63,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Todo"
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -61,7 +79,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="In Progress"
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -77,7 +95,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Blocked"
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -100,7 +118,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Needs Review"
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -116,7 +134,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Done"
         >
           <circle cx="8" cy="8" r="6.5" fill="currentColor" />
@@ -139,7 +157,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Cancelled"
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -163,7 +181,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Merged"
         >
           <circle cx="5" cy="5" r="1.8" stroke="currentColor" strokeWidth="1.3" />
@@ -186,7 +204,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
         >
           <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
         </svg>

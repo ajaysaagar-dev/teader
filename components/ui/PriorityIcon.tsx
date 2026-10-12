@@ -7,12 +7,24 @@ interface PriorityIconProps {
   className?: string;
 }
 
+const priorityColorMap: Record<string, string> = {
+  critical: 'text-rose-500',
+  urgent: 'text-rose-500',
+  high: 'text-orange-500',
+  medium: 'text-amber-500',
+  low: 'text-neutral-400',
+  none: 'text-neutral-500',
+};
+
 export const PriorityIcon: React.FC<PriorityIconProps> = ({
   priority,
   size = 14,
   className = '',
 }) => {
   const normalized = (priority || 'none').toLowerCase();
+  const defaultColor = priorityColorMap[normalized] || 'text-neutral-400';
+  const hasTextColor = className.includes('text-');
+  const iconClass = `shrink-0 ${hasTextColor ? '' : defaultColor} ${className}`.trim();
 
   switch (normalized) {
     case 'critical':
@@ -24,7 +36,7 @@ export const PriorityIcon: React.FC<PriorityIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Critical Priority"
         >
           <path
@@ -54,7 +66,7 @@ export const PriorityIcon: React.FC<PriorityIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="High Priority"
         >
           <rect x="2.5" y="9.5" width="2.4" height="4" rx="0.8" fill="currentColor" />
@@ -71,7 +83,7 @@ export const PriorityIcon: React.FC<PriorityIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Medium Priority"
         >
           <rect x="2.5" y="9.5" width="2.4" height="4" rx="0.8" fill="currentColor" />
@@ -97,7 +109,7 @@ export const PriorityIcon: React.FC<PriorityIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="Low Priority"
         >
           <rect x="2.5" y="9.5" width="2.4" height="4" rx="0.8" fill="currentColor" />
@@ -133,7 +145,7 @@ export const PriorityIcon: React.FC<PriorityIconProps> = ({
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={`shrink-0 ${className}`}
+          className={iconClass}
           aria-label="No Priority"
         >
           <line

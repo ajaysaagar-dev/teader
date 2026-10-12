@@ -147,11 +147,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => setActiveTab('general')}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
                       activeTab === 'general'
-                        ? 'bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]'
+                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
                         : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
                     }`}
                   >
-                    <Sliders size={14} className={activeTab === 'general' ? 'text-white' : 'text-[var(--text-muted)]'} />
+                    <Sliders size={14} className={activeTab === 'general' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
                     <span>General</span>
                   </button>
 
@@ -159,11 +159,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => setActiveTab('account')}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
                       activeTab === 'account'
-                        ? 'bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]'
+                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
                         : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
                     }`}
                   >
-                    <User size={14} className={activeTab === 'account' ? 'text-white' : 'text-[var(--text-muted)]'} />
+                    <User size={14} className={activeTab === 'account' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
                     <span>Account</span>
                   </button>
 
@@ -171,11 +171,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onClick={() => setActiveTab('shortcuts')}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium transition-colors text-left focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)] ${
                       activeTab === 'shortcuts'
-                        ? 'bg-[var(--ramp-2)] text-white border border-[var(--border-secondary)]'
+                        ? 'bg-[#3B82F6]/15 text-white border border-[#3B82F6]/30 shadow-sm'
                         : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-panel)]'
                     }`}
                   >
-                    <Keyboard size={14} className={activeTab === 'shortcuts' ? 'text-white' : 'text-[var(--text-muted)]'} />
+                    <Keyboard size={14} className={activeTab === 'shortcuts' ? 'text-[#3B82F6]' : 'text-[var(--text-muted)]'} />
                     <span>Shortcuts</span>
                   </button>
                 </div>

@@ -319,7 +319,7 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                   isColumnOver ? 'bg-[var(--bg-hover)]' : 'bg-[var(--bg-panel)]'
                 }`}>
                   <div className="flex items-center gap-2">
-                    <StatusIcon status={col.id} size={14} className="shrink-0 text-[var(--text-muted)]" />
+                    <StatusIcon status={col.id} size={14} className="shrink-0" />
                     <span className="font-medium text-xs text-[var(--text-primary)]">
                       {col.title}
                     </span>
@@ -460,18 +460,18 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                         }}
                         className={`relative p-3 bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-colors shadow-sm group select-none ${
                           isDragging
-                            ? 'opacity-30 border-dashed border-white'
+                            ? 'opacity-30 border-dashed border-[#3B82F6]'
                             : ''
                         }`}
                       >
                         {/* Top Drop Indicator Line (Reorder Above) */}
                         {isOverThis && dropPosition === 'before' && (
-                          <div className="absolute -top-1 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
+                          <div className="absolute -top-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                         )}
 
                         {/* Bottom Drop Indicator Line (Reorder Below) */}
                         {isOverThis && dropPosition === 'after' && (
-                          <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white rounded-full z-20" />
+                          <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
                         )}
 
                         {/* Key, Drag Handle & Priority */}

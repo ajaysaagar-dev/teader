@@ -31,9 +31,9 @@ describe('Monochrome UI Guard', () => {
   }
 
   const hexRegex = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
-  const tailwindRegex = /\b(bg|text|border|ring|stroke|fill)-(yellow|amber|red|rose|orange|green|emerald|lime|blue|sky|cyan|indigo|violet|purple|fuchsia|pink)-[0-9]{2,3}(\/[0-9]+)?\b/g;
+  const unapprovedTailwindRegex = /\b(bg|text|border|ring|stroke|fill)-(lime|sky|cyan|indigo|fuchsia|pink)-[0-9]{2,3}(\/[0-9]+)?\b/g;
 
-  it('contains zero non-monochrome hex codes', () => {
+  it('contains zero non-palette hex codes', () => {
     const violations: string[] = [];
     const allowlisted = new Set((allowlist.allowlistedHexes || []).map((h: string) => h.toUpperCase()));
 
@@ -64,10 +64,10 @@ describe('Monochrome UI Guard', () => {
       }
     }
 
-    expect(violations, `Found ${violations.length} non-monochrome hex values`).toEqual([]);
+    expect(violations, `Found ${violations.length} unapproved hex values`).toEqual([]);
   });
 
-  it('contains zero colored Tailwind utility classes', () => {
+  it('contains zero unapproved Tailwind color utility classes', () => {
     const violations: string[] = [];
 
     for (const file of allFiles) {
@@ -76,11 +76,11 @@ describe('Monochrome UI Guard', () => {
 
       const content = fs.readFileSync(file, 'utf8');
       let m: RegExpExecArray | null;
-      while ((m = tailwindRegex.exec(content)) !== null) {
+      while ((m = unapprovedTailwindRegex.exec(content)) !== null) {
         violations.push(`${rel}: ${m[0]}`);
       }
     }
 
-    expect(violations, `Found ${violations.length} Tailwind color classes`).toEqual([]);
+    expect(violations, `Found ${violations.length} unapproved Tailwind color classes`).toEqual([]);
   });
 });

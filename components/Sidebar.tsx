@@ -115,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-2 text-white font-semibold tracking-tight hover:opacity-80 transition-opacity min-w-0"
             title="Teader Workspace"
           >
-            <div className="w-6 h-6 rounded bg-white text-black font-bold flex items-center justify-center shrink-0 text-xs">
+            <div className="w-6 h-6 rounded bg-[#3B82F6] text-white font-bold flex items-center justify-center shrink-0 text-xs shadow-sm shadow-[#3B82F6]/30">
               T
             </div>
             {!collapsed && (
@@ -144,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-2 shrink-0">
             <button
               onClick={onOpenNewIssue}
-              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-white text-black hover:bg-neutral-200 transition-colors font-medium text-xs shadow-sm ${
+              className={`w-full flex items-center gap-2 rounded px-2.5 py-1.5 bg-[#3B82F6] text-white hover:bg-[#2563EB] transition-colors font-medium text-xs shadow-sm shadow-[#3B82F6]/25 ${
                 collapsed ? 'justify-center px-0' : ''
               }`}
               title="New Issue (C)"
@@ -168,12 +168,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 href={item.href}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded transition-colors text-xs ${
                   isActive
-                    ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                    ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
                 } ${collapsed ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
-                <Icon size={14} className={isActive ? 'text-white shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
+                <Icon size={14} className={isActive ? 'text-[#3B82F6] shrink-0' : 'text-[var(--text-muted)] shrink-0'} />
                 {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>
             );
@@ -203,12 +203,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   href={projHref}
                   className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-colors ${
                     isProjActive
-                      ? 'bg-[var(--ramp-2)] text-white font-medium border border-[var(--border-secondary)]'
-                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--ramp-1)]'
+                      ? 'bg-[#3B82F6]/15 text-white font-medium border border-[#3B82F6]/30 shadow-sm'
+                      : 'text-[var(--text-secondary)] hover:text-white hover:bg-[var(--bg-hover)]'
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                   title={proj.name}
                 >
-                  <span className="w-4 h-4 rounded bg-[var(--ramp-3)] text-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0">
+                  <span className={`w-4 h-4 rounded ${isProjActive ? 'bg-[#3B82F6] text-white' : 'bg-neutral-800 text-neutral-300'} flex items-center justify-center font-mono text-[9px] font-bold shrink-0`}>
                     {proj.key ? proj.key.slice(0, 2) : 'P'}
                   </span>
                   {!collapsed && <span className="truncate">{proj.name}</span>}
