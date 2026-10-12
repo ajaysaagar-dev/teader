@@ -8,12 +8,12 @@ interface PriorityIconProps {
 }
 
 const priorityColorMap: Record<string, string> = {
-  critical: 'text-rose-500',
-  urgent: 'text-rose-500',
-  high: 'text-orange-500',
-  medium: 'text-amber-500',
-  low: 'text-neutral-400',
-  none: 'text-neutral-500',
+  critical: 'text-white',
+  urgent: 'text-white',
+  high: 'text-[#EDEDED]',
+  medium: 'text-[#A3A3A3]',
+  low: 'text-[#737373]',
+  none: 'text-[#525252]',
 };
 
 export const PriorityIcon: React.FC<PriorityIconProps> = ({

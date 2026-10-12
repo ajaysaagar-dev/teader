@@ -8,18 +8,18 @@ interface StatusIconProps {
 }
 
 const statusColorMap: Record<string, string> = {
-  backlog: 'text-neutral-400',
-  todo: 'text-neutral-400',
-  in_progress: 'text-amber-500',
-  inprogress: 'text-amber-500',
-  needs_review: 'text-violet-400',
-  review: 'text-violet-400',
-  in_review: 'text-violet-400',
-  done: 'text-emerald-400',
-  blocked: 'text-rose-500',
-  cancelled: 'text-neutral-500',
-  canceled: 'text-neutral-500',
-  merged: 'text-blue-500',
+  backlog: 'text-[#737373]',
+  todo: 'text-[#A3A3A3]',
+  in_progress: 'text-white',
+  inprogress: 'text-white',
+  needs_review: 'text-[#EDEDED]',
+  review: 'text-[#EDEDED]',
+  in_review: 'text-[#EDEDED]',
+  done: 'text-white',
+  blocked: 'text-[#737373]',
+  cancelled: 'text-[#737373]',
+  canceled: 'text-[#737373]',
+  merged: 'text-white',
 };
 
 export const StatusIcon: React.FC<StatusIconProps> = ({
