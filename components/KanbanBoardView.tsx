@@ -460,18 +460,18 @@ export const KanbanBoardView: React.FC<KanbanBoardViewProps> = React.memo(({
                         }}
                         className={`relative p-3 bg-[var(--bg-main)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] rounded-lg cursor-grab active:cursor-grabbing space-y-2 transition-colors shadow-sm group select-none ${
                           isDragging
-                            ? 'opacity-30 border-dashed border-[#3B82F6]'
+                            ? 'opacity-30 border-dashed border-white'
                             : ''
                         }`}
                       >
                         {/* Top Drop Indicator Line (Reorder Above) */}
                         {isOverThis && dropPosition === 'before' && (
-                          <div className="absolute -top-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
+                          <div className="absolute -top-1 left-0 right-0 h-0.5 bg-white shadow-[0_0_6px_#FFFFFF] rounded-full z-20" />
                         )}
 
                         {/* Bottom Drop Indicator Line (Reorder Below) */}
                         {isOverThis && dropPosition === 'after' && (
-                          <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#3B82F6] shadow-[0_0_8px_#3B82F6] rounded-full z-20" />
+                          <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-white shadow-[0_0_6px_#FFFFFF] rounded-full z-20" />
                         )}
 
                         {/* Key, Drag Handle & Priority */}
