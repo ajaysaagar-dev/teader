@@ -2091,15 +2091,7 @@ export default function SingleProjectPage() {
                   projectKey={project?.key}
                 />
               </div>
-            ) : activeTab === 'meeting' ? (
-              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
-                <ProjectMeetingView
-                  projectId={project?.id || projectIdParam || 1}
-                  projectName={project?.name || ''}
-                  currentUser={currentUser}
-                />
-              </div>
-            ) : activeTab === 'chats' ? (
+            ) : activeTab === 'meeting' ? null : activeTab === 'chats' ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden">
                 <ProjectConversationView
                   projectId={project?.id || projectIdParam || 1}

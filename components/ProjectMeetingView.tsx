@@ -1755,7 +1755,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
                 e.stopPropagation();
                 handleAdminCloseCall();
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-white text-black hover:bg-neutral-200 text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-[#222222] hover:bg-[#2D2D2D] text-white border border-[var(--border-secondary)] transition-all shadow-md cursor-pointer"
               title="Close meeting for all participants and return to overview"
             >
               <PowerOff size={14} />
@@ -2426,7 +2426,7 @@ export const ProjectMeetingView: React.FC<ProjectMeetingViewProps> = ({
           {currentUserIsAdmin && (
             <button
               onClick={handleAdminCloseCall}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-white text-black hover:bg-neutral-200 text-white transition-all shadow-lg hover:shadow-red-600/30 cursor-pointer border border-[var(--border-secondary)]"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs bg-[#222222] hover:bg-[#2D2D2D] text-white transition-all shadow-lg cursor-pointer border border-[var(--border-secondary)]"
               title="Close meeting for everyone and return to overview"
             >
               <PowerOff size={16} />

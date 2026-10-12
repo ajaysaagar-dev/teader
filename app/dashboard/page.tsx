@@ -268,7 +268,7 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex flex-col h-full min-h-0 bg-[#000000] text-[var(--text-secondary)] font-sans overflow-y-auto custom-scrollbar select-none">
+      <div className="flex-1 flex flex-col h-full min-h-0 bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans overflow-y-auto custom-scrollbar select-none">
 
         {/* Dashboard Main Content Grid */}
         <div className="p-6 max-w-7xl mx-auto w-full space-y-6">
