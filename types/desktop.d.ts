@@ -4,6 +4,7 @@ export interface TeaderDesktopAPI {
   appVersion: string;
   platform: string;
   electronVersion: string;
+  getVersion?: () => Promise<string>;
   getGpuInfo?: () => Promise<{
     available: boolean;
     gpuInfo?: any;
@@ -17,16 +18,29 @@ export interface TeaderDesktopAPI {
   onUpdateProgress?: (callback: (progress: { percent: number; receivedBytes: number; totalBytes: number }) => void) => () => void;
 }
 
+export interface ElectronWindowAPI {
+  minimize: () => void;
+  toggleMaximize: () => void;
+  close: () => void;
+  retryLoad: () => void;
+  isMaximized: () => Promise<boolean>;
+  onMaximizedChange: (callback: (isMax: boolean) => void) => () => void;
+}
+
+export interface ElectronAPI {
+  getVersion: () => Promise<string>;
+  minimize: () => void;
+  maximize: () => void;
+  toggleMaximize: () => void;
+  close: () => void;
+  isMaximized: () => Promise<boolean>;
+  onMaximizedChange: (callback: (isMax: boolean) => void) => () => void;
+}
+
 declare global {
   interface Window {
     teaderDesktop?: TeaderDesktopAPI;
-    electronWindow?: {
-      minimize: () => void;
-      toggleMaximize: () => void;
-      close: () => void;
-      retryLoad: () => void;
-      isMaximized: () => Promise<boolean>;
-      onMaximizedChange: (callback: (isMax: boolean) => void) => () => void;
-    };
+    electronWindow?: ElectronWindowAPI;
+    electron?: ElectronAPI;
   }
 }

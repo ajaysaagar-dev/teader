@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { Sidebar } from "@/components/Sidebar";
+import { TopFrame } from "@/components/TopFrame";
 import { CommandPalette } from "@/components/CommandPalette";
 import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { SettingsModal } from "@/components/SettingsModal";
@@ -326,156 +327,161 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   );
 
   return (
-    <div className="fixed inset-0 flex h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--bg-canvas)] text-[var(--text-primary)] font-sans antialiased select-none">
-      {/* ─── Left Sidebar Shell ──────────────────────────────────────── */}
-      {currentUser && (
-        <Sidebar
-          collapsed={isSidebarCollapsed}
-          onToggleCollapse={handleToggleSidebar}
-          onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
-          onOpenSettings={() => setIsSettingsModalOpen(true)}
-        />
-      )}
+    <div className="fixed inset-0 flex flex-col h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-black text-white font-sans antialiased select-none p-[19px] box-border">
+      {/* ─── Top Frameless Window Header ────────────────────────────── */}
+      <TopFrame className="shrink-0" />
 
-      {/* ─── Main Right Canvas + Header Area ─────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
-        {/* Minimal Linear-Style Top Header Bar */}
+      {/* ─── Main Content View (Including Sidebar) ───────────────────── */}
+      <div className="mt-[15px] flex-1 flex flex-row min-w-0 min-h-0 h-full overflow-hidden bg-[#1E1E1E] rounded-[5px] border-2 border-[rgba(255,255,255,0.13)] box-border">
+        {/* ─── Left Sidebar Shell ──────────────────────────────────────── */}
         {currentUser && (
-          <header className="h-11 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-30">
-            {/* Breadcrumb Path */}
-            <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium truncate">
-              {breadcrumbs.map((crumb, idx) => (
-                <React.Fragment key={idx}>
-                  {idx > 0 && <span className="text-[var(--border-secondary)]">/</span>}
-                  <span
-                    className={
-                      idx === breadcrumbs.length - 1
-                        ? "text-white font-medium truncate"
-                        : "text-[var(--text-secondary)] hover:text-white transition-colors truncate"
-                    }
-                  >
-                    {crumb}
-                  </span>
-                </React.Fragment>
-              ))}
-            </div>
+          <Sidebar
+            collapsed={isSidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
+            onOpenNewIssue={() => setIsNewIssueModalOpen(true)}
+            onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+            onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+            onOpenSettings={() => setIsSettingsModalOpen(true)}
+          />
+        )}
 
-            {/* Active Meeting Widget in App Header */}
-            {activeMeeting && !isFullMeetingView && (
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[var(--bg-panel)] border border-[var(--border-primary)] select-none">
-                <div
-                  onClick={handleOpenMeeting}
-                  className="flex items-center gap-2 cursor-pointer group"
-                  title="Click to open full meeting"
-                >
-                  <div className="relative flex items-center justify-center">
-                    <Radio size={13} className="text-white animate-pulse" />
-                  </div>
-                  <span className="text-xs font-semibold text-white truncate max-w-[120px]">
-                    {activeMeeting.projectName}
-                  </span>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                    {activeMeeting.duration || "00:00"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1 border-l border-[var(--border-primary)] pl-2 ml-1">
-                  <button
-                    type="button"
-                    onClick={handleToggleMeetingMute}
-                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
-                    title={activeMeeting.isMuted ? "Unmute" : "Mute"}
-                  >
-                    {activeMeeting.isMuted ? <MicOff size={13} /> : <Mic size={13} />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleOpenMeeting}
-                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
-                    title="Open Meeting"
-                  >
-                    <Maximize2 size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleLeaveMeeting}
-                    className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
-                    title="Leave Meeting"
-                  >
-                    <PhoneOff size={13} />
-                  </button>
-                </div>
+        {/* ─── Main Right Canvas + Header Area ─────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden">
+          {/* Minimal Linear-Style Top Header Bar */}
+          {currentUser && (
+            <header className="h-11 px-4 bg-[var(--bg-canvas)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 z-30">
+              {/* Breadcrumb Path */}
+              <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] font-medium truncate">
+                {breadcrumbs.map((crumb, idx) => (
+                  <React.Fragment key={idx}>
+                    {idx > 0 && <span className="text-[var(--border-secondary)]">/</span>}
+                    <span
+                      className={
+                        idx === breadcrumbs.length - 1
+                          ? "text-white font-medium truncate"
+                          : "text-[var(--text-secondary)] hover:text-white transition-colors truncate"
+                      }
+                    >
+                      {crumb}
+                    </span>
+                  </React.Fragment>
+                ))}
               </div>
-            )}
 
-            {/* Top Right: Search Pill & Avatar */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsCommandPaletteOpen(true)}
-                className="flex items-center gap-2 px-2.5 py-1 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-white rounded text-xs transition-colors"
-                title="Quick Search (⌘K)"
-              >
-                <Search size={13} />
-                <span className="text-[11px] hidden sm:inline">Search...</span>
-                <kbd className="px-1.5 py-0.2 text-[10px] font-mono bg-white/5 border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
-                  ⌘K
-                </kbd>
-              </button>
+              {/* Active Meeting Widget in App Header */}
+              {activeMeeting && !isFullMeetingView && (
+                <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-[var(--bg-panel)] border border-[var(--border-primary)] select-none">
+                  <div
+                    onClick={handleOpenMeeting}
+                    className="flex items-center gap-2 cursor-pointer group"
+                    title="Click to open full meeting"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <Radio size={13} className="text-white animate-pulse" />
+                    </div>
+                    <span className="text-xs font-semibold text-white truncate max-w-[120px]">
+                      {activeMeeting.projectName}
+                    </span>
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                      {activeMeeting.duration || "00:00"}
+                    </span>
+                  </div>
 
-              <button
-                onClick={() => setIsNewIssueModalOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded bg-white text-black hover:bg-[#E5E5E5] transition-colors"
-                title="Create Task (C)"
-              >
-                <Plus size={14} />
-              </button>
+                  <div className="flex items-center gap-1 border-l border-[var(--border-primary)] pl-2 ml-1">
+                    <button
+                      type="button"
+                      onClick={handleToggleMeetingMute}
+                      className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
+                      title={activeMeeting.isMuted ? "Unmute" : "Mute"}
+                    >
+                      {activeMeeting.isMuted ? <MicOff size={13} /> : <Mic size={13} />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenMeeting}
+                      className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
+                      title="Open Meeting"
+                    >
+                      <Maximize2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLeaveMeeting}
+                      className="p-1 rounded text-white hover:bg-[var(--bg-hover)] transition-colors"
+                      title="Leave Meeting"
+                    >
+                      <PhoneOff size={13} />
+                    </button>
+                  </div>
+                </div>
+              )}
 
-              <button
-                onClick={() => setIsShortcutsModalOpen(true)}
-                className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-hover)] transition-colors"
-                title="Keyboard Shortcuts (?)"
-              >
-                <HelpCircle size={14} />
-              </button>
+              {/* Top Right: Search Pill & Avatar */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="flex items-center gap-2 px-2.5 py-1 bg-[var(--bg-panel)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-muted)] hover:text-white rounded text-xs transition-colors"
+                  title="Quick Search (⌘K)"
+                >
+                  <Search size={13} />
+                  <span className="text-[11px] hidden sm:inline">Search...</span>
+                  <kbd className="px-1.5 py-0.2 text-[10px] font-mono bg-white/5 border border-[var(--border-primary)] rounded text-[var(--text-secondary)]">
+                    ⌘K
+                  </kbd>
+                </button>
 
-              <button
-                onClick={() => setIsAccountModalOpen(true)}
-                className="p-0.5 rounded hover:ring-1 hover:ring-[var(--border-focus)] transition-all"
-                title="View Account"
-              >
-                <Avatar user={currentUser} size="xs" />
-              </button>
+                <button
+                  onClick={() => setIsNewIssueModalOpen(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded bg-white text-black hover:bg-[#E5E5E5] transition-colors"
+                  title="Create Task (C)"
+                >
+                  <Plus size={14} />
+                </button>
+
+                <button
+                  onClick={() => setIsShortcutsModalOpen(true)}
+                  className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-muted)] hover:text-white hover:bg-[var(--bg-hover)] transition-colors"
+                  title="Keyboard Shortcuts (?)"
+                >
+                  <HelpCircle size={14} />
+                </button>
+
+                <button
+                  onClick={() => setIsAccountModalOpen(true)}
+                  className="p-0.5 rounded hover:ring-1 hover:ring-[var(--border-focus)] transition-all"
+                  title="View Account"
+                >
+                  <Avatar user={currentUser} size="xs" />
+                </button>
+              </div>
+            </header>
+          )}
+
+          {/* ─── Main Content Canvas Area ──────────────────────────────── */}
+          {isCheckingAuth && !currentUser ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
             </div>
-          </header>
-        )}
-
-        {/* ─── Main Content Canvas Area ──────────────────────────────── */}
-        {isCheckingAuth && !currentUser ? (
-          <div className="flex-1 flex flex-col items-center justify-center bg-[var(--bg-canvas)] space-y-4 select-none">
-            <div className="text-center space-y-2">
-              <h1 className="text-7xl sm:text-8xl md:text-9xl font-extrabold text-white font-prompt tracking-tight">
-                teader
-              </h1>
-              <p className="text-sm font-semibold text-[var(--text-secondary)] tracking-[0.4em] uppercase font-prompt">
-                workspace
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-muted)] pt-2">
-              <Loader2 size={14} className="animate-spin text-white" />
-              <span>Verifying session...</span>
-            </div>
-          </div>
-        ) : !currentUser ? null : (
-          <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none p-2 bg-[var(--bg-canvas)]">
-            <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg shadow-sm">
-              {children}
-            </div>
-          </main>
-        )}
+          ) : !currentUser ? null : (
+            <main className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden overscroll-none p-2 bg-[var(--bg-canvas)]">
+              <div className="flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-lg shadow-sm">
+                {children}
+              </div>
+            </main>
+          )}
+        </div>
       </div>
+
+      {/* ─── Bottom Status Bar View ─────────────────────────────────── */}
+      <footer
+        role="contentinfo"
+        aria-label="Status Bar View"
+        className="mt-[11px] h-[42px] min-h-[42px] flex items-center justify-center bg-[#1E1E1E] rounded-[5px] border-2 border-[rgba(255,255,255,0.13)] px-4 box-border shrink-0 select-none"
+      >
+        <span className="text-[14px] sm:text-[15px] font-medium text-white tracking-normal">
+          [StatusBar View]
+        </span>
+      </footer>
 
       {/* ─── Account Modal ──────────────────────────────────────────── */}
       <AnimatePresence>
