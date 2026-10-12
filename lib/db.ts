@@ -106,6 +106,13 @@ let memoryUsersStore: any[] = [
     password: DEFAULT_PASSWORD_HASH,
     avatar: '/profiles/profile-3.webp',
   },
+  {
+    id: 100,
+    name: 'a',
+    email: 'a@teader.io',
+    password: DEFAULT_PASSWORD_HASH,
+    avatar: '/profiles/profile-10.webp',
+  },
 ];
 let memoryProjectsStore: any[] = [];
 let memoryMembersStore: any[] = [];
@@ -452,6 +459,7 @@ export async function initDB(): Promise<void> {
           { id: 13, name: 'ajaysaagar', email: 'ajaysaagar.dev@gmail.com', avatar: '/profiles/profile-13.webp' },
           { id: 14, name: 'Elena Rostova', email: 'elena@teader.io', avatar: '/profiles/profile-14.webp' },
           { id: 15, name: 'Marcus Vance', email: 'marcus@teader.io', avatar: '/profiles/profile-15.webp' },
+          { id: 100, name: 'a', email: 'a@teader.io', avatar: '/profiles/profile-10.webp' },
         ];
 
         for (const u of defaultUsers) {
@@ -488,7 +496,7 @@ export async function initDB(): Promise<void> {
 
         if (hugProjId) {
           // Project Members - Owner and diverse members
-          const memberIds = [13, 1, 2, 3, 4, 5, 14, 15];
+          const memberIds = [13, 1, 2, 3, 4, 5, 14, 15, 100];
           for (const mId of memberIds) {
             const role = mId === 13 ? 'owner' : (mId === 1 ? 'admin' : 'member');
             await p.query(
@@ -499,7 +507,61 @@ export async function initDB(): Promise<void> {
           }
         }
 
-        // Memory Store Fallbacks for Huge
+        // Seed Projects owned by user 'a'
+        const userAProjects = [
+          {
+            id: 5,
+            key: 'PRJCLD8K9L0M1N2P3Q4R5S6T7U8V9W',
+            name: 'Cloud Observability & Tracing',
+            description: 'OpenTelemetry distributed tracing, unified log streaming, and real-time p99 anomaly alert pipelines.',
+            owner_id: 100,
+            creatorId: 100,
+            ownerName: 'a',
+          },
+          {
+            id: 6,
+            key: 'PRJSEC7A8B9C0D1E2F3G4H5I6J7K8L',
+            name: 'Zero-Trust Security & Identity Mesh',
+            description: 'Mutual TLS mesh, hardware security key FIDO2 auth, fine-grained RBAC matrix, and automated session revocation.',
+            owner_id: 100,
+            creatorId: 100,
+            ownerName: 'a',
+          },
+          {
+            id: 7,
+            key: 'PRJDAT6X7Y8Z9W0V1U2T3S4R5Q6P7O',
+            name: 'Real-Time Vector Search Engine',
+            description: 'HNSW vector indexes, semantic similarity embeddings, and low-latency hybrid full-text lexical ranking.',
+            owner_id: 100,
+            creatorId: 100,
+            ownerName: 'a',
+          },
+          {
+            id: 8,
+            key: 'PRJMOB5A6B7C8D9E0F1G2H3I4J5K6M',
+            name: 'Mobile PWA & Sync Architecture',
+            description: 'Offline-first background web workers, touch gesture animations, and push notification relays.',
+            owner_id: 100,
+            creatorId: 100,
+            ownerName: 'a',
+          },
+        ];
+
+        for (const pr of userAProjects) {
+          await p.query(
+            `INSERT INTO "projects" ("id", "key", "name", "description", "owner_id", "creatorId", "ownerName")
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT ("id") DO UPDATE SET "name" = $3, "description" = $4`,
+            [pr.id, pr.key, pr.name, pr.description, pr.owner_id, pr.creatorId, pr.ownerName]
+          );
+          await p.query(
+            `INSERT INTO "project_members" ("projectId", "userId", "role") VALUES ($1, $2, 'owner')
+             ON CONFLICT ("projectId", "userId") DO UPDATE SET "role" = 'owner'`,
+            [pr.id, 100]
+          );
+        }
+
+        // Memory Store Fallbacks for Huge & user A projects
         if (!memoryProjectsStore.some((p) => p.key === 'HUGE' || p.key === 'HUG')) {
           const memProj = {
             id: 12,
@@ -516,6 +578,16 @@ export async function initDB(): Promise<void> {
           memoryMembersStore.push({ projectId: 12, userId: 2, role: 'member' });
           memoryMembersStore.push({ projectId: 12, userId: 14, role: 'member' });
           memoryMembersStore.push({ projectId: 12, userId: 15, role: 'member' });
+          memoryMembersStore.push({ projectId: 12, userId: 100, role: 'admin' });
+        }
+
+        for (const pr of userAProjects) {
+          if (!memoryProjectsStore.some((p) => p.id === pr.id)) {
+            memoryProjectsStore.push(pr);
+            memoryMembersStore.push({ projectId: pr.id, userId: 100, role: 'owner' });
+            memoryMembersStore.push({ projectId: pr.id, userId: 1, role: 'admin' });
+            memoryMembersStore.push({ projectId: pr.id, userId: 2, role: 'member' });
+          }
         }
 
         initialized = true;
