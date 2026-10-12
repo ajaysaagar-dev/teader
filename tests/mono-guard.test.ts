@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import allowlist from './mono-allowlist.json';
 
 function walk(dir: string): string[] {
   let results: string[] = [];
@@ -20,8 +19,39 @@ function walk(dir: string): string[] {
   return results;
 }
 
+function isMonochromeHex(hex: string): boolean {
+  let clean = hex.replace(/^#/, '');
+  if (clean.length === 3 || clean.length === 4) {
+    clean = clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2];
+  } else if (clean.length >= 6) {
+    clean = clean.slice(0, 6);
+  } else {
+    return false;
+  }
+  const r = clean.slice(0, 2);
+  const g = clean.slice(2, 4);
+  const b = clean.slice(4, 6);
+  return r.toUpperCase() === g.toUpperCase() && g.toUpperCase() === b.toUpperCase();
+}
+
+function isMonochromeRgb(rgbStr: string): boolean {
+  const m = rgbStr.match(/rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)/i);
+  if (!m) return true;
+  const r = Math.round(parseFloat(m[1]));
+  const g = Math.round(parseFloat(m[2]));
+  const b = Math.round(parseFloat(m[3]));
+  return r === g && g === b;
+}
+
+function isMonochromeHsl(hslStr: string): boolean {
+  const m = hslStr.match(/hsla?\(\s*([0-9.]+)\s*,\s*([0-9.]+)%?\s*,\s*([0-9.]+)%?/i);
+  if (!m) return true;
+  const s = parseFloat(m[2]);
+  return s === 0;
+}
+
 describe('Monochrome UI Guard', () => {
-  const dirs = ['app', 'components', 'lib'];
+  const dirs = ['app', 'components'];
   const allFiles: string[] = [];
   for (const d of dirs) {
     const full = path.resolve(process.cwd(), d);
@@ -30,57 +60,117 @@ describe('Monochrome UI Guard', () => {
     }
   }
 
-  const hexRegex = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g;
-  const unapprovedTailwindRegex = /\b(bg|text|border|ring|stroke|fill)-(lime|sky|cyan|indigo|fuchsia|pink)-[0-9]{2,3}(\/[0-9]+)?\b/g;
+  // 1. Hex codes check
+  const hexRegex = /#([0-9a-fA-F]{3,8})\b/g;
 
-  it('contains zero non-palette hex codes', () => {
+  it('contains zero non-monochrome hex codes in UI', () => {
     const violations: string[] = [];
-    const allowlisted = new Set((allowlist.allowlistedHexes || []).map((h: string) => h.toUpperCase()));
 
     for (const file of allFiles) {
       const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
-      if (((allowlist.allowlistFiles || []) as string[]).includes(rel)) continue;
-
       const content = fs.readFileSync(file, 'utf8');
       let m: RegExpExecArray | null;
       while ((m = hexRegex.exec(content)) !== null) {
-        const hex = m[0].toUpperCase();
-        if (allowlisted.has(hex)) continue;
-
-        let r: string, g: string, b: string;
-        if (hex.length === 4) {
-          r = hex[1] + hex[1];
-          g = hex[2] + hex[2];
-          b = hex[3] + hex[3];
-        } else {
-          r = hex.slice(1, 3);
-          g = hex.slice(3, 5);
-          b = hex.slice(5, 7);
-        }
-
-        if (r !== g || g !== b) {
+        const hex = m[0];
+        if (!isMonochromeHex(hex)) {
           violations.push(`${rel}: ${hex}`);
         }
       }
     }
 
-    expect(violations, `Found ${violations.length} unapproved hex values`).toEqual([]);
+    expect(violations, `Found ${violations.length} non-monochrome hex values in UI components`).toEqual([]);
   });
 
-  it('contains zero unapproved Tailwind color utility classes', () => {
+  // 2. Tailwind standard color utility classes
+  const tailwindColorRegex = /\b(?:bg|text|border|ring|stroke|fill|from|to|via)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}(?:\/[0-9]+)?\b/g;
+
+  it('contains zero standard Tailwind color utility classes', () => {
     const violations: string[] = [];
 
     for (const file of allFiles) {
       const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
-      if (((allowlist.allowlistFiles || []) as string[]).includes(rel)) continue;
-
       const content = fs.readFileSync(file, 'utf8');
       let m: RegExpExecArray | null;
-      while ((m = unapprovedTailwindRegex.exec(content)) !== null) {
+      while ((m = tailwindColorRegex.exec(content)) !== null) {
         violations.push(`${rel}: ${m[0]}`);
       }
     }
 
-    expect(violations, `Found ${violations.length} unapproved Tailwind color classes`).toEqual([]);
+    expect(violations, `Found ${violations.length} Tailwind color utility classes`).toEqual([]);
+  });
+
+  // 3. Arbitrary Tailwind color values (bg-[#...], text-[rgb(...)], hsl(), etc.)
+  const arbitraryColorRegex = /\b(?:bg|text|border|ring|stroke|fill|from|to|via)-\[(#[0-9a-fA-F]+|rgba?\([^\]]+\)|hsla?\([^\]]+\))\]/g;
+
+  it('catches arbitrary Tailwind color values (bg-[#...], text-[rgb(...)], hsl())', () => {
+    const violations: string[] = [];
+
+    for (const file of allFiles) {
+      const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
+      const content = fs.readFileSync(file, 'utf8');
+      let m: RegExpExecArray | null;
+      while ((m = arbitraryColorRegex.exec(content)) !== null) {
+        const fullMatch = m[0];
+        const inner = m[1];
+        if (inner.startsWith('#')) {
+          if (!isMonochromeHex(inner)) violations.push(`${rel}: ${fullMatch}`);
+        } else if (inner.toLowerCase().startsWith('rgb')) {
+          if (!isMonochromeRgb(inner)) violations.push(`${rel}: ${fullMatch}`);
+        } else if (inner.toLowerCase().startsWith('hsl')) {
+          if (!isMonochromeHsl(inner)) violations.push(`${rel}: ${fullMatch}`);
+        }
+      }
+    }
+
+    expect(violations, `Found ${violations.length} non-monochrome arbitrary Tailwind values`).toEqual([]);
+  });
+
+  // 4. Inline style={{ ... }} colors
+  const inlineStyleRegex = /style=\{\{[^}]*\b(color|backgroundColor|borderColor|fill|stroke)\s*:\s*['"`]([^'"`]+)['"`]/g;
+
+  it('catches non-monochrome inline style colors', () => {
+    const violations: string[] = [];
+
+    for (const file of allFiles) {
+      const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
+      const content = fs.readFileSync(file, 'utf8');
+      let m: RegExpExecArray | null;
+      while ((m = inlineStyleRegex.exec(content)) !== null) {
+        const prop = m[1];
+        const val = m[2].trim();
+        if (val.startsWith('#') && !isMonochromeHex(val)) {
+          violations.push(`${rel}: inline ${prop}="${val}"`);
+        } else if (val.toLowerCase().startsWith('rgb') && !isMonochromeRgb(val)) {
+          violations.push(`${rel}: inline ${prop}="${val}"`);
+        } else if (val.toLowerCase().startsWith('hsl') && !isMonochromeHsl(val)) {
+          violations.push(`${rel}: inline ${prop}="${val}"`);
+        }
+      }
+    }
+
+    expect(violations, `Found ${violations.length} non-monochrome inline styles`).toEqual([]);
+  });
+
+  // 5. Gradients with non-monochrome stops
+  const gradientStopsRegex = /\b(?:from|to|via)-(?:\[#([0-9a-fA-F]+)\]|\[(rgba?\([^\]]+\))\]|\[(hsla?\([^\]]+\))\])/g;
+
+  it('catches non-monochrome gradient stops', () => {
+    const violations: string[] = [];
+
+    for (const file of allFiles) {
+      const rel = path.relative(process.cwd(), file).replace(/\\/g, '/');
+      const content = fs.readFileSync(file, 'utf8');
+      let m: RegExpExecArray | null;
+      while ((m = gradientStopsRegex.exec(content)) !== null) {
+        const hex = m[1];
+        const rgb = m[2];
+        const hsl = m[3];
+        if (hex && !isMonochromeHex('#' + hex)) violations.push(`${rel}: gradient ${m[0]}`);
+        if (rgb && !isMonochromeRgb(rgb)) violations.push(`${rel}: gradient ${m[0]}`);
+        if (hsl && !isMonochromeHsl(hsl)) violations.push(`${rel}: gradient ${m[0]}`);
+      }
+    }
+
+    expect(violations, `Found ${violations.length} non-monochrome gradient stops`).toEqual([]);
   });
 });

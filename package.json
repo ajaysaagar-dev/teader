@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:mono": "tsx scripts/check-mono.ts",
     "db:setup": "tsx scripts/db-seed.ts",
     "db:seed": "tsx scripts/db-seed.ts",
     "db:reset": "tsx scripts/db-seed.ts"
