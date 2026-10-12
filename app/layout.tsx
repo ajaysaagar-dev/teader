@@ -6,7 +6,7 @@ import { ConsoleBranding } from "@/components/ConsoleBranding";
 import { DesktopVersionIndicator } from "@/components/DesktopVersionIndicator";
 import { DesktopUpdateModal } from "@/components/DesktopUpdateModal";
 import { UIScaleInitializer } from "@/components/UIScaleInitializer";
-import { ThemeInitializer } from "@/components/ThemeInitializer";
+import { LegacyThemeCleanup } from "@/components/LegacyThemeCleanup";
 import {
   siteConfig,
   getOrganizationSchema,
@@ -45,7 +45,7 @@ const sora = Sora({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#DCB001",
+  themeColor: "#000000",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -157,7 +157,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
-      <body className="h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0E0F12] text-[#F5F5F7] selection:bg-purple-500/30 selection:text-purple-200 font-sans">
+      <body className="h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[#000000] text-[#EDEDED] selection:bg-[rgba(255,255,255,0.2)] selection:text-white font-sans">
         <ConsoleBranding />
         {children}
 
@@ -165,10 +165,10 @@ export default function RootLayout({
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "#141518",
-              color: "#F5F5F7",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "10px",
+              background: "#0A0A0A",
+              color: "#EDEDED",
+              border: "1px solid #1F1F1F",
+              borderRadius: "8px",
               fontSize: "13px",
             },
           }}
@@ -176,7 +176,7 @@ export default function RootLayout({
         <DesktopVersionIndicator />
         <DesktopUpdateModal />
         <UIScaleInitializer />
-        <ThemeInitializer />
+        <LegacyThemeCleanup />
       </body>
     </html>
   );
