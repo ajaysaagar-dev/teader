@@ -211,35 +211,6 @@ export default function MyWorkPage() {
     <AppLayout>
       <div className="flex-1 flex flex-col h-full bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans select-none overflow-y-auto">
 
-        {/* Top Header */}
-        <div className="px-6 py-5 border-b border-[var(--border-primary)] bg-[var(--bg-panel)] flex items-center justify-between flex-wrap gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-white/10 text-white border border-[var(--border-secondary)] flex items-center justify-center font-bold">
-                <UserCheck size={18} />
-              </div>
-              <h1 className="text-xl font-bold text-white tracking-tight">My Work & Focus Workspace</h1>
-            </div>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Personal cross-project dashboard for {currentUser?.name || 'Engineer'}
-            </p>
-          </div>
-
-          {/* Quick Metrics Header Pills */}
-          <div className="flex items-center gap-2 text-sm">
-            <RealtimeBadge />
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl">
-              <span className="text-white font-bold font-mono">{myAssignedIssues.length}</span>
-              <span className="text-[var(--text-secondary)]">Assigned Tasks</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--bg-canvas)] border border-[var(--border-primary)] rounded-xl">
-              <Flame size={13} className="text-[#FFFFFF]" />
-              <span className="text-white font-bold font-mono">{pomodoroCycles}</span>
-              <span className="text-[var(--text-secondary)]">Focus Sessions</span>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content Layout */}
         <div className="p-6 max-w-7xl w-full mx-auto grid grid-cols-12 gap-6">
           {/* Left Column: Tasks Tabs & List */}
@@ -404,10 +375,10 @@ export default function MyWorkPage() {
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => setIsPomodoroRunning((prev) => !prev)}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md ${
+                  className={`px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer ${
                     isPomodoroRunning
-                      ? 'bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white'
-                      : 'bg-white text-black hover:bg-[#FFFFFF]'
+                      ? 'bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)]'
+                      : 'bg-[var(--accent)] text-black hover:bg-[var(--accent-hover)]'
                   }`}
                 >
                   {isPomodoroRunning ? <Square size={13} /> : <Play size={13} />}

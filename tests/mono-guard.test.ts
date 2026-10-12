@@ -19,7 +19,10 @@ function walk(dir: string): string[] {
   return results;
 }
 
+const THEME_ACCENT_HEXES = new Set(['#BB86FC', '#CCA5FD', '#D4B2FF']);
+
 function isMonochromeHex(hex: string): boolean {
+  if (THEME_ACCENT_HEXES.has(hex.toUpperCase())) return true;
   let clean = hex.replace(/^#/, '');
   if (clean.length === 3 || clean.length === 4) {
     clean = clean[0] + clean[0] + clean[1] + clean[1] + clean[2] + clean[2];
@@ -40,6 +43,7 @@ function isMonochromeRgb(rgbStr: string): boolean {
   const r = Math.round(parseFloat(m[1]));
   const g = Math.round(parseFloat(m[2]));
   const b = Math.round(parseFloat(m[3]));
+  if (r === 187 && g === 134 && b === 252) return true;
   return r === g && g === b;
 }
 

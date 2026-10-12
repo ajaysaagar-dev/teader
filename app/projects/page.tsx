@@ -3,8 +3,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
-import { ProjectsGridSkeleton } from '@/components/ui/Skeleton';
-import { RandomLoadingText } from '@/components/ui/RandomLoadingText';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 
 import { 
@@ -322,25 +320,12 @@ export default function ProjectsPage() {
     [projects, searchQuery]
   );
 
-  // Show skeleton on first load only
+  // Show clean loading spinner on first load only
   if (loading && projects.length === 0) {
     return (
       <AppLayout>
-        <div className="flex-1 flex flex-col h-full overflow-hidden bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans relative">
-          <div className="px-6 py-4 bg-[var(--bg-panel)] border-b border-[var(--border-primary)] flex items-center justify-between shrink-0 select-none">
-            <div className="w-32 h-4 bg-[#222222] animate-pulse rounded" />
-            <div className="flex gap-2">
-              <div className="w-28 h-7 bg-[#222222] animate-pulse rounded-lg" />
-              <div className="w-32 h-7 bg-[#222222] animate-pulse rounded-lg" />
-            </div>
-          </div>
-          <div className="flex-1 p-6 overflow-y-auto">
-            <div className="w-80 h-10 bg-[var(--bg-panel)] border border-[var(--border-primary)] animate-pulse rounded-xl mb-6" />
-            <ProjectsGridSkeleton />
-          </div>
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[var(--bg-panel)]/90 backdrop-blur-md border border-[var(--border-primary)] shadow-xl px-4 py-2 rounded-full">
-            <RandomLoadingText />
-          </div>
+        <div className="flex-1 flex items-center justify-center h-full p-6 bg-[var(--bg-canvas)]">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
         </div>
       </AppLayout>
     );

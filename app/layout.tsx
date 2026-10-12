@@ -110,9 +110,13 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
     shortcut: "/favicon.ico",
-    apple: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
   },
   ...(siteConfig.googleSiteVerification
     ? {
@@ -157,7 +161,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
-      <body className="h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[#000000] text-[#EDEDED] selection:bg-[rgba(255,255,255,0.2)] selection:text-white font-sans">
+      <body className="h-full h-[100dvh] max-h-[100dvh] w-full overflow-hidden overscroll-none bg-[var(--bg-main)] text-[var(--text-primary)] selection:bg-[var(--accent)] selection:text-[var(--text-inverse)] font-sans">
         <ConsoleBranding />
         {children}
 
@@ -165,9 +169,9 @@ export default function RootLayout({
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "#0A0A0A",
-              color: "#EDEDED",
-              border: "1px solid #1F1F1F",
+              background: "var(--bg-surface)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-primary)",
               borderRadius: "8px",
               fontSize: "13px",
             },

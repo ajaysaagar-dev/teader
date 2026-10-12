@@ -242,7 +242,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           <span className="text-xs text-[var(--text-muted)]">Restore default 100% scale</span>
                           <button
                             onClick={handleResetUI}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-white text-xs font-medium transition-colors border border-[var(--border-secondary)]"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-[var(--text-primary)] hover:text-white text-xs font-medium transition-colors border border-[var(--border-secondary)] cursor-pointer"
                           >
                             <RotateCcw size={12} />
                             <span>Reset Scale</span>
@@ -313,7 +313,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </div>
                           <button
                             onClick={handleClearCache}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-white rounded text-xs font-medium transition-colors border border-[var(--border-secondary)]"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#242424] hover:bg-[#2E2E2E] text-[var(--text-primary)] hover:text-white rounded text-xs font-medium transition-colors border border-[var(--border-secondary)] cursor-pointer"
                           >
                             <Trash2 size={12} />
                             <span>Clear Cache</span>
@@ -349,7 +349,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <button
                           type="button"
                           onClick={() => setIsAvatarPickerOpen(true)}
-                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-white border border-[var(--border-secondary)] text-xs font-medium transition-colors"
+                          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#242424] hover:bg-[#2E2E2E] text-[var(--text-primary)] hover:text-white border border-[var(--border-secondary)] text-xs font-medium transition-colors cursor-pointer"
                         >
                           <Sparkles size={13} />
                           <span>Change Avatar</span>
@@ -372,7 +372,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         <div className="pt-2">
                           <button
                             onClick={onLogout}
-                            className="flex items-center gap-2 px-4 py-2 rounded bg-[var(--ramp-2)] hover:bg-[var(--ramp-3)] text-white border border-[var(--border-secondary)] text-xs font-medium transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 rounded bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)] text-xs font-medium transition-colors cursor-pointer"
                           >
                             <LogOut size={14} />
                             <span>Sign Out of Session</span>

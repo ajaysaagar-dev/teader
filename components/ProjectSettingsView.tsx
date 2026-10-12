@@ -711,7 +711,7 @@ export function ProjectSettingsView({
 
                 <button
                   onClick={onOpenLeaveModal}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFFFFF] hover:bg-[#FFFFFF] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02] border border-[var(--border-primary)] cursor-pointer"
                 >
                   <LogOut size={14} />
                   <span>Leave Project</span>
@@ -738,7 +738,7 @@ export function ProjectSettingsView({
 
                 <button
                   onClick={onOpenDeleteModal}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--ramp-3)] hover:bg-[#FFFFFF] text-white font-bold text-xs shadow-lg transition-all hover:scale-[1.02]"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#242424] hover:bg-[#2E2E2E] text-white border border-[var(--border-secondary)] font-bold text-xs shadow-lg transition-all hover:scale-[1.02] cursor-pointer"
                 >
                   <Trash2 size={14} />
                   <span>Delete Project</span>

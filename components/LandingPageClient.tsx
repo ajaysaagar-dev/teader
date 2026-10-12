@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Kanban,
   FileText,
@@ -21,11 +22,14 @@ import {
   ListTodo,
   Check,
   Smartphone,
-  Laptop
+  Laptop,
+  Globe
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BUILD_NUMBER } from '@/lib/build-info';
 import { Avatar } from '@/components/ui/Avatar';
+import { TopFrame } from '@/components/TopFrame';
+import { getDesktopInfo } from '@/lib/desktop';
 
 interface AuthUser {
   name?: string;
@@ -34,9 +38,18 @@ interface AuthUser {
 }
 
 export default function LandingPageClient() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
   const [previewTab, setPreviewTab] = useState<'board' | 'docs'>('board');
+
+  // If opened via Desktop app, strictly redirect straight to workspace dashboard
+  useEffect(() => {
+    const desktop = getDesktopInfo();
+    if (desktop.isDesktop) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
 
   // Check login state on mount
   useEffect(() => {
@@ -83,77 +96,86 @@ export default function LandingPageClient() {
   const isLoggedIn = mounted && Boolean(currentUser);
 
   return (
-    <div className="min-h-screen bg-[#000000] text-[var(--text-secondary)] font-sans selection:bg-white/30 selection:text-white">
-      {/* ─── Top Header Navigation ──────────────────────────────────── */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-[#000000]/90 border-b border-[#232323]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
-              <span className="font-extrabold text-xl text-white tracking-tight">
-                teader
-              </span>
-            </Link>
-
-            <nav className="hidden md:flex items-center gap-6 text-sm text-[var(--text-secondary)]">
-              <Link href="/documentation" className="hover:text-white transition-colors">
-                documentation
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
-              download
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1B1B1B] hover:bg-[#262626] text-[#EDEDED] border border-[#323232] hover:border-[var(--border-secondary)] text-xs font-medium transition-all"
-              title="Download Desktop App for Windows"
-            >
-              <Download size={13} className="text-white" />
-            </a>
-
-            {isLoggedIn ? (
-              <>
-                <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#1B1B1B] border border-[#323232] text-xs font-medium text-[#EDEDED]">
-                  <Avatar user={currentUser} size="xs" />
-                  <span>{currentUser?.name}</span>
-                </div>
-
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 font-bold text-xs transition-all shadow-[0_0_12px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
-                >
-                  <LayoutDashboard size={13} />
-                  <span>Dashboard</span>
-                </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--ramp-3)]/15 hover:bg-[var(--ramp-3)]/25 text-white border border-[var(--border-secondary)] text-xs font-medium transition-colors"
-                >
-                  <LogOut size={13} />
-                  <span className="hidden sm:inline">Logout</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-white transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 font-bold text-xs transition-all shadow-[0_0_15px_rgba(220,176,1,0.25)] hover:scale-[1.02]"
-                >
-                  <span>Launch Free</span>
-                  <ArrowRight size={13} />
-                </Link>
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-secondary)] font-sans selection:bg-[var(--accent)] selection:text-[var(--text-inverse)]">
+      {/* ─── Top Window Frame & Navigation Header ──────────────────── */}
+      <div className="sticky top-0 z-50 bg-[var(--bg-main)]">
+        <div className="border-b border-[var(--border-primary)] px-5 py-2">
+          <TopFrame />
         </div>
-      </header>
+
+        {/* ─── Top Header Navigation ──────────────────────────────────── */}
+        <header className="backdrop-blur-md bg-[var(--bg-main)]/90 border-b border-[var(--border-primary)]">
+          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-8">
+              <Link href="/" className="flex items-center gap-2.5 group">
+                <img src="/logo.svg" alt="Teader" className="w-6 h-6 object-contain" />
+                <span className="font-extrabold text-xl text-[var(--text-primary)] tracking-tight">
+                  teader
+                </span>
+              </Link>
+
+              <nav className="hidden md:flex items-center gap-6 text-sm text-[var(--text-secondary)]">
+                <Link href="/documentation" className="hover:text-[var(--text-primary)] transition-colors">
+                  documentation
+                </Link>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <a
+                href="/releases/Teader-Workspace-Web-Setup.exe"
+                download
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] text-[var(--text-primary)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-xs font-medium transition-all"
+                title="Download Teader Cloud Web Setup for Windows"
+              >
+                <Download size={13} className="text-[var(--text-primary)]" />
+                <span>Web Setup</span>
+              </a>
+
+              {isLoggedIn ? (
+                <>
+                  <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-primary)] text-xs font-medium text-[var(--text-primary)]">
+                    <Avatar user={currentUser} size="xs" />
+                    <span>{currentUser?.name}</span>
+                  </div>
+
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)] hover:brightness-110 font-bold text-xs transition-all shadow-[0_0_12px_rgba(187,134,252,0.3)] hover:scale-[1.02]"
+                  >
+                    <LayoutDashboard size={13} />
+                    <span>Dashboard</span>
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--ramp-3)]/15 hover:bg-[var(--ramp-3)]/25 text-[var(--text-primary)] border border-[var(--border-secondary)] text-xs font-medium transition-colors"
+                  >
+                    <LogOut size={13} />
+                    <span className="hidden sm:inline">Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="px-3.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--accent)] text-[var(--text-inverse)] hover:brightness-110 font-bold text-xs transition-all shadow-[0_0_15px_rgba(187,134,252,0.35)] hover:scale-[1.02]"
+                  >
+                    <span>Launch Free</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+      </div>
 
       {/* ─── Hero Section ────────────────────────────────────────────── */}
       <section className="pt-20 pb-16 px-6 relative overflow-hidden">
@@ -183,19 +205,30 @@ export default function LandingPageClient() {
           <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-sm transition-all shadow-[0_0_20px_rgba(220,176,1,0.3)] hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent)] text-[var(--text-inverse)] hover:brightness-110 font-bold text-sm transition-all shadow-[0_0_20px_rgba(187,134,252,0.35)] hover:scale-105"
             >
               <span>{isLoggedIn ? 'Go to Dashboard' : 'Get Started Free'}</span>
               <ArrowRight size={16} />
             </Link>
 
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
+              href="/releases/Teader-Workspace-Web-Setup.exe"
               download
               className="flex items-center gap-2.5 px-5 py-3.5 rounded-xl bg-[#1B1B1B] hover:bg-[#262626] border border-[#343434] hover:border-[var(--border-secondary)] text-white font-medium text-sm transition-all shadow-sm group hover:scale-105"
+              title="Lightweight cloud web installer (fast, downloads from cloud)"
             >
-              <Download size={15} className="text-white group-hover:-translate-y-0.5 transition-transform" />
-              <span>Download for Windows</span>
+              <Globe size={15} className="text-[var(--accent)] group-hover:-translate-y-0.5 transition-transform" />
+              <span>Download Web Setup</span>
+            </a>
+
+            <a
+              href="/releases/Teader-Workspace-Setup.exe"
+              download
+              className="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-white font-medium text-xs transition-colors"
+              title="Full offline installer"
+            >
+              <Download size={13} />
+              <span>Offline Setup</span>
             </a>
 
             {!isLoggedIn && (
@@ -240,13 +273,13 @@ export default function LandingPageClient() {
             </div>
 
             {/* Toggle Tabs */}
-            <div className="flex items-center bg-[#131313] p-1 rounded-lg border border-[#323232] text-xs">
+            <div className="flex items-center bg-[var(--bg-main)] p-1 rounded-lg border border-[var(--border-primary)] text-xs">
               <button
                 onClick={() => setPreviewTab('board')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition-all ${
                   previewTab === 'board'
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                    ? 'bg-[var(--accent)] text-[var(--text-inverse)] font-bold shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 <Kanban size={13} />
@@ -256,8 +289,8 @@ export default function LandingPageClient() {
                 onClick={() => setPreviewTab('docs')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-md font-medium transition-all ${
                   previewTab === 'docs'
-                    ? 'bg-white text-black font-bold shadow-sm'
-                    : 'text-[var(--text-secondary)] hover:text-white'
+                    ? 'bg-[var(--accent)] text-[var(--text-inverse)] font-bold shadow-sm'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 }`}
               >
                 <FileText size={13} />
@@ -292,7 +325,7 @@ export default function LandingPageClient() {
                           <ListTodo size={12} />
                           <span>3 subtasks</span>
                         </div>
-                        <div className="w-4 h-4 rounded-full bg-[#FFFFFF] text-white text-[9px] font-bold flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-[var(--accent)] text-black text-[9px] font-bold flex items-center justify-center">
                           A
                         </div>
                       </div>
@@ -309,7 +342,7 @@ export default function LandingPageClient() {
                           <ListTodo size={12} />
                           <span>1 subtask</span>
                         </div>
-                        <div className="w-4 h-4 rounded-full bg-[#FFFFFF] text-white text-[9px] font-bold flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-[var(--accent)] text-black text-[9px] font-bold flex items-center justify-center">
                           K
                         </div>
                       </div>
@@ -545,40 +578,60 @@ export default function LandingPageClient() {
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3.5">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-sm transition-all shadow-[0_0_25px_rgba(220,176,1,0.3)] hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--accent)] text-[var(--text-inverse)] hover:brightness-110 font-bold text-sm transition-all shadow-[0_0_25px_rgba(187,134,252,0.4)] hover:scale-105"
             >
               <span>{isLoggedIn ? 'Open My Workspace' : 'Get Started Now'}</span>
               <ArrowRight size={16} />
             </Link>
 
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
+              href="/releases/Teader-Workspace-Web-Setup.exe"
               download
-              className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#1B1B1B] hover:bg-[#262626] border border-[#343434] hover:border-[var(--border-secondary)] text-white font-medium text-sm transition-all"
+              className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#1B1B1B] hover:bg-[#262626] border border-[#343434] text-white font-medium text-sm transition-all hover:scale-105"
+              title="Lightweight cloud web installer"
             >
-              <Download size={15} className="text-white" />
-              <span>Download Desktop App</span>
+              <Globe size={15} className="text-[var(--accent)]" />
+              <span>Download Web Setup</span>
+            </a>
+
+            <a
+              href="/releases/Teader-Workspace-Setup.exe"
+              download
+              className="flex items-center gap-2 px-4 py-3.5 rounded-xl bg-[var(--bg-surface)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] hover:border-[var(--border-secondary)] text-[var(--text-secondary)] hover:text-white font-medium text-xs transition-all"
+              title="Standalone offline installer"
+            >
+              <Download size={13} />
+              <span>Offline Setup</span>
             </a>
           </div>
         </div>
       </section>
 
       {/* ─── Clean Footer ────────────────────────────────────────────── */}
-      <footer className="py-8 px-6 border-t border-[#1D1D1D] bg-[#0A0A0A] text-xs text-[var(--text-muted)]">
+      <footer className="py-8 px-6 border-t border-[var(--border-primary)] bg-[var(--bg-main)] text-xs text-[var(--text-muted)]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
+            <img src="/logo.svg" alt="Teader" className="w-4 h-4 object-contain" />
             <span className="font-bold text-white">Teader</span>
             <span>• Build {BUILD_NUMBER}</span>
           </div>
 
           <div className="flex items-center gap-5">
             <a
-              href="https://teader.vedipocketpc.online/releases/Teader-Workspace-Setup.exe"
+              href="/releases/Teader-Workspace-Web-Setup.exe"
               download
               className="text-white hover:underline flex items-center gap-1"
             >
+              <Globe size={12} className="text-[var(--accent)]" />
+              <span>Web Setup</span>
+            </a>
+            <a
+              href="/releases/Teader-Workspace-Setup.exe"
+              download
+              className="text-[var(--text-secondary)] hover:underline flex items-center gap-1"
+            >
               <Download size={12} />
-              <span>Download App</span>
+              <span>Offline Setup</span>
             </a>
             <Link href="/dashboard" className="hover:text-white transition-colors">
               Dashboard

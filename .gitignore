@@ -45,7 +45,7 @@ next-env.d.ts
 !/scripts/db-seed.ts
 !/scripts/check-mono.ts
 
-# large release archives
-public/releases/*.7z
+# release artifacts
+public/releases/builder-debug.yml
 public/releases/Teader Workspace Setup *.exe
 

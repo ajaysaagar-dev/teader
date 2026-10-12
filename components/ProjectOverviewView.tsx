@@ -143,54 +143,7 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
   });
 
   return (
-    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[var(--bg-canvas)] text-[var(--text-secondary)] p-4 lg:p-6 space-y-6 select-none font-sans">
-      {/* ─── Hero Overview Header ─────────────────────────────────────────── */}
-      <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-2xl p-5 lg:p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="space-y-1.5 z-10">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] font-bold text-white bg-[var(--bg-canvas)] px-2 py-0.5 rounded border border-[var(--border-primary)]">
-              {project?.key || 'PROJECT'}
-            </span>
-            <span className="text-xs text-[var(--text-muted)]">Workspace Analytics & Insights</span>
-          </div>
-          <h2 className="text-xl lg:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            {project?.name || 'Project Overview'}
-          </h2>
-          <p className="text-xs text-[var(--text-secondary)] max-w-xl line-clamp-2">
-            {project?.description || 'Track real-time engineering velocity, sprint health, and status breakdowns.'}
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2 z-10">
-          <button
-            onClick={() => onNavigateTab('tasks', 'board')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] rounded-xl transition-all shadow-sm"
-          >
-            <LayoutGrid size={13} className="text-white" />
-            <span>Open Board</span>
-          </button>
-
-          <button
-            onClick={() => onNavigateTab('tasks', 'structure')}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-canvas)] hover:bg-[#242424] border border-[var(--border-primary)] rounded-xl transition-all shadow-sm"
-          >
-            <FolderTree size={13} className="text-white" />
-            <span>Structure View</span>
-          </button>
-
-          <button
-            onClick={onOpenNewIssue}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white text-black hover:bg-[#FFFFFF] rounded-xl transition-all shadow-md"
-          >
-            <Sparkles size={13} />
-            <span>New Task</span>
-          </button>
-        </div>
-
-        {/* Ambient Glow */}
-        <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 blur-3xl pointer-events-none rounded-full" />
-      </div>
+    <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[var(--bg-canvas)] text-[var(--text-secondary)] p-4 lg:p-6 space-y-6 select-none font-sans"> 
 
       {/* ─── Top KPI Metric Cards ─────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">

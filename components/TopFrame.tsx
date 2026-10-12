@@ -129,16 +129,21 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
     >
       {/* ─── Left Section: Teader App Title & Version Badge ──────────── */}
       <div
-        className="flex items-baseline gap-3 shrink-0"
+        className="flex items-center gap-2.5 shrink-0"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <span className="text-[17px] sm:text-[18px] font-bold text-white tracking-tight leading-none">
+        <img
+          src="/logo.svg"
+          alt="Teader"
+          className="w-4 h-4 object-contain shrink-0"
+        />
+        <span className="text-[17px] sm:text-[18px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Teader App
         </span>
         <span
           onClick={handleCheckVersionClick}
           title="Click to verify communication with Electron app"
-          className="text-[13px] font-normal text-white/50 tracking-normal leading-none cursor-pointer hover:text-white/80 transition-colors"
+          className="text-[13px] font-normal text-[var(--text-secondary)] tracking-normal leading-none cursor-pointer hover:text-[var(--accent)] transition-colors"
         >
           v{version}
         </span>
@@ -149,7 +154,7 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
 
       {/* ─── Right Section: Window Control Icons (Minimize, Maximize, Close) ─ */}
       <div
-        className="flex items-center gap-1 shrink-0 text-white"
+        className="flex items-center gap-1 shrink-0 text-[var(--text-primary)]"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
         <button
@@ -157,7 +162,7 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
           onClick={handleMinimize}
           aria-label="Minimize application window"
           title="Minimize"
-          className="w-7 h-7 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors cursor-pointer focus:outline-none"
+          className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-primary)] active:bg-[var(--bg-active)] transition-colors cursor-pointer focus:outline-none"
         >
           <Minus size={14} className="stroke-[2]" />
         </button>
@@ -167,7 +172,7 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
           onClick={handleToggleMaximize}
           aria-label={isMaximized ? 'Restore application window' : 'Maximize application window'}
           title={isMaximized ? 'Restore' : 'Maximize'}
-          className="w-7 h-7 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors cursor-pointer focus:outline-none"
+          className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-primary)] active:bg-[var(--bg-active)] transition-colors cursor-pointer focus:outline-none"
         >
           {isMaximized ? (
             <Copy size={12} className="rotate-90 stroke-[1.75]" />
@@ -181,7 +186,7 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
           onClick={handleClose}
           aria-label="Close application window"
           title="Close"
-          className="w-7 h-7 flex items-center justify-center rounded text-white/70 hover:text-white hover:bg-white/20 active:bg-white/30 transition-colors cursor-pointer focus:outline-none"
+          className="w-7 h-7 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-primary)] active:bg-[var(--bg-active)] transition-colors cursor-pointer focus:outline-none"
         >
           <X size={14} className="stroke-[2]" />
         </button>
