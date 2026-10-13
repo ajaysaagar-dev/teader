@@ -100,8 +100,8 @@ export const AnalyticsView: React.FC = () => {
               <AreaChart data={rpcData}>
                 <defs>
                   <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FFFFFF" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#FFFFFF" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#8400FF" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#8400FF" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="time" stroke="#666666" fontSize={11} tickLine={false} />
@@ -109,7 +109,7 @@ export const AnalyticsView: React.FC = () => {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#000000', borderColor: '#222222', borderRadius: '8px', fontSize: '12px', color: '#A0A0A0' }}
                 />
-                <Area type="monotone" dataKey="requests" stroke="#FFFFFF" fillOpacity={1} fill="url(#colorRequests)" />
+                <Area type="monotone" dataKey="requests" stroke="#8400FF" fillOpacity={1} fill="url(#colorRequests)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -121,7 +121,7 @@ export const AnalyticsView: React.FC = () => {
             <h3 className="text-xs font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
               Sprint Task Completion Velocity
             </h3>
-            <span className="text-[11px] text-[var(--text-muted)] font-mono">Story Points</span>
+            <span className="text-[11px] text-[#CCA5FD] font-mono">Story Points</span>
           </div>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -131,7 +131,7 @@ export const AnalyticsView: React.FC = () => {
                 <Tooltip
                   contentStyle={{ backgroundColor: '#000000', borderColor: '#222222', borderRadius: '8px', fontSize: '12px', color: '#A0A0A0' }}
                 />
-                <Bar dataKey="completed" name="Story Points" fill="#A0A0A0" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="completed" name="Story Points" fill="#FF0051" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

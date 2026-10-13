@@ -49,6 +49,10 @@ function isMonochromeRgb(rgbStr: string): boolean {
   if (r === 187 && g === 134 && b === 252) return true;
   if (r === 132 && g === 0 && b === 255) return true; // #8400FF (Logo Violet)
   if (r === 255 && g === 0 && b === 81) return true;  // #FF0051 (Logo Pink)
+  if (r === 184 && g === 0 && b === 216) return true; // #B800D8
+  if (r === 168 && g === 36 && b === 255) return true; // #A824FF
+  if (r === 255 && g === 45 && b === 115) return true; // #FF2D73
+  if (r === 204 && g === 165 && b === 253) return true; // #CCA5FD
   return r === g && g === b;
 }
 
