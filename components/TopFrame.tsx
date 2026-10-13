@@ -146,10 +146,9 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
           type="button"
           onClick={() => setIsDetailsOpen(true)}
           title="Click to view application details (version, build number, runtime)"
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#181818] hover:bg-[#222222] border border-[#2E2E2E] hover:border-[#8400FF]/50 text-[12px] font-mono text-[var(--text-secondary)] hover:text-white transition-all cursor-pointer group"
+          className="mt-[8px] ml-[-6px] inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:border-[#8400FF]/50 text-[10px] font-mono text-[var(--text-secondary)] hover:text-white transition-all cursor-pointer group"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#8400FF] group-hover:bg-[#FF0051] transition-colors shadow-[0_0_6px_rgba(132,0,255,0.8)]" />
-          <span>v{version}</span>
+          <span>{version}</span>
         </button>
       </div>
 

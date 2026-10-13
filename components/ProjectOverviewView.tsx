@@ -151,9 +151,6 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)]">Completion Rate</span>
-            <div className="w-7 h-7 rounded-lg bg-[#8400FF]/15 border border-[#8400FF]/30 flex items-center justify-center text-[#8400FF]">
-              <CheckCircle2 size={15} />
-            </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
@@ -173,9 +170,6 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)]">In Progress</span>
-            <div className="w-7 h-7 rounded-lg bg-[#FF0051]/15 border border-[#FF0051]/30 flex items-center justify-center text-[#FF0051]">
-              <Clock size={15} />
-            </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
@@ -192,9 +186,6 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)]">Sub-works & Folders</span>
-            <div className="w-7 h-7 rounded-lg bg-[#CCA5FD]/15 border border-[#CCA5FD]/30 flex items-center justify-center text-[#CCA5FD]">
-              <FolderTree size={15} />
-            </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">
@@ -214,9 +205,6 @@ export const ProjectOverviewView: React.FC<ProjectOverviewViewProps> = React.mem
         <div className="bg-[var(--bg-panel)] border border-[var(--border-primary)] rounded-xl p-4 flex flex-col justify-between shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)]">High Priority Tasks</span>
-            <div className="w-7 h-7 rounded-lg bg-[#FF0051]/15 border border-[#FF0051]/30 flex items-center justify-center text-[#FF0051]">
-              <Flame size={15} className="text-[#FF0051]" />
-            </div>
           </div>
           <div className="mt-3">
             <div className="flex items-baseline gap-2">

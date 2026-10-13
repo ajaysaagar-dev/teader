@@ -221,34 +221,6 @@ export function ProjectHistoryView({
   return (
     <div className="flex-1 h-full min-h-0 w-full overflow-y-auto bg-[var(--bg-main)] text-[var(--text-secondary)] p-4 lg:p-8 select-none">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header Title */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#141414] gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#191919] border border-[var(--border-primary)] flex items-center justify-center text-white">
-              <Clock size={20} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white tracking-tight">Project History</h2>
-              </div>
-              <p className="text-xs text-[var(--text-muted)]">
-                Comprehensive audit trail tracking every task, folder, documentation, permission and team action.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchHistory(true)}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A1A1A] hover:bg-[#252525] text-xs font-semibold text-white border border-[var(--border-primary)] transition-colors disabled:opacity-50"
-              title="Refresh History Audit Trail"
-            >
-              <RefreshCw size={13} className={refreshing ? 'animate-spin text-white' : ''} />
-              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
-            </button>
-          </div>
-        </div>
 
         {/* Filter and Search Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-[var(--bg-panel)] border border-[#141414]">

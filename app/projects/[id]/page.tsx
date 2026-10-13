@@ -1815,7 +1815,7 @@ export default function SingleProjectPage() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabSwitch(tab.id as ProjectTab)}
-                  className={`group flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative cursor-pointer ${
+                  className={`group flex items-center gap-1.5 px-3 h-full text-xs transition-colors relative ${
                     isActive
                       ? 'text-white font-medium'
                       : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.04]'
@@ -1902,70 +1902,6 @@ export default function SingleProjectPage() {
                   </button>
                 )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'overview' && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setOverviewSubView('summary')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
-                  overviewSubView === 'summary'
-                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
-                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Summary
-              </button>
-              <button
-                onClick={() => setOverviewSubView('activity')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
-                  overviewSubView === 'activity'
-                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
-                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Activity
-              </button>
-              <button
-                onClick={() => handleTabSwitch('meeting')}
-                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <Radio size={11} className="text-[#FF0051]" />
-                <span>Meeting</span>
-              </button>
-              <button
-                onClick={() => setIsChatOpen((prev) => !prev)}
-                className="flex items-center gap-1 px-2.5 py-0.5 text-xs text-[var(--text-muted)] hover:text-white rounded hover:bg-white/5 transition-colors cursor-pointer"
-              >
-                <MessageSquare size={11} className="text-[#8400FF]" />
-                <span>Chat</span>
-              </button>
-            </div>
-          )}
-
-          {activeTab === 'docs' && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setDocsSubView('docs')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
-                  docsSubView === 'docs'
-                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
-                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Docs
-              </button>
-              <button
-                onClick={() => setDocsSubView('charts')}
-                className={`px-2.5 py-0.5 text-xs rounded transition-all cursor-pointer ${
-                  docsSubView === 'charts'
-                    ? 'bg-gradient-to-r from-[#8400FF] to-[#FF0051] text-white font-medium shadow-[0_0_10px_rgba(132,0,255,0.4)]'
-                    : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
-                }`}
-              >
-                Charts
-              </button>
             </div>
           )}
 

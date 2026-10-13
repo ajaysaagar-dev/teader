@@ -14,7 +14,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Plus,
-  Cpu
+  Cpu,
+  Workflow
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar } from './ui/Avatar';
@@ -92,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/my-work', label: 'Commitments', icon: CheckSquare },
+    { href: '/projects', label: 'Projects', icon: Workflow },
   ];
 
   return (
@@ -132,13 +134,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="px-2 pt-2 pb-1 border-t border-[var(--border-subtle)] flex-1 min-h-0 flex flex-col">
           <div className="flex items-center justify-between px-2 py-1 text-xs font-semibold text-[var(--text-secondary)] shrink-0">
             {!collapsed && <span>Projects</span>}
-            <Link
-              href="/projects"
-              className="text-[var(--text-muted)] hover:text-white transition-colors"
-              title="View all projects"
-            >
-              <FolderKanban size={13} />
-            </Link>
           </div>
 
           <div className="space-y-0.5 overflow-y-auto flex-1 pr-0.5">
@@ -156,9 +151,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                   title={proj.name}
                 >
-                  <span className={`w-4 h-4 rounded ${isProjActive ? 'bg-white text-black' : 'bg-neutral-800 text-neutral-300'} flex items-center justify-center font-mono text-[9px] font-bold shrink-0`}>
-                    {proj.key ? proj.key.slice(0, 2) : 'P'}
-                  </span>
                   {!collapsed && <span className="truncate">{proj.name}</span>}
                 </Link>
               );
@@ -193,38 +185,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Keyboard size={14} className="shrink-0 text-[var(--text-muted)]" />
             {!collapsed && <span>Shortcuts</span>}
           </button>
-        )}
-
-        {currentUser && (
-          <div
-            className={`flex items-center gap-2 p-1.5 rounded hover:bg-[var(--ramp-1)] transition-colors ${
-              collapsed ? 'justify-center p-1' : 'justify-between'
-            }`}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar user={currentUser} size="xs" />
-              {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-white truncate leading-tight">
-                    {currentUser.name || 'User'}
-                  </p>
-                  <p className="text-[10px] text-[var(--text-muted)] truncate leading-tight">
-                    {currentUser.role || 'Member'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {!collapsed && (
-              <button
-                onClick={handleLogout}
-                className="w-6 h-6 rounded flex items-center justify-center text-[var(--text-muted)] hover:text-white transition-colors"
-                title="Sign out"
-              >
-                <LogOut size={13} />
-              </button>
-            )}
-          </div>
         )}
       </div>
     </aside>

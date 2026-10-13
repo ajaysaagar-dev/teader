@@ -110,18 +110,15 @@ export const AppDetailsModal: React.FC<AppDetailsModalProps> = ({
         {/* Header */}
         <div className="relative p-5 pb-4 border-b border-[#222222] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8400FF] to-[#FF0051] p-0.5 flex items-center justify-center shadow-[0_0_15px_rgba(132,0,255,0.4)]">
-              <div className="w-full h-full bg-[#141414] rounded-[10px] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl from-[#8400FF] to-[#FF0051] p-0.5 flex items-center justify-center">
+              <div className="w-full h-full bg-[#141414] flex items-center justify-center">
                 <img src="/logo.svg" alt="Teader" className="w-5 h-5 object-contain" />
               </div>
             </div>
             <div>
               <h2 id="app-details-title" className="text-base font-bold text-white tracking-tight leading-none">
-                Teader Workspace
+                Teader App
               </h2>
-              <p className="text-xs text-[var(--text-secondary)] mt-1 font-normal">
-                AI-Native High-Velocity Engineering Platform
-              </p>
             </div>
           </div>
           <button
