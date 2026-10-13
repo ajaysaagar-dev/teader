@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Minus, Square, Copy, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { AppDetailsModal } from '@/components/AppDetailsModal';
 
 interface TopFrameProps {
   className?: string;
@@ -12,6 +13,7 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
   const [version, setVersion] = useState<string>('1.0.0');
   const [isElectron, setIsElectron] = useState<boolean>(false);
   const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(false);
 
   // Communicate with Electron app to check application version
   const checkElectronVersion = useCallback(async () => {
@@ -140,13 +142,15 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
         <span className="text-[17px] sm:text-[18px] font-bold text-[var(--text-primary)] tracking-tight leading-none">
           Teader App
         </span>
-        <span
-          onClick={handleCheckVersionClick}
-          title="Click to verify communication with Electron app"
-          className="text-[13px] font-normal text-[var(--text-secondary)] tracking-normal leading-none cursor-pointer hover:text-[var(--accent)] transition-colors"
+        <button
+          type="button"
+          onClick={() => setIsDetailsOpen(true)}
+          title="Click to view application details (version, build number, runtime)"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#181818] hover:bg-[#222222] border border-[#2E2E2E] hover:border-[#8400FF]/50 text-[12px] font-mono text-[var(--text-secondary)] hover:text-white transition-all cursor-pointer group"
         >
-          v{version}
-        </span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#8400FF] group-hover:bg-[#FF0051] transition-colors shadow-[0_0_6px_rgba(132,0,255,0.8)]" />
+          <span>v{version}</span>
+        </button>
       </div>
 
       {/* ─── Center Draggable Bar Space ──────────────────────────────── */}
@@ -191,6 +195,13 @@ export const TopFrame: React.FC<TopFrameProps> = ({ className = '' }) => {
           <X size={14} className="stroke-[2]" />
         </button>
       </div>
+
+      {/* ─── Application Details Modal ──────────────────────────────── */}
+      <AppDetailsModal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        version={version}
+      />
     </header>
   );
 };

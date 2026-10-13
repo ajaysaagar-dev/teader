@@ -3,7 +3,6 @@ import { Inter, Geist, Geist_Mono, Space_Grotesk, Sora } from "next/font/google"
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ConsoleBranding } from "@/components/ConsoleBranding";
-import { DesktopVersionIndicator } from "@/components/DesktopVersionIndicator";
 import { DesktopUpdateModal } from "@/components/DesktopUpdateModal";
 import { UIScaleInitializer } from "@/components/UIScaleInitializer";
 import { LegacyThemeCleanup } from "@/components/LegacyThemeCleanup";
@@ -177,7 +176,6 @@ export default function RootLayout({
             },
           }}
         />
-        <DesktopVersionIndicator />
         <DesktopUpdateModal />
         <UIScaleInitializer />
         <LegacyThemeCleanup />
