@@ -318,11 +318,11 @@ export default function DashboardPage() {
             <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[var(--border-secondary)] transition-all shadow-sm">
               <div className="flex items-center justify-between text-[var(--text-muted)]">
                 <span className="text-xs font-semibold tracking-wide">PROJECTS</span>
-                <FolderKanban size={15} className="text-white" />
+                <FolderKanban size={15} className="text-[#CCA5FD]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.totalProjects}</span>
-                <span className="text-xs text-white font-mono">Active</span>
+                <span className="text-xs text-[#CCA5FD] font-mono">Active</span>
               </div>
             </div>
 
@@ -339,38 +339,38 @@ export default function DashboardPage() {
             </div>
 
             {/* Card: In Progress */}
-            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[#FFFFFF]/50 transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[#FF0051]/30 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[var(--text-muted)]">
                 <span className="text-xs font-semibold tracking-wide">IN PROGRESS</span>
-                <Flame size={15} className="text-white" />
+                <Flame size={15} className="text-[#FF0051]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.inProgress}</span>
-                <span className="text-xs text-[var(--text-secondary)] font-mono">Active</span>
+                <span className="text-xs text-[#FF0051] font-mono">Active</span>
               </div>
             </div>
 
             {/* Card: Blocked */}
-            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[var(--border-secondary)] transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[#FF2D73]/30 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[var(--text-muted)]">
                 <span className="text-xs font-semibold tracking-wide">BLOCKED</span>
-                <ShieldAlert size={15} className="text-white" />
+                <ShieldAlert size={15} className="text-[#FF2D73]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.blocked}</span>
-                <span className="text-xs text-white font-mono">Needs Lead</span>
+                <span className="text-xs text-[#FF2D73] font-mono">Needs Lead</span>
               </div>
             </div>
 
             {/* Card: Done */}
-            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[var(--border-secondary)] transition-all shadow-sm">
+            <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[#8400FF]/30 transition-all shadow-sm">
               <div className="flex items-center justify-between text-[var(--text-muted)]">
                 <span className="text-xs font-semibold tracking-wide">COMPLETED</span>
-                <CheckCircle2 size={15} className="text-white" />
+                <CheckCircle2 size={15} className="text-[#8400FF]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.completed}</span>
-                <span className="text-xs text-white font-mono">Shipped</span>
+                <span className="text-xs text-[#8400FF] font-mono">Shipped</span>
               </div>
             </div>
 
@@ -378,7 +378,7 @@ export default function DashboardPage() {
             <div className="p-5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-primary)] flex flex-col justify-between hover:border-[var(--border-secondary)] transition-all shadow-sm">
               <div className="flex items-center justify-between text-[var(--text-muted)]">
                 <span className="text-xs font-semibold tracking-wide">VELOCITY</span>
-                <TrendingUp size={15} className="text-white" />
+                <TrendingUp size={15} className="text-[#CCA5FD]" />
               </div>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-white font-mono">{globalMetrics.overallPercent}%</span>
@@ -402,35 +402,35 @@ export default function DashboardPage() {
               {globalMetrics.completed > 0 && (
                 <div
                   style={{ width: `${(globalMetrics.completed / globalMetrics.totalTasks) * 100}%` }}
-                  className="bg-[var(--ramp-3)] rounded-full transition-all duration-500"
+                  className="bg-[#8400FF] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(132,0,255,0.4)]"
                   title={`Done: ${globalMetrics.completed} tasks`}
                 />
               )}
               {globalMetrics.inProgress > 0 && (
                 <div
                   style={{ width: `${(globalMetrics.inProgress / globalMetrics.totalTasks) * 100}%` }}
-                  className="bg-white text-black rounded-full transition-all duration-500"
+                  className="bg-[#FF0051] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,0,81,0.4)]"
                   title={`In Progress: ${globalMetrics.inProgress} tasks`}
                 />
               )}
               {globalMetrics.needsReview > 0 && (
                 <div
                   style={{ width: `${(globalMetrics.needsReview / globalMetrics.totalTasks) * 100}%` }}
-                  className="bg-[var(--ramp-3)] rounded-full transition-all duration-500"
+                  className="bg-[#CCA5FD] rounded-full transition-all duration-500"
                   title={`Needs Review: ${globalMetrics.needsReview} tasks`}
                 />
               )}
               {globalMetrics.blocked > 0 && (
                 <div
                   style={{ width: `${(globalMetrics.blocked / globalMetrics.totalTasks) * 100}%` }}
-                  className="bg-[var(--ramp-3)] rounded-full transition-all duration-500"
+                  className="bg-[#FF2D73] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(255,45,115,0.4)]"
                   title={`Blocked: ${globalMetrics.blocked} tasks`}
                 />
               )}
               {globalMetrics.todo > 0 && (
                 <div
                   style={{ width: `${(globalMetrics.todo / globalMetrics.totalTasks) * 100}%` }}
-                  className="bg-[#505050] rounded-full transition-all duration-500"
+                  className="bg-[#333333] rounded-full transition-all duration-500"
                   title={`Todo: ${globalMetrics.todo} tasks`}
                 />
               )}
@@ -439,27 +439,27 @@ export default function DashboardPage() {
             {/* Legend & Breakdown Chips */}
             <div className="flex flex-wrap items-center gap-4 text-xs pt-1">
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--ramp-3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#8400FF] shadow-[0_0_5px_rgba(132,0,255,0.6)]" />
                 <span className="text-[var(--text-secondary)]">Done:</span>
-                <span className="font-bold text-white font-mono">{globalMetrics.completed}</span>
+                <span className="font-bold text-[#8400FF] font-mono">{globalMetrics.completed}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-white text-black" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF0051] shadow-[0_0_5px_rgba(255,0,81,0.6)]" />
                 <span className="text-[var(--text-secondary)]">In Progress:</span>
-                <span className="font-bold text-white font-mono">{globalMetrics.inProgress}</span>
+                <span className="font-bold text-[#FF0051] font-mono">{globalMetrics.inProgress}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--ramp-3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#CCA5FD]" />
                 <span className="text-[var(--text-secondary)]">Needs Review:</span>
-                <span className="font-bold text-white font-mono">{globalMetrics.needsReview}</span>
+                <span className="font-bold text-[#CCA5FD] font-mono">{globalMetrics.needsReview}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[var(--ramp-3)]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FF2D73] shadow-[0_0_5px_rgba(255,45,115,0.6)]" />
                 <span className="text-[var(--text-secondary)]">Blocked:</span>
-                <span className="font-bold text-white font-mono">{globalMetrics.blocked}</span>
+                <span className="font-bold text-[#FF2D73] font-mono">{globalMetrics.blocked}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#505050]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#333333]" />
                 <span className="text-[var(--text-secondary)]">Todo:</span>
                 <span className="font-bold text-white font-mono">{globalMetrics.todo}</span>
               </div>
@@ -472,7 +472,7 @@ export default function DashboardPage() {
             <div className="p-5 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={16} className="text-white" />
+                  <TrendingUp size={16} className="text-[#8400FF]" />
                   <h3 className="text-sm font-bold text-white tracking-tight">Task Velocity & Throughput Trend</h3>
                 </div>
                 <span className="text-xs text-[var(--text-secondary)] font-mono">7-Day Trajectory</span>
@@ -491,25 +491,26 @@ export default function DashboardPage() {
                       type="monotone"
                       dataKey="total"
                       name="Total Tasks"
-                      stroke="#666666"
+                      stroke="#CCA5FD"
+                      strokeDasharray="4 4"
                       strokeWidth={1.5}
-                      dot={{ r: 3, fill: '#666666' }}
+                      dot={{ r: 3, fill: '#CCA5FD' }}
                     />
                     <Line
                       type="monotone"
                       dataKey="inProgress"
                       name="In Progress"
-                      stroke="#AAAAAA"
+                      stroke="#FF0051"
                       strokeWidth={2}
-                      dot={{ r: 3, fill: '#AAAAAA' }}
+                      dot={{ r: 3, fill: '#FF0051' }}
                     />
                     <Line
                       type="monotone"
                       dataKey="completed"
                       name="Completed"
-                      stroke="#FFFFFF"
+                      stroke="#8400FF"
                       strokeWidth={2.5}
-                      dot={{ r: 4, fill: '#FFFFFF' }}
+                      dot={{ r: 4, fill: '#8400FF' }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -520,7 +521,7 @@ export default function DashboardPage() {
             <div className="p-5 rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-primary)] space-y-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <BarChart3 size={16} className="text-white" />
+                  <BarChart3 size={16} className="text-[#FF0051]" />
                   <h3 className="text-sm font-bold text-white tracking-tight">Project Workload & Status Breakdown</h3>
                 </div>
                 <span className="text-xs text-[var(--text-secondary)] font-mono">Top Projects</span>
@@ -535,8 +536,8 @@ export default function DashboardPage() {
                       contentStyle={{ backgroundColor: '#111111', borderColor: '#333333', borderRadius: '8px', fontSize: '12px', color: '#FFFFFF' }}
                     />
                     <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                    <Bar dataKey="completed" name="Done" fill="#FFFFFF" stackId="a" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="inProgress" name="In Progress" fill="#888888" stackId="a" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="completed" name="Done" fill="#8400FF" stackId="a" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="inProgress" name="In Progress" fill="#FF0051" stackId="a" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="todo" name="Todo" fill="#333333" stackId="a" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
