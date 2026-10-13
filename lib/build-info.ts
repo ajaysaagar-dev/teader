@@ -4,7 +4,7 @@
  * Prefix: BA for AM, BP for PM
  * Updated before pushing code to GitHub
  */
-export const BUILD_NUMBER = 'BP-12102026-0310';
+export const BUILD_NUMBER = 'BA-13102026-0944';
 
 export function getBuildNumber(): string {
   return BUILD_NUMBER;
