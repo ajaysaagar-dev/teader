@@ -49,6 +49,12 @@ import {
   Edit2,
   MoreVertical,
   CheckCheck,
+  Bold,
+  Italic,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Palette,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -81,6 +87,83 @@ const STICKY_COLORS = [
   { name: 'Pink Accent', bg: '#FF0051', text: '#FFFFFF' },
 ];
 
+const GROUP_COLORS = [
+  { name: 'Neon Purple', color: '#8400FF' },
+  { name: 'Cyber Pink', color: '#FF0051' },
+  { name: 'Magenta', color: '#B800D8' },
+  { name: 'Soft Lilac', color: '#BB86FC' },
+  { name: 'Pure White', color: '#FFFFFF' },
+  { name: 'Dark Minimal', color: '#171717' },
+];
+
+const TEXT_COLORS = [
+  { name: 'White', color: '#FFFFFF' },
+  { name: 'Dark', color: '#000000' },
+  { name: 'Purple', color: '#8400FF' },
+  { name: 'Pink', color: '#FF0051' },
+  { name: 'Lilac', color: '#CCA5FD' },
+  { name: 'Magenta', color: '#B800D8' },
+];
+
+const isImageLink = (url: string): boolean => {
+  const clean = url.trim().toLowerCase();
+  if (clean.startsWith('data:image/')) return true;
+  if (/\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(clean)) return true;
+  if (/\/(images?|photos?|img|assets|uploads|pictures?)\/.*\.(png|jpe?g|webp|gif|svg|avif|bmp)/i.test(clean)) return true;
+  if (clean.includes('images.unsplash.com') || clean.includes('imgur.com') || clean.includes('wikimedia.org/wikipedia/commons')) return true;
+  if (/[?&](format|ext|type|mime)=(png|jpe?g|webp|gif|svg)/i.test(clean)) return true;
+  return false;
+};
+
+const findOverlappingGroup = (
+  box: { x: number; y: number; width: number; height: number },
+  currentGroups: BoardGroup[],
+  currentElements: BoardElement[]
+): { group: BoardGroup; box: { x: number; y: number; width: number; height: number; elements: BoardElement[] } } | null => {
+  for (const g of currentGroups) {
+    const gBox = getGroupBoundingBox(g.id, currentElements, g);
+    if (!gBox) continue;
+    const intersects = !(
+      box.x + box.width < gBox.x ||
+      box.x > gBox.x + gBox.width ||
+      box.y + box.height < gBox.y ||
+      box.y > gBox.y + gBox.height
+    );
+    if (intersects) {
+      return { group: g, box: gBox };
+    }
+  }
+  return null;
+};
+
+const attachAndExpandGroup = (
+  newElem: BoardElement,
+  currentGroups: BoardGroup[],
+  currentElements: BoardElement[]
+): { updatedElem: BoardElement; updatedGroups: BoardGroup[] } => {
+  const overlap = findOverlappingGroup(
+    { x: newElem.x, y: newElem.y, width: newElem.width, height: newElem.height },
+    currentGroups,
+    currentElements
+  );
+  if (!overlap) {
+    return { updatedElem: newElem, updatedGroups: currentGroups };
+  }
+
+  const updatedElem = { ...newElem, groupId: overlap.group.id };
+  const pad = 24;
+  const minX = Math.min(overlap.box.x, newElem.x - pad);
+  const minY = Math.min(overlap.box.y, newElem.y - pad);
+  const maxX = Math.max(overlap.box.x + overlap.box.width, newElem.x + newElem.width + pad);
+  const maxY = Math.max(overlap.box.y + overlap.box.height, newElem.y + newElem.height + pad);
+
+  const updatedGroups = currentGroups.map((g) =>
+    g.id === overlap.group.id ? { ...g, x: minX, y: minY, width: maxX - minX, height: maxY - minY } : g
+  );
+
+  return { updatedElem, updatedGroups };
+};
+
 export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   projectId,
   projectName = 'Project',
@@ -111,6 +194,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // ── Selection & Tools ──
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [snapSettings, setSnapSettings] = useState({
@@ -177,6 +261,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     historyIndexRef.current = 0;
     setHasUnsavedChanges(false);
     setSelectedIds(new Set());
+    setSelectedGroupId(null);
     setSnapGuides([]);
   }, [boards, openBoardIds, projectId]);
 
@@ -691,6 +776,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
       if (!e.shiftKey) {
         setSelectedIds(new Set());
+        setSelectedGroupId(null);
       }
     }
   };
@@ -818,7 +904,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             height = 240;
           }
 
-          const newElem: BoardElement = {
+          let newElem: BoardElement = {
             id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             type: elemType,
             x: offsetPos.x,
@@ -834,10 +920,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             },
           };
 
+          const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+          newElem = updatedElem;
+          if (updatedGroups !== groups) setGroups(updatedGroups);
+
           setElements((prev) => {
             const updated = [...prev, newElem];
             pushHistory(updated);
-            saveCurrentBoard(updated);
+            saveCurrentBoard(updated, updatedGroups);
             return updated;
           });
           setSelectedIds(new Set([newElem.id]));
@@ -850,11 +940,36 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     const textData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
     if (textData) {
-      const isUrl = /^https?:\/\//i.test(textData.trim());
-      if (isUrl) {
+      const trimmed = textData.trim();
+      const isUrl = /^https?:\/\//i.test(trimmed);
+
+      if (isImageLink(trimmed)) {
+        let newElem: BoardElement = {
+          id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          type: 'image',
+          x: worldPos.x,
+          y: worldPos.y,
+          width: 320,
+          height: 220,
+          url: trimmed,
+        };
+
+        const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+        newElem = updatedElem;
+        if (updatedGroups !== groups) setGroups(updatedGroups);
+
+        setElements((prev) => {
+          const updated = [...prev, newElem];
+          pushHistory(updated);
+          saveCurrentBoard(updated, updatedGroups);
+          return updated;
+        });
+        setSelectedIds(new Set([newElem.id]));
+        toast.success(newElem.groupId ? 'Image added & group expanded' : 'Image added to canvas');
+      } else if (isUrl) {
         try {
-          const urlObj = new URL(textData.trim());
-          const newElem: BoardElement = {
+          const urlObj = new URL(trimmed);
+          let newElem: BoardElement = {
             id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             type: 'link',
             x: worldPos.x,
@@ -862,23 +977,28 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             width: 280,
             height: 110,
             title: urlObj.hostname,
-            url: textData.trim(),
+            url: trimmed,
             metadata: {
               domain: urlObj.hostname,
               favicon: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`,
             },
           };
+
+          const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+          newElem = updatedElem;
+          if (updatedGroups !== groups) setGroups(updatedGroups);
+
           setElements((prev) => {
             const updated = [...prev, newElem];
             pushHistory(updated);
-            saveCurrentBoard(updated);
+            saveCurrentBoard(updated, updatedGroups);
             return updated;
           });
           setSelectedIds(new Set([newElem.id]));
           toast.success('Added link bookmark to board');
         } catch {}
       } else {
-        const newElem: BoardElement = {
+        let newElem: BoardElement = {
           id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           type: 'sticky',
           x: worldPos.x,
@@ -886,14 +1006,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           width: 220,
           height: 160,
           title: 'Note',
-          content: textData.trim(),
+          content: trimmed,
           color: STICKY_COLORS[0].bg,
           textColor: STICKY_COLORS[0].text,
         };
+
+        const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+        newElem = updatedElem;
+        if (updatedGroups !== groups) setGroups(updatedGroups);
+
         setElements((prev) => {
           const updated = [...prev, newElem];
           pushHistory(updated);
-          saveCurrentBoard(updated);
+          saveCurrentBoard(updated, updatedGroups);
           return updated;
         });
         setSelectedIds(new Set([newElem.id]));
@@ -913,6 +1038,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     e.stopPropagation();
     if (activeTool === 'hand') return;
 
+    setSelectedGroupId(null);
+
     let nextSelected = new Set(selectedIds);
     if (e.shiftKey) {
       if (nextSelected.has(element.id)) nextSelected.delete(element.id);
@@ -923,11 +1050,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       }
     }
 
-    if (element.groupId) {
-      const groupElems = elements.filter((el) => el.groupId === element.groupId);
-      for (const el of groupElems) nextSelected.add(el.id);
-    }
-
+    // Do NOT force-select all elements in the group:
+    // Allows freely selecting and dragging individual child elements
     setSelectedIds(nextSelected);
 
     const initialMap = new Map<string, { x: number; y: number }>();
@@ -1002,8 +1126,68 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mouseup', handleWindowMouseUp);
       setSnapGuides([]);
       activeDragRef.current = null;
-      pushHistory(elements);
-      saveCurrentBoard();
+
+      // Auto-join group and auto-expand group bounds if element touches/overlaps group
+      setElements((currentElems) => {
+        const movedEl = currentElems.find((el) => el.id === element.id);
+        if (!movedEl) {
+          pushHistory(currentElems);
+          saveCurrentBoard(currentElems);
+          return currentElems;
+        }
+
+        const overlap = findOverlappingGroup(
+          { x: movedEl.x, y: movedEl.y, width: movedEl.width, height: movedEl.height },
+          groups,
+          currentElems.filter((el) => el.id !== movedEl.id)
+        );
+
+        let nextGroups = groups;
+        let nextElems = currentElems;
+
+        if (overlap) {
+          const targetGrp = overlap.group;
+          const pad = 24;
+          const minX = Math.min(overlap.box.x, movedEl.x - pad);
+          const minY = Math.min(overlap.box.y, movedEl.y - pad);
+          const maxX = Math.max(overlap.box.x + overlap.box.width, movedEl.x + movedEl.width + pad);
+          const maxY = Math.max(overlap.box.y + overlap.box.height, movedEl.y + movedEl.height + pad);
+
+          nextGroups = groups.map((g) =>
+            g.id === targetGrp.id ? { ...g, x: minX, y: minY, width: maxX - minX, height: maxY - minY } : g
+          );
+          nextElems = currentElems.map((el) =>
+            el.id === movedEl.id ? { ...el, groupId: targetGrp.id } : el
+          );
+          setGroups(nextGroups);
+          if (movedEl.groupId !== targetGrp.id) {
+            toast.success('Joined group & group expanded');
+          }
+        } else if (element.groupId) {
+          const formerGrp = groups.find((g) => g.id === element.groupId);
+          if (formerGrp) {
+            const formerBox = getGroupBoundingBox(formerGrp.id, currentElems, formerGrp);
+            if (formerBox) {
+              const stillOverlaps = !(
+                movedEl.x + movedEl.width < formerBox.x ||
+                movedEl.x > formerBox.x + formerBox.width ||
+                movedEl.y + movedEl.height < formerBox.y ||
+                movedEl.y > formerBox.y + formerBox.height
+              );
+              if (!stillOverlaps) {
+                nextElems = currentElems.map((el) =>
+                  el.id === movedEl.id ? { ...el, groupId: undefined } : el
+                );
+                toast.info('Detached from group');
+              }
+            }
+          }
+        }
+
+        pushHistory(nextElems);
+        saveCurrentBoard(nextElems, nextGroups);
+        return nextElems;
+      });
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -1058,6 +1242,158 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     window.addEventListener('mouseup', handleWindowMouseUp);
   };
 
+  // ── Group Dragging & Resizing Engines ──
+  const groupDragRef = useRef<{
+    groupId: string;
+    startX: number;
+    startY: number;
+    initialGroupX: number;
+    initialGroupY: number;
+    initialChildPos: Map<string, { x: number; y: number }>;
+  } | null>(null);
+
+  const handleGroupMouseDown = (
+    e: React.MouseEvent,
+    group: BoardGroup,
+    box: { x: number; y: number; width: number; height: number; elements: BoardElement[] }
+  ) => {
+    e.stopPropagation();
+    if (activeTool === 'hand') return;
+
+    setSelectedGroupId(group.id);
+    setSelectedIds(new Set());
+
+    const childMap = new Map<string, { x: number; y: number }>();
+    const groupChildren = elements.filter((el) => el.groupId === group.id);
+    for (const ch of groupChildren) {
+      childMap.set(ch.id, { x: ch.x, y: ch.y });
+    }
+
+    groupDragRef.current = {
+      groupId: group.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialGroupX: box.x,
+      initialGroupY: box.y,
+      initialChildPos: childMap,
+    };
+
+    const handleWindowMouseMove = (moveEvent: MouseEvent) => {
+      const drag = groupDragRef.current;
+      if (!drag) return;
+      const dx = (moveEvent.clientX - drag.startX) / viewport.zoom;
+      const dy = (moveEvent.clientY - drag.startY) / viewport.zoom;
+
+      const nextGroupX = Math.round(drag.initialGroupX + dx);
+      const nextGroupY = Math.round(drag.initialGroupY + dy);
+
+      setGroups((prev) =>
+        prev.map((g) => (g.id === group.id ? { ...g, x: nextGroupX, y: nextGroupY } : g))
+      );
+
+      setElements((prev) =>
+        prev.map((el) => {
+          const init = drag.initialChildPos.get(el.id);
+          if (init) {
+            return {
+              ...el,
+              x: Math.round(init.x + dx),
+              y: Math.round(init.y + dy),
+            };
+          }
+          return el;
+        })
+      );
+    };
+
+    const handleWindowMouseUp = () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+      groupDragRef.current = null;
+      pushHistory(elements);
+      saveCurrentBoard();
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+  };
+
+  const groupResizeRef = useRef<{
+    groupId: string;
+    handle: string;
+    startX: number;
+    startY: number;
+    initX: number;
+    initY: number;
+    initW: number;
+    initH: number;
+  } | null>(null);
+
+  const handleGroupResizeMouseDown = (
+    e: React.MouseEvent,
+    group: BoardGroup,
+    handle: string,
+    box: { x: number; y: number; width: number; height: number }
+  ) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initX = box.x;
+    const initY = box.y;
+    const initW = box.width;
+    const initH = box.height;
+
+    groupResizeRef.current = {
+      groupId: group.id,
+      handle,
+      startX,
+      startY,
+      initX,
+      initY,
+      initW,
+      initH,
+    };
+
+    const handleWindowMouseMove = (moveEvent: MouseEvent) => {
+      const resize = groupResizeRef.current;
+      if (!resize) return;
+      const dx = (moveEvent.clientX - resize.startX) / viewport.zoom;
+      const dy = (moveEvent.clientY - resize.startY) / viewport.zoom;
+
+      let nextW = resize.initW;
+      let nextH = resize.initH;
+      let nextX = resize.initX;
+      let nextY = resize.initY;
+
+      if (handle.includes('e')) nextW = Math.max(120, resize.initW + dx);
+      if (handle.includes('s')) nextH = Math.max(80, resize.initH + dy);
+      if (handle.includes('w')) {
+        const potentialW = Math.max(120, resize.initW - dx);
+        nextX = resize.initX + (resize.initW - potentialW);
+        nextW = potentialW;
+      }
+      if (handle.includes('n')) {
+        const potentialH = Math.max(80, resize.initH - dy);
+        nextY = resize.initY + (resize.initH - potentialH);
+        nextH = potentialH;
+      }
+
+      setGroups((prev) =>
+        prev.map((g) => (g.id === group.id ? { ...g, x: nextX, y: nextY, width: nextW, height: nextH } : g))
+      );
+    };
+
+    const handleWindowMouseUp = () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+      groupResizeRef.current = null;
+      saveCurrentBoard();
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+  };
+
   // ── Grouping & Ungrouping Actions ──
   const handleGroupSelected = () => {
     if (selectedIds.size < 2) {
@@ -1066,41 +1402,67 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     }
 
     const newGroupId = `group_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const updatedElements = elements.map((el) => (selectedIds.has(el.id) ? { ...el, groupId: newGroupId } : el));
+    const box = getGroupBoundingBox(newGroupId, updatedElements);
+
     const newGroup: BoardGroup = {
       id: newGroupId,
-      title: `Group ${groups.length + 1}`,
+      title: '',
       color: '#8400FF',
+      x: box ? box.x : undefined,
+      y: box ? box.y : undefined,
+      width: box ? box.width : undefined,
+      height: box ? box.height : undefined,
     };
 
     const updatedGroups = [...groups, newGroup];
-    const updatedElements = elements.map((el) => (selectedIds.has(el.id) ? { ...el, groupId: newGroupId } : el));
-
     setGroups(updatedGroups);
     setElements(updatedElements);
+    setSelectedGroupId(newGroupId);
+    setSelectedIds(new Set());
     pushHistory(updatedElements);
     saveCurrentBoard(updatedElements, updatedGroups);
-    toast.success('Elements grouped together');
+    toast.success('Elements grouped');
   };
 
-  const handleUngroupSelected = () => {
-    const selectedGroupIds = new Set<string>();
-    for (const id of selectedIds) {
-      const el = elements.find((e) => e.id === id);
-      if (el?.groupId) selectedGroupIds.add(el.groupId);
+  const handleUngroupSelected = (specificGroupId?: string) => {
+    const targetGroupIds = new Set<string>();
+    if (specificGroupId) {
+      targetGroupIds.add(specificGroupId);
+    } else {
+      for (const id of selectedIds) {
+        const el = elements.find((e) => e.id === id);
+        if (el?.groupId) targetGroupIds.add(el.groupId);
+      }
+      if (selectedGroupId) targetGroupIds.add(selectedGroupId);
     }
 
-    if (selectedGroupIds.size === 0) return;
+    if (targetGroupIds.size === 0) return;
 
-    const updatedGroups = groups.filter((g) => !selectedGroupIds.has(g.id));
+    const updatedGroups = groups.filter((g) => !targetGroupIds.has(g.id));
     const updatedElements = elements.map((el) =>
-      el.groupId && selectedGroupIds.has(el.groupId) ? { ...el, groupId: undefined } : el
+      el.groupId && targetGroupIds.has(el.groupId) ? { ...el, groupId: undefined } : el
     );
 
     setGroups(updatedGroups);
     setElements(updatedElements);
+    setSelectedGroupId(null);
     pushHistory(updatedElements);
     saveCurrentBoard(updatedElements, updatedGroups);
     toast.success('Elements ungrouped');
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    const updatedGroups = groups.filter((g) => g.id !== groupId);
+    const updatedElements = elements.map((el) =>
+      el.groupId === groupId ? { ...el, groupId: undefined } : el
+    );
+    setGroups(updatedGroups);
+    setElements(updatedElements);
+    setSelectedGroupId(null);
+    pushHistory(updatedElements);
+    saveCurrentBoard(updatedElements, updatedGroups);
+    toast.info('Group removed');
   };
 
   // ── Quick Add Items ──
@@ -1276,6 +1638,12 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         return;
       }
 
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedGroupId) {
+        e.preventDefault();
+        handleDeleteGroup(selectedGroupId);
+        return;
+      }
+
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0) {
         e.preventDefault();
         const next = elements.filter((el) => !selectedIds.has(el.id));
@@ -1293,7 +1661,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'g' && e.shiftKey) {
         e.preventDefault();
-        handleUngroupSelected();
+        handleUngroupSelected(selectedGroupId || undefined);
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
@@ -1375,7 +1743,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const groupBoxes = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getGroupBoundingBox>>();
     for (const g of groups) {
-      const box = getGroupBoundingBox(g.id, elements);
+      const box = getGroupBoundingBox(g.id, elements, g);
       if (box) map.set(g.id, box);
     }
     return map;
@@ -1624,22 +1992,73 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             {groups.map((group) => {
               const box = groupBoxes.get(group.id);
               if (!box) return null;
+              const isGroupSelected = selectedGroupId === group.id;
+              const groupColor = group.color || '#8400FF';
+
               return (
                 <div
                   key={group.id}
-                  className="absolute rounded-xl border-2 border-dashed border-[#8400FF]/40 bg-[#8400FF]/[0.02] transition-colors pointer-events-none"
+                  onMouseDown={(e) => handleGroupMouseDown(e, group, box)}
+                  className={`absolute rounded-xl transition-all cursor-move ${
+                    isGroupSelected
+                      ? 'ring-2 ring-white/80 shadow-[0_0_25px_rgba(132,0,255,0.25)]'
+                      : 'hover:ring-1 hover:ring-white/30'
+                  }`}
                   style={{
                     left: box.x,
                     top: box.y,
                     width: box.width,
                     height: box.height,
+                    borderColor: groupColor,
+                    borderWidth: '2px',
+                    borderStyle: 'dashed',
+                    backgroundColor: `${groupColor}08`,
+                    zIndex: isGroupSelected ? 20 : 5,
+                    pointerEvents: 'auto',
                   }}
                 >
-                  <div className="absolute -top-7 left-3 flex items-center gap-1.5 px-2.5 py-0.5 rounded-t-md bg-[#8400FF]/20 border border-[#8400FF]/40 text-[11px] font-mono text-white pointer-events-auto shadow-sm">
-                    <Layers size={11} className="text-[#8400FF]" />
-                    <span>{group.title}</span>
-                    <span className="text-[10px] text-white/50">({box.elements.length})</span>
+                  {/* Minimalist group indicator handle (NO "Group 2" title) */}
+                  <div
+                    className="absolute -top-3 left-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full backdrop-blur-md border text-[10px] select-none cursor-move transition-transform hover:scale-105"
+                    style={{
+                      borderColor: `${groupColor}60`,
+                      backgroundColor: '#171717',
+                      color: groupColor,
+                    }}
+                    title="Drag group"
+                  >
+                    <Layers size={11} />
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: groupColor }} />
                   </div>
+
+                  {/* 8 Resize Handles when group is selected */}
+                  {isGroupSelected && (
+                    <>
+                      {(['nw', 'ne', 'se', 'sw', 'n', 's', 'e', 'w'] as const).map((handle) => {
+                        let posStyle: React.CSSProperties = {};
+                        if (handle === 'nw') posStyle = { top: -5, left: -5, cursor: 'nwse-resize' };
+                        if (handle === 'ne') posStyle = { top: -5, right: -5, cursor: 'nesw-resize' };
+                        if (handle === 'se') posStyle = { bottom: -5, right: -5, cursor: 'nwse-resize' };
+                        if (handle === 'sw') posStyle = { bottom: -5, left: -5, cursor: 'nesw-resize' };
+                        if (handle === 'n') posStyle = { top: -5, left: '50%', transform: 'translateX(-50%)', cursor: 'ns-resize' };
+                        if (handle === 's') posStyle = { bottom: -5, left: '50%', transform: 'translateX(-50%)', cursor: 'ns-resize' };
+                        if (handle === 'w') posStyle = { top: '50%', left: -5, transform: 'translateY(-50%)', cursor: 'ew-resize' };
+                        if (handle === 'e') posStyle = { top: '50%', right: -5, transform: 'translateY(-50%)', cursor: 'ew-resize' };
+
+                        return (
+                          <div
+                            key={handle}
+                            onMouseDown={(e) => handleGroupResizeMouseDown(e, group, handle, box)}
+                            style={{
+                              ...posStyle,
+                              backgroundColor: groupColor,
+                            }}
+                            className="absolute w-2.5 h-2.5 rounded-full border border-white z-30 shadow-md hover:scale-125 transition-transform"
+                          />
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -1697,8 +2116,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                         }}
                         onBlur={() => saveCurrentBoard()}
                         placeholder="Type notes..."
-                        style={{ color: element.textColor || '#000000' }}
-                        className="flex-1 w-full bg-transparent resize-none outline-none text-xs leading-relaxed mt-2 placeholder-black/30 font-sans"
+                        style={{
+                          color: element.textColor || '#000000',
+                          fontSize: element.fontSize ? `${element.fontSize}px` : '12px',
+                          fontWeight: element.fontWeight || 'normal',
+                          fontStyle: element.fontStyle || 'normal',
+                          textAlign: element.textAlign || 'left',
+                        }}
+                        className="flex-1 w-full bg-transparent resize-none outline-none leading-relaxed mt-2 placeholder-black/30 font-sans"
                       />
                     </div>
                   )}
@@ -1715,8 +2140,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                           );
                         }}
                         onBlur={() => saveCurrentBoard()}
-                        style={{ fontSize: element.fontSize || 16, color: element.textColor || '#FFFFFF' }}
-                        className="w-full h-full bg-transparent resize-none outline-none leading-snug font-medium font-sans"
+                        style={{
+                          fontSize: element.fontSize ? `${element.fontSize}px` : '16px',
+                          color: element.textColor || '#FFFFFF',
+                          fontWeight: element.fontWeight || 'normal',
+                          fontStyle: element.fontStyle || 'normal',
+                          textAlign: element.textAlign || 'left',
+                        }}
+                        className="w-full h-full bg-transparent resize-none outline-none leading-snug font-sans"
                       />
                     </div>
                   )}
@@ -1724,24 +2155,13 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   {/* 3. IMAGE CARD */}
                   {element.type === 'image' && (
                     <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img">
-                      <div className="flex-1 relative overflow-hidden bg-black/40">
+                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={element.url}
                           alt={element.title || 'Image'}
                           className="w-full h-full object-cover select-none pointer-events-none"
                         />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <a
-                            href={element.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 rounded-full bg-black/70 hover:bg-black text-white hover:scale-105 transition-all"
-                            title="Open image in new tab"
-                          >
-                            <ExternalLink size={13} />
-                          </a>
-                        </div>
                       </div>
                       {element.title && (
                         <div className="px-2.5 py-1.5 bg-[#141414] border-t border-white/5 text-[11px] text-[var(--text-secondary)] truncate">
@@ -1983,17 +2403,233 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
           {/* Floating Selection Actions Bar */}
           <AnimatePresence>
-            {selectedIds.size > 0 && (
+            {/* Group Selected Toolbar */}
+            {selectedGroupId && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
+                className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
+              >
+                <div className="flex items-center gap-1.5 mr-2">
+                  <Layers size={13} className="text-[#8400FF]" />
+                  <span className="text-[11px] font-mono text-[var(--text-muted)]">Group Color:</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 mr-2">
+                  {GROUP_COLORS.map((gc) => (
+                    <button
+                      key={gc.name}
+                      onClick={() => {
+                        setGroups((prev) =>
+                          prev.map((g) => (g.id === selectedGroupId ? { ...g, color: gc.color } : g))
+                        );
+                        saveCurrentBoard();
+                      }}
+                      style={{ backgroundColor: gc.color }}
+                      className="w-4 h-4 rounded-full border border-white/30 hover:scale-125 transition-transform cursor-pointer"
+                      title={gc.name}
+                    />
+                  ))}
+                </div>
+
+                <div className="w-[1px] h-4 bg-white/15 mx-1" />
+
+                <button
+                  onClick={() => handleUngroupSelected(selectedGroupId)}
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-white/10 text-white transition-colors cursor-pointer"
+                  title="Ungroup (Ctrl+Shift+G)"
+                >
+                  <span>Ungroup</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteGroup(selectedGroupId)}
+                  className="p-1.5 rounded hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  title="Delete group frame"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </motion.div>
+            )}
+
+            {/* Elements Selected Toolbar */}
+            {selectedIds.size > 0 && !selectedGroupId && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
               >
                 <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1">
                   {selectedIds.size} selected
                 </span>
 
+                {/* Text Formatting Controls when 1 element selected */}
+                {selectedIds.size === 1 && (() => {
+                  const targetId = Array.from(selectedIds)[0];
+                  const selectedEl = elements.find((el) => el.id === targetId);
+                  if (!selectedEl) return null;
+
+                  return (
+                    <div className="flex items-center gap-1.5 mr-1">
+                      {/* Boldness toggle */}
+                      <button
+                        onClick={() => {
+                          const nextWeight = selectedEl.fontWeight === 'bold' ? 'normal' : 'bold';
+                          setElements((prev) =>
+                            prev.map((el) => (el.id === selectedEl.id ? { ...el, fontWeight: nextWeight } : el))
+                          );
+                          saveCurrentBoard();
+                        }}
+                        className={`p-1.5 rounded transition-colors cursor-pointer ${
+                          selectedEl.fontWeight === 'bold' ? 'bg-white/25 text-white font-bold' : 'hover:bg-white/10 text-white/70'
+                        }`}
+                        title="Toggle Bold (B)"
+                      >
+                        <Bold size={13} />
+                      </button>
+
+                      {/* Italic toggle */}
+                      <button
+                        onClick={() => {
+                          const nextStyle = selectedEl.fontStyle === 'italic' ? 'normal' : 'italic';
+                          setElements((prev) =>
+                            prev.map((el) => (el.id === selectedEl.id ? { ...el, fontStyle: nextStyle } : el))
+                          );
+                          saveCurrentBoard();
+                        }}
+                        className={`p-1.5 rounded transition-colors cursor-pointer ${
+                          selectedEl.fontStyle === 'italic' ? 'bg-white/25 text-white' : 'hover:bg-white/10 text-white/70'
+                        }`}
+                        title="Toggle Italic (I)"
+                      >
+                        <Italic size={13} />
+                      </button>
+
+                      {/* Font Size decrease / indicator / increase */}
+                      <div className="flex items-center bg-black/40 rounded border border-white/10 px-1 py-0.5 text-[11px] gap-1">
+                        <button
+                          onClick={() => {
+                            const cur = selectedEl.fontSize || (selectedEl.type === 'text' ? 16 : 12);
+                            const nextSize = Math.max(10, cur - 2);
+                            setElements((prev) =>
+                              prev.map((el) => (el.id === selectedEl.id ? { ...el, fontSize: nextSize } : el))
+                            );
+                            saveCurrentBoard();
+                          }}
+                          className="px-1 hover:text-white text-white/70 cursor-pointer"
+                          title="Decrease Font Size"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono px-0.5 text-white/90">
+                          {selectedEl.fontSize || (selectedEl.type === 'text' ? 16 : 12)}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedEl.fontSize || (selectedEl.type === 'text' ? 16 : 12);
+                            const nextSize = Math.min(64, cur + 2);
+                            setElements((prev) =>
+                              prev.map((el) => (el.id === selectedEl.id ? { ...el, fontSize: nextSize } : el))
+                            );
+                            saveCurrentBoard();
+                          }}
+                          className="px-1 hover:text-white text-white/70 cursor-pointer"
+                          title="Increase Font Size"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Text Color Swatches */}
+                      <div className="flex items-center gap-1 mx-1">
+                        {TEXT_COLORS.map((tc) => (
+                          <button
+                            key={tc.name}
+                            onClick={() => {
+                              setElements((prev) =>
+                                prev.map((el) => (el.id === selectedEl.id ? { ...el, textColor: tc.color } : el))
+                              );
+                              saveCurrentBoard();
+                            }}
+                            style={{ backgroundColor: tc.color }}
+                            className="w-3.5 h-3.5 rounded-full border border-white/30 hover:scale-125 transition-transform cursor-pointer"
+                            title={`Text Color: ${tc.name}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Text Alignment */}
+                      <div className="flex items-center bg-black/40 rounded border border-white/10">
+                        <button
+                          onClick={() => {
+                            setElements((prev) =>
+                              prev.map((el) => (el.id === selectedEl.id ? { ...el, textAlign: 'left' } : el))
+                            );
+                            saveCurrentBoard();
+                          }}
+                          className={`p-1 rounded-l transition-colors cursor-pointer ${
+                            (selectedEl.textAlign || 'left') === 'left' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+                          }`}
+                          title="Align Left"
+                        >
+                          <AlignLeft size={11} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setElements((prev) =>
+                              prev.map((el) => (el.id === selectedEl.id ? { ...el, textAlign: 'center' } : el))
+                            );
+                            saveCurrentBoard();
+                          }}
+                          className={`p-1 transition-colors cursor-pointer ${
+                            selectedEl.textAlign === 'center' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+                          }`}
+                          title="Align Center"
+                        >
+                          <AlignCenter size={11} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setElements((prev) =>
+                              prev.map((el) => (el.id === selectedEl.id ? { ...el, textAlign: 'right' } : el))
+                            );
+                            saveCurrentBoard();
+                          }}
+                          className={`p-1 rounded-r transition-colors cursor-pointer ${
+                            selectedEl.textAlign === 'right' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+                          }`}
+                          title="Align Right"
+                        >
+                          <AlignRight size={11} />
+                        </button>
+                      </div>
+
+                      {/* Note Background Color (for sticky notes) */}
+                      {selectedEl.type === 'sticky' && (
+                        <div className="flex items-center gap-1 ml-1 pl-1 border-l border-white/15">
+                          {STICKY_COLORS.map((c) => (
+                            <button
+                              key={c.name}
+                              onClick={() => {
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === selectedEl.id ? { ...el, color: c.bg, textColor: c.text } : el))
+                                );
+                                saveCurrentBoard();
+                              }}
+                              style={{ backgroundColor: c.bg }}
+                              className="w-3.5 h-3.5 rounded-full border border-black/30 hover:scale-125 transition-transform cursor-pointer"
+                              title={`Note: ${c.name}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Multi-selection Group button */}
                 {selectedIds.size >= 2 && (
                   <button
                     onClick={handleGroupSelected}
@@ -2005,35 +2641,18 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   </button>
                 )}
 
-                <button
-                  onClick={handleUngroupSelected}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
-                  title="Ungroup selected elements (Ctrl+Shift+G)"
-                >
-                  <span>Ungroup</span>
-                </button>
+                {/* Ungroup if element in a group */}
+                {Array.from(selectedIds).some((id) => elements.find((el) => el.id === id)?.groupId) && (
+                  <button
+                    onClick={() => handleUngroupSelected()}
+                    className="flex items-center gap-1 px-2 py-1 rounded hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+                    title="Detach from group"
+                  >
+                    <span>Ungroup</span>
+                  </button>
+                )}
 
                 <div className="w-[1px] h-4 bg-white/15 mx-1" />
-
-                {selectedIds.size === 1 &&
-                  elements.find((el) => selectedIds.has(el.id))?.type === 'sticky' && (
-                    <div className="flex items-center gap-1 mr-1">
-                      {STICKY_COLORS.map((c) => (
-                        <button
-                          key={c.name}
-                          onClick={() => {
-                            const targetId = Array.from(selectedIds)[0];
-                            setElements((prev) =>
-                              prev.map((el) => (el.id === targetId ? { ...el, color: c.bg, textColor: c.text } : el))
-                            );
-                            saveCurrentBoard();
-                          }}
-                          style={{ backgroundColor: c.bg }}
-                          className="w-4 h-4 rounded-full border border-black/20 hover:scale-110 transition-transform"
-                        />
-                      ))}
-                    </div>
-                  )}
 
                 <button
                   onClick={() => {
@@ -2043,7 +2662,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                     pushHistory(next);
                     saveCurrentBoard(next);
                   }}
-                  className="p-1.5 rounded hover:bg-white/15 text-white/80 hover:text-white transition-colors"
+                  className="p-1.5 rounded hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
                   title="Delete selected (Del)"
                 >
                   <Trash2 size={13} />

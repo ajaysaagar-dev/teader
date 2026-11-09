@@ -250,7 +250,7 @@ export default function PublicBoardSharePage() {
   const groupBoxes = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getGroupBoundingBox>>();
     for (const g of groups) {
-      const box = getGroupBoundingBox(g.id, elements);
+      const box = getGroupBoundingBox(g.id, elements, g);
       if (box) map.set(g.id, box);
     }
     return map;
@@ -326,20 +326,32 @@ export default function PublicBoardSharePage() {
         {groups.map((group) => {
           const box = groupBoxes.get(group.id);
           if (!box) return null;
+          const groupColor = group.color || '#8400FF';
           return (
             <div
               key={group.id}
-              className="absolute rounded-xl border-2 border-dashed border-[#8400FF]/40 bg-[#8400FF]/[0.02]"
+              className="absolute rounded-xl transition-colors"
               style={{
                 left: box.x,
                 top: box.y,
                 width: box.width,
                 height: box.height,
+                borderColor: groupColor,
+                borderWidth: '2px',
+                borderStyle: 'dashed',
+                backgroundColor: `${groupColor}08`,
               }}
             >
-              <div className="absolute -top-7 left-3 flex items-center gap-1.5 px-2.5 py-0.5 rounded-t-md bg-[#8400FF]/20 border border-[#8400FF]/40 text-[11px] font-mono text-white shadow-sm">
-                <Layers size={11} className="text-[#8400FF]" />
-                <span>{group.title}</span>
+              <div
+                className="absolute -top-3 left-4 flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] select-none"
+                style={{
+                  borderColor: `${groupColor}60`,
+                  backgroundColor: '#171717',
+                  color: groupColor,
+                }}
+              >
+                <Layers size={11} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: groupColor }} />
               </div>
             </div>
           );
@@ -372,6 +384,10 @@ export default function PublicBoardSharePage() {
                 style={{
                   backgroundColor: element.color || '#FFFFFF',
                   color: element.textColor || '#000000',
+                  fontSize: element.fontSize ? `${element.fontSize}px` : '12px',
+                  fontWeight: element.fontWeight || 'normal',
+                  fontStyle: element.fontStyle || 'normal',
+                  textAlign: element.textAlign || 'left',
                 }}
                 className="w-full h-full p-3.5 rounded-lg shadow-lg flex flex-col justify-between overflow-hidden"
               >
@@ -390,8 +406,14 @@ export default function PublicBoardSharePage() {
             {/* Text Card */}
             {element.type === 'text' && (
               <div
-                style={{ fontSize: element.fontSize || 16, color: element.textColor || '#FFFFFF' }}
-                className="w-full h-full p-2 font-medium font-sans whitespace-pre-wrap select-text"
+                style={{
+                  fontSize: element.fontSize ? `${element.fontSize}px` : '16px',
+                  color: element.textColor || '#FFFFFF',
+                  fontWeight: element.fontWeight || 'normal',
+                  fontStyle: element.fontStyle || 'normal',
+                  textAlign: element.textAlign || 'left',
+                }}
+                className="w-full h-full p-2 font-sans whitespace-pre-wrap select-text leading-snug"
               >
                 {element.content}
               </div>
