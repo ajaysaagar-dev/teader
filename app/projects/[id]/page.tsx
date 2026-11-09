@@ -96,6 +96,10 @@ const ProjectChartsView = dynamic(
   () => import('@/components/ProjectChartsView').then((m) => ({ default: m.ProjectChartsView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
 );
+const ProjectBoardView = dynamic(
+  () => import('@/components/ProjectBoardView').then((m) => ({ default: m.ProjectBoardView })),
+  { ssr: false, loading: () => <ViewLoadingFallback /> }
+);
 const ProjectMeetingView = dynamic(
   () => import('@/components/ProjectMeetingView').then((m) => ({ default: m.ProjectMeetingView })),
   { ssr: false, loading: () => <ViewLoadingFallback /> }
@@ -161,7 +165,7 @@ interface MemberItem {
   avatar: string;
 }
 
-export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'meeting' | 'chats' | 'apps' | 'history' | 'settings' | 'plugins';
+export type ProjectTab = 'overview' | 'tasks' | 'docs' | 'charts' | 'board' | 'meeting' | 'chats' | 'apps' | 'history' | 'settings' | 'plugins';
 export type TaskViewMode = 'structure' | 'board' | 'timeline' | 'list' | 'dependencies';
 
 function parseViewTab(view?: string): ProjectTab {
@@ -170,7 +174,8 @@ function parseViewTab(view?: string): ProjectTab {
   if (v === 'meeting' || v === 'call' || v === 'audio' || v === 'voice' || v === 'conference' || v === 'huddle') return 'meeting';
   if (v === 'chats' || v === 'chat' || v === 'conversation' || v === 'conversations' || v === 'messages' || v === 'discuss') return 'chats';
   if (v === 'apps' || v === 'app' || v === 'tools' || v === 'integrations' || v === 'store' || v === 'widgets') return 'apps';
-  if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow' || v === 'whiteboard') return 'charts';
+  if (v === 'board' || v === 'miro' || v === 'canvas-board' || v === 'whiteboard') return 'board';
+  if (v === 'charts' || v === 'diagram' || v === 'diagrams' || v === 'canvas' || v === 'flow') return 'charts';
   if (v === 'overview' || v === 'analytics' || v === 'insights' || v === 'stats') return 'overview';
   if (v === 'docs' || v === 'wiki' || v === 'spec') return 'docs';
   if (v === 'history' || v === 'audit' || v === 'log' || v === 'changelog') return 'history';
@@ -178,7 +183,6 @@ function parseViewTab(view?: string): ProjectTab {
   if (v === 'settings' || v === 'config' || v === 'preferences') return 'settings';
   if (
     v === 'tasks' ||
-    v === 'board' ||
     v === 'kanban' ||
     v === 'list' ||
     v === 'compact-list' ||
@@ -342,14 +346,17 @@ export default function SingleProjectPage() {
         handleTabSwitch('charts');
       } else if (e.key === '5' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        handleTabSwitch('chats');
+        handleTabSwitch('board');
       } else if (e.key === '6' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        handleTabSwitch('meeting');
+        handleTabSwitch('chats');
       } else if (e.key === '7' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        handleTabSwitch('history');
+        handleTabSwitch('meeting');
       } else if (e.key === '8' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        handleTabSwitch('history');
+      } else if (e.key === '9' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
         handleTabSwitch('settings');
       } else if (e.key.toLowerCase() === 'v' && !e.metaKey && !e.ctrlKey && !e.altKey) {
@@ -1805,6 +1812,7 @@ export default function SingleProjectPage() {
               { id: 'tasks', label: 'Tasks', badge: projectIssues.length },
               { id: 'docs', label: 'Docs' },
               { id: 'charts', label: 'Charts' },
+              { id: 'board', label: 'Board' },
               { id: 'chats', label: 'Conversations' },
               { id: 'meeting', label: 'Meetings' },
               { id: 'history', label: 'History' },
@@ -1996,6 +2004,14 @@ export default function SingleProjectPage() {
             ) : activeTab === 'charts' ? (
               <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
                 <ProjectChartsView
+                  projectId={project?.id || projectIdParam || 1}
+                  projectName={project?.name}
+                  projectKey={project?.key}
+                />
+              </div>
+            ) : activeTab === 'board' ? (
+              <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden overscroll-none">
+                <ProjectBoardView
                   projectId={project?.id || projectIdParam || 1}
                   projectName={project?.name}
                   projectKey={project?.key}
