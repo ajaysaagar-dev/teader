@@ -67,7 +67,7 @@ import {
   SnapGuide,
   BoardShareRecord,
 } from '@/types/board';
-import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox } from '@/lib/board-snap';
+import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
 
@@ -105,15 +105,6 @@ const TEXT_COLORS = [
   { name: 'Magenta', color: '#B800D8' },
 ];
 
-const isImageLink = (url: string): boolean => {
-  const clean = url.trim().toLowerCase();
-  if (clean.startsWith('data:image/')) return true;
-  if (/\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(clean)) return true;
-  if (/\/(images?|photos?|img|assets|uploads|pictures?)\/.*\.(png|jpe?g|webp|gif|svg|avif|bmp)/i.test(clean)) return true;
-  if (clean.includes('images.unsplash.com') || clean.includes('imgur.com') || clean.includes('wikimedia.org/wikipedia/commons')) return true;
-  if (/[?&](format|ext|type|mime)=(png|jpe?g|webp|gif|svg)/i.test(clean)) return true;
-  return false;
-};
 
 const findOverlappingGroup = (
   box: { x: number; y: number; width: number; height: number },
@@ -859,6 +850,15 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     e.dataTransfer.dropEffect = 'copy';
   };
 
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     const worldPos = screenToWorld(e.clientX, e.clientY);
@@ -871,6 +871,55 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           x: worldPos.x + i * 40,
           y: worldPos.y + i * 40,
         };
+
+        let previewUrl = '';
+        if (file.type.startsWith('image/')) {
+          previewUrl = await readFileAsDataUrl(file);
+        }
+
+        let elemType: BoardElement['type'] = 'image';
+        let width = 320;
+        let height = 220;
+
+        if (file.type.startsWith('audio/')) {
+          elemType = 'audio';
+          width = 320;
+          height = 140;
+        } else if (file.type.startsWith('video/')) {
+          elemType = 'video';
+          width = 360;
+          height = 240;
+        }
+
+        const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        let newElem: BoardElement = {
+          id: tempId,
+          type: elemType,
+          x: offsetPos.x,
+          y: offsetPos.y,
+          width,
+          height,
+          title: file.name,
+          url: previewUrl,
+          metadata: {
+            filename: file.name,
+            filesize: file.size,
+            mimeType: file.type,
+            dataUrl: previewUrl || undefined,
+          },
+        };
+
+        const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+        newElem = updatedElem;
+        if (updatedGroups !== groups) setGroups(updatedGroups);
+
+        setElements((prev) => {
+          const updated = [...prev, newElem];
+          pushHistory(updated);
+          saveCurrentBoard(updated, updatedGroups);
+          return updated;
+        });
+        setSelectedIds(new Set([newElem.id]));
 
         const toastId = toast.loading(`Uploading media "${file.name}"...`);
         try {
@@ -890,83 +939,90 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           const uploaded = await res.json();
           toast.success(`Uploaded ${file.name}`, { id: toastId });
 
-          let elemType: BoardElement['type'] = 'image';
-          let width = 320;
-          let height = 220;
-
-          if (file.type.startsWith('audio/')) {
-            elemType = 'audio';
-            width = 320;
-            height = 140;
-          } else if (file.type.startsWith('video/')) {
-            elemType = 'video';
-            width = 360;
-            height = 240;
-          }
-
-          let newElem: BoardElement = {
-            id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-            type: elemType,
-            x: offsetPos.x,
-            y: offsetPos.y,
-            width,
-            height,
-            title: file.name,
-            url: uploaded.url,
-            metadata: {
-              filename: file.name,
-              filesize: file.size,
-              mimeType: file.type,
-            },
-          };
-
-          const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
-          newElem = updatedElem;
-          if (updatedGroups !== groups) setGroups(updatedGroups);
-
           setElements((prev) => {
-            const updated = [...prev, newElem];
-            pushHistory(updated);
-            saveCurrentBoard(updated, updatedGroups);
+            const updated = prev.map((el) => {
+              if (el.id === tempId) {
+                return {
+                  ...el,
+                  url: uploaded.url,
+                  metadata: {
+                    ...el.metadata,
+                    url: uploaded.url,
+                    filename: file.name,
+                  },
+                };
+              }
+              return el;
+            });
+            saveCurrentBoard(updated);
             return updated;
           });
-          setSelectedIds(new Set([newElem.id]));
         } catch (err: any) {
-          toast.error(err.message || 'File drop failed', { id: toastId });
+          if (previewUrl) {
+            toast.info(`Rendered local image "${file.name}"`, { id: toastId });
+          } else {
+            toast.error(err.message || 'File drop failed', { id: toastId });
+          }
         }
       }
       return;
     }
 
+    // Check for dragged HTML containing image (e.g. from Google Images, browser tabs, or other web pages)
+    const htmlData = e.dataTransfer.getData('text/html');
+    let extractedImgUrl: string | null = null;
+    if (htmlData) {
+      const match = htmlData.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (match && match[1]) {
+        const candidate = match[1].trim();
+        if (candidate.startsWith('data:image/') || /^https?:\/\//i.test(candidate) || candidate.startsWith('/')) {
+          extractedImgUrl = candidate;
+        }
+      }
+    }
+
     const textData = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-    if (textData) {
-      const trimmed = textData.trim();
-      const isUrl = /^https?:\/\//i.test(trimmed);
+    const trimmed = textData ? textData.trim() : '';
+    const isUrl = /^https?:\/\//i.test(trimmed);
 
-      if (isImageLink(trimmed)) {
-        let newElem: BoardElement = {
-          id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-          type: 'image',
-          x: worldPos.x,
-          y: worldPos.y,
-          width: 320,
-          height: 220,
-          url: trimmed,
-        };
+    if (extractedImgUrl || trimmed) {
+      if (extractedImgUrl || isImageLink(trimmed)) {
+      const finalImgUrl = extractedImgUrl || trimmed;
+      let imgTitle = 'Image';
+      try {
+        if (!finalImgUrl.startsWith('data:')) {
+          const parsed = new URL(finalImgUrl, window.location.origin);
+          const base = parsed.pathname.split('/').filter(Boolean).pop();
+          if (base && /\.(png|jpe?g|webp|gif|svg|avif|bmp)/i.test(base)) {
+            imgTitle = decodeURIComponent(base);
+          }
+        }
+      } catch {}
 
-        const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
-        newElem = updatedElem;
-        if (updatedGroups !== groups) setGroups(updatedGroups);
+      let newElem: BoardElement = {
+        id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        type: 'image',
+        x: worldPos.x,
+        y: worldPos.y,
+        width: 320,
+        height: 220,
+        title: imgTitle,
+        url: finalImgUrl,
+      };
 
-        setElements((prev) => {
-          const updated = [...prev, newElem];
-          pushHistory(updated);
-          saveCurrentBoard(updated, updatedGroups);
-          return updated;
-        });
-        setSelectedIds(new Set([newElem.id]));
-        toast.success(newElem.groupId ? 'Image added & group expanded' : 'Image added to canvas');
-      } else if (isUrl) {
+      const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+      newElem = updatedElem;
+      if (updatedGroups !== groups) setGroups(updatedGroups);
+
+      setElements((prev) => {
+        const updated = [...prev, newElem];
+        pushHistory(updated);
+        saveCurrentBoard(updated, updatedGroups);
+        return updated;
+      });
+      setSelectedIds(new Set([newElem.id]));
+      toast.success(newElem.groupId ? 'Image added & group expanded' : 'Image added to canvas');
+    } else if (isUrl) {
         try {
           const urlObj = new URL(trimmed);
           let newElem: BoardElement = {
@@ -1529,25 +1585,24 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-    const toastId = toast.loading(`Uploading "${file.name}"...`);
+    const fileList = Array.from(e.target.files);
 
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(`/api/projects/${projectId}/boards/upload`, {
-        method: 'POST',
-        body: formData,
-      });
+    const worldCenter = screenToWorld(
+      (containerRef.current?.clientWidth || 1000) / 2,
+      (containerRef.current?.clientHeight || 700) / 2
+    );
 
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      toast.success('Media added to board', { id: toastId });
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const offsetPos = {
+        x: worldCenter.x - 160 + i * 30,
+        y: worldCenter.y - 110 + i * 30,
+      };
 
-      const worldCenter = screenToWorld(
-        (containerRef.current?.clientWidth || 1000) / 2,
-        (containerRef.current?.clientHeight || 700) / 2
-      );
+      let previewUrl = '';
+      if (file.type.startsWith('image/')) {
+        previewUrl = await readFileAsDataUrl(file);
+      }
 
       let elemType: BoardElement['type'] = 'image';
       let w = 320;
@@ -1562,34 +1617,77 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         h = 240;
       }
 
-      const newElem: BoardElement = {
-        id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      let newElem: BoardElement = {
+        id: tempId,
         type: elemType,
-        x: worldCenter.x - w / 2,
-        y: worldCenter.y - h / 2,
+        x: offsetPos.x,
+        y: offsetPos.y,
         width: w,
         height: h,
         title: file.name,
-        url: data.url,
+        url: previewUrl,
         metadata: {
           filename: file.name,
           filesize: file.size,
           mimeType: file.type,
+          dataUrl: previewUrl || undefined,
         },
       };
+
+      const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
+      newElem = updatedElem;
+      if (updatedGroups !== groups) setGroups(updatedGroups);
 
       setElements((prev) => {
         const next = [...prev, newElem];
         pushHistory(next);
-        saveCurrentBoard(next);
+        saveCurrentBoard(next, updatedGroups);
         return next;
       });
       setSelectedIds(new Set([newElem.id]));
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upload media', { id: toastId });
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      const toastId = toast.loading(`Uploading "${file.name}"...`);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`/api/projects/${projectId}/boards/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error('Upload failed');
+        const data = await res.json();
+        toast.success(`Uploaded ${file.name}`, { id: toastId });
+
+        setElements((prev) => {
+          const updated = prev.map((el) => {
+            if (el.id === tempId) {
+              return {
+                ...el,
+                url: data.url,
+                metadata: {
+                  ...el.metadata,
+                  url: data.url,
+                  filename: file.name,
+                },
+              };
+            }
+            return el;
+          });
+          saveCurrentBoard(updated);
+          return updated;
+        });
+      } catch (err: any) {
+        if (previewUrl) {
+          toast.info(`Rendered local image "${file.name}"`, { id: toastId });
+        } else {
+          toast.error(err.message || 'Failed to upload media', { id: toastId });
+        }
+      }
     }
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // ── Audio Playback Controller ──
@@ -1970,6 +2068,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             onChange={handleFileInputChange}
           />
@@ -2155,13 +2254,28 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   {/* 3. IMAGE CARD */}
                   {element.type === 'image' && (
                     <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img">
-                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40">
+                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={element.url}
+                          src={element.url || (element.metadata as any)?.dataUrl || ''}
                           alt={element.title || 'Image'}
                           className="w-full h-full object-cover select-none pointer-events-none"
+                          onError={(e) => {
+                            const fallback = (element.metadata as any)?.dataUrl;
+                            if (fallback && e.currentTarget.src !== fallback) {
+                              e.currentTarget.src = fallback;
+                            } else {
+                              e.currentTarget.style.display = 'none';
+                              const placeholder = e.currentTarget.parentElement?.querySelector('.img-error-placeholder');
+                              if (placeholder) (placeholder as HTMLElement).style.display = 'flex';
+                            }
+                          }}
                         />
+                        <div className="img-error-placeholder hidden flex-col items-center justify-center text-center p-3 text-white/50 w-full h-full">
+                          <ImageIcon size={26} className="mb-2 text-white/40" />
+                          <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
+                          <span className="text-[10px] text-white/40 mt-1">Image preview unavailable</span>
+                        </div>
                       </div>
                       {element.title && (
                         <div className="px-2.5 py-1.5 bg-[#141414] border-t border-white/5 text-[11px] text-[var(--text-secondary)] truncate">

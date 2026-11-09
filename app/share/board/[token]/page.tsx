@@ -14,6 +14,7 @@ import {
   AlertCircle,
   Layers,
   StickyNote as StickyIcon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { BoardElement, BoardGroup, BoardViewport, BoardData } from '@/types/board';
 import { isElementInViewport, getGroupBoundingBox } from '@/lib/board-snap';
@@ -422,16 +423,31 @@ export default function PublicBoardSharePage() {
             {/* Image Card */}
             {element.type === 'image' && (
               <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg group">
-                <div className="flex-1 relative overflow-hidden bg-black/40">
+                <div className="flex-1 relative overflow-hidden bg-black/40 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={element.url}
+                    src={element.url || (element.metadata as any)?.dataUrl || ''}
                     alt={element.title || 'Image'}
                     className="w-full h-full object-cover select-none"
+                    onError={(e) => {
+                      const fallback = (element.metadata as any)?.dataUrl;
+                      if (fallback && e.currentTarget.src !== fallback) {
+                        e.currentTarget.src = fallback;
+                      } else {
+                        e.currentTarget.style.display = 'none';
+                        const placeholder = e.currentTarget.parentElement?.querySelector('.img-error-placeholder');
+                        if (placeholder) (placeholder as HTMLElement).style.display = 'flex';
+                      }
+                    }}
                   />
+                  <div className="img-error-placeholder hidden flex-col items-center justify-center text-center p-3 text-white/50 w-full h-full">
+                    <ImageIcon size={26} className="mb-2 text-white/40" />
+                    <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
+                    <span className="text-[10px] text-white/40 mt-1">Image unavailable</span>
+                  </div>
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <a
-                      href={element.url}
+                      href={element.url || (element.metadata as any)?.dataUrl || '#'}
                       target="_blank"
                       rel="noreferrer"
                       className="p-1.5 rounded-full bg-black/70 hover:bg-black text-white hover:scale-105 transition-all"

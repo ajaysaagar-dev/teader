@@ -210,3 +210,24 @@ export function computeSnapAlignment(
     guides,
   };
 }
+
+/**
+ * Detects whether a string is a valid image URL / data URL / upload path.
+ * Bare filenames (e.g. "images (1).jpg") without protocol or root slash return false.
+ */
+export function isImageLink(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const clean = url.trim();
+  if (clean.startsWith('data:image/')) return true;
+  if (clean.startsWith('blob:')) return true;
+  // Must have protocol (http/https) or be a root-relative path (/...)
+  if (!/^https?:\/\//i.test(clean) && !clean.startsWith('/')) {
+    return false;
+  }
+  const lower = clean.toLowerCase();
+  if (/\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(lower)) return true;
+  if (/\/(images?|photos?|img|assets|uploads|pictures?)\/.*\.(png|jpe?g|webp|gif|svg|avif|bmp)/i.test(lower)) return true;
+  if (lower.includes('images.unsplash.com') || lower.includes('imgur.com') || lower.includes('wikimedia.org/wikipedia/commons')) return true;
+  if (/[?&](format|ext|type|mime)=(png|jpe?g|webp|gif|svg)/i.test(lower)) return true;
+  return false;
+}

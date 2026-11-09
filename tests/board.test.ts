@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox } from '@/lib/board-snap';
+import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
 import { BoardElement, BoardViewport } from '@/types/board';
 import {
   createProjectBoardDB,
@@ -259,6 +259,34 @@ describe('Miro Board Public Share Links', () => {
 
     // Clean up test board
     await deleteProjectBoardDB(shareBoardId);
+  });
+});
+
+describe('Miro Board Image & Media Link Detection Engine', () => {
+  it('correctly accepts valid web image URLs and data URLs', () => {
+    expect(isImageLink('https://images.unsplash.com/photo-1534528741775-53994a69daeb')).toBe(true);
+    expect(isImageLink('https://example.com/assets/banner.png')).toBe(true);
+    expect(isImageLink('https://example.com/photo.jpeg?w=800')).toBe(true);
+    expect(isImageLink('https://example.com/picture.webp')).toBe(true);
+    expect(isImageLink('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==')).toBe(true);
+    expect(isImageLink('/uploads/boards/1794210600360_macaw.avif')).toBe(true);
+    expect(isImageLink('blob:http://localhost:3000/08493021-9492-4211-9231-102948291024')).toBe(true);
+  });
+
+  it('strictly rejects raw file names without protocol or root-relative paths', () => {
+    // These caused broken <img src="images (1).jpg"> before the fix
+    expect(isImageLink('images (1).jpg')).toBe(false);
+    expect(isImageLink('images (2).jpg')).toBe(false);
+    expect(isImageLink('images.jpg')).toBe(false);
+    expect(isImageLink('screenshot.png')).toBe(false);
+    expect(isImageLink('avatar.webp')).toBe(false);
+  });
+
+  it('rejects regular non-image URLs and plain text', () => {
+    expect(isImageLink('https://google.com')).toBe(false);
+    expect(isImageLink('https://github.com/repository/project')).toBe(false);
+    expect(isImageLink('Hello world this is a test note')).toBe(false);
+    expect(isImageLink('')).toBe(false);
   });
 });
 
