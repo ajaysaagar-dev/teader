@@ -129,6 +129,14 @@ describe('Miro Board Grouping Engine', () => {
   it('returns null for empty or non-existent group id', () => {
     expect(getGroupBoundingBox('grp-non-existent', elements)).toBeNull();
   });
+
+  it('supports explicit group bounds and auto-expands when child exceeds bounds', () => {
+    const group = { id: 'grp-1', title: '', x: 50, y: 50, width: 300, height: 200, color: '#8400FF' };
+    const box = getGroupBoundingBox('grp-1', elements, group);
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeLessThanOrEqual(50);
+    expect(box!.width).toBeGreaterThanOrEqual(600);
+  });
 });
 
 describe('Miro Board Database Operations', () => {
