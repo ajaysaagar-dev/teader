@@ -28,6 +28,9 @@ export async function middleware(req: NextRequest) {
   if (
     PUBLIC_PAGE_ROUTES.includes(pathname) ||
     PUBLIC_API_ROUTES.some((r) => pathname.startsWith(r)) ||
+    pathname.startsWith('/share/') ||
+    pathname.startsWith('/api/share/') ||
+    pathname.startsWith('/uploads/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon.ico') ||
     pathname.startsWith('/data/') ||

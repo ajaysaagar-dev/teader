@@ -27,6 +27,7 @@ import {
   BookOpen,
   FileText,
   Workflow,
+  StickyNote,
   PhoneCall,
   Boxes,
   Plug,
@@ -215,6 +216,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           category: 'Project',
           icon: Workflow,
           run: () => { router.push(`/projects/${currentProjectId}/charts`); onClose(); },
+        },
+        {
+          id: 'act_proj_board',
+          label: `${projPrefix}Spatial Board & Media Canvas`,
+          category: 'Project',
+          icon: StickyNote,
+          run: () => { router.push(`/projects/${currentProjectId}?view=board`); onClose(); },
         },
         {
           id: 'act_proj_chat',

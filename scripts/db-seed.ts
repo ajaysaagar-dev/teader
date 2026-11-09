@@ -52,6 +52,8 @@ async function runSeed() {
       'project_history',
       'project_channels',
       'project_messages',
+      'board_shares',
+      'project_boards',
       'project_charts',
       'project_doc_folders',
       'project_docs',
