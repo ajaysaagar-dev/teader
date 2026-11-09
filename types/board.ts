@@ -96,3 +96,13 @@ export interface SnapResult {
   y: number;
   guides: SnapGuide[];
 }
+
+export interface BoardShareRecord {
+  id: string;
+  boardId: string;
+  projectId: number;
+  token: string;
+  createdBy?: number;
+  expiresAt?: string | null;
+  createdAt: string;
+}
