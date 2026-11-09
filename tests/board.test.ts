@@ -7,6 +7,10 @@ import {
   getProjectBoardByIdDB,
   updateProjectBoardDB,
   deleteProjectBoardDB,
+  createBoardShareDB,
+  getBoardShareByTokenDB,
+  getActiveBoardShareDB,
+  revokeBoardShareDB,
 } from '@/lib/db';
 
 describe('Miro Board Viewport Culling & Optimization Engine', () => {
@@ -181,3 +185,72 @@ describe('Miro Board Database Operations', () => {
     expect(check).toBeNull();
   });
 });
+
+describe('Miro Board Public Share Links', () => {
+  const shareBoardId = `share_test_board_${Date.now()}`;
+
+  it('creates and retrieves a public share link without expiry', async () => {
+    // First create a board to share
+    await createProjectBoardDB({
+      id: shareBoardId,
+      projectId: 1,
+      title: 'Public Architecture Diagram',
+      data: {
+        elements: [
+          { id: 'el-1', type: 'text', x: 100, y: 100, width: 250, height: 60, title: 'Architecture V1' },
+        ],
+        groups: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+    });
+
+    const share = await createBoardShareDB({
+      boardId: shareBoardId,
+      projectId: 1,
+      expiresAt: null,
+      createdBy: 'user_1',
+    });
+
+    expect(share).not.toBeNull();
+    expect(share.boardId).toBe(shareBoardId);
+    expect(share.expiresAt).toBeNull();
+    expect(typeof share.token).toBe('string');
+    expect(share.token.length).toBeGreaterThan(10);
+
+    const activeShare = await getActiveBoardShareDB(shareBoardId);
+    expect(activeShare).not.toBeNull();
+    expect(activeShare?.token).toBe(share.token);
+
+    const lookedUp = await getBoardShareByTokenDB(share.token);
+    expect(lookedUp).not.toBeNull();
+    expect(lookedUp?.share.token).toBe(share.token);
+    expect(lookedUp?.board.title).toBe('Public Architecture Diagram');
+  });
+
+  it('updates share link with an expiration date', async () => {
+    const oneHourLater = new Date(Date.now() + 3600000).toISOString();
+    const updatedShare = await createBoardShareDB({
+      boardId: shareBoardId,
+      projectId: 1,
+      expiresAt: oneHourLater,
+      createdBy: 'user_1',
+    });
+
+    expect(updatedShare.expiresAt).toBe(oneHourLater);
+
+    const activeShare = await getActiveBoardShareDB(shareBoardId);
+    expect(activeShare?.expiresAt).toBe(oneHourLater);
+  });
+
+  it('revokes public share link cleanly', async () => {
+    const revoked = await revokeBoardShareDB(shareBoardId);
+    expect(revoked).toBe(true);
+
+    const activeShare = await getActiveBoardShareDB(shareBoardId);
+    expect(activeShare).toBeNull();
+
+    // Clean up test board
+    await deleteProjectBoardDB(shareBoardId);
+  });
+});
+
