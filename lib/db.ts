@@ -126,6 +126,7 @@ let memoryPermissionsStore: any[] = [];
 let memoryProjectHistoryStore: any[] = [];
 let memoryDocFoldersStore: any[] = [];
 let memoryProjectChartsStore: any[] = [];
+let memoryProjectBoardsStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -366,6 +367,21 @@ export async function initDB(): Promise<void> {
             "userName" VARCHAR(128) DEFAULT 'karri',
             "title" VARCHAR(255) NOT NULL,
             "data" JSONB NOT NULL DEFAULT '{"elements":[],"connections":[],"viewport":{"x":0,"y":0,"zoom":1}}',
+            "orderIndex" INT DEFAULT 0,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+        // 9d. Create Project Boards Table (Miro-style Infinite Canvas Board)
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "project_boards" (
+            "id" VARCHAR(64) PRIMARY KEY,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "userId" INT DEFAULT 1,
+            "userName" VARCHAR(128) DEFAULT 'karri',
+            "title" VARCHAR(255) NOT NULL,
+            "data" JSONB NOT NULL DEFAULT '{"elements":[],"groups":[],"connections":[],"viewport":{"x":0,"y":0,"zoom":1}}',
             "orderIndex" INT DEFAULT 0,
             "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -3091,6 +3107,162 @@ export async function deleteProjectChartDB(chartId: string): Promise<boolean> {
     await p.query(`DELETE FROM "project_charts" WHERE "id" = $1`, [chartId]);
   } catch {}
   memoryProjectChartsStore = memoryProjectChartsStore.filter((c) => c.id !== chartId);
+  return true;
+}
+
+// ==========================================
+// Project Boards (Miro-style Canvas Board)
+// ==========================================
+
+export interface ProjectBoardRecord {
+  id: string;
+  projectId: number;
+  userId?: number;
+  userName?: string;
+  title: string;
+  data: any;
+  orderIndex?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getProjectBoardsDB(projectId: string | number): Promise<ProjectBoardRecord[]> {
+  await initDB();
+  let numId = Number(projectId);
+  if (isNaN(numId)) {
+    const project = await getProjectByIdDB(projectId);
+    if (project) numId = Number(project.id);
+  }
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT * FROM "project_boards" WHERE "projectId" = $1 ORDER BY "orderIndex" ASC, "updatedAt" DESC`,
+      [numId]
+    );
+    return (result.rows || []).map((row: any) => ({
+      ...row,
+      data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+    }));
+  } catch {
+    return memoryProjectBoardsStore
+      .filter((b) => Number(b.projectId) === numId)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }
+}
+
+export async function getProjectBoardByIdDB(boardId: string): Promise<ProjectBoardRecord | null> {
+  await initDB();
+  try {
+    const p = getPool();
+    const result = await p.query(`SELECT * FROM "project_boards" WHERE "id" = $1 LIMIT 1`, [boardId]);
+    if (result.rows && result.rows[0]) {
+      const row = result.rows[0];
+      return {
+        ...row,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+      };
+    }
+    return null;
+  } catch {
+    return memoryProjectBoardsStore.find((b) => b.id === boardId) || null;
+  }
+}
+
+export async function createProjectBoardDB(data: {
+  id: string;
+  projectId: number | string;
+  userId?: number | string;
+  userName?: string;
+  title: string;
+  data?: any;
+  orderIndex?: number;
+}): Promise<ProjectBoardRecord> {
+  await initDB();
+  let numProjId = Number(data.projectId);
+  if (isNaN(numProjId)) {
+    const project = await getProjectByIdDB(data.projectId);
+    numProjId = project ? Number(project.id) : 1;
+  }
+  const numUserId = data.userId ? Number(data.userId) : 1;
+  const userName = data.userName || 'karri';
+  const now = new Date().toISOString();
+  const boardData = data.data || { elements: [], groups: [], connections: [], viewport: { x: 0, y: 0, zoom: 1 } };
+  const orderIndex = data.orderIndex !== undefined ? Number(data.orderIndex) : 0;
+
+  const record: ProjectBoardRecord = {
+    id: data.id,
+    projectId: numProjId,
+    userId: numUserId,
+    userName,
+    title: data.title || 'Untitled Board',
+    data: boardData,
+    orderIndex,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    const p = getPool();
+    await p.query(
+      `INSERT INTO "project_boards" ("id", "projectId", "userId", "userName", "title", "data", "orderIndex", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT ("id") DO UPDATE SET "title" = $5, "data" = $6, "updatedAt" = $9`,
+      [record.id, record.projectId, record.userId, record.userName, record.title, JSON.stringify(record.data), record.orderIndex, record.createdAt, record.updatedAt]
+    );
+  } catch {}
+
+  memoryProjectBoardsStore = memoryProjectBoardsStore.filter((b) => b.id !== data.id);
+  memoryProjectBoardsStore.unshift(record);
+  return record;
+}
+
+export async function updateProjectBoardDB(
+  boardId: string,
+  updates: { title?: string; data?: any; orderIndex?: number }
+): Promise<ProjectBoardRecord | null> {
+  await initDB();
+  const now = new Date().toISOString();
+  const fields: string[] = ['"updatedAt" = $1'];
+  const values: any[] = [now];
+  let paramIdx = 2;
+
+  if (updates.title !== undefined) {
+    fields.push(`"title" = $${paramIdx++}`);
+    values.push(updates.title);
+  }
+  if (updates.data !== undefined) {
+    fields.push(`"data" = $${paramIdx++}`);
+    values.push(JSON.stringify(updates.data));
+  }
+  if (updates.orderIndex !== undefined) {
+    fields.push(`"orderIndex" = $${paramIdx++}`);
+    values.push(updates.orderIndex);
+  }
+
+  values.push(boardId);
+  try {
+    const p = getPool();
+    await p.query(`UPDATE "project_boards" SET ${fields.join(', ')} WHERE "id" = $${paramIdx}`, values);
+  } catch {}
+
+  const target = memoryProjectBoardsStore.find((b) => b.id === boardId);
+  if (target) {
+    if (updates.title !== undefined) target.title = updates.title;
+    if (updates.data !== undefined) target.data = updates.data;
+    if (updates.orderIndex !== undefined) target.orderIndex = updates.orderIndex;
+    target.updatedAt = now;
+    return target;
+  }
+  return await getProjectBoardByIdDB(boardId);
+}
+
+export async function deleteProjectBoardDB(boardId: string): Promise<boolean> {
+  await initDB();
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM "project_boards" WHERE "id" = $1`, [boardId]);
+  } catch {}
+  memoryProjectBoardsStore = memoryProjectBoardsStore.filter((b) => b.id !== boardId);
   return true;
 }
 
