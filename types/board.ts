@@ -26,6 +26,9 @@ export interface BoardElement {
   color?: string;
   textColor?: string;
   fontSize?: number;
+  fontWeight?: 'normal' | 'bold' | '600' | '700';
+  fontStyle?: 'normal' | 'italic';
+  textAlign?: 'left' | 'center' | 'right';
   shapeKind?: ShapeKind;
   locked?: boolean;
   aspectRatio?: number;
@@ -45,9 +48,14 @@ export interface BoardElement {
 
 export interface BoardGroup {
   id: string;
-  title: string;
+  title?: string;
   color?: string;
+  backgroundColor?: string;
   locked?: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface BoardConnection {

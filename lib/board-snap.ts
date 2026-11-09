@@ -1,4 +1,4 @@
-import { BoardElement, BoardViewport, SnapGuide, SnapResult } from '@/types/board';
+import { BoardElement, BoardGroup, BoardViewport, SnapGuide, SnapResult } from '@/types/board';
 
 /**
  * Axis-Aligned Bounding Box (AABB) intersection check with configurable buffer margin.
@@ -29,11 +29,38 @@ export function isElementInViewport(
 }
 
 /**
- * Calculate dynamic bounding box of all elements belonging to a group
+ * Calculate dynamic bounding box of a group (supporting explicit bounds and auto-expansion to contain children)
  */
-export function getGroupBoundingBox(groupId: string, elements: BoardElement[]) {
+export function getGroupBoundingBox(groupId: string, elements: BoardElement[], group?: BoardGroup) {
   const groupElements = elements.filter((e) => e.groupId === groupId);
-  if (groupElements.length === 0) return null;
+  if (groupElements.length === 0 && (!group || group.x === undefined || group.width === undefined)) {
+    return null;
+  }
+
+  const PADDING = 24;
+
+  if (group && group.x !== undefined && group.y !== undefined && group.width !== undefined && group.height !== undefined) {
+    let minX = group.x;
+    let minY = group.y;
+    let maxX = group.x + group.width;
+    let maxY = group.y + group.height;
+
+    // Expand if any child extends outside the manual boundaries
+    for (const e of groupElements) {
+      if (e.x - PADDING < minX) minX = e.x - PADDING;
+      if (e.y - PADDING < minY) minY = e.y - PADDING;
+      if (e.x + e.width + PADDING > maxX) maxX = e.x + e.width + PADDING;
+      if (e.y + e.height + PADDING > maxY) maxY = e.y + e.height + PADDING;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+      elements: groupElements,
+    };
+  }
 
   let minX = Infinity;
   let minY = Infinity;
@@ -47,7 +74,6 @@ export function getGroupBoundingBox(groupId: string, elements: BoardElement[]) {
     if (e.y + e.height > maxY) maxY = e.y + e.height;
   }
 
-  const PADDING = 24;
   return {
     x: minX - PADDING,
     y: minY - PADDING,
