@@ -49,3 +49,7 @@ next-env.d.ts
 public/releases/builder-debug.yml
 public/releases/Teader Workspace Setup *.exe
 
+# runtime data & uploads
+/data/
+/public/uploads/
+
