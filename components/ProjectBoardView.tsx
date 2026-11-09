@@ -696,13 +696,16 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (panStartRef.current) {
-      const dx = e.clientX - panStartRef.current.startX;
-      const dy = e.clientY - panStartRef.current.startY;
+    const pan = panStartRef.current;
+    if (pan) {
+      const dx = e.clientX - pan.startX;
+      const dy = e.clientY - pan.startY;
+      const targetX = pan.vX + dx;
+      const targetY = pan.vY + dy;
       setViewport((prev) => ({
         ...prev,
-        x: panStartRef.current!.vX + dx,
-        y: panStartRef.current!.vY + dy,
+        x: targetX,
+        y: targetY,
       }));
       return;
     }
@@ -750,6 +753,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       setMarqueeBox(null);
     }
   };
+
+  // Global mouseup listener to guarantee pan cancellation even if pointer leaves canvas
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (panStartRef.current) {
+        panStartRef.current = null;
+        setIsPanning(false);
+        saveCurrentBoard();
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [saveCurrentBoard]);
 
   // ── Drag & Drop Engine (Images, Audio, Video, Links, Text) ──
   const handleDragOver = (e: React.DragEvent) => {
@@ -928,11 +944,12 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     };
 
     const handleWindowMouseMove = (moveEvent: MouseEvent) => {
-      if (!activeDragRef.current) return;
-      const dx = (moveEvent.clientX - activeDragRef.current.startX) / viewport.zoom;
-      const dy = (moveEvent.clientY - activeDragRef.current.startY) / viewport.zoom;
+      const currentDrag = activeDragRef.current;
+      if (!currentDrag) return;
+      const dx = (moveEvent.clientX - currentDrag.startX) / viewport.zoom;
+      const dy = (moveEvent.clientY - currentDrag.startY) / viewport.zoom;
 
-      const primaryInitial = activeDragRef.current.initialElems.get(element.id);
+      const primaryInitial = currentDrag.initialElems.get(element.id);
       if (!primaryInitial) return;
 
       const rawX = primaryInitial.x + dx;
@@ -943,7 +960,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       let calculatedGuides: SnapGuide[] = [];
 
       if (snapSettings.enabled) {
-        const otherElements = elements.filter((el) => !activeDragRef.current!.initialElems.has(el.id));
+        const otherElements = elements.filter((el) => !currentDrag.initialElems.has(el.id));
         const snap = computeSnapAlignment(
           { x: rawX, y: rawY, width: element.width, height: element.height },
           otherElements,
@@ -963,10 +980,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
       const snapDeltaX = finalX - primaryInitial.x;
       const snapDeltaY = finalY - primaryInitial.y;
+      const initialMap = currentDrag.initialElems;
 
       setElements((prev) =>
         prev.map((el) => {
-          const init = activeDragRef.current?.initialElems.get(el.id);
+          const init = initialMap.get(el.id);
           if (init) {
             return {
               ...el,

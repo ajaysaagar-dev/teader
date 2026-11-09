@@ -118,13 +118,16 @@ export default function PublicBoardSharePage() {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (panStartRef.current) {
-      const dx = e.clientX - panStartRef.current.startX;
-      const dy = e.clientY - panStartRef.current.startY;
+    const pan = panStartRef.current;
+    if (pan) {
+      const dx = e.clientX - pan.startX;
+      const dy = e.clientY - pan.startY;
+      const targetX = pan.vX + dx;
+      const targetY = pan.vY + dy;
       setViewport((prev) => ({
         ...prev,
-        x: panStartRef.current!.vX + dx,
-        y: panStartRef.current!.vY + dy,
+        x: targetX,
+        y: targetY,
       }));
     }
   };
@@ -133,6 +136,15 @@ export default function PublicBoardSharePage() {
     panStartRef.current = null;
     setIsPanning(false);
   };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      panStartRef.current = null;
+      setIsPanning(false);
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
 
   // ── Viewport Culling Optimization ──
   const visibleElements = useMemo(() => {
