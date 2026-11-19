@@ -27,8 +27,9 @@ export async function GET() {
     };
 
     // Refresh and ensure teader_session cookie is set for browser navigations
+    let token = '';
     try {
-      await setSessionCookie({
+      token = await setSessionCookie({
         id: effectiveUser.id,
         name: effectiveUser.name,
         email: effectiveUser.email,
@@ -36,7 +37,11 @@ export async function GET() {
       });
     } catch {}
 
-    return NextResponse.json({ user: effectiveUser, authenticated: true }, { status: 200 });
+    return NextResponse.json({
+      user: effectiveUser,
+      token,
+      authenticated: true,
+    }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }

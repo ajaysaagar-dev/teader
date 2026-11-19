@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDesktopInfo } from '@/lib/desktop';
+import { authFetch } from '@/lib/api-client';
 
 interface ProjectItem {
   id: string | number;
@@ -86,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, []);
 
   useEffect(() => {
-    fetch('/api/projects')
+    authFetch('/api/projects')
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) setProjects(data);

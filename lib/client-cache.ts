@@ -46,7 +46,17 @@ export function clearAllLocalCaches(): void {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('teader_cache_') || key.startsWith('teader_') || key.includes('projects') || key.includes('issues'))) {
+      if (
+        key &&
+        key !== 'teader_user' &&
+        key !== 'teader_token' &&
+        key !== 'teader_remember' &&
+        (key.startsWith('teader_cache_') ||
+          key.startsWith('issues_') ||
+          key.startsWith('project_') ||
+          key.includes('projects') ||
+          key.includes('issues'))
+      ) {
         keysToRemove.push(key);
       }
     }

@@ -26,10 +26,8 @@ export default function LoginPage() {
         const lastAttempt = sessionStorage.getItem('teader_auto_login_attempt');
         const now = Date.now();
         if (lastAttempt && now - Number(lastAttempt) < 4000) {
-          console.warn('[Auth] Redirect loop detected. Clearing stored credentials and showing login form.');
+          console.warn('[Auth] Rapid bounce detected. Halting auto-redirect loop and presenting login form.');
           sessionStorage.removeItem('teader_auto_login_attempt');
-          localStorage.removeItem('teader_token');
-          localStorage.removeItem('teader_user');
           if (isMounted) setIsCheckingAutoLogin(false);
           return;
         }
@@ -47,7 +45,8 @@ export default function LoginPage() {
           if (res.ok) {
             const data = await res.json();
             if (data.authenticated && data.user) {
-              if (savedToken) localStorage.setItem('teader_token', savedToken);
+              const activeToken = data.token || savedToken;
+              if (activeToken) localStorage.setItem('teader_token', activeToken);
               localStorage.setItem('teader_user', JSON.stringify(data.user));
 
               // Record timestamp to catch rapid bounce loops
@@ -124,22 +123,14 @@ export default function LoginPage() {
         // Clear previous user cache
         clearAllLocalCaches();
 
-        // Persist session user & token in localStorage if remember enabled
-        if (rememberMe) {
-          try {
-            localStorage.setItem('teader_user', JSON.stringify(data));
-            if (data.token) {
-              localStorage.setItem('teader_token', data.token);
-            }
-            localStorage.setItem('teader_remember', 'true');
-          } catch {}
-        } else {
-          try {
-            localStorage.removeItem('teader_user');
-            localStorage.removeItem('teader_token');
-            localStorage.removeItem('teader_remember');
-          } catch {}
-        }
+        // Persist session user & token in localStorage
+        try {
+          localStorage.setItem('teader_user', JSON.stringify(data));
+          if (data.token) {
+            localStorage.setItem('teader_token', data.token);
+          }
+          localStorage.setItem('teader_remember', rememberMe ? 'true' : 'false');
+        } catch {}
 
         toast.success(`Welcome back, ${data.name}!`);
         

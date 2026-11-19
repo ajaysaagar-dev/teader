@@ -68,7 +68,10 @@ export async function setSessionCookie(user: SessionUser, remember: boolean = tr
   const maxAge = remember ? 60 * 60 * 24 * 30 : 60 * 60 * 24; // 30 days or 1 day
   const token = await signSession(user, expiresIn);
   const cookieStore = await cookies();
-  const isHttps = process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') || false;
+  const isHttps =
+    process.env.NODE_ENV === 'production' ||
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith('https://') ||
+    false;
   cookieStore.set(COOKIE_NAME, token, {
     httpOnly: true,
     path: '/',

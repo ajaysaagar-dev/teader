@@ -52,6 +52,7 @@ import { getLocalCache, setLocalCache, reconcileDocs } from '@/lib/client-cache'
 import { useRealtimeSubscription, RealtimeEvent, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { renderGithubMarkdown, parseInlineMarkdown, ActiveHighlightInfo, ActiveCursorInfo } from '@/components/ui/MarkdownRenderer';
+import { authFetch } from '@/lib/api-client';
 
 interface ProjectDocsViewProps {
   projectId: string | number;
@@ -191,7 +192,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
 
   useEffect(() => {
     let active = true;
-    fetch('/api/auth/me')
+    authFetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (active && data?.user?.id) {

@@ -206,6 +206,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           setCurrentUser(data.user);
           try {
             localStorage.setItem("teader_user", JSON.stringify(data.user));
+            if (data.token) {
+              localStorage.setItem("teader_token", data.token);
+            }
           } catch {}
           setIsCheckingAuth(false);
         } else if (data && data.authenticated === false) {

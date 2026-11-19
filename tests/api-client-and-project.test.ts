@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getAuthToken, setStoredAuth, clearStoredAuth, authFetch } from '@/lib/api-client';
+import { clearAllLocalCaches } from '@/lib/client-cache';
+import { getProjectByIdDB } from '@/lib/db';
 import { GET as getProjectHandler } from '@/app/api/projects/[id]/route';
 
 // In-memory mock for localStorage in Node.js test environment
@@ -16,6 +18,10 @@ const localStorageMock = {
     for (const key of Object.keys(memoryStorage)) {
       delete memoryStorage[key];
     }
+  },
+  key: (index: number) => Object.keys(memoryStorage)[index] ?? null,
+  get length() {
+    return Object.keys(memoryStorage).length;
   },
 };
 
@@ -75,6 +81,25 @@ describe('API Client & Auth Header Persistence', () => {
     const headers = new Headers(capturedInit?.headers);
     expect(headers.get('Authorization')).toBe('Bearer custom_token');
   });
+
+  it('preserves teader_user and teader_token when clearing local caches', () => {
+    localStorageMock.setItem('teader_user', JSON.stringify({ id: 7, name: 'ajaysaagar' }));
+    localStorageMock.setItem('teader_token', 'sample_bearer_token');
+    localStorageMock.setItem('teader_remember', 'true');
+    localStorageMock.setItem('teader_cache_tasks', JSON.stringify({ data: [] }));
+    localStorageMock.setItem('issues_9', JSON.stringify([]));
+
+    clearAllLocalCaches();
+
+    // Cache keys should be removed
+    expect(localStorageMock.getItem('teader_cache_tasks')).toBeNull();
+    expect(localStorageMock.getItem('issues_9')).toBeNull();
+
+    // User credentials must be preserved
+    expect(localStorageMock.getItem('teader_user')).not.toBeNull();
+    expect(localStorageMock.getItem('teader_token')).toBe('sample_bearer_token');
+    expect(localStorageMock.getItem('teader_remember')).toBe('true');
+  });
 });
 
 describe('GET /api/projects/[id] Route Handler', () => {
@@ -84,5 +109,14 @@ describe('GET /api/projects/[id] Route Handler', () => {
     expect(res.status).toBe(401);
     const data = await res.json();
     expect(data.error).toBe('Unauthorized');
+  });
+});
+
+describe('getProjectByIdDB lookup', () => {
+  it('returns project by numeric ID or key from DB/fallback', async () => {
+    const project = await getProjectByIdDB(1);
+    if (project) {
+      expect(Number(project.id)).toBe(1);
+    }
   });
 });

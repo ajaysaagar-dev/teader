@@ -30,6 +30,7 @@ import { BUILD_NUMBER } from '@/lib/build-info';
 import { Avatar } from '@/components/ui/Avatar';
 import { TopFrame } from '@/components/TopFrame';
 import { getDesktopInfo } from '@/lib/desktop';
+import { authFetch, getAuthToken } from '@/lib/api-client';
 
 interface AuthUser {
   name?: string;
@@ -61,19 +62,25 @@ export default function LandingPageClient() {
       }
     } catch {}
 
-    fetch('/api/auth/me')
-      .then((res) => res.json())
+    authFetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.user) {
+        if (data?.user) {
           setCurrentUser(data.user);
           try {
             localStorage.setItem('teader_user', JSON.stringify(data.user));
+            if (data.token) {
+              localStorage.setItem('teader_token', data.token);
+            }
           } catch {}
-        } else {
-          setCurrentUser(null);
-          try {
-            localStorage.removeItem('teader_user');
-          } catch {}
+        } else if (data && data.authenticated === false) {
+          const token = getAuthToken();
+          if (!token) {
+            setCurrentUser(null);
+            try {
+              localStorage.removeItem('teader_user');
+            } catch {}
+          }
         }
       })
       .catch(() => {});

@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { authFetch } from '@/lib/api-client';
 
 export default function MyWorkPage() {
   const searchParams = useSearchParams();
@@ -54,20 +55,20 @@ export default function MyWorkPage() {
 
   useEffect(() => {
     // Fetch User Profile
-    fetch('/api/auth/me')
-      .then((res) => res.json())
+    authFetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.user) setCurrentUser(data.user);
+        if (data?.user) setCurrentUser(data.user);
       })
       .catch(() => {});
 
     // Fetch All Cross-Project Issues
-    fetch('/api/issues')
-      .then((res) => res.json())
+    authFetch('/api/issues')
+      .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
         if (Array.isArray(data)) setIssues(data);
       })
-      .catch(() => {})
+      .catch(() => {});
   }, []);
 
   // ─── Real-Time WebSocket Dynamic Synchronization ────────────────────────────

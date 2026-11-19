@@ -12,6 +12,7 @@ import { RealtimeBadge } from '@/components/RealtimeBadge';
 import { toast } from 'sonner';
 import { ArrowLeft, Copy, Check } from 'lucide-react';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
+import { authFetch } from '@/lib/api-client';
 
 export default function TaskDetailsPage() {
   const params = useParams();
@@ -26,10 +27,10 @@ export default function TaskDetailsPage() {
 
   useEffect(() => {
     // 1. Fetch current user
-    fetch('/api/auth/me')
-      .then((res) => res.json())
+    authFetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.user) setCurrentUser(data.user);
+        if (data?.user) setCurrentUser(data.user);
       })
       .catch(() => {});
 
@@ -39,8 +40,8 @@ export default function TaskDetailsPage() {
       return;
     }
 
-    fetch('/api/issues')
-      .then((res) => res.json())
+    authFetch('/api/issues')
+      .then((res) => (res.ok ? res.json() : []))
       .then(async (data) => {
         let found: Issue | null = null;
         if (Array.isArray(data)) {

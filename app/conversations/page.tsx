@@ -24,6 +24,7 @@ import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
 import { Avatar } from '@/components/ui/Avatar';
 import { resolveUserAvatar } from '@/lib/avatar';
+import { authFetch } from '@/lib/api-client';
 
 interface Project {
   id: number;
@@ -173,7 +174,7 @@ export default function ConversationsPage() {
       }
 
       if (isInitial) {
-        const meRes = await fetch('/api/auth/me');
+        const meRes = await authFetch('/api/auth/me');
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.user) {

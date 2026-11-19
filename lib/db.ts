@@ -923,8 +923,32 @@ export async function getAllProjectsDB(userId?: number | string) {
 
 
 export async function getProjectByIdDB(id: string | number) {
-  const projects = await getAllProjectsDB();
-  return projects.find((p: any) => String(p.id) === String(id) || String(p.key).toLowerCase() === String(id).toLowerCase()) || null;
+  await initDB();
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+  const isNumeric = /^\d+$/.test(cleanId);
+  try {
+    const p = getPool();
+    let result;
+    if (isNumeric) {
+      result = await p.query(`SELECT * FROM "projects" WHERE "id" = $1 LIMIT 1`, [Number(cleanId)]);
+    } else {
+      result = await p.query(`SELECT * FROM "projects" WHERE LOWER("key") = LOWER($1) OR "id"::text = $1 LIMIT 1`, [cleanId]);
+    }
+    if (result.rows && result.rows.length > 0) {
+      return result.rows[0];
+    }
+    return null;
+  } catch (err: any) {
+    console.warn('[getProjectByIdDB DB Error]:', err.message);
+    const memoryTarget = memoryProjectsStore.find(
+      (p) =>
+        (isNumeric && Number(p.id) === Number(cleanId)) ||
+        String(p.key).toLowerCase() === cleanId.toLowerCase()
+    );
+    if (memoryTarget) return memoryTarget;
+    return null;
+  }
 }
 
 export async function createProjectDB(data: {

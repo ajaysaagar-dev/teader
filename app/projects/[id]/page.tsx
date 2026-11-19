@@ -11,7 +11,7 @@ import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cach
 import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
-import { authFetch } from '@/lib/api-client';
+import { authFetch, getAuthToken } from '@/lib/api-client';
 
 
 
@@ -393,7 +393,15 @@ export default function SingleProjectPage() {
   }, [project]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = localStorage.getItem('teader_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [userPermissions, setUserPermissions] = useState<MemberPermissions | null>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(taskQuery || null);
   const [loading, setLoading] = useState(true);
@@ -607,18 +615,23 @@ export default function SingleProjectPage() {
       let sessionUser: any = currentUser;
       const meRes = await authFetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
       if (meRes) {
-        if (meRes.status === 401) {
-          router.push('/login');
-          return;
+        if (meRes.status === 401 && !currentProjectRef.current) {
+          const token = getAuthToken();
+          if (!token) {
+            router.push('/login');
+            return;
+          }
         }
         if (meRes.ok) {
           const meData = await meRes.json().catch(() => null);
           if (meData?.user) {
             sessionUser = meData.user;
             setCurrentUser(meData.user);
-          } else if (meData && meData.authenticated === false && !sessionUser) {
-            router.push('/login');
-            return;
+            if (meData.token) {
+              try {
+                localStorage.setItem('teader_token', meData.token);
+              } catch {}
+            }
           }
         }
       }
@@ -631,9 +644,12 @@ export default function SingleProjectPage() {
       const directProjRes = await authFetch(`/api/projects/${projectIdParam}`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
 
       if (directProjRes) {
-        if (directProjRes.status === 401) {
-          router.push('/login');
-          return;
+        if (directProjRes.status === 401 && !currentProjectRef.current) {
+          const token = getAuthToken();
+          if (!token) {
+            router.push('/login');
+            return;
+          }
         }
         if (directProjRes.ok) {
           foundProj = await directProjRes.json().catch(() => null);
@@ -642,14 +658,19 @@ export default function SingleProjectPage() {
           if (forbiddenData?.joinStatus === 'pending' && forbiddenData?.project) {
             foundProj = { ...forbiddenData.project, joinStatus: 'pending' };
           } else {
-            projectAccessDenied = true;
+            // Only consider access denied if not already in an active project workspace
+            if (!currentProjectRef.current) {
+              projectAccessDenied = true;
+            }
           }
         } else if (directProjRes.status === 404) {
-          projectAccessDenied = true;
+          if (!currentProjectRef.current) {
+            projectAccessDenied = true;
+          }
         }
       }
 
-      // Fallback: list search if direct endpoint returned a network error or was unavailable
+      // Fallback 1: list search if direct endpoint returned a network error or was unavailable
       if (!foundProj && !projectAccessDenied) {
         const projRes = await authFetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
         if (projRes && projRes.ok) {
@@ -659,10 +680,27 @@ export default function SingleProjectPage() {
               projData.find(
                 (p: ProjectItem) =>
                   String(p.id) === String(projectIdParam) ||
-                  p.key.toLowerCase() === projectIdParam.toLowerCase()
+                  p.key?.toLowerCase() === projectIdParam.toLowerCase()
               ) || null;
           }
         }
+      }
+
+      // Fallback 2: check local storage cache if initial direct & list fetches were temporarily unavailable
+      if (!foundProj && !projectAccessDenied && !currentProjectRef.current && typeof window !== 'undefined') {
+        try {
+          const cachedList = localStorage.getItem('projects_list') || localStorage.getItem('dashboard_projects');
+          if (cachedList) {
+            const parsed = JSON.parse(cachedList);
+            if (Array.isArray(parsed)) {
+              foundProj = parsed.find(
+                (p: any) =>
+                  String(p.id) === String(projectIdParam) ||
+                  p.key?.toLowerCase() === projectIdParam.toLowerCase()
+              ) || null;
+            }
+          }
+        } catch {}
       }
 
       // CRITICAL FIX: Only update project state if a project was retrieved OR if server explicitly confirmed access denied on initial load
@@ -672,10 +710,14 @@ export default function SingleProjectPage() {
         if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
         if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
       } else if (projectAccessDenied) {
-        // Server explicitly responded 403/404 — access is genuinely denied
-        setProject(null);
-        setLoading(false);
-        return;
+        // Only wipe project if there was no active project already loaded
+        if (!currentProjectRef.current) {
+          setProject(null);
+          setLoading(false);
+          return;
+        } else {
+          console.warn('[SingleProjectPage] Transient 403/404 during background sync; keeping active project in view');
+        }
       } else if (!currentProjectRef.current) {
         // Initial load failure with no existing project in state
         setProject(null);

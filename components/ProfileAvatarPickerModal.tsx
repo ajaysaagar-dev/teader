@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ALL_PROFILE_IMAGES, isAllowedProfileImage } from '@/lib/avatar';
+import { authFetch } from '@/lib/api-client';
 
 interface ProfileAvatarPickerModalProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export const ProfileAvatarPickerModal: React.FC<ProfileAvatarPickerModalProps> =
 
     setIsSaving(true);
     try {
-      const res = await fetch('/api/auth/me', {
+      const res = await authFetch('/api/auth/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatar: selectedAvatar }),
