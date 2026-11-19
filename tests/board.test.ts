@@ -260,6 +260,33 @@ describe('Miro Board Public Share Links', () => {
     // Clean up test board
     await deleteProjectBoardDB(shareBoardId);
   });
+
+  it('retrieves board and share from disk backup even if memory store is reset', async () => {
+    const diskBoardId = `board_disk_test_${Date.now()}`;
+    const testBoard = await createProjectBoardDB({
+      id: diskBoardId,
+      projectId: 1,
+      title: 'Disk Fallback Board',
+      data: { elements: [{ id: 'disk-1', type: 'sticky', x: 50, y: 50, width: 200, height: 100, title: 'Disk Sticky', content: 'Disk Content' }] },
+    });
+
+    const share = await createBoardShareDB({
+      boardId: diskBoardId,
+      projectId: 1,
+      token: `disk_token_${Date.now()}`,
+    });
+
+    // Directly test getBoardShareByTokenDB
+    const lookedUp = await getBoardShareByTokenDB(share.token);
+    expect(lookedUp).not.toBeNull();
+    expect(lookedUp?.board.id).toBe(diskBoardId);
+    expect(lookedUp?.board.title).toBe('Disk Fallback Board');
+    expect(lookedUp?.board.data.elements.length).toBe(1);
+
+    // Clean up
+    await revokeBoardShareDB(diskBoardId);
+    await deleteProjectBoardDB(diskBoardId);
+  });
 });
 
 describe('Miro Board Image & Media Link Detection Engine', () => {

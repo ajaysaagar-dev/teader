@@ -70,6 +70,7 @@ import {
 import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
+import { authFetch } from '@/lib/api-client';
 
 interface ProjectBoardViewProps {
   projectId: number | string;
@@ -219,12 +220,17 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // ── Undo / Redo History ──
+  // ── Undo / Redo History & Auto-Save Tracking ──
   const historyRef = useRef<BoardElement[][]>([]);
   const historyIndexRef = useRef<number>(-1);
   const clipboardRef = useRef<BoardElement[]>([]);
   const wheelThrottleRef = useRef<number>(0);
   const canvasDrawScheduledRef = useRef(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialLoadedRef = useRef(false);
+  const hasUnsavedChangesRef = useRef(false);
+  hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const saveCurrentBoardRef = useRef<(newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => Promise<void>>(() => Promise.resolve());
 
   const pushHistory = useCallback((newElements: BoardElement[]) => {
     const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -245,6 +251,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     const target = boards.find((b) => b.id === boardId);
     if (!target) return;
 
+    if (hasUnsavedChangesRef.current && activeBoardIdRef.current) {
+      saveCurrentBoardRef.current();
+    }
+
+    isInitialLoadedRef.current = false;
     setActiveBoardId(boardId);
     setLocalCache(`boards_active_${projectId}`, boardId);
 
@@ -265,6 +276,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     setSelectedIds(new Set());
     setSelectedGroupId(null);
     setSnapGuides([]);
+
+    setTimeout(() => {
+      isInitialLoadedRef.current = true;
+      setHasUnsavedChanges(false);
+    }, 300);
   }, [boards, openBoardIds, projectId]);
 
   // ── Close Board Tab ──
@@ -328,7 +344,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     toast.success(`Created board "${title}"`);
 
     try {
-      await fetch(`/api/projects/${projectId}/boards`, {
+      await authFetch(`/api/projects/${projectId}/boards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: newId, title, data: newBoard.data }),
@@ -353,7 +369,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     toast.info(`Deleted board "${target.title}"`);
 
     try {
-      await fetch(`/api/projects/${projectId}/boards/${boardId}`, { method: 'DELETE' });
+      await authFetch(`/api/projects/${projectId}/boards/${boardId}`, { method: 'DELETE' });
     } catch {}
   };
 
@@ -384,7 +400,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     toast.success(`Duplicated "${target.title}"`);
 
     try {
-      await fetch(`/api/projects/${projectId}/boards`, {
+      await authFetch(`/api/projects/${projectId}/boards`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: dupId, title: duplicate.title, data: duplicate.data }),
@@ -403,7 +419,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     setLocalCache(`boards_${projectId}`, nextBoards);
 
     try {
-      await fetch(`/api/projects/${projectId}/boards/${boardId}`, {
+      await authFetch(`/api/projects/${projectId}/boards/${boardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmed }),
@@ -414,7 +430,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   // ── Load Boards from API ──
   const loadBoards = useCallback(async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/boards`);
+      const res = await authFetch(`/api/projects/${projectId}/boards`);
       if (res.ok) {
         const json = await res.json();
         const serverBoards: BoardFile[] = json.boards || [];
@@ -432,6 +448,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         const currentActive = activeBoardIdRef.current || getLocalCache<string | null>(`boards_active_${projectId}`, null);
         const target = serverBoards.find((b) => b.id === currentActive) || serverBoards[0];
         if (target) {
+          isInitialLoadedRef.current = false;
           setActiveBoardId(target.id);
           setLocalCache(`boards_active_${projectId}`, target.id);
           setElements(target.data.elements || []);
@@ -440,6 +457,10 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           if (target.data.viewport) setViewport(target.data.viewport);
           historyRef.current = [JSON.parse(JSON.stringify(target.data.elements || []))];
           historyIndexRef.current = 0;
+          setTimeout(() => {
+            isInitialLoadedRef.current = true;
+            setHasUnsavedChanges(false);
+          }, 300);
         }
       }
     } catch (err) {
@@ -472,7 +493,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     try {
       setIsSaving(true);
-      await fetch(`/api/projects/${projectId}/boards/${activeBoardId}`, {
+      await authFetch(`/api/projects/${projectId}/boards/${activeBoardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: boardData, clientSessionId: clientSessionIdRef.current }),
@@ -484,6 +505,46 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       setIsSaving(false);
     }
   }, [activeBoardId, elements, groups, connections, viewport, projectId]);
+
+  // Keep saveCurrentBoardRef updated
+  useEffect(() => {
+    saveCurrentBoardRef.current = saveCurrentBoard;
+  }, [saveCurrentBoard]);
+
+  // ── Automatic Debounced Auto-Saver on Board Changes ──
+  useEffect(() => {
+    if (!activeBoardId || !isInitialLoadedRef.current) return;
+    setHasUnsavedChanges(true);
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      saveCurrentBoardRef.current();
+    }, 800);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [elements, groups, connections, activeBoardId]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (hasUnsavedChangesRef.current && activeBoardIdRef.current) {
+        saveCurrentBoardRef.current();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (hasUnsavedChangesRef.current && activeBoardIdRef.current) {
+        saveCurrentBoardRef.current();
+      }
+    };
+  }, []);
 
   // Real-time remote board sync
   useRealtimeSubscription({
@@ -509,7 +570,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const fetchActiveShare = useCallback(async () => {
     if (!activeBoardId) return;
     try {
-      const res = await fetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`);
+      const res = await authFetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`);
       if (res.ok) {
         const json = await res.json();
         setActiveShare(json.share);
@@ -527,7 +588,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     if (!activeBoardId) return;
     try {
       setIsGeneratingShare(true);
-      const res = await fetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`, {
+      const res = await authFetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expiry: shareExpiry }),
@@ -547,7 +608,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const handleRevokeShare = async () => {
     if (!activeBoardId) return;
     try {
-      await fetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`, { method: 'DELETE' });
+      await authFetch(`/api/projects/${projectId}/boards/${activeBoardId}/share`, { method: 'DELETE' });
       setActiveShare(null);
       toast.info('Public link revoked');
     } catch {}
@@ -775,7 +836,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const panStartRef = useRef<{ startX: number; startY: number; vX: number; vY: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || activeTool === 'hand' || e.altKey || isSpacePressedRef.current) {
+    if (e.button === 1 || e.button === 2 || activeTool === 'hand' || e.altKey || isSpacePressedRef.current) {
       panStartRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -960,7 +1021,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           const formData = new FormData();
           formData.append('file', file);
 
-          const res = await fetch(`/api/projects/${projectId}/boards/upload`, {
+          const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
             method: 'POST',
             body: formData,
           });
@@ -1125,8 +1186,22 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   } | null>(null);
 
   const handleElementMouseDown = (e: React.MouseEvent, element: BoardElement) => {
+    // Middle click (1) or right click (2) or hand tool pans board canvas
+    if (e.button === 1 || e.button === 2 || activeTool === 'hand' || isSpacePressedRef.current || e.altKey) {
+      panStartRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        vX: viewport.x,
+        vY: viewport.y,
+      };
+      setIsPanning(true);
+      return;
+    }
+
+    // Drag & drop is strictly permitted ONLY with the left mouse button (0)
+    if (e.button !== 0) return;
+
     e.stopPropagation();
-    if (activeTool === 'hand') return;
     isLocalMutatingRef.current = true;
 
     setSelectedGroupId(null);
@@ -1288,6 +1363,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // ── Element Resizing Engine ──
   const handleResizeMouseDown = (e: React.MouseEvent, element: BoardElement, handle: string) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     isLocalMutatingRef.current = true;
     const startX = e.clientX;
@@ -1351,8 +1427,22 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     group: BoardGroup,
     box: { x: number; y: number; width: number; height: number; elements: BoardElement[] }
   ) => {
+    // Middle click (1) or right click (2) or hand tool pans board canvas
+    if (e.button === 1 || e.button === 2 || activeTool === 'hand' || isSpacePressedRef.current || e.altKey) {
+      panStartRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        vX: viewport.x,
+        vY: viewport.y,
+      };
+      setIsPanning(true);
+      return;
+    }
+
+    // Drag & drop is strictly permitted ONLY with the left mouse button (0)
+    if (e.button !== 0) return;
+
     e.stopPropagation();
-    if (activeTool === 'hand') return;
     isLocalMutatingRef.current = true;
 
     setSelectedGroupId(group.id);
@@ -1431,6 +1521,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     handle: string,
     box: { x: number; y: number; width: number; height: number }
   ) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     const startX = e.clientX;
     const startY = e.clientY;
@@ -1691,7 +1782,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       try {
         const formData = new FormData();
         formData.append('file', file);
-        const res = await fetch(`/api/projects/${projectId}/boards/upload`, {
+        const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
           method: 'POST',
           body: formData,
         });
@@ -1920,7 +2011,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
             const formData = new FormData();
             formData.append('file', file);
-            fetch(`/api/projects/${projectId}/boards/upload`, {
+            authFetch(`/api/projects/${projectId}/boards/upload`, {
               method: 'POST',
               body: formData,
             })
@@ -2285,6 +2376,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         {/* ── Main Canvas Viewport ── */}
         <div
           ref={containerRef}
+          onContextMenu={(e) => e.preventDefault()}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
