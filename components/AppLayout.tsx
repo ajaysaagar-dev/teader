@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAllLocalCaches } from "@/lib/client-cache";
+import { authFetch, getAuthToken } from "@/lib/api-client";
 import {
   Search,
   Plus,
@@ -91,7 +92,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
@@ -103,7 +104,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("teader_sidebar_collapsed");
-      if (saved === "true") setIsSidebarCollapsed(true);
+      if (saved === "false") setIsSidebarCollapsed(false);
+      else setIsSidebarCollapsed(true);
     } catch {}
   }, []);
 
@@ -194,34 +196,33 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
     const signal =
       typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
-        ? AbortSignal.timeout(5000)
+        ? AbortSignal.timeout(8000)
         : undefined;
 
-    fetch("/api/auth/me", { signal })
-      .then((res) => res.json())
+    authFetch("/api/auth/me", { signal })
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data.user) {
+        if (data?.user) {
           setCurrentUser(data.user);
           try {
             localStorage.setItem("teader_user", JSON.stringify(data.user));
           } catch {}
           setIsCheckingAuth(false);
-        } else if (pathname !== "/login" && pathname !== "/register") {
-          try {
-            localStorage.removeItem("teader_user");
-            localStorage.removeItem("teader_token");
-          } catch {}
-          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+        } else if (data && data.authenticated === false) {
+          // If explicitly unauthenticated and no valid token exists in storage, redirect to login
+          const token = getAuthToken();
+          if (!token && pathname !== "/login" && pathname !== "/register") {
+            try {
+              localStorage.removeItem("teader_user");
+              localStorage.removeItem("teader_token");
+            } catch {}
+            router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+          }
         }
       })
-      .catch(() => {
-        if (pathname !== "/login" && pathname !== "/register") {
-          try {
-            localStorage.removeItem("teader_user");
-            localStorage.removeItem("teader_token");
-          } catch {}
-          router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
-        }
+      .catch((err) => {
+        // On network errors / timeouts / aborts: DO NOT wipe local session or redirect!
+        console.warn("[AppLayout] Auth check transient network notice:", err?.message);
       })
       .finally(() => {
         clearTimeout(authTimeout);
@@ -234,10 +235,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   // Fetch data for command palette and navigation
   useEffect(() => {
     Promise.all([
-      fetch("/api/issues")
+      authFetch("/api/issues")
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
-      fetch("/api/projects")
+      authFetch("/api/projects")
         .then((r) => (r.ok ? r.json() : []))
         .catch(() => []),
     ]).then(([issueData, projectData]) => {

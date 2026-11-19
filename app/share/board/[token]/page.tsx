@@ -32,11 +32,64 @@ export default function PublicBoardSharePage() {
   const [elements, setElements] = useState<BoardElement[]>([]);
   const [groups, setGroups] = useState<BoardGroup[]>([]);
   const [viewport, setViewport] = useState<BoardViewport>({ x: 40, y: 30, zoom: 0.9 });
-  const [canvasDimensions, setCanvasDimensions] = useState({ width: 1200, height: 800 });
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
+  });
   const [isPanning, setIsPanning] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState<Record<string, { current: number; duration: number }>>({});
   const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
+
+  const fitElementsToScreen = useCallback((elems: BoardElement[], grps: BoardGroup[], width: number, height: number) => {
+    if ((!elems || elems.length === 0) && (!grps || grps.length === 0)) {
+      setViewport({ x: width / 2, y: height / 2, zoom: 1 });
+      return;
+    }
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const el of elems || []) {
+      if (el.x < minX) minX = el.x;
+      if (el.y < minY) minY = el.y;
+      if (el.x + el.width > maxX) maxX = el.x + el.width;
+      if (el.y + el.height > maxY) maxY = el.y + el.height;
+    }
+
+    for (const g of grps || []) {
+      if (g.x !== undefined && g.y !== undefined) {
+        if (g.x < minX) minX = g.x;
+        if (g.y < minY) minY = g.y;
+        if (g.width && g.x + g.width > maxX) maxX = g.x + g.width;
+        if (g.height && g.y + g.height > maxY) maxY = g.y + g.height;
+      }
+    }
+
+    if (!isFinite(minX) || !isFinite(maxX)) {
+      setViewport({ x: width / 2, y: height / 2, zoom: 1 });
+      return;
+    }
+
+    const contentW = Math.max(maxX - minX, 100);
+    const contentH = Math.max(maxY - minY, 100);
+    const padding = 80;
+    const headerHeight = 52;
+
+    const availW = Math.max(width - padding * 2, 200);
+    const availH = Math.max(height - padding * 2 - headerHeight, 200);
+
+    const scaleX = availW / contentW;
+    const scaleY = availH / contentH;
+    const nextZoom = Math.min(1.4, Math.max(0.2, Math.min(scaleX, scaleY)));
+
+    const nextX = (width - contentW * nextZoom) / 2 - minX * nextZoom;
+    const nextY = (height + headerHeight - contentH * nextZoom) / 2 - minY * nextZoom;
+
+    setViewport({ x: nextX, y: nextY, zoom: nextZoom });
+  }, []);
 
   // ── Fetch Shared Board Data ──
   useEffect(() => {
@@ -59,9 +112,23 @@ export default function PublicBoardSharePage() {
         const b = json.board;
         setBoardTitle(b.title || 'Shared Canvas Board');
         const data: BoardData = b.data || { elements: [], groups: [], viewport: { x: 40, y: 30, zoom: 0.9 } };
-        setElements(data.elements || []);
-        setGroups(data.groups || []);
-        if (data.viewport) setViewport(data.viewport);
+        const boardElems = data.elements || [];
+        const boardGroups = data.groups || [];
+        setElements(boardElems);
+        setGroups(boardGroups);
+
+        const w = typeof window !== 'undefined' ? window.innerWidth : 1920;
+        const h = typeof window !== 'undefined' ? window.innerHeight : 1080;
+        setCanvasDimensions({ width: w, height: h });
+
+        // Auto-fit board elements into full screen view on open
+        if (boardElems.length > 0 || boardGroups.length > 0) {
+          fitElementsToScreen(boardElems, boardGroups, w, h);
+        } else if (data.viewport && data.viewport.zoom >= 0.25) {
+          setViewport(data.viewport);
+        } else {
+          setViewport({ x: w / 2, y: h / 2, zoom: 1 });
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load shared board');
       } finally {
@@ -70,17 +137,33 @@ export default function PublicBoardSharePage() {
     };
 
     fetchSharedBoard();
-  }, [token]);
+  }, [token, fitElementsToScreen]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleBrowserFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
 
   // ── Track Dimensions ──
   useEffect(() => {
     const updateDimensions = () => {
-      if (containerRef.current) {
-        setCanvasDimensions({
-          width: Math.max(300, containerRef.current.clientWidth),
-          height: Math.max(300, containerRef.current.clientHeight),
-        });
-      }
+      const w = containerRef.current?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1920);
+      const h = containerRef.current?.clientHeight || (typeof window !== 'undefined' ? window.innerHeight : 1080);
+      setCanvasDimensions({
+        width: Math.max(300, w),
+        height: Math.max(300, h),
+      });
     };
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
@@ -107,7 +190,8 @@ export default function PublicBoardSharePage() {
   const panStartRef = useRef<{ startX: number; startY: number; vX: number; vY: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 0 || e.button === 1) {
+    // Left click (0), middle click (1), or right click (2) all pan in presentation read-only view
+    if (e.button === 0 || e.button === 1 || e.button === 2) {
       panStartRef.current = {
         startX: e.clientX,
         startY: e.clientY,
@@ -154,7 +238,7 @@ export default function PublicBoardSharePage() {
     );
   }, [elements, viewport, canvasDimensions]);
 
-  // ── Render Infinite Dot Grid on Canvas Background ──
+  // ── Render Infinite Dot Grid on Canvas Background (Ultra-optimized) ──
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -170,19 +254,28 @@ export default function PublicBoardSharePage() {
     ctx.fillRect(0, 0, canvasDimensions.width, canvasDimensions.height);
 
     const zoom = viewport.zoom;
-    const gridSize = 20 * zoom;
-    const offsetX = ((viewport.x % gridSize) + gridSize) % gridSize;
-    const offsetY = ((viewport.y % gridSize) + gridSize) % gridSize;
+    if (zoom > 0.18) {
+      ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
+      const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
 
-    ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
-    const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
-
-    for (let x = offsetX; x < canvasDimensions.width; x += gridSize) {
-      for (let y = offsetY; y < canvasDimensions.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
+      // Adaptive grid spacing (Miro style): dots never closer than 22px
+      let worldStep = 20;
+      while (worldStep * zoom < 22) {
+        worldStep *= 2;
       }
+      const step = worldStep * zoom;
+      const offsetX = ((viewport.x % step) + step) % step;
+      const offsetY = ((viewport.y % step) + step) % step;
+
+      // Single beginPath + single fill for 60fps rendering
+      ctx.beginPath();
+      for (let x = offsetX; x < canvasDimensions.width; x += step) {
+        for (let y = offsetY; y < canvasDimensions.height; y += step) {
+          ctx.moveTo(x + dotRadius, y);
+          ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        }
+      }
+      ctx.fill();
     }
   }, [canvasDimensions, viewport]);
 
@@ -257,42 +350,37 @@ export default function PublicBoardSharePage() {
     return map;
   }, [groups, elements]);
 
-  if (loading) {
-    return (
-      <div className="w-screen h-screen bg-[#0F0F0F] flex flex-col items-center justify-center text-white space-y-3 font-sans">
-        <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-        <div className="text-xs font-mono text-[var(--text-muted)]">Loading shared canvas board...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-screen h-screen bg-[#0F0F0F] flex flex-col items-center justify-center text-white p-6 font-sans">
-        <div className="max-w-md w-full bg-[#171717] border border-white/10 rounded-xl p-6 text-center space-y-4 shadow-2xl">
-          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto text-white">
-            <AlertCircle size={24} />
-          </div>
-          <h1 className="text-lg font-semibold text-white">Link Unavailable</h1>
-          <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{error}</p>
-          <div className="pt-2 text-[11px] font-mono text-[var(--text-muted)]">Teader Spatial Canvas</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={containerRef}
+      onContextMenu={(e) => e.preventDefault()}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      className={`relative w-screen h-screen overflow-hidden select-none bg-[#0F0F0F] ${
+      className={`fixed inset-0 w-screen h-screen overflow-hidden select-none bg-[#0F0F0F] ${
         isPanning ? 'cursor-grabbing' : 'cursor-grab'
       }`}
     >
-      {/* Top Header Bar */}
+      {loading ? (
+        <div className="absolute inset-0 z-50 bg-[#0F0F0F] flex flex-col items-center justify-center text-white space-y-3 font-sans">
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+          <div className="text-xs font-mono text-[var(--text-muted)]">Loading shared canvas board...</div>
+        </div>
+      ) : error ? (
+        <div className="absolute inset-0 z-50 bg-[#0F0F0F] flex flex-col items-center justify-center text-white p-6 font-sans">
+          <div className="max-w-md w-full bg-[#171717] border border-white/10 rounded-xl p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto text-white">
+              <AlertCircle size={24} />
+            </div>
+            <h1 className="text-lg font-semibold text-white">Link Unavailable</h1>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{error}</p>
+            <div className="pt-2 text-[11px] font-mono text-[var(--text-muted)]">Teader Spatial Canvas</div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Top Header Bar */}
       <header className="absolute top-0 left-0 right-0 h-12 px-4 bg-[#141414]/90 backdrop-blur-md border-b border-white/10 z-30 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 rounded bg-white text-black font-mono font-bold text-xs flex items-center justify-center shadow">
@@ -305,6 +393,14 @@ export default function PublicBoardSharePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleBrowserFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-black hover:bg-white/90 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            title="Toggle Fullscreen"
+          >
+            <Maximize2 size={12} />
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}</span>
+          </button>
           <div className="px-2.5 py-1 rounded bg-white/10 text-white text-[11px] font-mono">Read-Only</div>
         </div>
       </header>
@@ -312,7 +408,7 @@ export default function PublicBoardSharePage() {
       {/* HTML5 Canvas Background */}
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 pointer-events-auto"
+        className="absolute inset-0 w-full h-full pointer-events-auto"
         style={{ width: canvasDimensions.width, height: canvasDimensions.height }}
       />
 
@@ -365,6 +461,8 @@ export default function PublicBoardSharePage() {
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: '0 0',
+          willChange: 'transform',
+          contain: 'layout style',
         }}
       >
         {visibleElements.map((element) => (
@@ -376,6 +474,7 @@ export default function PublicBoardSharePage() {
               width: element.width,
               height: element.height,
               zIndex: element.zIndex || 10,
+              transform: 'translateZ(0)',
             }}
             className="absolute pointer-events-auto rounded-lg shadow-lg"
           >
@@ -428,6 +527,7 @@ export default function PublicBoardSharePage() {
                   <img
                     src={element.url || (element.metadata as any)?.dataUrl || ''}
                     alt={element.title || 'Image'}
+                    loading="eager"
                     className="w-full h-full object-cover select-none"
                     onError={(e) => {
                       const fallback = (element.metadata as any)?.dataUrl;
@@ -445,22 +545,7 @@ export default function PublicBoardSharePage() {
                     <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
                     <span className="text-[10px] text-white/40 mt-1">Image unavailable</span>
                   </div>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <a
-                      href={element.url || (element.metadata as any)?.dataUrl || '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 rounded-full bg-black/70 hover:bg-black text-white hover:scale-105 transition-all"
-                    >
-                      <ExternalLink size={13} />
-                    </a>
-                  </div>
                 </div>
-                {element.title && (
-                  <div className="px-2.5 py-1.5 bg-[#141414] border-t border-white/5 text-[11px] text-[var(--text-secondary)] truncate">
-                    {element.title}
-                  </div>
-                )}
               </div>
             )}
 
@@ -607,6 +692,8 @@ export default function PublicBoardSharePage() {
           <Maximize2 size={14} />
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -39,6 +39,7 @@ export interface RealtimeEvent<T = any> {
   payload: T;
   timestamp?: number;
   senderSessionId?: string | number;
+  clientSessionId?: string;
 }
 
 const WS_PORT = process.env.WS_PORT || process.env.PORT_WS || '3001';

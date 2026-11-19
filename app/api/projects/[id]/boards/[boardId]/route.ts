@@ -106,11 +106,14 @@ export async function PUT(
       fs.writeFileSync(diskFile, JSON.stringify(updated, null, 2), 'utf-8');
     } catch {}
 
+    const clientSessionId = body.clientSessionId;
+
     broadcastRealtimeEvent({
       type: 'BOARD_UPDATED',
       projectId: targetProjId,
-      payload: { boardId, board: updated },
+      payload: { boardId, board: updated, clientSessionId },
       senderSessionId: session.id,
+      clientSessionId,
     });
 
     return NextResponse.json({ board: updated });

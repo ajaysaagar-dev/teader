@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/AppLayout';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
+import { authFetch } from '@/lib/api-client';
 
 import { 
   FolderKanban, 
@@ -93,12 +94,12 @@ export default function ProjectsPage() {
   const fetchDataFromDB = useCallback(async () => {
     try {
       const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
-        ? AbortSignal.timeout(6000)
+        ? AbortSignal.timeout(8000)
         : undefined;
       const [meRes, projRes, issueRes] = await Promise.all([
-        fetch('/api/auth/me', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        fetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        fetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch('/api/auth/me', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
       ]);
 
       if (meRes?.status === 401 || projRes?.status === 401) {
@@ -180,7 +181,7 @@ export default function ProjectsPage() {
 
     setIsSubmittingProj(true);
     try {
-      const res = await fetch('/api/projects', {
+      const res = await authFetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -220,7 +221,7 @@ export default function ProjectsPage() {
 
     setIsJoining(true);
     try {
-      const res = await fetch('/api/projects/join', {
+      const res = await authFetch('/api/projects/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectKey: joinKeyInput.trim() }),
@@ -252,7 +253,7 @@ export default function ProjectsPage() {
 
     setIsSavingEdit(true);
     try {
-      const res = await fetch(`/api/projects/${projectToEdit.id}`, {
+      const res = await authFetch(`/api/projects/${projectToEdit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -290,7 +291,7 @@ export default function ProjectsPage() {
 
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/projects/${projectToDelete.id}`, {
+      const res = await authFetch(`/api/projects/${projectToDelete.id}`, {
         method: 'DELETE',
       });
 

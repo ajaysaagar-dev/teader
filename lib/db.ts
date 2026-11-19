@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { hashPassword, verifyPassword } from './auth';
 import { MemberPermissions, MemberPermissionsWithUser, HistoryEntry } from './types';
 
@@ -3147,21 +3149,61 @@ export async function getProjectBoardsDB(projectId: string | number): Promise<Pr
     const project = await getProjectByIdDB(projectId);
     if (project) numId = Number(project.id);
   }
+  let boards: ProjectBoardRecord[] = [];
   try {
     const p = getPool();
     const result = await p.query(
       `SELECT * FROM "project_boards" WHERE "projectId" = $1 ORDER BY "orderIndex" ASC, "updatedAt" DESC`,
       [numId]
     );
-    return (result.rows || []).map((row: any) => ({
-      ...row,
-      data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
-    }));
-  } catch {
-    return memoryProjectBoardsStore
+    if (result.rows && result.rows.length > 0) {
+      boards = result.rows.map((row: any) => ({
+        ...row,
+        data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
+      }));
+    }
+  } catch {}
+
+  if (boards.length === 0) {
+    boards = memoryProjectBoardsStore
       .filter((b) => Number(b.projectId) === numId)
       .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
   }
+
+  // Fallback: check data/boards on disk
+  if (boards.length === 0) {
+    try {
+      const boardsDir = path.join(process.cwd(), 'data', 'boards');
+      if (fs.existsSync(boardsDir)) {
+        const files = fs.readdirSync(boardsDir);
+        for (const file of files) {
+          if (file.endsWith('.json') && file.startsWith(`proj_${numId}_`)) {
+            const content = fs.readFileSync(path.join(boardsDir, file), 'utf-8');
+            const parsed = JSON.parse(content);
+            if (parsed && parsed.id) {
+              const record: ProjectBoardRecord = {
+                id: parsed.id,
+                projectId: numId,
+                userId: Number(parsed.userId) || 1,
+                userName: parsed.userName || 'karri',
+                title: parsed.title || 'Untitled Board',
+                data: parsed.data || { elements: [], groups: [], connections: [], viewport: { x: 0, y: 0, zoom: 1 } },
+                orderIndex: parsed.orderIndex || 0,
+                createdAt: parsed.createdAt || new Date().toISOString(),
+                updatedAt: parsed.updatedAt || new Date().toISOString(),
+              };
+              boards.push(record);
+              if (!memoryProjectBoardsStore.some((b) => b.id === record.id)) {
+                memoryProjectBoardsStore.push(record);
+              }
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return boards;
 }
 
 export async function getProjectBoardByIdDB(boardId: string): Promise<ProjectBoardRecord | null> {
@@ -3176,10 +3218,43 @@ export async function getProjectBoardByIdDB(boardId: string): Promise<ProjectBoa
         data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data,
       };
     }
-    return null;
-  } catch {
-    return memoryProjectBoardsStore.find((b) => b.id === boardId) || null;
-  }
+  } catch {}
+
+  const fromMemory = memoryProjectBoardsStore.find((b) => b.id === boardId);
+  if (fromMemory) return fromMemory;
+
+  // Check disk storage in data/boards
+  try {
+    const boardsDir = path.join(process.cwd(), 'data', 'boards');
+    if (fs.existsSync(boardsDir)) {
+      const files = fs.readdirSync(boardsDir);
+      for (const file of files) {
+        if (file.endsWith('.json') && file.includes(boardId)) {
+          const content = fs.readFileSync(path.join(boardsDir, file), 'utf-8');
+          const parsed = JSON.parse(content);
+          if (parsed && (parsed.id === boardId || file.includes(boardId))) {
+            const record: ProjectBoardRecord = {
+              id: parsed.id || boardId,
+              projectId: Number(parsed.projectId) || 1,
+              userId: Number(parsed.userId) || 1,
+              userName: parsed.userName || 'karri',
+              title: parsed.title || 'Untitled Board',
+              data: parsed.data || { elements: [], groups: [], connections: [], viewport: { x: 0, y: 0, zoom: 1 } },
+              orderIndex: parsed.orderIndex || 0,
+              createdAt: parsed.createdAt || new Date().toISOString(),
+              updatedAt: parsed.updatedAt || new Date().toISOString(),
+            };
+            if (!memoryProjectBoardsStore.some((b) => b.id === record.id)) {
+              memoryProjectBoardsStore.push(record);
+            }
+            return record;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function createProjectBoardDB(data: {
@@ -3227,6 +3302,15 @@ export async function createProjectBoardDB(data: {
 
   memoryProjectBoardsStore = memoryProjectBoardsStore.filter((b) => b.id !== data.id);
   memoryProjectBoardsStore.unshift(record);
+
+  // Backup to disk
+  try {
+    const boardsDir = path.join(process.cwd(), 'data', 'boards');
+    if (!fs.existsSync(boardsDir)) fs.mkdirSync(boardsDir, { recursive: true });
+    const diskFile = path.join(boardsDir, `proj_${record.projectId}_${record.id}.json`);
+    fs.writeFileSync(diskFile, JSON.stringify(record, null, 2), 'utf-8');
+  } catch {}
+
   return record;
 }
 
@@ -3259,14 +3343,32 @@ export async function updateProjectBoardDB(
     await p.query(`UPDATE "project_boards" SET ${fields.join(', ')} WHERE "id" = $${paramIdx}`, values);
   } catch {}
 
-  const target = memoryProjectBoardsStore.find((b) => b.id === boardId);
+  let target = memoryProjectBoardsStore.find((b) => b.id === boardId);
+  if (!target) {
+    target = (await getProjectBoardByIdDB(boardId)) || undefined;
+  }
+
   if (target) {
     if (updates.title !== undefined) target.title = updates.title;
     if (updates.data !== undefined) target.data = updates.data;
     if (updates.orderIndex !== undefined) target.orderIndex = updates.orderIndex;
     target.updatedAt = now;
+
+    memoryProjectBoardsStore = memoryProjectBoardsStore.filter((b) => b.id !== boardId);
+    memoryProjectBoardsStore.unshift(target);
+
+    // Save to disk
+    try {
+      const boardsDir = path.join(process.cwd(), 'data', 'boards');
+      if (fs.existsSync(boardsDir)) {
+        const diskFile = path.join(boardsDir, `proj_${target.projectId}_${boardId}.json`);
+        fs.writeFileSync(diskFile, JSON.stringify(target, null, 2), 'utf-8');
+      }
+    } catch {}
+
     return target;
   }
+
   return await getProjectBoardByIdDB(boardId);
 }
 
@@ -3277,6 +3379,17 @@ export async function deleteProjectBoardDB(boardId: string): Promise<boolean> {
     await p.query(`DELETE FROM "project_boards" WHERE "id" = $1`, [boardId]);
   } catch {}
   memoryProjectBoardsStore = memoryProjectBoardsStore.filter((b) => b.id !== boardId);
+  try {
+    const boardsDir = path.join(process.cwd(), 'data', 'boards');
+    if (fs.existsSync(boardsDir)) {
+      const files = fs.readdirSync(boardsDir);
+      for (const file of files) {
+        if (file.endsWith('.json') && file.includes(boardId)) {
+          fs.unlinkSync(path.join(boardsDir, file));
+        }
+      }
+    }
+  } catch {}
   return true;
 }
 
@@ -3319,8 +3432,18 @@ export async function createBoardShareDB(data: {
     createdAt: now,
   };
 
+  // Ensure board is registered in project_boards in DB if possible so foreign key doesn't fail
   try {
     const p = getPool();
+    const board = await getProjectBoardByIdDB(data.boardId);
+    if (board) {
+      await p.query(
+        `INSERT INTO "project_boards" ("id", "projectId", "userId", "userName", "title", "data", "orderIndex", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT ("id") DO NOTHING`,
+        [board.id, board.projectId, board.userId || 1, board.userName || 'karri', board.title, JSON.stringify(board.data), board.orderIndex || 0, board.createdAt, board.updatedAt]
+      );
+    }
     await p.query(`DELETE FROM "board_shares" WHERE "boardId" = $1`, [data.boardId]);
     await p.query(
       `INSERT INTO "board_shares" ("id", "boardId", "projectId", "token", "createdBy", "expiresAt", "createdAt")
@@ -3331,6 +3454,23 @@ export async function createBoardShareDB(data: {
 
   memoryBoardSharesStore = memoryBoardSharesStore.filter((s) => s.boardId !== data.boardId);
   memoryBoardSharesStore.unshift(record);
+
+  // Backup share record to disk
+  try {
+    const sharesDir = path.join(process.cwd(), 'data', 'boards');
+    if (!fs.existsSync(sharesDir)) fs.mkdirSync(sharesDir, { recursive: true });
+    const sharesFile = path.join(sharesDir, 'shares.json');
+    let allShares: BoardShareRecord[] = [];
+    if (fs.existsSync(sharesFile)) {
+      try {
+        allShares = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      } catch {}
+    }
+    allShares = allShares.filter((s) => s.boardId !== data.boardId && s.token !== record.token);
+    allShares.unshift(record);
+    fs.writeFileSync(sharesFile, JSON.stringify(allShares, null, 2), 'utf-8');
+  } catch {}
+
   return record;
 }
 
@@ -3345,53 +3485,63 @@ export async function getActiveBoardShareDB(boardId: string): Promise<BoardShare
     if (result.rows && result.rows[0]) {
       return result.rows[0];
     }
-    return null;
-  } catch {
-    return memoryBoardSharesStore.find((s) => s.boardId === boardId) || null;
-  }
+  } catch {}
+
+  const mem = memoryBoardSharesStore.find((s) => s.boardId === boardId);
+  if (mem) return mem;
+
+  // Check disk backup
+  try {
+    const sharesFile = path.join(process.cwd(), 'data', 'boards', 'shares.json');
+    if (fs.existsSync(sharesFile)) {
+      const allShares: BoardShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      const found = allShares.find((s) => s.boardId === boardId);
+      if (found) {
+        if (!memoryBoardSharesStore.some((s) => s.id === found.id)) {
+          memoryBoardSharesStore.push(found);
+        }
+        return found;
+      }
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function getBoardShareByTokenDB(token: string): Promise<{ share: BoardShareRecord; board: ProjectBoardRecord } | null> {
   await initDB();
+  let share: BoardShareRecord | null = null;
   try {
     const p = getPool();
     const result = await p.query(
-      `SELECT s.*, b.title as "boardTitle", b.data as "boardData", b."projectId" as "boardProjectId"
-       FROM "board_shares" s
-       JOIN "project_boards" b ON s."boardId" = b."id"
-       WHERE s."token" = $1
-       LIMIT 1`,
+      `SELECT * FROM "board_shares" WHERE "token" = $1 LIMIT 1`,
       [token]
     );
     if (result.rows && result.rows[0]) {
-      const row = result.rows[0];
-      const share: BoardShareRecord = {
-        id: row.id,
-        boardId: row.boardId,
-        projectId: row.projectId,
-        token: row.token,
-        createdBy: row.createdBy,
-        expiresAt: row.expiresAt,
-        createdAt: row.createdAt,
-      };
-      const board: ProjectBoardRecord = {
-        id: row.boardId,
-        projectId: row.boardProjectId,
-        title: row.boardTitle,
-        data: typeof row.boardData === 'string' ? JSON.parse(row.boardData) : row.boardData,
-        createdAt: row.createdAt,
-        updatedAt: row.createdAt,
-      };
-      return { share, board };
+      share = result.rows[0];
     }
   } catch {}
 
-  const share = memoryBoardSharesStore.find((s) => s.token === token);
-  if (share) {
-    const board = await getProjectBoardByIdDB(share.boardId);
-    if (board) return { share, board };
+  if (!share) {
+    share = memoryBoardSharesStore.find((s) => s.token === token) || null;
   }
-  return null;
+
+  if (!share) {
+    try {
+      const sharesFile = path.join(process.cwd(), 'data', 'boards', 'shares.json');
+      if (fs.existsSync(sharesFile)) {
+        const allShares: BoardShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+        share = allShares.find((s) => s.token === token) || null;
+      }
+    } catch {}
+  }
+
+  if (!share) return null;
+
+  const board = await getProjectBoardByIdDB(share.boardId);
+  if (!board) return null;
+
+  return { share, board };
 }
 
 export async function revokeBoardShareDB(boardId: string): Promise<boolean> {
@@ -3401,6 +3551,14 @@ export async function revokeBoardShareDB(boardId: string): Promise<boolean> {
     await p.query(`DELETE FROM "board_shares" WHERE "boardId" = $1`, [boardId]);
   } catch {}
   memoryBoardSharesStore = memoryBoardSharesStore.filter((s) => s.boardId !== boardId);
+  try {
+    const sharesFile = path.join(process.cwd(), 'data', 'boards', 'shares.json');
+    if (fs.existsSync(sharesFile)) {
+      let allShares: BoardShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      allShares = allShares.filter((s) => s.boardId !== boardId);
+      fs.writeFileSync(sharesFile, JSON.stringify(allShares, null, 2), 'utf-8');
+    }
+  } catch {}
   return true;
 }
 
