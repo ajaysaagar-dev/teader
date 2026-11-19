@@ -165,6 +165,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // Client Session ID for real-time broadcast filtering
   const clientSessionIdRef = useRef(`board_client_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const lastLocalSaveRef = useRef<number>(0);
+  const isLocalMutatingRef = useRef(false);
 
   // ── Multi-Board Files state ──
   const [boards, setBoards] = useState<BoardFile[]>(() => {
@@ -176,6 +178,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const [activeBoardId, setActiveBoardId] = useState<string | null>(() => {
     return getLocalCache<string | null>(`boards_active_${projectId}`, null);
   });
+  const activeBoardIdRef = useRef<string | null>(null);
 
   // ── Active Board Data ──
   const [elements, setElements] = useState<BoardElement[]>([]);
@@ -219,6 +222,9 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   // ── Undo / Redo History ──
   const historyRef = useRef<BoardElement[][]>([]);
   const historyIndexRef = useRef<number>(-1);
+  const clipboardRef = useRef<BoardElement[]>([]);
+  const wheelThrottleRef = useRef<number>(0);
+  const canvasDrawScheduledRef = useRef(false);
 
   const pushHistory = useCallback((newElements: BoardElement[]) => {
     const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -228,6 +234,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     historyIndexRef.current = nextHistory.length - 1;
     setHasUnsavedChanges(true);
   }, []);
+
+  // Keep activeBoardIdRef in sync with state
+  useEffect(() => {
+    activeBoardIdRef.current = activeBoardId;
+  }, [activeBoardId]);
 
   // ── Switch Active Board ──
   const handleSelectBoard = useCallback((boardId: string) => {
@@ -418,7 +429,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         setOpenBoardIds(nextOpen);
         setLocalCache(`boards_open_${projectId}`, nextOpen);
 
-        const currentActive = activeBoardId || getLocalCache<string | null>(`boards_active_${projectId}`, null);
+        const currentActive = activeBoardIdRef.current || getLocalCache<string | null>(`boards_active_${projectId}`, null);
         const target = serverBoards.find((b) => b.id === currentActive) || serverBoards[0];
         if (target) {
           setActiveBoardId(target.id);
@@ -434,7 +445,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     } catch (err) {
       console.warn('[ProjectBoardView] Could not load boards from server, using local cache:', err);
     }
-  }, [projectId, activeBoardId]);
+  }, [projectId]);
 
   useEffect(() => {
     loadBoards();
@@ -443,6 +454,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   // ── Auto-save Board Data ──
   const saveCurrentBoard = useCallback(async (newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => {
     if (!activeBoardId) return;
+    lastLocalSaveRef.current = Date.now();
     const elems = newElements ?? elements;
     const grps = newGroups ?? groups;
     const vport = newViewport ?? viewport;
@@ -463,7 +475,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       await fetch(`/api/projects/${projectId}/boards/${activeBoardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: boardData }),
+        body: JSON.stringify({ data: boardData, clientSessionId: clientSessionIdRef.current }),
       });
       setHasUnsavedChanges(false);
     } catch (err) {
@@ -481,7 +493,9 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         event.type === 'BOARD_UPDATED' &&
         (event.boardId === activeBoardId || event.payload?.boardId === activeBoardId)
       ) {
-        if (event.clientSessionId === clientSessionIdRef.current) return;
+        if (event.clientSessionId === clientSessionIdRef.current || event.payload?.clientSessionId === clientSessionIdRef.current) return;
+        if (Date.now() - lastLocalSaveRef.current < 3000) return; // skip echoed updates after local save
+        if (isLocalMutatingRef.current) return; // skip while user is dragging/editing
         const b = event.board || event.payload?.board;
         if (b?.data?.elements) {
           setElements(b.data.elements);
@@ -576,6 +590,12 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // ── Render Canvas Background & Dynamic Snap Alignment Lines ──
   useEffect(() => {
+    // Batch rapid state updates into a single draw frame via RAF
+    if (canvasDrawScheduledRef.current) return;
+    canvasDrawScheduledRef.current = true;
+    requestAnimationFrame(() => {
+      canvasDrawScheduledRef.current = false;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -590,19 +610,28 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     ctx.fillRect(0, 0, canvasDimensions.width, canvasDimensions.height);
 
     const zoom = viewport.zoom;
-    const gridSize = (snapSettings.gridSize || 20) * zoom;
-    const offsetX = ((viewport.x % gridSize) + gridSize) % gridSize;
-    const offsetY = ((viewport.y % gridSize) + gridSize) % gridSize;
+    if (zoom > 0.18) {
+      ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
+      const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
 
-    ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
-    const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
-
-    for (let x = offsetX; x < canvasDimensions.width; x += gridSize) {
-      for (let y = offsetY; y < canvasDimensions.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
+      // Adaptive grid spacing (Miro style): dots never closer than 22px
+      let worldStep = snapSettings.gridSize || 20;
+      while (worldStep * zoom < 22) {
+        worldStep *= 2;
       }
+      const step = worldStep * zoom;
+      const offsetX = ((viewport.x % step) + step) % step;
+      const offsetY = ((viewport.y % step) + step) % step;
+
+      // Single beginPath + single fill for 60fps rendering without GPU choke
+      ctx.beginPath();
+      for (let x = offsetX; x < canvasDimensions.width; x += step) {
+        for (let y = offsetY; y < canvasDimensions.height; y += step) {
+          ctx.moveTo(x + dotRadius, y);
+          ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        }
+      }
+      ctx.fill();
     }
 
     // Draw Connector Arrows
@@ -707,12 +736,17 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       ctx.strokeRect(x, y, w, h);
       ctx.restore();
     }
+    }); // end requestAnimationFrame
   }, [canvasDimensions, viewport, snapGuides, snapSettings, connections, elements, marqueeBox]);
 
   // ── DIRECT MOUSE WHEEL ZOOM CONTROLLER ──
   // User explicitly asked: "can zoom in and out using mouse wheel on the board view"
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
+    const now = Date.now();
+    if (now - wheelThrottleRef.current < 16) return; // ~60fps throttle
+    wheelThrottleRef.current = now;
+
     // Direct mouse wheel zooms into cursor location
     const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
     const nextZoom = Math.min(4.0, Math.max(0.15, viewport.zoom * zoomFactor));
@@ -1093,6 +1127,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const handleElementMouseDown = (e: React.MouseEvent, element: BoardElement) => {
     e.stopPropagation();
     if (activeTool === 'hand') return;
+    isLocalMutatingRef.current = true;
 
     setSelectedGroupId(null);
 
@@ -1182,6 +1217,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mouseup', handleWindowMouseUp);
       setSnapGuides([]);
       activeDragRef.current = null;
+      isLocalMutatingRef.current = false;
 
       // Auto-join group and auto-expand group bounds if element touches/overlaps group
       setElements((currentElems) => {
@@ -1253,6 +1289,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   // ── Element Resizing Engine ──
   const handleResizeMouseDown = (e: React.MouseEvent, element: BoardElement, handle: string) => {
     e.stopPropagation();
+    isLocalMutatingRef.current = true;
     const startX = e.clientX;
     const startY = e.clientY;
     const initW = element.width;
@@ -1290,6 +1327,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     const handleWindowMouseUp = () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
+      isLocalMutatingRef.current = false;
       pushHistory(elements);
       saveCurrentBoard();
     };
@@ -1315,6 +1353,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   ) => {
     e.stopPropagation();
     if (activeTool === 'hand') return;
+    isLocalMutatingRef.current = true;
 
     setSelectedGroupId(group.id);
     setSelectedIds(new Set());
@@ -1366,6 +1405,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
       groupDragRef.current = null;
+      isLocalMutatingRef.current = false;
       pushHistory(elements);
       saveCurrentBoard();
     };
@@ -1789,6 +1829,35 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         e.preventDefault();
         handleFitView();
       }
+
+      // Copy selected elements (Ctrl+C)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && selectedIds.size > 0) {
+        e.preventDefault();
+        const copied = elements.filter((el) => selectedIds.has(el.id));
+        clipboardRef.current = JSON.parse(JSON.stringify(copied));
+        toast.success(`Copied ${copied.length} element${copied.length > 1 ? 's' : ''}`);
+      }
+
+      // Paste elements (Ctrl+V)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v' && clipboardRef.current.length > 0) {
+        e.preventDefault();
+        const offset = 20;
+        const pasted = clipboardRef.current.map((el) => ({
+          ...el,
+          id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          x: el.x + offset,
+          y: el.y + offset,
+          groupId: undefined,
+        }));
+        setElements((prev) => {
+          const next = [...prev, ...pasted];
+          pushHistory(next);
+          saveCurrentBoard(next);
+          return next;
+        });
+        setSelectedIds(new Set(pasted.map((el) => el.id)));
+        toast.success(`Pasted ${pasted.length} element${pasted.length > 1 ? 's' : ''}`);
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -1799,11 +1868,173 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
+    // Global Paste Event Handler (supports Ctrl+V for images, GIFs, links, and text)
+    const handlePaste = async (e: ClipboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      const isInput =
+        activeTag === 'input' ||
+        activeTag === 'textarea' ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+      if (isInput) return;
+
+      // 1. If files in clipboard (e.g. copied GIF or image file / screenshot)
+      if (e.clipboardData?.files && e.clipboardData.files.length > 0) {
+        e.preventDefault();
+        const files = Array.from(e.clipboardData.files);
+        const center = screenToWorld(
+          (containerRef.current?.clientWidth || 1000) / 2,
+          (containerRef.current?.clientHeight || 700) / 2
+        );
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.type.startsWith('image/')) {
+            const previewUrl = await readFileAsDataUrl(file);
+            const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+            const newElem: BoardElement = {
+              id: tempId,
+              type: 'image',
+              x: center.x - 160 + i * 30,
+              y: center.y - 110 + i * 30,
+              width: 320,
+              height: 220,
+              title: file.name,
+              url: previewUrl,
+              metadata: {
+                filename: file.name,
+                filesize: file.size,
+                mimeType: file.type,
+                dataUrl: previewUrl || undefined,
+              },
+            };
+
+            setElements((prev) => {
+              const updated = [...prev, newElem];
+              pushHistory(updated);
+              saveCurrentBoard(updated);
+              return updated;
+            });
+            setSelectedIds(new Set([newElem.id]));
+
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch(`/api/projects/${projectId}/boards/upload`, {
+              method: 'POST',
+              body: formData,
+            })
+              .then(async (res) => {
+                if (res.ok) {
+                  const data = await res.json();
+                  setElements((prev) => {
+                    const updated = prev.map((el) => (el.id === tempId ? { ...el, url: data.url } : el));
+                    saveCurrentBoard(updated);
+                    return updated;
+                  });
+                }
+              })
+              .catch(() => {});
+
+            toast.success(isGif ? 'Pasted GIF to canvas' : 'Pasted image to canvas');
+          }
+        }
+        return;
+      }
+
+      // 2. Text / Image link / GIF URL paste when no internal elements copied
+      if (clipboardRef.current.length === 0) {
+        const text = e.clipboardData?.getData('text/plain')?.trim();
+        if (text) {
+          e.preventDefault();
+          const center = screenToWorld(
+            (containerRef.current?.clientWidth || 1000) / 2,
+            (containerRef.current?.clientHeight || 700) / 2
+          );
+
+          if (isImageLink(text)) {
+            const isGif = text.toLowerCase().includes('.gif') || text.toLowerCase().includes('giphy') || text.toLowerCase().includes('tenor');
+            const newElem: BoardElement = {
+              id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              type: 'image',
+              x: center.x - 160,
+              y: center.y - 110,
+              width: 320,
+              height: 220,
+              title: isGif ? 'GIF' : 'Image',
+              url: text,
+            };
+
+            setElements((prev) => {
+              const updated = [...prev, newElem];
+              pushHistory(updated);
+              saveCurrentBoard(updated);
+              return updated;
+            });
+            setSelectedIds(new Set([newElem.id]));
+            toast.success(isGif ? 'Pasted GIF link' : 'Pasted image link');
+          } else if (/^https?:\/\//i.test(text)) {
+            try {
+              const urlObj = new URL(text);
+              const newElem: BoardElement = {
+                id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                type: 'link',
+                x: center.x - 140,
+                y: center.y - 55,
+                width: 280,
+                height: 110,
+                title: urlObj.hostname,
+                url: text,
+                metadata: {
+                  domain: urlObj.hostname,
+                  favicon: `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`,
+                },
+              };
+
+              setElements((prev) => {
+                const updated = [...prev, newElem];
+                pushHistory(updated);
+                saveCurrentBoard(updated);
+                return updated;
+              });
+              setSelectedIds(new Set([newElem.id]));
+              toast.success('Pasted link bookmark');
+            } catch {}
+          } else {
+            const newElem: BoardElement = {
+              id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              type: 'sticky',
+              x: center.x - 110,
+              y: center.y - 85,
+              width: 220,
+              height: 160,
+              title: 'Note',
+              content: text,
+              color: STICKY_COLORS[0].bg,
+              textColor: STICKY_COLORS[0].text,
+            };
+
+            setElements((prev) => {
+              const updated = [...prev, newElem];
+              pushHistory(updated);
+              saveCurrentBoard(updated);
+              return updated;
+            });
+            setSelectedIds(new Set([newElem.id]));
+            toast.success('Pasted sticky note');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('paste', handlePaste);
     };
-  }, [selectedIds, elements, groups, pushHistory, saveCurrentBoard]);
+  }, [selectedIds, elements, groups, pushHistory, saveCurrentBoard, screenToWorld]);
 
   // Fit to Content
   const handleFitView = () => {
@@ -2169,6 +2400,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             style={{
               transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
               transformOrigin: '0 0',
+              willChange: 'transform',
+              contain: 'layout style',
             }}
           >
             {visibleElements.map((element) => {
@@ -2183,11 +2416,12 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                     width: element.width,
                     height: element.height,
                     zIndex: isSelected ? 50 : element.zIndex || 10,
+                    transform: 'translateZ(0)',
                   }}
                   className={`absolute pointer-events-auto group rounded-lg transition-shadow cursor-move ${
                     isSelected
                       ? 'ring-2 ring-white shadow-[0_0_20px_rgba(255,255,255,0.25)]'
-                      : 'hover:ring-1 hover:ring-white/20'
+                      : viewport.zoom < 0.4 ? '' : 'hover:ring-1 hover:ring-white/20'
                   }`}
                 >
                   {/* 1. STICKY NOTE */}
@@ -2207,13 +2441,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                       </div>
                       <textarea
                         value={element.content || ''}
+                        onFocus={() => {
+                          isLocalMutatingRef.current = true;
+                        }}
                         onChange={(e) => {
                           const val = e.target.value;
                           setElements((prev) =>
                             prev.map((el) => (el.id === element.id ? { ...el, content: val } : el))
                           );
                         }}
-                        onBlur={() => saveCurrentBoard()}
+                        onBlur={() => {
+                          isLocalMutatingRef.current = false;
+                          saveCurrentBoard();
+                        }}
                         placeholder="Type notes..."
                         style={{
                           color: element.textColor || '#000000',
@@ -2232,13 +2472,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                     <div className="w-full h-full p-2 flex items-center">
                       <textarea
                         value={element.content || ''}
+                        onFocus={() => {
+                          isLocalMutatingRef.current = true;
+                        }}
                         onChange={(e) => {
                           const val = e.target.value;
                           setElements((prev) =>
                             prev.map((el) => (el.id === element.id ? { ...el, content: val } : el))
                           );
                         }}
-                        onBlur={() => saveCurrentBoard()}
+                        onBlur={() => {
+                          isLocalMutatingRef.current = false;
+                          saveCurrentBoard();
+                        }}
                         style={{
                           fontSize: element.fontSize ? `${element.fontSize}px` : '16px',
                           color: element.textColor || '#FFFFFF',
@@ -2259,6 +2505,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                         <img
                           src={element.url || (element.metadata as any)?.dataUrl || ''}
                           alt={element.title || 'Image'}
+                          loading="eager"
                           className="w-full h-full object-cover select-none pointer-events-none"
                           onError={(e) => {
                             const fallback = (element.metadata as any)?.dataUrl;
@@ -2277,11 +2524,6 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                           <span className="text-[10px] text-white/40 mt-1">Image preview unavailable</span>
                         </div>
                       </div>
-                      {element.title && (
-                        <div className="px-2.5 py-1.5 bg-[#141414] border-t border-white/5 text-[11px] text-[var(--text-secondary)] truncate">
-                          {element.title}
-                        </div>
-                      )}
                     </div>
                   )}
 

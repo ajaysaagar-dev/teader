@@ -91,7 +91,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isNewIssueModalOpen, setIsNewIssueModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
@@ -103,7 +103,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("teader_sidebar_collapsed");
-      if (saved === "true") setIsSidebarCollapsed(true);
+      if (saved === "false") setIsSidebarCollapsed(false);
+      else setIsSidebarCollapsed(true);
     } catch {}
   }, []);
 

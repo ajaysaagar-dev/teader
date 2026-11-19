@@ -34,9 +34,38 @@ export default function PublicBoardSharePage() {
   const [viewport, setViewport] = useState<BoardViewport>({ x: 40, y: 30, zoom: 0.9 });
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 1200, height: 800 });
   const [isPanning, setIsPanning] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState<Record<string, { current: number; duration: number }>>({});
   const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
+
+  const fitElementsToScreen = useCallback((elems: BoardElement[], width: number, height: number) => {
+    if (!elems || elems.length === 0) return;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const el of elems) {
+      if (el.x < minX) minX = el.x;
+      if (el.y < minY) minY = el.y;
+      if (el.x + el.width > maxX) maxX = el.x + el.width;
+      if (el.y + el.height > maxY) maxY = el.y + el.height;
+    }
+
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const padding = 80;
+
+    const scaleX = (width - padding * 2) / Math.max(contentW, 100);
+    const scaleY = (height - padding * 2) / Math.max(contentH, 100);
+    const nextZoom = Math.min(1.8, Math.max(0.18, Math.min(scaleX, scaleY)));
+
+    const nextX = (width - contentW * nextZoom) / 2 - minX * nextZoom;
+    const nextY = (height - contentH * nextZoom) / 2 - minY * nextZoom;
+
+    setViewport({ x: nextX, y: nextY, zoom: nextZoom });
+  }, []);
 
   // ── Fetch Shared Board Data ──
   useEffect(() => {
@@ -59,9 +88,18 @@ export default function PublicBoardSharePage() {
         const b = json.board;
         setBoardTitle(b.title || 'Shared Canvas Board');
         const data: BoardData = b.data || { elements: [], groups: [], viewport: { x: 40, y: 30, zoom: 0.9 } };
-        setElements(data.elements || []);
+        const boardElems = data.elements || [];
+        setElements(boardElems);
         setGroups(data.groups || []);
-        if (data.viewport) setViewport(data.viewport);
+
+        // Auto-fit board elements into full screen view on open
+        if (boardElems.length > 0) {
+          const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+          const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+          fitElementsToScreen(boardElems, w, h);
+        } else if (data.viewport) {
+          setViewport(data.viewport);
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load shared board');
       } finally {
@@ -70,7 +108,23 @@ export default function PublicBoardSharePage() {
     };
 
     fetchSharedBoard();
-  }, [token]);
+  }, [token, fitElementsToScreen]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleBrowserFullscreen = () => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  };
 
   // ── Track Dimensions ──
   useEffect(() => {
@@ -154,7 +208,7 @@ export default function PublicBoardSharePage() {
     );
   }, [elements, viewport, canvasDimensions]);
 
-  // ── Render Infinite Dot Grid on Canvas Background ──
+  // ── Render Infinite Dot Grid on Canvas Background (Ultra-optimized) ──
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -170,19 +224,28 @@ export default function PublicBoardSharePage() {
     ctx.fillRect(0, 0, canvasDimensions.width, canvasDimensions.height);
 
     const zoom = viewport.zoom;
-    const gridSize = 20 * zoom;
-    const offsetX = ((viewport.x % gridSize) + gridSize) % gridSize;
-    const offsetY = ((viewport.y % gridSize) + gridSize) % gridSize;
+    if (zoom > 0.18) {
+      ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
+      const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
 
-    ctx.fillStyle = zoom > 0.4 ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)';
-    const dotRadius = Math.max(1, 1.2 * Math.min(zoom, 1.5));
-
-    for (let x = offsetX; x < canvasDimensions.width; x += gridSize) {
-      for (let y = offsetY; y < canvasDimensions.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
+      // Adaptive grid spacing (Miro style): dots never closer than 22px
+      let worldStep = 20;
+      while (worldStep * zoom < 22) {
+        worldStep *= 2;
       }
+      const step = worldStep * zoom;
+      const offsetX = ((viewport.x % step) + step) % step;
+      const offsetY = ((viewport.y % step) + step) % step;
+
+      // Single beginPath + single fill for 60fps rendering
+      ctx.beginPath();
+      for (let x = offsetX; x < canvasDimensions.width; x += step) {
+        for (let y = offsetY; y < canvasDimensions.height; y += step) {
+          ctx.moveTo(x + dotRadius, y);
+          ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+        }
+      }
+      ctx.fill();
     }
   }, [canvasDimensions, viewport]);
 
@@ -305,6 +368,14 @@ export default function PublicBoardSharePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleBrowserFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-black hover:bg-white/90 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+            title="Toggle Fullscreen"
+          >
+            <Maximize2 size={12} />
+            <span>{isFullscreen ? 'Exit Fullscreen' : 'Full Screen'}</span>
+          </button>
           <div className="px-2.5 py-1 rounded bg-white/10 text-white text-[11px] font-mono">Read-Only</div>
         </div>
       </header>
@@ -365,6 +436,8 @@ export default function PublicBoardSharePage() {
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: '0 0',
+          willChange: 'transform',
+          contain: 'layout style',
         }}
       >
         {visibleElements.map((element) => (
@@ -376,6 +449,7 @@ export default function PublicBoardSharePage() {
               width: element.width,
               height: element.height,
               zIndex: element.zIndex || 10,
+              transform: 'translateZ(0)',
             }}
             className="absolute pointer-events-auto rounded-lg shadow-lg"
           >
@@ -428,6 +502,7 @@ export default function PublicBoardSharePage() {
                   <img
                     src={element.url || (element.metadata as any)?.dataUrl || ''}
                     alt={element.title || 'Image'}
+                    loading="eager"
                     className="w-full h-full object-cover select-none"
                     onError={(e) => {
                       const fallback = (element.metadata as any)?.dataUrl;
@@ -445,22 +520,7 @@ export default function PublicBoardSharePage() {
                     <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
                     <span className="text-[10px] text-white/40 mt-1">Image unavailable</span>
                   </div>
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <a
-                      href={element.url || (element.metadata as any)?.dataUrl || '#'}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="p-1.5 rounded-full bg-black/70 hover:bg-black text-white hover:scale-105 transition-all"
-                    >
-                      <ExternalLink size={13} />
-                    </a>
-                  </div>
                 </div>
-                {element.title && (
-                  <div className="px-2.5 py-1.5 bg-[#141414] border-t border-white/5 text-[11px] text-[var(--text-secondary)] truncate">
-                    {element.title}
-                  </div>
-                )}
               </div>
             )}
 

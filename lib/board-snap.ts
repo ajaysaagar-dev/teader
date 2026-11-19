@@ -227,7 +227,7 @@ export function isImageLink(url: string): boolean {
   const lower = clean.toLowerCase();
   if (/\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(lower)) return true;
   if (/\/(images?|photos?|img|assets|uploads|pictures?)\/.*\.(png|jpe?g|webp|gif|svg|avif|bmp)/i.test(lower)) return true;
-  if (lower.includes('images.unsplash.com') || lower.includes('imgur.com') || lower.includes('wikimedia.org/wikipedia/commons')) return true;
+  if (lower.includes('images.unsplash.com') || lower.includes('imgur.com') || lower.includes('wikimedia.org/wikipedia/commons') || lower.includes('giphy.com') || lower.includes('tenor.com') || lower.includes('gfycat.com')) return true;
   if (/[?&](format|ext|type|mime)=(png|jpe?g|webp|gif|svg)/i.test(lower)) return true;
   return false;
 }
