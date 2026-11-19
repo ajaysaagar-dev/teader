@@ -230,6 +230,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const isInitialLoadedRef = useRef(false);
   const hasUnsavedChangesRef = useRef(false);
   hasUnsavedChangesRef.current = hasUnsavedChanges;
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
+  const connectionsRef = useRef(connections);
+  connectionsRef.current = connections;
+  const viewportRef = useRef(viewport);
+  viewportRef.current = viewport;
   const saveCurrentBoardRef = useRef<(newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => Promise<void>>(() => Promise.resolve());
 
   const pushHistory = useCallback((newElements: BoardElement[]) => {
@@ -476,14 +484,15 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const saveCurrentBoard = useCallback(async (newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => {
     if (!activeBoardId) return;
     lastLocalSaveRef.current = Date.now();
-    const elems = newElements ?? elements;
-    const grps = newGroups ?? groups;
-    const vport = newViewport ?? viewport;
+    const elems = newElements ?? elementsRef.current;
+    const grps = newGroups ?? groupsRef.current;
+    const vport = newViewport ?? viewportRef.current;
+    const conns = connectionsRef.current;
 
     const boardData = {
       elements: elems,
       groups: grps,
-      connections,
+      connections: conns,
       viewport: vport,
     };
 
@@ -504,14 +513,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [activeBoardId, elements, groups, connections, viewport, projectId]);
+  }, [activeBoardId, projectId]);
 
   // Keep saveCurrentBoardRef updated
   useEffect(() => {
     saveCurrentBoardRef.current = saveCurrentBoard;
   }, [saveCurrentBoard]);
 
-  // ── Automatic Debounced Auto-Saver on Board Changes ──
+  // ── Automatic Debounced Auto-Saver on Board Changes (resize, move, text, etc.) ──
   useEffect(() => {
     if (!activeBoardId || !isInitialLoadedRef.current) return;
     setHasUnsavedChanges(true);
@@ -521,8 +530,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     }
 
     autoSaveTimerRef.current = setTimeout(() => {
-      saveCurrentBoardRef.current();
-    }, 800);
+      saveCurrentBoardRef.current(elementsRef.current, groupsRef.current, viewportRef.current);
+    }, 600);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -1404,8 +1413,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
       isLocalMutatingRef.current = false;
-      pushHistory(elements);
-      saveCurrentBoard();
+      pushHistory(elementsRef.current);
+      saveCurrentBoard(elementsRef.current, groupsRef.current);
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -1496,8 +1505,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mouseup', handleWindowMouseUp);
       groupDragRef.current = null;
       isLocalMutatingRef.current = false;
-      pushHistory(elements);
-      saveCurrentBoard();
+      pushHistory(elementsRef.current);
+      saveCurrentBoard(elementsRef.current, groupsRef.current);
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -1574,7 +1583,9 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
       groupResizeRef.current = null;
-      saveCurrentBoard();
+      isLocalMutatingRef.current = false;
+      pushHistory(elementsRef.current);
+      saveCurrentBoard(elementsRef.current, groupsRef.current);
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -1858,6 +1869,18 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
       const isInput = activeTag === 'input' || activeTag === 'textarea' || (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // 0. Manual Save Shortcut (Ctrl+S / Cmd+S)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isInput && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        saveCurrentBoardRef.current(elementsRef.current, groupsRef.current, viewportRef.current);
+        toast.success('Board saved', { id: 'board-manual-save', duration: 1500 });
+        return;
+      }
 
       if (e.code === 'Space' && !isInput && !e.repeat) {
         isSpacePressedRef.current = true;
@@ -2249,8 +2272,29 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           </button>
         </div>
 
-        {/* Right: Public Link Share Button */}
+        {/* Right: Save Status & Public Link Share Button */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => {
+              saveCurrentBoard();
+              toast.success('Board saved', { id: 'board-manual-save', duration: 1500 });
+            }}
+            disabled={isSaving}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-all cursor-pointer border ${
+              isSaving
+                ? 'bg-white/10 text-white/50 border-white/10 cursor-wait'
+                : hasUnsavedChanges
+                ? 'bg-white/15 text-white border-white/30 hover:bg-white/25'
+                : 'bg-transparent text-white/60 border-white/10 hover:text-white hover:bg-white/10'
+            }`}
+            title="Save board (Ctrl+S)"
+          >
+            <Save size={12} className={isSaving ? 'animate-spin' : ''} />
+            <span className="text-[11px] font-mono">
+              {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save *' : 'Saved'}
+            </span>
+          </button>
+
           <button
             onClick={handleOpenShareModal}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white text-black hover:bg-white/90 text-xs font-semibold shadow-sm transition-all cursor-pointer"
