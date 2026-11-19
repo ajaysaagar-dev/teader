@@ -56,6 +56,12 @@ import {
   AlignCenter,
   AlignRight,
   Palette,
+  Circle,
+  Diamond,
+  Star,
+  Smile,
+  Tag,
+  LayoutTemplate,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -67,8 +73,9 @@ import {
   BoardFile,
   SnapGuide,
   BoardShareRecord,
+  ShapeKind,
 } from '@/types/board';
-import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
+import { isElementInViewport, computeSnapAlignment, computeResizeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { authFetch } from '@/lib/api-client';
@@ -193,7 +200,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   // ── Selection & Tools ──
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [activeTool, setActiveTool] = useState<'pointer' | 'hand'>('pointer');
+  const [activeTool, setActiveTool] = useState<'pointer' | 'hand' | 'sticky' | 'text' | 'shape' | 'connector' | 'frame'>('pointer');
+  const [selectedShapeKind, setSelectedShapeKind] = useState<ShapeKind>('rectangle');
+  const [isShapePickerOpen, setIsShapePickerOpen] = useState(false);
+  const [connectorStartId, setConnectorStartId] = useState<string | null>(null);
+  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [editingTagElementId, setEditingTagElementId] = useState<string | null>(null);
+  const [newTagText, setNewTagText] = useState('');
   const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [snapSettings, setSnapSettings] = useState({
     enabled: true,
@@ -242,7 +256,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   connectionsRef.current = connections;
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
-  const saveCurrentBoardRef = useRef<(newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => Promise<void>>(() => Promise.resolve());
+  const saveCurrentBoardRef = useRef<(newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport, newConnections?: BoardConnection[]) => Promise<void>>(() => Promise.resolve());
   const localBlobUrlsRef = useRef<Set<string>>(new Set());
 
   // Clean up object URLs on component unmount
@@ -498,13 +512,18 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   }, [loadBoards]);
 
   // ── Auto-save Board Data ──
-  const saveCurrentBoard = useCallback(async (newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => {
+  const saveCurrentBoard = useCallback(async (
+    newElements?: BoardElement[],
+    newGroups?: BoardGroup[],
+    newViewport?: BoardViewport,
+    newConnections?: BoardConnection[]
+  ) => {
     if (!activeBoardId) return;
     lastLocalSaveRef.current = Date.now();
     const elems = newElements ?? elementsRef.current;
     const grps = newGroups ?? groupsRef.current;
     const vport = newViewport ?? viewportRef.current;
-    const conns = connectionsRef.current;
+    const conns = newConnections ?? connectionsRef.current;
 
     const boardData = {
       elements: elems,
@@ -873,11 +892,74 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       return;
     }
 
-    if (e.button === 0 && e.target === canvasRef.current) {
+    if (connectorStartId) {
+      setConnectorStartId(null);
+    }
+
+    if (e.button === 0 && (e.target === canvasRef.current || e.target === containerRef.current)) {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const localX = e.clientX - rect.left;
       const localY = e.clientY - rect.top;
+
+      if (activeTool === 'sticky') {
+        const worldPos = screenToWorld(localX, localY);
+        const newElem: BoardElement = {
+          id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          type: 'sticky',
+          x: Math.round(worldPos.x - 100),
+          y: Math.round(worldPos.y - 75),
+          width: 220,
+          height: 160,
+          color: STICKY_COLORS[0].bg,
+          textColor: STICKY_COLORS[0].text,
+          title: 'Idea Note',
+          content: '',
+          fontSize: 14,
+          textAlign: 'left',
+        };
+        setElements((prev) => {
+          const next = [...prev, newElem];
+          pushHistory(next);
+          saveCurrentBoard(next);
+          return next;
+        });
+        setSelectedIds(new Set([newElem.id]));
+        setActiveTool('pointer');
+        return;
+      }
+
+      if (activeTool === 'shape') {
+        const worldPos = screenToWorld(localX, localY);
+        const w = selectedShapeKind === 'circle' ? 180 : selectedShapeKind === 'frame' ? 640 : 200;
+        const h = selectedShapeKind === 'circle' ? 180 : selectedShapeKind === 'frame' ? 420 : 120;
+        const newElem: BoardElement = {
+          id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          type: 'shape',
+          shapeKind: selectedShapeKind,
+          x: Math.round(worldPos.x - w / 2),
+          y: Math.round(worldPos.y - h / 2),
+          width: w,
+          height: h,
+          color: selectedShapeKind === 'frame' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.06)',
+          textColor: '#FFFFFF',
+          borderColor: selectedShapeKind === 'frame' ? 'rgba(255, 255, 255, 0.4)' : '#FFFFFF',
+          borderStyle: selectedShapeKind === 'frame' ? 'dashed' : 'solid',
+          title: selectedShapeKind === 'frame' ? 'Presentation Frame' : undefined,
+          content: selectedShapeKind === 'frame' ? '' : 'Shape text',
+          fontSize: 14,
+          textAlign: 'center',
+        };
+        setElements((prev) => {
+          const next = [...prev, newElem];
+          pushHistory(next);
+          saveCurrentBoard(next);
+          return next;
+        });
+        setSelectedIds(new Set([newElem.id]));
+        setActiveTool('pointer');
+        return;
+      }
 
       setMarqueeBox({
         startX: localX,
@@ -891,6 +973,36 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         setSelectedGroupId(null);
       }
     }
+  };
+
+  const handleCanvasDoubleClick = (e: React.MouseEvent) => {
+    if (e.target !== containerRef.current && e.target !== canvasRef.current) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    const mouseX = rect ? e.clientX - rect.left : canvasDimensions.width / 2;
+    const mouseY = rect ? e.clientY - rect.top : canvasDimensions.height / 2;
+    const worldPos = screenToWorld(mouseX, mouseY);
+
+    const newElem: BoardElement = {
+      id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      type: 'sticky',
+      x: Math.round(worldPos.x - 100),
+      y: Math.round(worldPos.y - 75),
+      width: 220,
+      height: 160,
+      color: STICKY_COLORS[0].bg,
+      textColor: STICKY_COLORS[0].text,
+      title: 'Idea Note',
+      content: '',
+      fontSize: 14,
+      textAlign: 'left',
+    };
+    setElements((prev) => {
+      const next = [...prev, newElem];
+      pushHistory(next);
+      saveCurrentBoard(next);
+      return next;
+    });
+    setSelectedIds(new Set([newElem.id]));
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -1257,6 +1369,38 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     if (e.button !== 0) return;
 
     e.stopPropagation();
+
+    // Connector tool interaction
+    if (activeTool === 'connector') {
+      if (!connectorStartId) {
+        setConnectorStartId(element.id);
+        toast.info(`Connected from "${element.title || element.type}". Click target element to complete connection.`);
+      } else if (connectorStartId !== element.id) {
+        const newConn: BoardConnection = {
+          id: `conn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          fromId: connectorStartId,
+          toId: element.id,
+          arrow: true,
+          color: '#8400FF',
+          style: 'solid',
+        };
+        const updated = [...connections, newConn];
+        setConnections(updated);
+        setConnectorStartId(null);
+        setActiveTool('pointer');
+        saveCurrentBoard(elements, groups, undefined, updated);
+        toast.success('Connection created');
+      }
+      return;
+    }
+
+    // Locked element interaction
+    if (element.locked) {
+      setSelectedIds(new Set([element.id]));
+      setSelectedGroupId(null);
+      return;
+    }
+
     isLocalMutatingRef.current = true;
 
     setSelectedGroupId(null);
@@ -1418,7 +1562,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // ── Element Resizing Engine ──
   const handleResizeMouseDown = (e: React.MouseEvent, element: BoardElement, handle: string) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || element.locked) return;
     e.stopPropagation();
     isLocalMutatingRef.current = true;
     const startX = e.clientX;
@@ -1437,17 +1581,41 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       let nextX = initX;
       let nextY = initY;
 
-      if (handle.includes('e')) nextW = Math.max(100, initW + dx);
-      if (handle.includes('s')) nextH = Math.max(60, initH + dy);
+      if (handle.includes('e')) nextW = Math.max(element.type === 'shape' ? 40 : 80, initW + dx);
+      if (handle.includes('s')) nextH = Math.max(element.type === 'shape' ? 40 : 50, initH + dy);
       if (handle.includes('w')) {
-        const potentialW = Math.max(100, initW - dx);
+        const potentialW = Math.max(element.type === 'shape' ? 40 : 80, initW - dx);
         nextX = initX + (initW - potentialW);
         nextW = potentialW;
       }
       if (handle.includes('n')) {
-        const potentialH = Math.max(60, initH - dy);
+        const potentialH = Math.max(element.type === 'shape' ? 40 : 50, initH - dy);
         nextY = initY + (initH - potentialH);
         nextH = potentialH;
+      }
+
+      if (snapSettings.enabled) {
+        const otherElements = elementsRef.current.filter((el) => el.id !== element.id);
+        const snapped = computeResizeSnapAlignment(
+          { x: nextX, y: nextY, width: nextW, height: nextH },
+          handle,
+          otherElements,
+          {
+            snapThreshold: snapSettings.snapThreshold,
+            zoom: viewport.zoom,
+            snapToGrid: snapSettings.snapToGrid,
+            gridSize: snapSettings.gridSize,
+            minWidth: element.type === 'shape' ? 40 : 80,
+            minHeight: element.type === 'shape' ? 40 : 50,
+          }
+        );
+        nextX = snapped.x;
+        nextY = snapped.y;
+        nextW = snapped.width;
+        nextH = snapped.height;
+        setSnapGuides(snapped.guides);
+      } else {
+        setSnapGuides([]);
       }
 
       setElements((prev) =>
@@ -1459,6 +1627,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
       isLocalMutatingRef.current = false;
+      setSnapGuides([]);
       pushHistory(elementsRef.current);
       saveCurrentBoard(elementsRef.current, groupsRef.current);
     };
@@ -1762,6 +1931,204 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     setSelectedIds(new Set([newElem.id]));
   };
 
+  // ── Shape Elements Engine (Miro Shapes) ──
+  const addShapeElement = (shapeKind: ShapeKind = 'rectangle') => {
+    const worldCenter = screenToWorld(
+      (containerRef.current?.clientWidth || 1000) / 2,
+      (containerRef.current?.clientHeight || 700) / 2
+    );
+    const w = shapeKind === 'circle' ? 180 : shapeKind === 'frame' ? 640 : 200;
+    const h = shapeKind === 'circle' ? 180 : shapeKind === 'frame' ? 420 : 120;
+    const newElem: BoardElement = {
+      id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      type: 'shape',
+      shapeKind,
+      x: Math.round(worldCenter.x - w / 2),
+      y: Math.round(worldCenter.y - h / 2),
+      width: w,
+      height: h,
+      color: shapeKind === 'frame' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.06)',
+      textColor: '#FFFFFF',
+      borderColor: shapeKind === 'frame' ? 'rgba(255, 255, 255, 0.4)' : '#FFFFFF',
+      borderStyle: shapeKind === 'frame' ? 'dashed' : 'solid',
+      title: shapeKind === 'frame' ? 'Presentation Frame' : undefined,
+      content: shapeKind === 'frame' ? '' : 'Shape text',
+      fontSize: 14,
+      textAlign: 'center',
+    };
+    setElements((prev) => {
+      const next = [...prev, newElem];
+      pushHistory(next);
+      saveCurrentBoard(next);
+      return next;
+    });
+    setSelectedIds(new Set([newElem.id]));
+    toast.success(`Added ${shapeKind} shape`);
+  };
+
+  // ── Duplication, Lock, and Layer Stacking Engines ──
+  const handleDuplicateSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    const targets = elements.filter((el) => selectedIds.has(el.id));
+    const offset = 24;
+    const duplicated = targets.map((el) => ({
+      ...el,
+      id: `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      x: el.x + offset,
+      y: el.y + offset,
+      groupId: undefined,
+    }));
+    setElements((prev) => {
+      const next = [...prev, ...duplicated];
+      pushHistory(next);
+      saveCurrentBoard(next);
+      return next;
+    });
+    setSelectedIds(new Set(duplicated.map((el) => el.id)));
+    toast.success(`Duplicated ${duplicated.length} element${duplicated.length > 1 ? 's' : ''}`);
+  }, [elements, selectedIds, pushHistory, saveCurrentBoard]);
+
+  const handleToggleLockSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setElements((prev) => {
+      const isAnyUnlocked = Array.from(selectedIds).some((id) => !prev.find((e) => e.id === id)?.locked);
+      const next = prev.map((el) =>
+        selectedIds.has(el.id) ? { ...el, locked: isAnyUnlocked } : el
+      );
+      pushHistory(next);
+      saveCurrentBoard(next);
+      toast.info(isAnyUnlocked ? 'Element(s) locked' : 'Element(s) unlocked');
+      return next;
+    });
+  }, [selectedIds, pushHistory, saveCurrentBoard]);
+
+  const handleBringToFront = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setElements((prev) => {
+      const maxZ = Math.max(...prev.map((e) => e.zIndex || 10), 10);
+      const next = prev.map((el) =>
+        selectedIds.has(el.id) ? { ...el, zIndex: maxZ + 1 } : el
+      );
+      pushHistory(next);
+      saveCurrentBoard(next);
+      return next;
+    });
+    toast.info('Brought to front');
+  }, [selectedIds, pushHistory, saveCurrentBoard]);
+
+  const handleSendToBack = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    setElements((prev) => {
+      const minZ = Math.min(...prev.map((e) => e.zIndex || 10), 10);
+      const next = prev.map((el) =>
+        selectedIds.has(el.id) ? { ...el, zIndex: Math.max(1, minZ - 1) } : el
+      );
+      pushHistory(next);
+      saveCurrentBoard(next);
+      return next;
+    });
+    toast.info('Sent to back');
+  }, [selectedIds, pushHistory, saveCurrentBoard]);
+
+  // ── Export Board snapshot (PNG & JSON) ──
+  const handleExportJSON = () => {
+    const currentTitle = boards.find((b) => b.id === activeBoardId)?.title || 'board';
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify({
+      title: currentTitle,
+      elements,
+      groups,
+      connections,
+      viewport,
+      exportedAt: new Date().toISOString(),
+    }, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = `${currentTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-backup.json`;
+    a.click();
+    toast.success('Board exported to JSON');
+  };
+
+  const handleExportPNG = () => {
+    if (elements.length === 0) {
+      toast.info('Canvas is empty');
+      return;
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const el of elements) {
+      minX = Math.min(minX, el.x);
+      minY = Math.min(minY, el.y);
+      maxX = Math.max(maxX, el.x + el.width);
+      maxY = Math.max(maxY, el.y + el.height);
+    }
+    const pad = 60;
+    const exportW = Math.max(800, (maxX - minX) + pad * 2);
+    const exportH = Math.max(600, (maxY - minY) + pad * 2);
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = exportW * 2;
+    offscreen.height = exportH * 2;
+    const ctx = offscreen.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(2, 2);
+
+    ctx.fillStyle = '#0F0F0F';
+    ctx.fillRect(0, 0, exportW, exportH);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    for (let x = 0; x < exportW; x += 20) {
+      for (let y = 0; y < exportH; y += 20) {
+        ctx.beginPath();
+        ctx.arc(x, y, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const offsetX = pad - minX;
+    const offsetY = pad - minY;
+
+    for (const el of elements) {
+      const ex = el.x + offsetX;
+      const ey = el.y + offsetY;
+      ctx.fillStyle = el.color || '#FFFFFF';
+      ctx.strokeStyle = el.borderColor || 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 2;
+
+      if (el.type === 'sticky') {
+        ctx.fillStyle = el.color || '#FFFFFF';
+        ctx.fillRect(ex, ey, el.width, el.height);
+        ctx.fillStyle = el.textColor || '#000000';
+        ctx.font = `${el.fontSize || 12}px sans-serif`;
+        const lines = (el.content || '').split('\n').slice(0, 8);
+        lines.forEach((line, i) => {
+          ctx.fillText(line, ex + 12, ey + 30 + i * 18);
+        });
+      } else if (el.type === 'shape') {
+        if (el.shapeKind === 'circle') {
+          ctx.beginPath();
+          ctx.arc(ex + el.width / 2, ey + el.height / 2, Math.min(el.width, el.height) / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.fillRect(ex, ey, el.width, el.height);
+          ctx.strokeRect(ex, ey, el.width, el.height);
+        }
+        ctx.fillStyle = el.textColor || '#FFFFFF';
+        ctx.font = `${el.fontSize || 14}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(el.content || '', ex + el.width / 2, ey + el.height / 2 + 5);
+        ctx.textAlign = 'left';
+      }
+    }
+
+    const url = offscreen.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    const currentTitle = boards.find((b) => b.id === activeBoardId)?.title || 'board';
+    a.download = `${currentTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.png`;
+    a.click();
+    toast.success('Exported high-res PNG snapshot');
+  };
+
   const handleMediaUploadClick = (type: 'image' | 'audio' | 'video') => {
     if (fileInputRef.current) {
       if (type === 'image') fileInputRef.current.accept = 'image/*';
@@ -1988,6 +2355,44 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       if (e.shiftKey && e.key === '1') {
         e.preventDefault();
         handleFitView();
+      }
+
+      // Duplicate elements (Ctrl+D / Cmd+D)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && selectedIds.size > 0) {
+        e.preventDefault();
+        handleDuplicateSelected();
+        return;
+      }
+
+      // Lock / Unlock elements (Ctrl+L / Cmd+L)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'l' && selectedIds.size > 0) {
+        e.preventDefault();
+        handleToggleLockSelected();
+        return;
+      }
+
+      // Bring to front (Ctrl+])
+      if ((e.ctrlKey || e.metaKey) && e.key === ']' && selectedIds.size > 0) {
+        e.preventDefault();
+        handleBringToFront();
+        return;
+      }
+
+      // Send to back (Ctrl+[)
+      if ((e.ctrlKey || e.metaKey) && e.key === '[' && selectedIds.size > 0) {
+        e.preventDefault();
+        handleSendToBack();
+        return;
+      }
+
+      // Single key tool shortcuts (when not editing text)
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+        if (e.key.toLowerCase() === 'v') setActiveTool('pointer');
+        else if (e.key.toLowerCase() === 'h') setActiveTool('hand');
+        else if (e.key.toLowerCase() === 'c') {
+          setActiveTool('connector');
+          toast.info('Connector tool active: click two elements to connect');
+        }
       }
 
       // Copy selected elements (Ctrl+C)
@@ -2517,6 +2922,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          onDoubleClick={handleCanvasDoubleClick}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           className={`flex-1 relative w-full h-full overflow-hidden select-none bg-[#0F0F0F] ${
@@ -2658,14 +3064,111 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                         backgroundColor: element.color || '#FFFFFF',
                         color: element.textColor || '#000000',
                       }}
-                      className="w-full h-full p-3.5 rounded-lg shadow-lg flex flex-col justify-between overflow-hidden relative"
+                      className="w-full h-full p-3 rounded-lg shadow-lg flex flex-col justify-between overflow-hidden relative group/note"
                     >
-                      <div className="flex items-center justify-between gap-1 pb-1 border-b border-black/10">
-                        <span className="font-medium text-xs truncate select-none opacity-80">
-                          {element.title || 'Note'}
-                        </span>
-                        <StickyIcon size={12} className="opacity-40 shrink-0" />
+                      {/* Note Header: Title, Inline Font Stepper, Quick Colors, and Lock */}
+                      <div className="flex items-center justify-between gap-1 pb-1.5 border-b border-black/10 select-none">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
+                          {editingTitleId === element.id ? (
+                            <input
+                              type="text"
+                              value={element.title || ''}
+                              autoFocus
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === element.id ? { ...el, title: val } : el))
+                                );
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === 'Escape') {
+                                  setEditingTitleId(null);
+                                  saveCurrentBoard();
+                                }
+                              }}
+                              onBlur={() => {
+                                setEditingTitleId(null);
+                                saveCurrentBoard();
+                              }}
+                              className="font-semibold text-xs bg-black/10 rounded px-1 outline-none w-full text-black"
+                            />
+                          ) : (
+                            <span
+                              onClick={() => setEditingTitleId(element.id)}
+                              className="font-semibold text-xs truncate cursor-text opacity-90 hover:opacity-100 hover:underline"
+                              title="Click to rename note"
+                            >
+                              {element.title || 'Note'}
+                            </span>
+                          )}
+                          {element.locked && (
+                            <span title="Element locked" className="inline-flex items-center">
+                              <Lock size={11} className="opacity-60 shrink-0 ml-0.5" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Inline Font Size Stepper directly in sticky note */}
+                        <div className="flex items-center gap-0.5 bg-black/10 rounded px-1 py-0.5 text-[10px] shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cur = element.fontSize || 14;
+                              const nextSize = Math.max(10, cur - 2);
+                              setElements((prev) =>
+                                prev.map((el) => (el.id === element.id ? { ...el, fontSize: nextSize } : el))
+                              );
+                              saveCurrentBoard();
+                            }}
+                            className="px-1 font-bold hover:bg-black/10 rounded cursor-pointer leading-none"
+                            title="Decrease font size (-2)"
+                          >
+                            -
+                          </button>
+                          <span className="font-mono text-[9px] min-w-[14px] text-center leading-none opacity-80">
+                            {element.fontSize || 14}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const cur = element.fontSize || 14;
+                              const nextSize = Math.min(36, cur + 2);
+                              setElements((prev) =>
+                                prev.map((el) => (el.id === element.id ? { ...el, fontSize: nextSize } : el))
+                              );
+                              saveCurrentBoard();
+                            }}
+                            className="px-1 font-bold hover:bg-black/10 rounded cursor-pointer leading-none"
+                            title="Increase font size (+2)"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* Quick Color Swatches */}
+                        <div className="opacity-0 group-hover/note:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                          {STICKY_COLORS.slice(0, 4).map((c) => (
+                            <button
+                              key={c.name}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === element.id ? { ...el, color: c.bg, textColor: c.text } : el))
+                                );
+                                saveCurrentBoard();
+                              }}
+                              style={{ backgroundColor: c.bg }}
+                              className="w-2.5 h-2.5 rounded-full border border-black/30 hover:scale-125 transition-transform"
+                              title={c.name}
+                            />
+                          ))}
+                        </div>
                       </div>
+
+                      {/* Main Note Body Text */}
                       <textarea
                         value={element.content || ''}
                         onFocus={() => {
@@ -2684,13 +3187,113 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                         placeholder="Type notes..."
                         style={{
                           color: element.textColor || '#000000',
-                          fontSize: element.fontSize ? `${element.fontSize}px` : '12px',
+                          fontSize: element.fontSize ? `${element.fontSize}px` : '14px',
                           fontWeight: element.fontWeight || 'normal',
                           fontStyle: element.fontStyle || 'normal',
                           textAlign: element.textAlign || 'left',
                         }}
-                        className="flex-1 w-full bg-transparent resize-none outline-none leading-relaxed mt-2 placeholder-black/30 font-sans"
+                        className="flex-1 w-full bg-transparent resize-none outline-none leading-relaxed my-1.5 placeholder-black/30 font-sans"
                       />
+
+                      {/* Note Footer: Category Tags & Reactions */}
+                      <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-black/10 text-[10px]">
+                        {(element.tags || []).map((t, idx) => (
+                          <span
+                            key={idx}
+                            className="px-1.5 py-0.5 rounded bg-black/10 text-black/80 font-mono text-[9px] flex items-center gap-1 select-none"
+                          >
+                            <span>{t}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const nextTags = (element.tags || []).filter((_, i) => i !== idx);
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === element.id ? { ...el, tags: nextTags } : el))
+                                );
+                                saveCurrentBoard();
+                              }}
+                              className="opacity-50 hover:opacity-100 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+
+                        {editingTagElementId === element.id ? (
+                          <input
+                            type="text"
+                            value={newTagText}
+                            autoFocus
+                            onChange={(e) => setNewTagText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && newTagText.trim()) {
+                                e.preventDefault();
+                                const nextTags = [...(element.tags || []), newTagText.trim()];
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === element.id ? { ...el, tags: nextTags } : el))
+                                );
+                                saveCurrentBoard();
+                                setNewTagText('');
+                                setEditingTagElementId(null);
+                              } else if (e.key === 'Escape') {
+                                setEditingTagElementId(null);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (newTagText.trim()) {
+                                const nextTags = [...(element.tags || []), newTagText.trim()];
+                                setElements((prev) =>
+                                  prev.map((el) => (el.id === element.id ? { ...el, tags: nextTags } : el))
+                                );
+                                saveCurrentBoard();
+                              }
+                              setNewTagText('');
+                              setEditingTagElementId(null);
+                            }}
+                            placeholder="tag..."
+                            className="w-14 bg-black/10 rounded px-1 text-[9px] font-mono outline-none text-black"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTagElementId(element.id);
+                              setNewTagText('');
+                            }}
+                            className="px-1 py-0.5 rounded text-[9px] font-mono opacity-50 hover:opacity-100 hover:bg-black/10 transition-opacity"
+                            title="Add Tag"
+                          >
+                            + tag
+                          </button>
+                        )}
+
+                        {/* Quick Reaction Stickers */}
+                        <div className="ml-auto flex items-center gap-1 opacity-40 hover:opacity-100 transition-opacity">
+                          {['👍', '❤️', '🔥'].map((emoji) => {
+                            const count = (element.reactions || {})[emoji] || 0;
+                            return (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const nextReactions = { ...(element.reactions || {}), [emoji]: count + 1 };
+                                  setElements((prev) =>
+                                    prev.map((el) => (el.id === element.id ? { ...el, reactions: nextReactions } : el))
+                                  );
+                                  saveCurrentBoard();
+                                }}
+                                className="text-[10px] hover:scale-125 transition-transform cursor-pointer"
+                                title={`React ${emoji}`}
+                              >
+                                {emoji}{count > 0 ? count : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -2720,6 +3323,64 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                           textAlign: element.textAlign || 'left',
                         }}
                         className="w-full h-full bg-transparent resize-none outline-none leading-snug font-sans"
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. SHAPE CARD (Miro Geometric Shapes) */}
+                  {element.type === 'shape' && (
+                    <div
+                      style={{
+                        backgroundColor: element.color || 'rgba(255, 255, 255, 0.06)',
+                        borderColor: element.borderColor || '#FFFFFF',
+                        borderStyle: element.borderStyle || 'solid',
+                        color: element.textColor || '#FFFFFF',
+                      }}
+                      className={`w-full h-full flex flex-col justify-center items-center p-3 relative overflow-hidden transition-all shadow-md ${
+                        element.shapeKind === 'rounded'
+                          ? 'rounded-3xl border-2'
+                          : element.shapeKind === 'circle'
+                          ? 'rounded-full border-2'
+                          : element.shapeKind === 'card'
+                          ? 'rounded-xl border bg-[#171717]'
+                          : element.shapeKind === 'frame'
+                          ? 'rounded-lg border-2 border-dashed bg-white/[0.02]'
+                          : element.shapeKind === 'diamond'
+                          ? 'rounded-md border-2 rotate-45 scale-75'
+                          : 'rounded-md border-2'
+                      }`}
+                    >
+                      {element.shapeKind === 'frame' && (
+                        <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[10px] font-mono text-white/80 rounded-br border-b border-r border-white/20 select-none">
+                          {element.title || 'Frame'}
+                        </div>
+                      )}
+
+                      <textarea
+                        value={element.content || ''}
+                        onFocus={() => {
+                          isLocalMutatingRef.current = true;
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setElements((prev) =>
+                            prev.map((el) => (el.id === element.id ? { ...el, content: val } : el))
+                          );
+                        }}
+                        onBlur={() => {
+                          isLocalMutatingRef.current = false;
+                          saveCurrentBoard();
+                        }}
+                        placeholder={element.shapeKind === 'frame' ? '' : 'Type text...'}
+                        style={{
+                          color: element.textColor || '#FFFFFF',
+                          fontSize: element.fontSize ? `${element.fontSize}px` : '14px',
+                          fontWeight: element.fontWeight || 'normal',
+                          fontStyle: element.fontStyle || 'normal',
+                          textAlign: element.textAlign || 'center',
+                          transform: element.shapeKind === 'diamond' ? 'rotate(-45deg)' : 'none',
+                        }}
+                        className="w-full bg-transparent resize-none outline-none leading-relaxed text-center placeholder-white/30 font-sans"
                       />
                     </div>
                   )}
@@ -2916,8 +3577,18 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                     </a>
                   )}
 
+                  {/* Connector Anchor Points */}
+                  {activeTool === 'connector' && (
+                    <>
+                      <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#8400FF] border-2 border-white z-50 animate-pulse pointer-events-none" />
+                      <div className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 rounded-full bg-[#8400FF] border-2 border-white z-50 animate-pulse pointer-events-none" />
+                      <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-[#8400FF] border-2 border-white z-50 animate-pulse pointer-events-none" />
+                      <div className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 rounded-full bg-[#8400FF] border-2 border-white z-50 animate-pulse pointer-events-none" />
+                    </>
+                  )}
+
                   {/* 8-Point Resize Handles */}
-                  {isSelected && (
+                  {isSelected && !element.locked && (
                     <>
                       <div
                         onMouseDown={(e) => handleResizeMouseDown(e, element, 'nw')}
@@ -2936,12 +3607,20 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                         className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-white rounded-sm cursor-nesw-resize z-50 shadow"
                       />
                       <div
-                        onMouseDown={(e) => handleResizeMouseDown(e, element, 'e')}
-                        className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-2 h-4 bg-white border border-white rounded-xs cursor-ew-resize z-50 shadow"
+                        onMouseDown={(e) => handleResizeMouseDown(e, element, 'n')}
+                        className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-2 bg-white border border-white rounded-xs cursor-ns-resize z-50 shadow"
                       />
                       <div
                         onMouseDown={(e) => handleResizeMouseDown(e, element, 's')}
                         className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-2 bg-white border border-white rounded-xs cursor-ns-resize z-50 shadow"
+                      />
+                      <div
+                        onMouseDown={(e) => handleResizeMouseDown(e, element, 'e')}
+                        className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-2 h-4 bg-white border border-white rounded-xs cursor-ew-resize z-50 shadow"
+                      />
+                      <div
+                        onMouseDown={(e) => handleResizeMouseDown(e, element, 'w')}
+                        className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-2 h-4 bg-white border border-white rounded-xs cursor-ew-resize z-50 shadow"
                       />
                     </>
                   )}
@@ -2976,16 +3655,83 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             <button
               onClick={() => addStickyNote(STICKY_COLORS[0])}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-white/10 text-xs text-white transition-colors cursor-pointer"
-              title="Add Sticky Note"
+              title="Add Sticky Note (S)"
             >
               <StickyIcon size={14} className="text-white" />
               <span>Sticky</span>
             </button>
 
+            {/* Shapes Dropdown (Miro Shapes) */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  if (activeTool === 'shape') {
+                    setIsShapePickerOpen((prev) => !prev);
+                  } else {
+                    setActiveTool('shape');
+                    setIsShapePickerOpen(true);
+                  }
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                  activeTool === 'shape' ? 'bg-white/20 text-white font-medium' : 'hover:bg-white/10 text-white'
+                }`}
+                title="Add Geometric Shape (Rectangle, Circle, Diamond, Frame)"
+              >
+                <Square size={14} className="text-white" />
+                <span>Shape</span>
+              </button>
+
+              {isShapePickerOpen && (
+                <div className="absolute top-full left-0 mt-1 p-1.5 bg-[#171717] border border-white/15 rounded-lg shadow-2xl flex items-center gap-1 z-50">
+                  {[
+                    { kind: 'rectangle' as const, label: 'Rect', icon: Square },
+                    { kind: 'rounded' as const, label: 'Round', icon: LayoutTemplate },
+                    { kind: 'circle' as const, label: 'Circle', icon: Circle },
+                    { kind: 'diamond' as const, label: 'Diamond', icon: Diamond },
+                    { kind: 'frame' as const, label: 'Frame', icon: Maximize2 },
+                  ].map((s) => (
+                    <button
+                      key={s.kind}
+                      onClick={() => {
+                        setSelectedShapeKind(s.kind);
+                        setIsShapePickerOpen(false);
+                        addShapeElement(s.kind);
+                      }}
+                      className="p-1.5 rounded hover:bg-white/20 text-white transition-colors flex items-center gap-1 text-[11px]"
+                      title={`Add ${s.label}`}
+                    >
+                      <s.icon size={13} />
+                      <span>{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Connector Arrow Tool */}
+            <button
+              onClick={() => {
+                if (activeTool === 'connector') {
+                  setActiveTool('pointer');
+                  setConnectorStartId(null);
+                } else {
+                  setActiveTool('connector');
+                  toast.info('Click element A then element B to connect');
+                }
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors cursor-pointer ${
+                activeTool === 'connector' ? 'bg-[#8400FF] text-white font-medium shadow' : 'hover:bg-white/10 text-white'
+              }`}
+              title="Connection Arrow tool (C): click element A then element B"
+            >
+              <ArrowRight size={14} />
+              <span>Connect</span>
+            </button>
+
             <button
               onClick={addTextElement}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-white/10 text-xs text-white transition-colors cursor-pointer"
-              title="Add Text Card"
+              title="Add Text Card (T)"
             >
               <Type size={14} className="text-white" />
               <span>Text</span>
@@ -3029,6 +3775,25 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             >
               <Magnet size={14} />
               <span>Snap</span>
+            </button>
+
+            <div className="w-[1px] h-5 bg-white/10 mx-1" />
+
+            {/* Export Snapshot Buttons */}
+            <button
+              onClick={handleExportPNG}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-white/10 text-xs text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Export Snapshot as High-Res PNG"
+            >
+              <Download size={13} />
+              <span>PNG</span>
+            </button>
+            <button
+              onClick={handleExportJSON}
+              className="flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-white/10 text-xs text-white/80 hover:text-white transition-colors cursor-pointer"
+              title="Export Full Board JSON Backup"
+            >
+              <span>JSON</span>
             </button>
           </div>
 
@@ -3285,6 +4050,46 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
                 <div className="w-[1px] h-4 bg-white/15 mx-1" />
 
+                {/* Duplicate */}
+                <button
+                  onClick={handleDuplicateSelected}
+                  className="p-1.5 rounded hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  title="Duplicate (Ctrl+D)"
+                >
+                  <Copy size={13} />
+                </button>
+
+                {/* Lock / Unlock */}
+                <button
+                  onClick={handleToggleLockSelected}
+                  className="p-1.5 rounded hover:bg-white/15 text-white/80 hover:text-white transition-colors cursor-pointer"
+                  title={Array.from(selectedIds).some((id) => elements.find((e) => e.id === id)?.locked) ? "Unlock (Ctrl+L)" : "Lock (Ctrl+L)"}
+                >
+                  {Array.from(selectedIds).some((id) => elements.find((e) => e.id === id)?.locked) ? (
+                    <Lock size={13} className="text-[#8400FF]" />
+                  ) : (
+                    <Unlock size={13} />
+                  )}
+                </button>
+
+                {/* Layer Stacking */}
+                <button
+                  onClick={handleBringToFront}
+                  className="px-1.5 py-1 rounded hover:bg-white/15 text-[10px] font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  title="Bring to Front (Ctrl+])"
+                >
+                  Front
+                </button>
+                <button
+                  onClick={handleSendToBack}
+                  className="px-1.5 py-1 rounded hover:bg-white/15 text-[10px] font-mono text-white/70 hover:text-white transition-colors cursor-pointer"
+                  title="Send to Back (Ctrl+[)"
+                >
+                  Back
+                </button>
+
+                <div className="w-[1px] h-4 bg-white/15 mx-1" />
+
                 <button
                   onClick={() => {
                     const next = elements.filter((el) => !selectedIds.has(el.id));
@@ -3317,6 +4122,99 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             </div>
           </div>
 
+          {/* Interactive Minimap Radar */}
+          {isMinimapOpen && (
+            <div className="absolute bottom-16 right-4 z-40 p-2.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-xl shadow-2xl flex flex-col gap-1.5 select-none">
+              <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] border-b border-white/10 pb-1">
+                <span>Minimap Radar</span>
+                <button
+                  onClick={() => setIsMinimapOpen(false)}
+                  className="hover:text-white cursor-pointer px-1 text-xs"
+                >
+                  ✕
+                </button>
+              </div>
+              <div
+                className="w-[180px] h-[120px] bg-black/50 border border-white/10 rounded relative overflow-hidden cursor-crosshair select-none"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const clickY = e.clientY - rect.top;
+                  let minX = -800, minY = -600, maxX = 1800, maxY = 1400;
+                  if (elements.length > 0) {
+                    minX = Math.min(...elements.map((el) => el.x)) - 200;
+                    minY = Math.min(...elements.map((el) => el.y)) - 200;
+                    maxX = Math.max(...elements.map((el) => el.x + el.width)) + 200;
+                    maxY = Math.max(...elements.map((el) => el.y + el.height)) + 200;
+                  }
+                  const worldW = Math.max(100, maxX - minX);
+                  const worldH = Math.max(100, maxY - minY);
+                  const targetWorldX = minX + (clickX / 180) * worldW;
+                  const targetWorldY = minY + (clickY / 120) * worldH;
+                  const screenW = containerRef.current?.clientWidth || 1000;
+                  const screenH = containerRef.current?.clientHeight || 700;
+                  setViewport((prev) => ({
+                    ...prev,
+                    x: Math.round(screenW / 2 - targetWorldX * prev.zoom),
+                    y: Math.round(screenH / 2 - targetWorldY * prev.zoom),
+                  }));
+                }}
+              >
+                {(() => {
+                  let minX = -800, minY = -600, maxX = 1800, maxY = 1400;
+                  if (elements.length > 0) {
+                    minX = Math.min(...elements.map((el) => el.x)) - 200;
+                    minY = Math.min(...elements.map((el) => el.y)) - 200;
+                    maxX = Math.max(...elements.map((el) => el.x + el.width)) + 200;
+                    maxY = Math.max(...elements.map((el) => el.y + el.height)) + 200;
+                  }
+                  const worldW = Math.max(100, maxX - minX);
+                  const worldH = Math.max(100, maxY - minY);
+
+                  const screenW = containerRef.current?.clientWidth || 1000;
+                  const screenH = containerRef.current?.clientHeight || 700;
+                  const vLeftWorld = -viewport.x / viewport.zoom;
+                  const vTopWorld = -viewport.y / viewport.zoom;
+                  const vWidthWorld = screenW / viewport.zoom;
+                  const vHeightWorld = screenH / viewport.zoom;
+
+                  const vx = ((vLeftWorld - minX) / worldW) * 180;
+                  const vy = ((vTopWorld - minY) / worldH) * 120;
+                  const vw = (vWidthWorld / worldW) * 180;
+                  const vh = (vHeightWorld / worldH) * 120;
+
+                  return (
+                    <>
+                      {elements.map((el) => {
+                        const ex = ((el.x - minX) / worldW) * 180;
+                        const ey = ((el.y - minY) / worldH) * 120;
+                        const ew = Math.max(2, (el.width / worldW) * 180);
+                        const eh = Math.max(2, (el.height / worldH) * 120);
+                        return (
+                          <div
+                            key={el.id}
+                            style={{ left: ex, top: ey, width: ew, height: eh, backgroundColor: el.color || '#FFFFFF' }}
+                            className="absolute rounded-xs opacity-60 pointer-events-none"
+                          />
+                        );
+                      })}
+                      {/* Viewport Frame Box */}
+                      <div
+                        style={{
+                          left: Math.max(0, vx),
+                          top: Math.max(0, vy),
+                          width: Math.min(180, Math.max(8, vw)),
+                          height: Math.min(120, Math.max(8, vh)),
+                        }}
+                        className="absolute border border-white bg-white/10 rounded-xs pointer-events-none shadow"
+                      />
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+
           {/* Floating Bottom Right: Zoom & Navigation Controls */}
           <div className="absolute bottom-4 right-4 z-40 flex items-center gap-1 p-1 bg-[#171717]/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
             <button
@@ -3334,7 +4232,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
               {Math.round(viewport.zoom * 100)}%
             </span>
             <button
-              onClick={() => setViewport((prev) => ({ ...prev, zoom: Math.min(4.0, prev.zoom + 0.15) }))}
+              onClick={() => setViewport((prev) => ({ ...prev, zoom: Math.min(5.0, prev.zoom + 0.15) }))}
               className="p-1.5 rounded hover:bg-white/10 text-white transition-colors cursor-pointer"
               title="Zoom In"
             >
@@ -3347,6 +4245,16 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
               title="Fit to Content (Shift+1)"
             >
               <Maximize2 size={14} />
+            </button>
+            <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
+            <button
+              onClick={() => setIsMinimapOpen((prev) => !prev)}
+              className={`p-1.5 rounded transition-colors cursor-pointer ${
+                isMinimapOpen ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+              }`}
+              title="Toggle Minimap Radar"
+            >
+              <Grid size={14} />
             </button>
           </div>
         </div>

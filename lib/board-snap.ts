@@ -1,4 +1,4 @@
-import { BoardElement, BoardGroup, BoardViewport, SnapGuide, SnapResult } from '@/types/board';
+import { BoardElement, BoardGroup, BoardViewport, SnapGuide, SnapResult, ResizeSnapResult } from '@/types/board';
 
 /**
  * Axis-Aligned Bounding Box (AABB) intersection check with configurable buffer margin.
@@ -207,6 +207,200 @@ export function computeSnapAlignment(
   return {
     x: snappedX,
     y: snappedY,
+    guides,
+  };
+}
+
+/**
+ * Magnetic snap alignment during element resize.
+ * Snaps moving edges (left, right, top, bottom) to grid, sibling element edges,
+ * and matches equal widths / equal heights of nearby elements.
+ */
+export function computeResizeSnapAlignment(
+  candidateBox: { x: number; y: number; width: number; height: number },
+  handle: string,
+  targetElements: { id: string; x: number; y: number; width: number; height: number }[],
+  options: {
+    snapThreshold?: number;
+    zoom?: number;
+    snapToGrid?: boolean;
+    gridSize?: number;
+    minWidth?: number;
+    minHeight?: number;
+  } = {}
+): ResizeSnapResult {
+  const {
+    snapThreshold = 8,
+    zoom = 1,
+    snapToGrid = false,
+    gridSize = 20,
+    minWidth = 60,
+    minHeight = 40,
+  } = options;
+
+  let nextX = candidateBox.x;
+  let nextY = candidateBox.y;
+  let nextW = Math.max(minWidth, candidateBox.width);
+  let nextH = Math.max(minHeight, candidateBox.height);
+
+  const guides: SnapGuide[] = [];
+  const thresholdInWorld = snapThreshold / Math.max(0.1, zoom);
+
+  // 1. Grid snap
+  if (snapToGrid && gridSize > 0) {
+    if (handle.includes('e')) {
+      const right = nextX + nextW;
+      const snappedRight = Math.round(right / gridSize) * gridSize;
+      nextW = Math.max(minWidth, snappedRight - nextX);
+    }
+    if (handle.includes('w')) {
+      const right = nextX + nextW;
+      const snappedLeft = Math.round(nextX / gridSize) * gridSize;
+      nextW = Math.max(minWidth, right - snappedLeft);
+      nextX = right - nextW;
+    }
+    if (handle.includes('s')) {
+      const bottom = nextY + nextH;
+      const snappedBottom = Math.round(bottom / gridSize) * gridSize;
+      nextH = Math.max(minHeight, snappedBottom - nextY);
+    }
+    if (handle.includes('n')) {
+      const bottom = nextY + nextH;
+      const snappedTop = Math.round(nextY / gridSize) * gridSize;
+      nextH = Math.max(minHeight, bottom - snappedTop);
+      nextY = bottom - nextH;
+    }
+  }
+
+  // 2. Magnetic Element Snapping
+  let closestDistX = thresholdInWorld;
+  let closestDistY = thresholdInWorld;
+  let snapXGuide: SnapGuide | null = null;
+  let snapYGuide: SnapGuide | null = null;
+
+  const currentLeft = nextX;
+  const currentRight = nextX + nextW;
+  const currentTop = nextY;
+  const currentBottom = nextY + nextH;
+
+  for (const target of targetElements) {
+    const targetLeft = target.x;
+    const targetCenter = target.x + target.width / 2;
+    const targetRight = target.x + target.width;
+
+    const targetTop = target.y;
+    const targetMiddle = target.y + target.height / 2;
+    const targetBottom = target.y + target.height;
+
+    // Horizontal snapping
+    if (handle.includes('e')) {
+      const candidateSnaps = [
+        { pos: targetLeft, delta: targetLeft - currentRight },
+        { pos: targetRight, delta: targetRight - currentRight },
+        { pos: targetCenter, delta: targetCenter - currentRight },
+        { pos: nextX + target.width, delta: target.width - nextW },
+      ];
+      for (const s of candidateSnaps) {
+        const dist = Math.abs(s.delta);
+        if (dist < closestDistX && nextW + s.delta >= minWidth) {
+          closestDistX = dist;
+          nextW = nextW + s.delta;
+          snapXGuide = {
+            id: `v-resize-e-${target.id}`,
+            orientation: 'vertical',
+            pos: s.pos,
+            start: Math.min(nextY, targetTop) - 30,
+            end: Math.max(nextY + nextH, targetBottom) + 30,
+            snapType: 'edge',
+          };
+        }
+      }
+    } else if (handle.includes('w')) {
+      const right = nextX + nextW;
+      const candidateSnaps = [
+        { pos: targetLeft, delta: targetLeft - currentLeft },
+        { pos: targetRight, delta: targetRight - currentLeft },
+        { pos: targetCenter, delta: targetCenter - currentLeft },
+        { pos: right - target.width, delta: (right - target.width) - currentLeft },
+      ];
+      for (const s of candidateSnaps) {
+        const dist = Math.abs(s.delta);
+        const candW = right - (currentLeft + s.delta);
+        if (dist < closestDistX && candW >= minWidth) {
+          closestDistX = dist;
+          nextX = currentLeft + s.delta;
+          nextW = candW;
+          snapXGuide = {
+            id: `v-resize-w-${target.id}`,
+            orientation: 'vertical',
+            pos: s.pos,
+            start: Math.min(nextY, targetTop) - 30,
+            end: Math.max(nextY + nextH, targetBottom) + 30,
+            snapType: 'edge',
+          };
+        }
+      }
+    }
+
+    // Vertical snapping
+    if (handle.includes('s')) {
+      const candidateSnaps = [
+        { pos: targetTop, delta: targetTop - currentBottom },
+        { pos: targetBottom, delta: targetBottom - currentBottom },
+        { pos: targetMiddle, delta: targetMiddle - currentBottom },
+        { pos: nextY + target.height, delta: target.height - nextH },
+      ];
+      for (const s of candidateSnaps) {
+        const dist = Math.abs(s.delta);
+        if (dist < closestDistY && nextH + s.delta >= minHeight) {
+          closestDistY = dist;
+          nextH = nextH + s.delta;
+          snapYGuide = {
+            id: `h-resize-s-${target.id}`,
+            orientation: 'horizontal',
+            pos: s.pos,
+            start: Math.min(nextX, targetLeft) - 30,
+            end: Math.max(nextX + nextW, targetRight) + 30,
+            snapType: 'edge',
+          };
+        }
+      }
+    } else if (handle.includes('n')) {
+      const bottom = nextY + nextH;
+      const candidateSnaps = [
+        { pos: targetTop, delta: targetTop - currentTop },
+        { pos: targetBottom, delta: targetBottom - currentTop },
+        { pos: targetMiddle, delta: targetMiddle - currentTop },
+        { pos: bottom - target.height, delta: (bottom - target.height) - currentTop },
+      ];
+      for (const s of candidateSnaps) {
+        const dist = Math.abs(s.delta);
+        const candH = bottom - (currentTop + s.delta);
+        if (dist < closestDistY && candH >= minHeight) {
+          closestDistY = dist;
+          nextY = currentTop + s.delta;
+          nextH = candH;
+          snapYGuide = {
+            id: `h-resize-n-${target.id}`,
+            orientation: 'horizontal',
+            pos: s.pos,
+            start: Math.min(nextX, targetLeft) - 30,
+            end: Math.max(nextX + nextW, targetRight) + 30,
+            snapType: 'edge',
+          };
+        }
+      }
+    }
+  }
+
+  if (snapXGuide) guides.push(snapXGuide);
+  if (snapYGuide) guides.push(snapYGuide);
+
+  return {
+    x: nextX,
+    y: nextY,
+    width: nextW,
+    height: nextH,
     guides,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
+import { isElementInViewport, computeSnapAlignment, computeResizeSnapAlignment, getGroupBoundingBox, isImageLink } from '@/lib/board-snap';
 import { BoardElement, BoardViewport } from '@/types/board';
 import {
   createProjectBoardDB,
@@ -102,6 +102,31 @@ describe('Miro Board Magnetic Snap & Alignment Guide Engine', () => {
     expect(result.x).toBe(450);
     expect(result.y).toBe(500);
     expect(result.guides.length).toBe(0);
+  });
+
+  // Resize Snapping Tests
+  it('snaps right edge to target left edge when resizing with east handle', () => {
+    // Current element x=50, width=147 -> right edge=197. Target left is at 200 (delta +3 <= 8)
+    const candidate = { x: 50, y: 300, width: 147, height: 100 };
+    const result = computeResizeSnapAlignment(candidate, 'e', [targetElement], { snapThreshold: 8, zoom: 1 });
+
+    expect(result.width).toBe(150); // 50 + 150 = 200 (matches target left edge)
+    expect(result.guides.some((g) => g.orientation === 'vertical' && g.pos === 200)).toBe(true);
+  });
+
+  it('snaps width to match target width when resizing', () => {
+    // Target width is 150. Candidate width is 152 (delta -2 <= 8)
+    const candidate = { x: 0, y: 0, width: 152, height: 100 };
+    const result = computeResizeSnapAlignment(candidate, 'e', [targetElement], { snapThreshold: 8, zoom: 1 });
+
+    expect(result.width).toBe(150); // Snaps to exactly match target element width
+  });
+
+  it('snaps to grid during resize when snapToGrid is enabled', () => {
+    const candidate = { x: 0, y: 0, width: 138, height: 100 };
+    const result = computeResizeSnapAlignment(candidate, 'e', [], { snapToGrid: true, gridSize: 20 });
+
+    expect(result.width).toBe(140); // 138 snaps to 140 (multiple of 20)
   });
 });
 

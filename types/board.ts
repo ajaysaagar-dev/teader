@@ -8,7 +8,7 @@ export type BoardElementType =
   | 'shape'
   | 'container';
 
-export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'card';
+export type ShapeKind = 'rectangle' | 'rounded' | 'circle' | 'diamond' | 'star' | 'card' | 'frame';
 
 export interface BoardElement {
   id: string;
@@ -31,6 +31,11 @@ export interface BoardElement {
   textAlign?: 'left' | 'center' | 'right';
   shapeKind?: ShapeKind;
   locked?: boolean;
+  tags?: string[];
+  reactions?: Record<string, number>;
+  borderColor?: string;
+  borderStyle?: 'solid' | 'dashed';
+  isFrame?: boolean;
   isUploading?: boolean;
   aspectRatio?: number;
   metadata?: {
@@ -103,6 +108,14 @@ export interface SnapGuide {
 export interface SnapResult {
   x: number;
   y: number;
+  guides: SnapGuide[];
+}
+
+export interface ResizeSnapResult {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
   guides: SnapGuide[];
 }
 

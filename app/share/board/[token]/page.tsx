@@ -16,8 +16,9 @@ import {
   Layers,
   StickyNote as StickyIcon,
   Image as ImageIcon,
+  Grid,
 } from 'lucide-react';
-import { BoardElement, BoardGroup, BoardViewport, BoardData } from '@/types/board';
+import { BoardElement, BoardGroup, BoardConnection, BoardViewport, BoardData } from '@/types/board';
 import { isElementInViewport, getGroupBoundingBox } from '@/lib/board-snap';
 import { BoardImageFocusModal } from '@/components/BoardImageFocusModal';
 
@@ -33,7 +34,9 @@ export default function PublicBoardSharePage() {
   const [boardTitle, setBoardTitle] = useState('Shared Canvas Board');
   const [elements, setElements] = useState<BoardElement[]>([]);
   const [groups, setGroups] = useState<BoardGroup[]>([]);
+  const [connections, setConnections] = useState<BoardConnection[]>([]);
   const [viewport, setViewport] = useState<BoardViewport>({ x: 40, y: 30, zoom: 0.9 });
+  const [isMinimapOpen, setIsMinimapOpen] = useState(false);
   const [canvasDimensions, setCanvasDimensions] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 1920,
     height: typeof window !== 'undefined' ? window.innerHeight : 1080,
@@ -162,6 +165,7 @@ export default function PublicBoardSharePage() {
         const boardGroups = data.groups || [];
         setElements(boardElems);
         setGroups(boardGroups);
+        setConnections(data.connections || []);
 
         const w = typeof window !== 'undefined' ? window.innerWidth : 1920;
         const h = typeof window !== 'undefined' ? window.innerHeight : 1080;
@@ -323,7 +327,46 @@ export default function PublicBoardSharePage() {
       }
       ctx.fill();
     }
-  }, [canvasDimensions, viewport]);
+
+    // Draw Connector Arrows
+    if (connections.length > 0) {
+      ctx.save();
+      for (const conn of connections) {
+        const fromElem = elements.find((e) => e.id === conn.fromId);
+        const toElem = elements.find((e) => e.id === conn.toId);
+        if (!fromElem || !toElem) continue;
+
+        const x1 = (fromElem.x + fromElem.width / 2) * zoom + viewport.x;
+        const y1 = (fromElem.y + fromElem.height / 2) * zoom + viewport.y;
+        const x2 = (toElem.x + toElem.width / 2) * zoom + viewport.x;
+        const y2 = (toElem.y + toElem.height / 2) * zoom + viewport.y;
+
+        ctx.strokeStyle = conn.color || 'rgba(132, 0, 255, 0.7)';
+        ctx.lineWidth = 2 * Math.min(zoom, 1.2);
+        if (conn.style === 'dashed') ctx.setLineDash([6, 4]);
+        else ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        if (conn.arrow) {
+          const angle = Math.atan2(y2 - y1, x2 - x1);
+          const headLen = 10 * zoom;
+          ctx.setLineDash([]);
+          ctx.fillStyle = conn.color || 'rgba(132, 0, 255, 0.9)';
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+  }, [canvasDimensions, viewport, connections, elements]);
 
   // ── Audio Playback ──
   const toggleAudioPlay = (elementId: string, url?: string) => {
@@ -529,7 +572,7 @@ export default function PublicBoardSharePage() {
                 style={{
                   backgroundColor: element.color || '#FFFFFF',
                   color: element.textColor || '#000000',
-                  fontSize: element.fontSize ? `${element.fontSize}px` : '12px',
+                  fontSize: element.fontSize ? `${element.fontSize}px` : '14px',
                   fontWeight: element.fontWeight || 'normal',
                   fontStyle: element.fontStyle || 'normal',
                   textAlign: element.textAlign || 'left',
@@ -537,14 +580,34 @@ export default function PublicBoardSharePage() {
                 className="w-full h-full p-3.5 rounded-lg shadow-lg flex flex-col justify-between overflow-hidden"
               >
                 <div className="flex items-center justify-between gap-1 pb-1 border-b border-black/10">
-                  <span className="font-medium text-xs truncate select-none opacity-80">
+                  <span className="font-semibold text-xs truncate select-none opacity-80">
                     {element.title || 'Note'}
                   </span>
                   <StickyIcon size={12} className="opacity-40 shrink-0" />
                 </div>
-                <div className="flex-1 w-full text-xs leading-relaxed mt-2 font-sans whitespace-pre-wrap select-text">
+                <div className="flex-1 w-full leading-relaxed my-2 font-sans whitespace-pre-wrap select-text">
                   {element.content}
                 </div>
+
+                {/* Footer tags and reactions */}
+                {((element.tags && element.tags.length > 0) || (element.reactions && Object.keys(element.reactions).length > 0)) && (
+                  <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-black/10 text-[9px] font-mono select-none">
+                    {(element.tags || []).map((t, idx) => (
+                      <span key={idx} className="px-1.5 py-0.5 rounded bg-black/10 text-black/80 font-mono">
+                        {t}
+                      </span>
+                    ))}
+                    {element.reactions && (
+                      <div className="ml-auto flex items-center gap-1">
+                        {Object.entries(element.reactions).map(([emoji, count]) => (
+                          <span key={emoji} className="text-[10px]">
+                            {emoji}{count}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -561,6 +624,50 @@ export default function PublicBoardSharePage() {
                 className="w-full h-full p-2 font-sans whitespace-pre-wrap select-text leading-snug"
               >
                 {element.content}
+              </div>
+            )}
+
+            {/* Shape Card (Miro Geometric Shapes) */}
+            {element.type === 'shape' && (
+              <div
+                style={{
+                  backgroundColor: element.color || 'rgba(255, 255, 255, 0.06)',
+                  borderColor: element.borderColor || '#FFFFFF',
+                  borderStyle: element.borderStyle || 'solid',
+                  color: element.textColor || '#FFFFFF',
+                }}
+                className={`w-full h-full flex flex-col justify-center items-center p-3 relative overflow-hidden shadow-md ${
+                  element.shapeKind === 'rounded'
+                    ? 'rounded-3xl border-2'
+                    : element.shapeKind === 'circle'
+                    ? 'rounded-full border-2'
+                    : element.shapeKind === 'card'
+                    ? 'rounded-xl border bg-[#171717]'
+                    : element.shapeKind === 'frame'
+                    ? 'rounded-lg border-2 border-dashed bg-white/[0.02]'
+                    : element.shapeKind === 'diamond'
+                    ? 'rounded-md border-2 rotate-45 scale-75'
+                    : 'rounded-md border-2'
+                }`}
+              >
+                {element.shapeKind === 'frame' && (
+                  <div className="absolute top-0 left-0 px-2 py-0.5 bg-white/10 text-[10px] font-mono text-white/80 rounded-br border-b border-r border-white/20 select-none">
+                    {element.title || 'Frame'}
+                  </div>
+                )}
+                <div
+                  style={{
+                    color: element.textColor || '#FFFFFF',
+                    fontSize: element.fontSize ? `${element.fontSize}px` : '14px',
+                    fontWeight: element.fontWeight || 'normal',
+                    fontStyle: element.fontStyle || 'normal',
+                    textAlign: element.textAlign || 'center',
+                    transform: element.shapeKind === 'diamond' ? 'rotate(-45deg)' : 'none',
+                  }}
+                  className="w-full text-center font-sans whitespace-pre-wrap select-text leading-relaxed"
+                >
+                  {element.content}
+                </div>
               </div>
             )}
 
@@ -778,7 +885,110 @@ export default function PublicBoardSharePage() {
         >
           <Maximize2 size={14} />
         </button>
+        <div className="w-[1px] h-4 bg-white/10 mx-0.5" />
+        <button
+          onClick={() => setIsMinimapOpen((prev) => !prev)}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            isMinimapOpen ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+          }`}
+          title="Toggle Minimap Radar"
+        >
+          <Grid size={14} />
+        </button>
       </div>
+
+      {/* Interactive Minimap Radar */}
+      {isMinimapOpen && (
+        <div className="absolute bottom-16 right-4 z-40 p-2.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-xl shadow-2xl flex flex-col gap-1.5 select-none">
+          <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] border-b border-white/10 pb-1">
+            <span>Minimap Radar</span>
+            <button
+              onClick={() => setIsMinimapOpen(false)}
+              className="hover:text-white cursor-pointer px-1 text-xs"
+            >
+              ✕
+            </button>
+          </div>
+          <div
+            className="w-[180px] h-[120px] bg-black/50 border border-white/10 rounded relative overflow-hidden cursor-crosshair select-none"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickX = e.clientX - rect.left;
+              const clickY = e.clientY - rect.top;
+              let minX = -800, minY = -600, maxX = 1800, maxY = 1400;
+              if (elements.length > 0) {
+                minX = Math.min(...elements.map((el) => el.x)) - 200;
+                minY = Math.min(...elements.map((el) => el.y)) - 200;
+                maxX = Math.max(...elements.map((el) => el.x + el.width)) + 200;
+                maxY = Math.max(...elements.map((el) => el.y + el.height)) + 200;
+              }
+              const worldW = Math.max(100, maxX - minX);
+              const worldH = Math.max(100, maxY - minY);
+              const targetWorldX = minX + (clickX / 180) * worldW;
+              const targetWorldY = minY + (clickY / 120) * worldH;
+              const screenW = containerRef.current?.clientWidth || 1000;
+              const screenH = containerRef.current?.clientHeight || 700;
+              setViewport((prev) => ({
+                ...prev,
+                x: Math.round(screenW / 2 - targetWorldX * prev.zoom),
+                y: Math.round(screenH / 2 - targetWorldY * prev.zoom),
+              }));
+            }}
+          >
+            {(() => {
+              let minX = -800, minY = -600, maxX = 1800, maxY = 1400;
+              if (elements.length > 0) {
+                minX = Math.min(...elements.map((el) => el.x)) - 200;
+                minY = Math.min(...elements.map((el) => el.y)) - 200;
+                maxX = Math.max(...elements.map((el) => el.x + el.width)) + 200;
+                maxY = Math.max(...elements.map((el) => el.y + el.height)) + 200;
+              }
+              const worldW = Math.max(100, maxX - minX);
+              const worldH = Math.max(100, maxY - minY);
+
+              const screenW = containerRef.current?.clientWidth || 1000;
+              const screenH = containerRef.current?.clientHeight || 700;
+              const vLeftWorld = -viewport.x / viewport.zoom;
+              const vTopWorld = -viewport.y / viewport.zoom;
+              const vWidthWorld = screenW / viewport.zoom;
+              const vHeightWorld = screenH / viewport.zoom;
+
+              const vx = ((vLeftWorld - minX) / worldW) * 180;
+              const vy = ((vTopWorld - minY) / worldH) * 120;
+              const vw = (vWidthWorld / worldW) * 180;
+              const vh = (vHeightWorld / worldH) * 120;
+
+              return (
+                <>
+                  {elements.map((el) => {
+                    const ex = ((el.x - minX) / worldW) * 180;
+                    const ey = ((el.y - minY) / worldH) * 120;
+                    const ew = Math.max(2, (el.width / worldW) * 180);
+                    const eh = Math.max(2, (el.height / worldH) * 120);
+                    return (
+                      <div
+                        key={el.id}
+                        style={{ left: ex, top: ey, width: ew, height: eh, backgroundColor: el.color || '#FFFFFF' }}
+                        className="absolute rounded-xs opacity-60 pointer-events-none"
+                      />
+                    );
+                  })}
+                  {/* Viewport Frame Box */}
+                  <div
+                    style={{
+                      left: Math.max(0, vx),
+                      top: Math.max(0, vy),
+                      width: Math.min(180, Math.max(8, vw)),
+                      height: Math.min(120, Math.max(8, vh)),
+                    }}
+                    className="absolute border border-white bg-white/10 rounded-xs pointer-events-none shadow"
+                  />
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* High-Resolution HD Focus Modal */}
       {focusedImage && (
