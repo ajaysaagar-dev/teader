@@ -31,6 +31,7 @@ export interface BoardElement {
   textAlign?: 'left' | 'center' | 'right';
   shapeKind?: ShapeKind;
   locked?: boolean;
+  isUploading?: boolean;
   aspectRatio?: number;
   metadata?: {
     filename?: string;

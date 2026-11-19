@@ -71,6 +71,7 @@ import { isElementInViewport, computeSnapAlignment, getGroupBoundingBox, isImage
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { authFetch } from '@/lib/api-client';
+import { optimizeImageForBoard } from '@/lib/image-optimizer';
 
 interface ProjectBoardViewProps {
   projectId: number | string;
@@ -239,6 +240,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const viewportRef = useRef(viewport);
   viewportRef.current = viewport;
   const saveCurrentBoardRef = useRef<(newElements?: BoardElement[], newGroups?: BoardGroup[], newViewport?: BoardViewport) => Promise<void>>(() => Promise.resolve());
+  const localBlobUrlsRef = useRef<Set<string>>(new Set());
+
+  // Clean up object URLs on component unmount
+  useEffect(() => {
+    return () => {
+      localBlobUrlsRef.current.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+      });
+      localBlobUrlsRef.current.clear();
+    };
+  }, []);
 
   const pushHistory = useCallback((newElements: BoardElement[]) => {
     const nextHistory = historyRef.current.slice(0, historyIndexRef.current + 1);
@@ -954,13 +968,68 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const readFileAsDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
-      reader.onerror = () => resolve('');
-      reader.readAsDataURL(file);
-    });
+  // ── High-Performance Async File Upload ──
+  const processAndUploadFile = async (
+    file: File,
+    tempId: string,
+    previewUrl: string
+  ) => {
+    try {
+      // 1. Optimize oversized raster images client-side before network transmission
+      const optimizedFile = file.type.startsWith('image/')
+        ? await optimizeImageForBoard(file)
+        : file;
+
+      const formData = new FormData();
+      formData.append('file', optimizedFile);
+
+      const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const uploaded = await res.json();
+
+      // Revoke temporary blob URL
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(previewUrl);
+        } catch {}
+        localBlobUrlsRef.current.delete(previewUrl);
+      }
+
+      // Update element to permanent server URL
+      setElements((prev) => {
+        const updated = prev.map((el) => {
+          if (el.id === tempId) {
+            return {
+              ...el,
+              url: uploaded.url,
+              isUploading: false,
+              metadata: {
+                ...el.metadata,
+                url: uploaded.url,
+                filename: file.name,
+              },
+            };
+          }
+          return el;
+        });
+        saveCurrentBoard(updated);
+        return updated;
+      });
+    } catch (err: any) {
+      console.warn('[Upload error]:', err);
+      // Keep local preview so user still sees the dropped/pasted item
+      setElements((prev) =>
+        prev.map((el) => (el.id === tempId ? { ...el, isUploading: false } : el))
+      );
+      toast.error(`Could not upload ${file.name}`);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
@@ -969,6 +1038,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
+      const newElementsList: BoardElement[] = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const offsetPos = {
@@ -978,7 +1049,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
         let previewUrl = '';
         if (file.type.startsWith('image/')) {
-          previewUrl = await readFileAsDataUrl(file);
+          previewUrl = URL.createObjectURL(file);
+          localBlobUrlsRef.current.add(previewUrl);
         }
 
         let elemType: BoardElement['type'] = 'image';
@@ -996,7 +1068,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         }
 
         const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-        let newElem: BoardElement = {
+        const newElem: BoardElement = {
           id: tempId,
           type: elemType,
           x: offsetPos.x,
@@ -1005,70 +1077,41 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           height,
           title: file.name,
           url: previewUrl,
+          isUploading: true,
           metadata: {
             filename: file.name,
             filesize: file.size,
             mimeType: file.type,
-            dataUrl: previewUrl || undefined,
           },
         };
 
-        const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
-        newElem = updatedElem;
-        if (updatedGroups !== groups) setGroups(updatedGroups);
-
-        setElements((prev) => {
-          const updated = [...prev, newElem];
-          pushHistory(updated);
-          saveCurrentBoard(updated, updatedGroups);
-          return updated;
-        });
-        setSelectedIds(new Set([newElem.id]));
-
-        const toastId = toast.loading(`Uploading media "${file.name}"...`);
-        try {
-          const formData = new FormData();
-          formData.append('file', file);
-
-          const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Upload failed');
-          }
-
-          const uploaded = await res.json();
-          toast.success(`Uploaded ${file.name}`, { id: toastId });
-
-          setElements((prev) => {
-            const updated = prev.map((el) => {
-              if (el.id === tempId) {
-                return {
-                  ...el,
-                  url: uploaded.url,
-                  metadata: {
-                    ...el.metadata,
-                    url: uploaded.url,
-                    filename: file.name,
-                  },
-                };
-              }
-              return el;
-            });
-            saveCurrentBoard(updated);
-            return updated;
-          });
-        } catch (err: any) {
-          if (previewUrl) {
-            toast.info(`Rendered local image "${file.name}"`, { id: toastId });
-          } else {
-            toast.error(err.message || 'File drop failed', { id: toastId });
-          }
-        }
+        newElementsList.push(newElem);
       }
+
+      // Group attachment & immediate canvas update
+      let currentGroups = groups;
+      const finalNewElements: BoardElement[] = [];
+      for (const elem of newElementsList) {
+        const { updatedElem, updatedGroups } = attachAndExpandGroup(elem, currentGroups, elements);
+        finalNewElements.push(updatedElem);
+        if (updatedGroups !== currentGroups) currentGroups = updatedGroups;
+      }
+      if (currentGroups !== groups) setGroups(currentGroups);
+
+      setElements((prev) => {
+        const updated = [...prev, ...finalNewElements];
+        pushHistory(updated);
+        saveCurrentBoard(updated, currentGroups);
+        return updated;
+      });
+      setSelectedIds(new Set(finalNewElements.map((el) => el.id)));
+
+      // Parallel non-blocking upload of all files
+      Promise.all(
+        files.map((file, idx) =>
+          processAndUploadFile(file, finalNewElements[idx].id, finalNewElements[idx].url || '')
+        )
+      );
       return;
     }
 
@@ -1734,6 +1777,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       (containerRef.current?.clientHeight || 700) / 2
     );
 
+    const newElementsList: BoardElement[] = [];
+
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       const offsetPos = {
@@ -1743,7 +1788,8 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
       let previewUrl = '';
       if (file.type.startsWith('image/')) {
-        previewUrl = await readFileAsDataUrl(file);
+        previewUrl = URL.createObjectURL(file);
+        localBlobUrlsRef.current.add(previewUrl);
       }
 
       let elemType: BoardElement['type'] = 'image';
@@ -1760,7 +1806,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       }
 
       const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      let newElem: BoardElement = {
+      const newElem: BoardElement = {
         id: tempId,
         type: elemType,
         x: offsetPos.x,
@@ -1769,65 +1815,39 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         height: h,
         title: file.name,
         url: previewUrl,
+        isUploading: true,
         metadata: {
           filename: file.name,
           filesize: file.size,
           mimeType: file.type,
-          dataUrl: previewUrl || undefined,
         },
       };
 
-      const { updatedElem, updatedGroups } = attachAndExpandGroup(newElem, groups, elements);
-      newElem = updatedElem;
-      if (updatedGroups !== groups) setGroups(updatedGroups);
-
-      setElements((prev) => {
-        const next = [...prev, newElem];
-        pushHistory(next);
-        saveCurrentBoard(next, updatedGroups);
-        return next;
-      });
-      setSelectedIds(new Set([newElem.id]));
-
-      const toastId = toast.loading(`Uploading "${file.name}"...`);
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) throw new Error('Upload failed');
-        const data = await res.json();
-        toast.success(`Uploaded ${file.name}`, { id: toastId });
-
-        setElements((prev) => {
-          const updated = prev.map((el) => {
-            if (el.id === tempId) {
-              return {
-                ...el,
-                url: data.url,
-                metadata: {
-                  ...el.metadata,
-                  url: data.url,
-                  filename: file.name,
-                },
-              };
-            }
-            return el;
-          });
-          saveCurrentBoard(updated);
-          return updated;
-        });
-      } catch (err: any) {
-        if (previewUrl) {
-          toast.info(`Rendered local image "${file.name}"`, { id: toastId });
-        } else {
-          toast.error(err.message || 'Failed to upload media', { id: toastId });
-        }
-      }
+      newElementsList.push(newElem);
     }
+
+    let currentGroups = groups;
+    const finalNewElements: BoardElement[] = [];
+    for (const elem of newElementsList) {
+      const { updatedElem, updatedGroups } = attachAndExpandGroup(elem, currentGroups, elements);
+      finalNewElements.push(updatedElem);
+      if (updatedGroups !== currentGroups) currentGroups = updatedGroups;
+    }
+    if (currentGroups !== groups) setGroups(currentGroups);
+
+    setElements((prev) => {
+      const next = [...prev, ...finalNewElements];
+      pushHistory(next);
+      saveCurrentBoard(next, currentGroups);
+      return next;
+    });
+    setSelectedIds(new Set(finalNewElements.map((el) => el.id)));
+
+    Promise.all(
+      fileList.map((file, idx) =>
+        processAndUploadFile(file, finalNewElements[idx].id, finalNewElements[idx].url || '')
+      )
+    );
 
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -2001,10 +2021,13 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           (containerRef.current?.clientHeight || 700) / 2
         );
 
+        const newElementsList: BoardElement[] = [];
+
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
           if (file.type.startsWith('image/')) {
-            const previewUrl = await readFileAsDataUrl(file);
+            const previewUrl = URL.createObjectURL(file);
+            localBlobUrlsRef.current.add(previewUrl);
             const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
             const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
             const newElem: BoardElement = {
@@ -2016,42 +2039,39 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
               height: 220,
               title: file.name,
               url: previewUrl,
+              isUploading: true,
               metadata: {
                 filename: file.name,
                 filesize: file.size,
                 mimeType: file.type,
-                dataUrl: previewUrl || undefined,
               },
             };
-
-            setElements((prev) => {
-              const updated = [...prev, newElem];
-              pushHistory(updated);
-              saveCurrentBoard(updated);
-              return updated;
-            });
-            setSelectedIds(new Set([newElem.id]));
-
-            const formData = new FormData();
-            formData.append('file', file);
-            authFetch(`/api/projects/${projectId}/boards/upload`, {
-              method: 'POST',
-              body: formData,
-            })
-              .then(async (res) => {
-                if (res.ok) {
-                  const data = await res.json();
-                  setElements((prev) => {
-                    const updated = prev.map((el) => (el.id === tempId ? { ...el, url: data.url } : el));
-                    saveCurrentBoard(updated);
-                    return updated;
-                  });
-                }
-              })
-              .catch(() => {});
-
-            toast.success(isGif ? 'Pasted GIF to canvas' : 'Pasted image to canvas');
+            newElementsList.push(newElem);
           }
+        }
+
+        if (newElementsList.length > 0) {
+          setElements((prev) => {
+            const updated = [...prev, ...newElementsList];
+            pushHistory(updated);
+            saveCurrentBoard(updated);
+            return updated;
+          });
+          setSelectedIds(new Set(newElementsList.map((el) => el.id)));
+
+          const imageFiles = files.filter((f) => f.type.startsWith('image/'));
+          Promise.all(
+            imageFiles.map((file, idx) =>
+              processAndUploadFile(file, newElementsList[idx].id, newElementsList[idx].url || '')
+            )
+          );
+
+          const hasGif = imageFiles.some((f) => f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'));
+          toast.success(
+            imageFiles.length === 1 && hasGif
+              ? 'Pasted GIF to canvas'
+              : `Pasted ${newElementsList.length} image${newElementsList.length > 1 ? 's' : ''}`
+          );
         }
         return;
       }
@@ -2636,6 +2656,12 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   {/* 3. IMAGE CARD */}
                   {element.type === 'image' && (
                     <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img">
+                      {element.isUploading && (
+                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-[10px] text-white shadow-lg pointer-events-none select-none animate-pulse">
+                          <span className="w-2 h-2 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                          <span className="font-mono text-[9px] uppercase tracking-wider">Syncing</span>
+                        </div>
+                      )}
                       <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img

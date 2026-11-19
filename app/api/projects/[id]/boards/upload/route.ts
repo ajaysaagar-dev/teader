@@ -57,7 +57,7 @@ export async function POST(
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    fs.writeFileSync(destinationPath, buffer);
+    await fs.promises.writeFile(destinationPath, buffer);
 
     const publicUrl = `/uploads/boards/${uniqueFileName}`;
 
