@@ -11,25 +11,34 @@ export async function GET() {
       return NextResponse.json({ user: null, authenticated: false }, { status: 200 });
     }
 
-    // Re-verify user still exists in DB
-    const dbUser = await getUserByIdDB(session.id);
-    if (!dbUser) {
-      return NextResponse.json({ user: null, authenticated: false, error: 'User no longer exists' }, { status: 200 });
+    // Try fetching latest user profile from DB, but fall back gracefully to verified JWT session if DB is reconnecting
+    let dbUser: any = null;
+    try {
+      dbUser = await getUserByIdDB(session.id);
+    } catch (err: any) {
+      console.warn('[auth/me] Database query transient failure, using session payload:', err?.message);
     }
+
+    const effectiveUser = dbUser || {
+      id: session.id,
+      name: session.name,
+      email: session.email,
+      avatar: session.avatar,
+    };
 
     // Refresh and ensure teader_session cookie is set for browser navigations
     try {
       await setSessionCookie({
-        id: dbUser.id,
-        name: dbUser.name,
-        email: dbUser.email,
-        avatar: dbUser.avatar,
+        id: effectiveUser.id,
+        name: effectiveUser.name,
+        email: effectiveUser.email,
+        avatar: effectiveUser.avatar,
       });
     } catch {}
 
-    return NextResponse.json({ user: dbUser, authenticated: true }, { status: 200 });
+    return NextResponse.json({ user: effectiveUser, authenticated: true }, { status: 200 });
   } catch (err: any) {
-    return NextResponse.json({ user: null, authenticated: false, error: err.message }, { status: 200 });
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
 }
 

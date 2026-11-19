@@ -11,6 +11,7 @@ import { getLocalCache, setLocalCache, reconcileIssues } from '@/lib/client-cach
 import { reconcileCreatedIssue } from '@/lib/reconcileIssue';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
+import { authFetch } from '@/lib/api-client';
 
 
 
@@ -386,6 +387,10 @@ export default function SingleProjectPage() {
   }, [handleTabSwitch]);
 
   const [project, setProject] = useState<ProjectItem | null>(null);
+  const currentProjectRef = useRef<ProjectItem | null>(null);
+  useEffect(() => {
+    currentProjectRef.current = project;
+  }, [project]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [joinedMembers, setJoinedMembers] = useState<MemberItem[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -442,7 +447,7 @@ export default function SingleProjectPage() {
 
     setIsDeletingProject(true);
     try {
-      const res = await fetch(`/api/projects/${project.id}`, {
+      const res = await authFetch(`/api/projects/${project.id}`, {
         method: 'DELETE',
       });
 
@@ -468,7 +473,7 @@ export default function SingleProjectPage() {
 
     setIsLeavingProject(true);
     try {
-      const res = await fetch(`/api/projects/${project.id}/leave`, {
+      const res = await authFetch(`/api/projects/${project.id}/leave`, {
         method: 'POST',
       });
 
@@ -500,7 +505,7 @@ export default function SingleProjectPage() {
   const handleCancelJoinRequest = useCallback(async () => {
     if (!project) return;
     try {
-      const res = await fetch(`/api/projects/${project.id}/join-requests`, { method: 'DELETE' });
+      const res = await authFetch(`/api/projects/${project.id}/join-requests`, { method: 'DELETE' });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Unable to cancel the join request.');
@@ -546,7 +551,7 @@ export default function SingleProjectPage() {
         setExportStatusText('Applying AES-256-GCM cipher & computing SHA-256 checksum...');
       }, 700);
 
-      const res = await fetch(`/api/projects/${projectIdParam}/export`);
+      const res = await authFetch(`/api/projects/${projectIdParam}/export`);
       if (!res.ok) throw new Error('Failed to generate project dump');
 
       const blob = await res.blob();
@@ -595,81 +600,113 @@ export default function SingleProjectPage() {
 
     try {
       const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
-        ? AbortSignal.timeout(6000)
+        ? AbortSignal.timeout(8000)
         : undefined;
 
-      // Step 1: Verify User Session
-      let sessionUser: any = null;
-      const meRes = await fetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
-      if (meRes && meRes.ok) {
-        const meData = await meRes.json().catch(() => null);
-        if (meData?.user) {
-          sessionUser = meData.user;
-          setCurrentUser(meData.user);
-        } else {
+      // Step 1: Verify User Session (resilient against network glitches/timeouts)
+      let sessionUser: any = currentUser;
+      const meRes = await authFetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
+      if (meRes) {
+        if (meRes.status === 401) {
           router.push('/login');
           return;
         }
-      } else {
-        router.push('/login');
-        return;
-      }
-
-      // Step 2: Verify Project Permissions & Membership
-      const [projRes, issueRes] = await Promise.all([
-        fetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        fetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-      ]);
-
-      if (projRes?.status === 401 || issueRes?.status === 401) {
-        router.push('/login');
-        return;
-      }
-
-      let foundProj: ProjectItem | null = null;
-      if (projRes && projRes.ok) {
-        const projData = await projRes.json().catch(() => null);
-        if (Array.isArray(projData)) {
-          foundProj =
-            projData.find(
-              (p: ProjectItem) =>
-                String(p.id) === String(projectIdParam) ||
-                p.key.toLowerCase() === projectIdParam.toLowerCase()
-            ) || null;
+        if (meRes.ok) {
+          const meData = await meRes.json().catch(() => null);
+          if (meData?.user) {
+            sessionUser = meData.user;
+            setCurrentUser(meData.user);
+          } else if (meData && meData.authenticated === false && !sessionUser) {
+            router.push('/login');
+            return;
+          }
         }
       }
 
-      setProject(foundProj);
+      // Step 2: Fetch Target Project Directly & Issues
+      let foundProj: ProjectItem | null = null;
+      let projectAccessDenied = false;
 
-      if (!foundProj) {
-        // Project not found or user lacks access
+      // Direct single-project endpoint (fast & lightweight)
+      const directProjRes = await authFetch(`/api/projects/${projectIdParam}`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
+
+      if (directProjRes) {
+        if (directProjRes.status === 401) {
+          router.push('/login');
+          return;
+        }
+        if (directProjRes.ok) {
+          foundProj = await directProjRes.json().catch(() => null);
+        } else if (directProjRes.status === 403) {
+          const forbiddenData = await directProjRes.json().catch(() => null);
+          if (forbiddenData?.joinStatus === 'pending' && forbiddenData?.project) {
+            foundProj = { ...forbiddenData.project, joinStatus: 'pending' };
+          } else {
+            projectAccessDenied = true;
+          }
+        } else if (directProjRes.status === 404) {
+          projectAccessDenied = true;
+        }
+      }
+
+      // Fallback: list search if direct endpoint returned a network error or was unavailable
+      if (!foundProj && !projectAccessDenied) {
+        const projRes = await authFetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
+        if (projRes && projRes.ok) {
+          const projData = await projRes.json().catch(() => null);
+          if (Array.isArray(projData)) {
+            foundProj =
+              projData.find(
+                (p: ProjectItem) =>
+                  String(p.id) === String(projectIdParam) ||
+                  p.key.toLowerCase() === projectIdParam.toLowerCase()
+              ) || null;
+          }
+        }
+      }
+
+      // CRITICAL FIX: Only update project state if a project was retrieved OR if server explicitly confirmed access denied on initial load
+      if (foundProj) {
+        setProject(foundProj);
+        initializedProjects.add(String(projectIdParam).toLowerCase());
+        if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
+        if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
+      } else if (projectAccessDenied) {
+        // Server explicitly responded 403/404 — access is genuinely denied
+        setProject(null);
+        setLoading(false);
+        return;
+      } else if (!currentProjectRef.current) {
+        // Initial load failure with no existing project in state
+        setProject(null);
+        setLoading(false);
+        return;
+      }
+      // If we already have currentProjectRef.current, keep it! Do not wipe on temporary network failure!
+
+      const activeProj = foundProj || currentProjectRef.current;
+      if (!activeProj) {
         setLoading(false);
         return;
       }
 
-      // Register project in session memory
-      initializedProjects.add(String(projectIdParam).toLowerCase());
-      if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
-      if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
-
       // Step 3: Load Architecture, Members, and Issues
-      if (foundProj && foundProj.id) {
-        const [memRes, permRes] = await Promise.all([
-          fetch(`/api/projects/${foundProj.id}/members`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-          fetch(`/api/projects/${foundProj.id}/permissions`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        ]);
+      const [memRes, permRes, issueRes] = await Promise.all([
+        authFetch(`/api/projects/${activeProj.id}/members`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch(`/api/projects/${activeProj.id}/permissions`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+      ]);
 
-        if (memRes && memRes.ok) {
-          const memData = await memRes.json().catch(() => null);
-          if (Array.isArray(memData)) setJoinedMembers(memData);
-        }
+      if (memRes && memRes.ok) {
+        const memData = await memRes.json().catch(() => null);
+        if (Array.isArray(memData)) setJoinedMembers(memData);
+      }
 
-        if (permRes && permRes.ok) {
-          const permData = await permRes.json().catch(() => null);
-          if (Array.isArray(permData) && sessionUser) {
-            const myPerm = permData.find((p: any) => String(p.userId) === String(sessionUser.id));
-            if (myPerm) setUserPermissions(myPerm);
-          }
+      if (permRes && permRes.ok) {
+        const permData = await permRes.json().catch(() => null);
+        if (Array.isArray(permData) && sessionUser) {
+          const myPerm = permData.find((p: any) => String(p.userId) === String(sessionUser.id));
+          if (myPerm) setUserPermissions(myPerm);
         }
       }
 
@@ -692,7 +729,7 @@ export default function SingleProjectPage() {
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [projectIdParam, router]);
+  }, [projectIdParam, router, currentUser]);
 
   // Smart polling: every 30s only when tab is visible
   useEffect(() => {
@@ -940,7 +977,7 @@ export default function SingleProjectPage() {
 
     // 2. Process in background to database
     try {
-      const res = await fetch(`/api/projects/${project.id}`, {
+      const res = await authFetch(`/api/projects/${project.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -988,7 +1025,7 @@ export default function SingleProjectPage() {
     );
 
     try {
-      const res = await fetch(`/api/issues/${issueId}`, {
+      const res = await authFetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1035,7 +1072,7 @@ export default function SingleProjectPage() {
         status: iss.status,
       }));
 
-      await fetch('/api/issues/reorder', {
+      await authFetch('/api/issues/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: payload, projectId: project?.id }),
@@ -1063,7 +1100,7 @@ export default function SingleProjectPage() {
     toast.success(`Deleted task ${issueKey}`);
 
     try {
-      const res = await fetch(`/api/issues/${issueId}`, {
+      const res = await authFetch(`/api/issues/${issueId}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -1082,7 +1119,7 @@ export default function SingleProjectPage() {
     toast.success(`Priority updated to ${nextPriority}`);
 
     try {
-      await fetch(`/api/issues/${issueId}`, {
+      await authFetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priority: nextPriority }),
@@ -1128,7 +1165,7 @@ export default function SingleProjectPage() {
 
     // 2. Process in background to PostgreSQL server
     try {
-      const res = await fetch('/api/issues', {
+      const res = await authFetch('/api/issues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1188,7 +1225,7 @@ export default function SingleProjectPage() {
     );
 
     try {
-      await fetch('/api/subtasks', {
+      await authFetch('/api/subtasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subId, completed: nextCompleted, issueId, projectId: project?.id }),
@@ -1214,7 +1251,7 @@ export default function SingleProjectPage() {
     type: 'folder' | 'subtask' = 'subtask'
   ) => {
     try {
-      const res = await fetch('/api/subtasks', {
+      const res = await authFetch('/api/subtasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ issueId, title, parentId, isFolder, type, projectId: project?.id }),
@@ -1279,7 +1316,7 @@ export default function SingleProjectPage() {
     );
 
     try {
-      const res = await fetch(`/api/subtasks?id=${subId}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/subtasks?id=${subId}`, { method: 'DELETE' });
       if (res.ok) {
         toast.success('Item deleted');
       } else {
@@ -1310,7 +1347,7 @@ export default function SingleProjectPage() {
     );
 
     try {
-      const res = await fetch('/api/subtasks', {
+      const res = await authFetch('/api/subtasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subId, title: newTitle }),
@@ -1408,7 +1445,7 @@ export default function SingleProjectPage() {
     setIssues((prev) => moveNodeInIssues(prev, subId, newParentId, targetIssueId));
 
     try {
-      const res = await fetch('/api/subtasks', {
+      const res = await authFetch('/api/subtasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subId, parentId: newParentId, issueId: targetIssueId }),
@@ -1433,7 +1470,7 @@ export default function SingleProjectPage() {
     );
 
     try {
-      const res = await fetch(`/api/issues/${issueId}`, {
+      const res = await authFetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: newTitle }),
@@ -1485,7 +1522,7 @@ export default function SingleProjectPage() {
             iss.title === `📁 ${oldEpicName}` ||
             iss.title === `[Folder] ${oldEpicName}` ||
             (iss.labels && iss.labels.some((l) => l.toLowerCase() === 'folder') && (iss.title.replace(/^(\📁|\[Folder\])\s*/i, '').trim() === oldEpicName));
-          return fetch(`/api/issues/${iss.id}`, {
+          return authFetch(`/api/issues/${iss.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1534,7 +1571,7 @@ export default function SingleProjectPage() {
       try {
         await Promise.all(
           allMatching.map((iss) =>
-            fetch(`/api/issues/${iss.id}`, {
+            authFetch(`/api/issues/${iss.id}`, {
               method: 'DELETE',
             })
           )
@@ -1562,7 +1599,7 @@ export default function SingleProjectPage() {
       try {
         await Promise.all(
           folderEntities.map((iss) =>
-            fetch(`/api/issues/${iss.id}`, {
+            authFetch(`/api/issues/${iss.id}`, {
               method: 'DELETE',
             })
           )
@@ -1570,7 +1607,7 @@ export default function SingleProjectPage() {
 
         await Promise.all(
           childTasks.map((iss) =>
-            fetch(`/api/issues/${iss.id}`, {
+            authFetch(`/api/issues/${iss.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ folderId: 'folder_general', epic: 'General' }),
@@ -1602,7 +1639,7 @@ export default function SingleProjectPage() {
 
     // 2. Background Sync
     try {
-      await fetch(`/api/issues/${issueId}`, {
+      await authFetch(`/api/issues/${issueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folderId: targetFolderId, epic: finalEpic }),
@@ -1623,7 +1660,7 @@ export default function SingleProjectPage() {
           status: iss.status,
         }));
 
-        await fetch('/api/issues/reorder', {
+        await authFetch('/api/issues/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: payload, projectId: project?.id }),
@@ -1670,7 +1707,7 @@ export default function SingleProjectPage() {
     toast.success(`Task created in folder "${folderName}"!`);
 
     try {
-      const res = await fetch('/api/issues', {
+      const res = await authFetch('/api/issues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1727,7 +1764,7 @@ export default function SingleProjectPage() {
     });
 
     try {
-      await fetch(`/api/issues/${draggedIssueId}`, {
+      await authFetch(`/api/issues/${draggedIssueId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ folderId: targetFolderId, epic: targetFolderName }),
@@ -1748,7 +1785,7 @@ export default function SingleProjectPage() {
           status: iss.status,
         }));
 
-        await fetch('/api/issues/reorder', {
+        await authFetch('/api/issues/reorder', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ items: payload, projectId: project?.id }),

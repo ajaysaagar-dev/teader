@@ -8,6 +8,7 @@ import { Issue, Status, Priority } from '@/lib/types';
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, RealtimeEvent } from '@/lib/useRealtime';
 import { RealtimeBadge } from '@/components/RealtimeBadge';
+import { authFetch } from '@/lib/api-client';
 import { 
   FolderKanban, 
   CheckCircle2, 
@@ -65,8 +66,8 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     try {
       const [projRes, issueRes] = await Promise.all([
-        fetch('/api/projects', { cache: 'no-store' }),
-        fetch('/api/issues', { cache: 'no-store' }),
+        authFetch('/api/projects', { cache: 'no-store' }),
+        authFetch('/api/issues', { cache: 'no-store' }),
       ]);
 
       if (projRes.status === 401 || issueRes.status === 401) {
