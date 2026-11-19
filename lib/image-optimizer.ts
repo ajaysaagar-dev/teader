@@ -9,9 +9,9 @@
  */
 
 export interface OptimizeImageOptions {
-  maxDimension?: number; // default: 2560px
-  quality?: number;      // default: 0.85
-  minSizeToOptimize?: number; // default: 1.2MB (1,258,291 bytes)
+  maxDimension?: number; // default: 4096px (Ultra-HD / 4K)
+  quality?: number;      // default: 0.92 (High fidelity)
+  minSizeToOptimize?: number; // default: 2.5MB (2,621,440 bytes)
 }
 
 export async function optimizeImageForBoard(
@@ -28,9 +28,9 @@ export async function optimizeImageForBoard(
     return file;
   }
 
-  const minSize = options.minSizeToOptimize ?? 1.2 * 1024 * 1024;
-  const maxDim = options.maxDimension ?? 2560;
-  const quality = options.quality ?? 0.85;
+  const minSize = options.minSizeToOptimize ?? 2.5 * 1024 * 1024;
+  const maxDim = options.maxDimension ?? 4096;
+  const quality = options.quality ?? 0.92;
 
   // 2. If already lightweight, keep original
   if (file.size < minSize) {

@@ -17,6 +17,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Crosshair,
   MousePointer,
   Hand,
   StickyNote as StickyIcon,
@@ -72,6 +73,7 @@ import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { authFetch } from '@/lib/api-client';
 import { optimizeImageForBoard } from '@/lib/image-optimizer';
+import { BoardImageFocusModal } from '@/components/BoardImageFocusModal';
 
 interface ProjectBoardViewProps {
   projectId: number | string;
@@ -213,6 +215,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState<Record<string, { current: number; duration: number }>>({});
   const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
+  const [focusedImage, setFocusedImage] = useState<{ url: string; title: string; element?: BoardElement } | null>(null);
 
   // ── Share Modal States ──
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -1768,6 +1771,26 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     }
   };
 
+  const getImageDimensions = async (file: File): Promise<{ width: number; height: number }> => {
+    try {
+      if (typeof createImageBitmap === 'function') {
+        const bmp = await createImageBitmap(file);
+        const w = bmp.width;
+        const h = bmp.height;
+        bmp.close();
+        if (w > 0 && h > 0) {
+          const maxInitial = 420;
+          const scale = Math.min(1, maxInitial / Math.max(w, h));
+          return {
+            width: Math.max(160, Math.round(w * scale)),
+            height: Math.max(120, Math.round(h * scale)),
+          };
+        }
+      }
+    } catch {}
+    return { width: 320, height: 220 };
+  };
+
   const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const fileList = Array.from(e.target.files);
@@ -1781,21 +1804,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
-      const offsetPos = {
-        x: worldCenter.x - 160 + i * 30,
-        y: worldCenter.y - 110 + i * 30,
-      };
 
       let previewUrl = '';
-      if (file.type.startsWith('image/')) {
-        previewUrl = URL.createObjectURL(file);
-        localBlobUrlsRef.current.add(previewUrl);
-      }
-
       let elemType: BoardElement['type'] = 'image';
       let w = 320;
       let h = 220;
-      if (file.type.startsWith('audio/')) {
+
+      if (file.type.startsWith('image/')) {
+        previewUrl = URL.createObjectURL(file);
+        localBlobUrlsRef.current.add(previewUrl);
+        const dims = await getImageDimensions(file);
+        w = dims.width;
+        h = dims.height;
+      } else if (file.type.startsWith('audio/')) {
         elemType = 'audio';
         w = 320;
         h = 140;
@@ -1804,6 +1825,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         w = 360;
         h = 240;
       }
+
+      const offsetPos = {
+        x: worldCenter.x - Math.round(w / 2) + i * 30,
+        y: worldCenter.y - Math.round(h / 2) + i * 30,
+      };
 
       const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const newElem: BoardElement = {
@@ -2030,13 +2056,14 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             localBlobUrlsRef.current.add(previewUrl);
             const tempId = `elem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
             const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+            const dims = await getImageDimensions(file);
             const newElem: BoardElement = {
               id: tempId,
               type: 'image',
-              x: center.x - 160 + i * 30,
-              y: center.y - 110 + i * 30,
-              width: 320,
-              height: 220,
+              x: center.x - Math.round(dims.width / 2) + i * 30,
+              y: center.y - Math.round(dims.height / 2) + i * 30,
+              width: dims.width,
+              height: dims.height,
               title: file.name,
               url: previewUrl,
               isUploading: true,
@@ -2201,6 +2228,51 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
     setViewport({ x: nextX, y: nextY, zoom: nextZoom });
   };
+
+  // Smooth animated viewport transition
+  const animateViewportTo = useCallback((target: BoardViewport, duration = 280) => {
+    const startX = viewport.x;
+    const startY = viewport.y;
+    const startZoom = viewport.zoom;
+    const startTime = performance.now();
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+
+      const curX = startX + (target.x - startX) * ease;
+      const curY = startY + (target.y - startY) * ease;
+      const curZoom = startZoom + (target.zoom - startZoom) * ease;
+
+      setViewport({ x: curX, y: curY, zoom: curZoom });
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }, [viewport]);
+
+  // Focus and center on element in crisp high resolution
+  const handleFocusElement = useCallback((element: BoardElement) => {
+    const screenW = containerRef.current?.clientWidth || canvasDimensions.width;
+    const screenH = containerRef.current?.clientHeight || canvasDimensions.height;
+
+    const pad = 80;
+    const availW = Math.max(100, screenW - pad * 2);
+    const availH = Math.max(100, screenH - pad * 2);
+
+    const fitZoom = Math.min(availW / Math.max(10, element.width), availH / Math.max(10, element.height));
+    const targetZoom = Math.min(2.5, Math.max(0.35, Number(fitZoom.toFixed(2))));
+
+    const targetX = Math.round((screenW - element.width * targetZoom) / 2 - element.x * targetZoom);
+    const targetY = Math.round((screenH - element.height * targetZoom) / 2 - element.y * targetZoom);
+
+    animateViewportTo({ x: targetX, y: targetY, zoom: targetZoom });
+    setSelectedIds(new Set([element.id]));
+    toast.success(`Focused on ${element.title || 'Image'}`);
+  }, [canvasDimensions, animateViewportTo]);
 
   // Group Bounding Boxes Map
   const groupBoxes = useMemo(() => {
@@ -2556,8 +2628,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             style={{
               transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
               transformOrigin: '0 0',
-              willChange: 'transform',
-              contain: 'layout style',
+              willChange: isPanning ? 'transform' : 'auto',
             }}
           >
             {visibleElements.map((element) => {
@@ -2655,20 +2726,62 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
                   {/* 3. IMAGE CARD */}
                   {element.type === 'image' && (
-                    <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img">
+                    <div
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        handleFocusElement(element);
+                      }}
+                      className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img cursor-pointer"
+                    >
+                      {/* Action buttons on hover: HD Focus (lightbox) & Frame camera */}
+                      <div className="absolute top-2 left-2 z-20 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/85 backdrop-blur-md rounded-lg p-1 border border-white/15 shadow-xl">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setFocusedImage({
+                              url: element.url || (element.metadata as any)?.dataUrl || '',
+                              title: element.title || 'Image',
+                              element,
+                            });
+                          }}
+                          className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
+                          title="Open HD Lightbox (inspect pixels up to 500%)"
+                        >
+                          <Maximize2 size={12} />
+                          <span>HD Focus</span>
+                        </button>
+                        <div className="w-[1px] h-3 bg-white/20" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFocusElement(element);
+                          }}
+                          className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
+                          title="Center & frame on board viewport"
+                        >
+                          <Crosshair size={12} />
+                          <span>Frame</span>
+                        </button>
+                      </div>
+
                       {element.isUploading && (
                         <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-[10px] text-white shadow-lg pointer-events-none select-none animate-pulse">
                           <span className="w-2 h-2 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                           <span className="font-mono text-[9px] uppercase tracking-wider">Syncing</span>
                         </div>
                       )}
-                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center">
+                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center p-1">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={element.url || (element.metadata as any)?.dataUrl || ''}
                           alt={element.title || 'Image'}
                           loading="eager"
-                          className="w-full h-full object-cover select-none pointer-events-none"
+                          style={{
+                            imageRendering: '-webkit-optimize-contrast',
+                          }}
+                          className="w-full h-full object-contain select-none pointer-events-none"
                           onError={(e) => {
                             const fallback = (element.metadata as any)?.dataUrl;
                             if (fallback && e.currentTarget.src !== fallback) {
@@ -3365,6 +3478,20 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* High-Resolution HD Focus Modal */}
+      {focusedImage && (
+        <BoardImageFocusModal
+          imageUrl={focusedImage.url}
+          title={focusedImage.title}
+          onClose={() => setFocusedImage(null)}
+          onFocusInViewport={() => {
+            if (focusedImage.element) {
+              handleFocusElement(focusedImage.element);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

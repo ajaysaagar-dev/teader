@@ -6,6 +6,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  Crosshair,
   Music,
   Video as VideoIcon,
   ExternalLink,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { BoardElement, BoardGroup, BoardViewport, BoardData } from '@/types/board';
 import { isElementInViewport, getGroupBoundingBox } from '@/lib/board-snap';
+import { BoardImageFocusModal } from '@/components/BoardImageFocusModal';
 
 export default function PublicBoardSharePage() {
   const params = useParams();
@@ -41,6 +43,50 @@ export default function PublicBoardSharePage() {
   const [activeAudioId, setActiveAudioId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState<Record<string, { current: number; duration: number }>>({});
   const audioElementsRef = useRef<Record<string, HTMLAudioElement>>({});
+  const [focusedImage, setFocusedImage] = useState<{ url: string; title: string; element?: BoardElement } | null>(null);
+
+  // Smooth animated viewport transition
+  const animateViewportTo = useCallback((target: BoardViewport, duration = 280) => {
+    const startX = viewport.x;
+    const startY = viewport.y;
+    const startZoom = viewport.zoom;
+    const startTime = performance.now();
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+
+      const curX = startX + (target.x - startX) * ease;
+      const curY = startY + (target.y - startY) * ease;
+      const curZoom = startZoom + (target.zoom - startZoom) * ease;
+
+      setViewport({ x: curX, y: curY, zoom: curZoom });
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
+  }, [viewport]);
+
+  // Focus and center on element in crisp high resolution
+  const handleFocusElement = useCallback((element: BoardElement) => {
+    const screenW = containerRef.current?.clientWidth || canvasDimensions.width;
+    const screenH = containerRef.current?.clientHeight || canvasDimensions.height;
+
+    const pad = 80;
+    const availW = Math.max(100, screenW - pad * 2);
+    const availH = Math.max(100, screenH - pad * 2);
+
+    const fitZoom = Math.min(availW / Math.max(10, element.width), availH / Math.max(10, element.height));
+    const targetZoom = Math.min(2.5, Math.max(0.35, Number(fitZoom.toFixed(2))));
+
+    const targetX = Math.round((screenW - element.width * targetZoom) / 2 - element.x * targetZoom);
+    const targetY = Math.round((screenH - element.height * targetZoom) / 2 - element.y * targetZoom);
+
+    animateViewportTo({ x: targetX, y: targetY, zoom: targetZoom });
+  }, [canvasDimensions, animateViewportTo]);
 
   const fitElementsToScreen = useCallback((elems: BoardElement[], grps: BoardGroup[], width: number, height: number) => {
     if ((!elems || elems.length === 0) && (!grps || grps.length === 0)) {
@@ -174,7 +220,7 @@ export default function PublicBoardSharePage() {
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    const nextZoom = Math.min(3.5, Math.max(0.15, viewport.zoom * zoomFactor));
+    const nextZoom = Math.min(5.0, Math.max(0.15, viewport.zoom * zoomFactor));
 
     const rect = containerRef.current?.getBoundingClientRect();
     const mouseX = rect ? e.clientX - rect.left : canvasDimensions.width / 2;
@@ -461,8 +507,7 @@ export default function PublicBoardSharePage() {
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: '0 0',
-          willChange: 'transform',
-          contain: 'layout style',
+          willChange: isPanning ? 'transform' : 'auto',
         }}
       >
         {visibleElements.map((element) => (
@@ -521,14 +566,56 @@ export default function PublicBoardSharePage() {
 
             {/* Image Card */}
             {element.type === 'image' && (
-              <div className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg group">
-                <div className="flex-1 relative overflow-hidden bg-black/40 flex items-center justify-center">
+              <div
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  handleFocusElement(element);
+                }}
+                className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg group/img relative cursor-pointer"
+              >
+                {/* Action buttons on hover: HD Focus (lightbox) & Frame camera */}
+                <div className="absolute top-2 left-2 z-20 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/85 backdrop-blur-md rounded-lg p-1 border border-white/15 shadow-xl">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFocusedImage({
+                        url: element.url || (element.metadata as any)?.dataUrl || '',
+                        title: element.title || 'Image',
+                        element,
+                      });
+                    }}
+                    className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
+                    title="Open HD Lightbox (inspect pixels up to 500%)"
+                  >
+                    <Maximize2 size={12} />
+                    <span>HD Focus</span>
+                  </button>
+                  <div className="w-[1px] h-3 bg-white/20" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFocusElement(element);
+                    }}
+                    className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
+                    title="Center & frame on board viewport"
+                  >
+                    <Crosshair size={12} />
+                    <span>Frame</span>
+                  </button>
+                </div>
+
+                <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center p-1">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={element.url || (element.metadata as any)?.dataUrl || ''}
                     alt={element.title || 'Image'}
                     loading="eager"
-                    className="w-full h-full object-cover select-none"
+                    style={{
+                      imageRendering: '-webkit-optimize-contrast',
+                    }}
+                    className="w-full h-full object-contain select-none pointer-events-none"
                     onError={(e) => {
                       const fallback = (element.metadata as any)?.dataUrl;
                       if (fallback && e.currentTarget.src !== fallback) {
@@ -677,7 +764,7 @@ export default function PublicBoardSharePage() {
           {Math.round(viewport.zoom * 100)}%
         </span>
         <button
-          onClick={() => setViewport((prev) => ({ ...prev, zoom: Math.min(3.5, prev.zoom + 0.15) }))}
+          onClick={() => setViewport((prev) => ({ ...prev, zoom: Math.min(5.0, prev.zoom + 0.15) }))}
           className="p-1.5 rounded hover:bg-white/10 text-white transition-colors cursor-pointer"
           title="Zoom In"
         >
@@ -692,6 +779,20 @@ export default function PublicBoardSharePage() {
           <Maximize2 size={14} />
         </button>
       </div>
+
+      {/* High-Resolution HD Focus Modal */}
+      {focusedImage && (
+        <BoardImageFocusModal
+          imageUrl={focusedImage.url}
+          title={focusedImage.title}
+          onClose={() => setFocusedImage(null)}
+          onFocusInViewport={() => {
+            if (focusedImage.element) {
+              handleFocusElement(focusedImage.element);
+            }
+          }}
+        />
+      )}
       </>
       )}
     </div>
