@@ -599,21 +599,24 @@ export default function SingleProjectPage() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
 
-  const isFetchingRef = useRef(false);
+  // Track in-flight fetch and retry state without triggering re-renders
+  const fetchStateRef = useRef<{ fetching: boolean; retried: boolean }>({ fetching: false, retried: false });
+
+  // Helper: create a fresh AbortSignal per individual fetch (15s timeout)
+  const makeSignal = () =>
+    typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+      ? AbortSignal.timeout(15000)
+      : undefined;
 
   // Real-time Fetching & User Session
   const fetchProjectData = useCallback(async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
+    if (fetchStateRef.current.fetching) return;
+    fetchStateRef.current.fetching = true;
 
     try {
-      const timeoutSignal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
-        ? AbortSignal.timeout(8000)
-        : undefined;
-
       // Step 1: Verify User Session (resilient against network glitches/timeouts)
       let sessionUser: any = currentUser;
-      const meRes = await authFetch('/api/auth/me', { signal: timeoutSignal }).catch(() => null);
+      const meRes = await authFetch('/api/auth/me', { signal: makeSignal() }).catch(() => null);
       if (meRes) {
         if (meRes.status === 401 && !currentProjectRef.current) {
           const token = getAuthToken();
@@ -641,7 +644,7 @@ export default function SingleProjectPage() {
       let projectAccessDenied = false;
 
       // Direct single-project endpoint (fast & lightweight)
-      const directProjRes = await authFetch(`/api/projects/${projectIdParam}`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
+      const directProjRes = await authFetch(`/api/projects/${projectIdParam}`, { cache: 'no-store', signal: makeSignal() }).catch(() => null);
 
       if (directProjRes) {
         if (directProjRes.status === 401 && !currentProjectRef.current) {
@@ -672,7 +675,7 @@ export default function SingleProjectPage() {
 
       // Fallback 1: list search if direct endpoint returned a network error or was unavailable
       if (!foundProj && !projectAccessDenied) {
-        const projRes = await authFetch('/api/projects', { cache: 'no-store', signal: timeoutSignal }).catch(() => null);
+        const projRes = await authFetch('/api/projects', { cache: 'no-store', signal: makeSignal() }).catch(() => null);
         if (projRes && projRes.ok) {
           const projData = await projRes.json().catch(() => null);
           if (Array.isArray(projData)) {
@@ -703,9 +706,10 @@ export default function SingleProjectPage() {
         } catch {}
       }
 
-      // CRITICAL FIX: Only update project state if a project was retrieved OR if server explicitly confirmed access denied on initial load
+      // Only update project state if a project was retrieved OR if server explicitly confirmed access denied on initial load
       if (foundProj) {
         setProject(foundProj);
+        fetchStateRef.current.retried = false; // reset retry counter on successful load
         initializedProjects.add(String(projectIdParam).toLowerCase());
         if (foundProj.key) initializedProjects.add(foundProj.key.toLowerCase());
         if (foundProj.id) initializedProjects.add(String(foundProj.id).toLowerCase());
@@ -719,7 +723,18 @@ export default function SingleProjectPage() {
           console.warn('[SingleProjectPage] Transient 403/404 during background sync; keeping active project in view');
         }
       } else if (!currentProjectRef.current) {
-        // Initial load failure with no existing project in state
+        // Initial load failure with no existing project in state.
+        // Retry once after a short delay before showing "Access Denied" — protects against
+        // transient network errors, cold DB starts, and React StrictMode double-invoke races.
+        if (!fetchStateRef.current.retried) {
+          fetchStateRef.current.retried = true;
+          setTimeout(() => {
+            fetchStateRef.current.fetching = false;
+            fetchProjectData();
+          }, 2500);
+          return;
+        }
+        // After retry also failed, show the error state
         setProject(null);
         setLoading(false);
         return;
@@ -732,11 +747,11 @@ export default function SingleProjectPage() {
         return;
       }
 
-      // Step 3: Load Architecture, Members, and Issues
+      // Step 3: Load Architecture, Members, and Issues — each with its own timeout signal
       const [memRes, permRes, issueRes] = await Promise.all([
-        authFetch(`/api/projects/${activeProj.id}/members`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        authFetch(`/api/projects/${activeProj.id}/permissions`, { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
-        authFetch('/api/issues', { cache: 'no-store', signal: timeoutSignal }).catch(() => null),
+        authFetch(`/api/projects/${activeProj.id}/members`, { cache: 'no-store', signal: makeSignal() }).catch(() => null),
+        authFetch(`/api/projects/${activeProj.id}/permissions`, { cache: 'no-store', signal: makeSignal() }).catch(() => null),
+        authFetch('/api/issues', { cache: 'no-store', signal: makeSignal() }).catch(() => null),
       ]);
 
       if (memRes && memRes.ok) {
@@ -769,7 +784,7 @@ export default function SingleProjectPage() {
       console.error('Error loading project:', err);
     } finally {
       setLoading(false);
-      isFetchingRef.current = false;
+      fetchStateRef.current.fetching = false;
     }
   }, [projectIdParam, router, currentUser]);
 

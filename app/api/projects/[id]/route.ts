@@ -23,7 +23,11 @@ export async function GET(
 
     // Check membership and join requests
     const members = await getProjectMembersDB(project.id);
-    const isMember = members.some((m: any) => Number(m.userId) === numUserId);
+    // getProjectMembersDB returns rows with `id` (from users JOIN), not `userId`.
+    // We check both fields to be safe against any schema variations.
+    const isMember = members.some(
+      (m: any) => Number(m.id) === numUserId || Number(m.userId) === numUserId
+    );
 
     let joinStatus: 'active' | 'pending' | 'none' = isOwner || isMember ? 'active' : 'none';
     if (joinStatus === 'none') {
@@ -47,7 +51,8 @@ export async function GET(
 
     return NextResponse.json({ ...project, joinStatus });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[GET /api/projects/[id]] Error:', err.message);
+    return NextResponse.json({ error: 'Internal server error while loading project' }, { status: 500 });
   }
 }
 

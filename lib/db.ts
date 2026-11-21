@@ -874,7 +874,7 @@ export async function getAllProjectsDB(userId?: number | string) {
          FROM "projects" p
          LEFT JOIN "project_members" pm ON p."id" = pm."projectId" AND pm."userId" = $1
          LEFT JOIN "project_join_requests" pjr ON p."id" = pjr."projectId" AND pjr."userId" = $1 AND pjr."status" = 'pending'
-         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1 OR pjr."status" = 'pending'
+         WHERE p."owner_id" = $1 OR p."creatorId" = $1 OR pm."userId" = $1 OR (pjr."userId" = $1 AND pjr."status" = 'pending')
          ORDER BY p."id" ASC`,
         [numericUserId]
       );
