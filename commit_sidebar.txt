@@ -1,0 +1,6 @@
+feat: compact hover-expandable sidebars for board, docs, and diagrams
+
+- Make board sidebar, docs tree sidebar, and charts sidebar compact strips (w-12) by default
+- Expand sidebars to full width (w-64/w-80) on cursor hover with smooth transition and overlay shadow
+- Add pin/unpin button (PanelLeft/PanelLeftClose) in sidebar headers with localStorage persistence
+- Update package.json build script to use --webpack to avoid Turbopack font compiler bug

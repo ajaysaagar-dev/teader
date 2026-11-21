@@ -43,7 +43,9 @@ import {
   ChevronDown,
   GripVertical,
   Users,
-  X
+  X,
+  PanelLeft,
+  PanelLeftClose
 } from 'lucide-react';
 
 import { toast } from 'sonner';
@@ -128,6 +130,30 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       return clamped;
     });
   }, []);
+  // Hover and Pin states for compact expandable sidebar (matching main sidebar)
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('teader_docs_sidebar_pinned');
+      if (saved === 'true') setIsPinned(true);
+    } catch {}
+  }, []);
+
+  const togglePin = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('teader_docs_sidebar_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const isExpanded = isPinned || isHovered;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -1713,51 +1739,126 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
     <div className="relative flex-1 h-full min-h-0 flex flex-col bg-[var(--bg-canvas)] text-[var(--text-secondary)] font-sans selection:bg-white/30 selection:text-white overflow-hidden overscroll-none">
       {/* ─── Main Two-Column Layout ────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 flex overflow-hidden">
-        {/* ─── Left Sidebar: Folders & Markdown Files (Drag and Drop) ─────── */}
-        <aside className="w-72 sm:w-80 shrink-0 border-r border-[#141414] bg-[#101010] flex flex-col h-full select-none z-10">
-          {/* Header & Actions */}
-          <div className="p-3.5 border-b border-[#141414] space-y-2.5 bg-[var(--bg-panel)]">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <BookOpen size={15} className="text-white" />
-                <span className="font-semibold text-xs text-white">
-                  Documentation tree
-                </span>
+        {/* ─── Left Sidebar: Folders & Markdown Files (Expandable on hover like main sidebar) ─────── */}
+        <div
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+            isPinned ? 'w-72 sm:w-80' : 'w-12'
+          }`}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          <aside
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#101010] border-r border-[#141414] text-[var(--text-secondary)] flex flex-col select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+              isExpanded
+                ? 'w-72 sm:w-80 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
+                : 'w-12 shadow-none'
+            }`}
+          >
+            {/* Header & Actions */}
+            {isExpanded ? (
+              <div className="p-3.5 border-b border-[#141414] space-y-2.5 bg-[var(--bg-panel)] shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <BookOpen size={15} className="text-white shrink-0" />
+                    <span className="font-semibold text-xs text-white truncate">
+                      Documentation tree
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => setIsCreatingFolder(true)}
+                      className="p-1.5 rounded-lg bg-[var(--bg-panel)] hover:bg-white/5 text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] transition-colors"
+                      title="Create New Folder"
+                    >
+                      <FolderPlus size={13} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveFolderForCreation(DEFAULT_FOLDER);
+                        setIsCreatingNew(true);
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#E5E5E5] font-medium text-xs transition-colors shadow-sm"
+                      title="Create New Document in Start folder"
+                    >
+                      <Plus size={13} />
+                      <span>New Doc</span>
+                    </button>
+                    <button
+                      onClick={togglePin}
+                      className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${
+                        isPinned ? 'text-white bg-white/10' : 'text-[var(--text-muted)] hover:text-white'
+                      }`}
+                      title={isPinned ? 'Unpin sidebar (auto-compact on hover out)' : 'Pin sidebar open'}
+                    >
+                      {isPinned ? <PanelLeftClose size={13} /> : <PanelLeft size={13} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Search */}
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Filter documents..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-[#191919] border border-[#292929] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white placeholder-[#666666] outline-none"
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-1">
+            ) : (
+              <div className="h-10 border-b border-[#141414] flex items-center justify-center bg-[var(--bg-panel)] shrink-0">
                 <button
-                  onClick={() => setIsCreatingFolder(true)}
-                  className="p-1.5 rounded-lg bg-[var(--bg-panel)] hover:bg-white/5 text-[var(--text-secondary)] hover:text-white border border-[var(--border-primary)] transition-colors"
-                  title="Create New Folder"
+                  onClick={togglePin}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-white transition-colors"
+                  title="Documentation tree (hover to expand, click to pin)"
                 >
-                  <FolderPlus size={13} />
+                  <BookOpen size={16} />
                 </button>
+              </div>
+            )}
+
+            {/* Collapsed State: Vertical Icon Strip */}
+            {!isExpanded && (
+              <div className="flex-1 overflow-y-auto py-2 px-1 space-y-1.5 flex flex-col items-center custom-scrollbar">
+                {docs.map((doc) => {
+                  const isSelected = selectedDocId === String(doc.id);
+                  const cleanTitle = (doc.title || doc.fileName || 'Untitled').replace(/\.md$/i, '');
+                  return (
+                    <button
+                      key={doc.id}
+                      onClick={() => handleOpenDoc(String(doc.id))}
+                      className={`p-2 rounded-lg transition-colors relative group flex items-center justify-center w-8 h-8 ${
+                        isSelected
+                          ? 'bg-white/15 text-white'
+                          : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
+                      }`}
+                      title={`${cleanTitle} (${doc.folder || DEFAULT_FOLDER})`}
+                    >
+                      <FileText size={14} className={isSelected ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-white'} />
+                      {isSelected && (
+                        <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-white rounded-r" />
+                      )}
+                    </button>
+                  );
+                })}
                 <button
                   onClick={() => {
                     setActiveFolderForCreation(DEFAULT_FOLDER);
                     setIsCreatingNew(true);
                   }}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white text-black hover:bg-[#E5E5E5] font-medium text-xs transition-colors shadow-sm"
-                  title="Create New Document in Start folder"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors"
+                  title="New Document"
                 >
                   <Plus size={13} />
-                  <span>New Doc</span>
                 </button>
               </div>
-            </div>
+            )}
 
-            {/* Quick Search */}
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter documents..."
-                className="w-full pl-8 pr-3 py-1.5 bg-[#191919] border border-[#292929] focus:border-[var(--border-secondary)] rounded-lg text-xs text-white placeholder-[#666666] outline-none"
-              />
-            </div>
-          </div>
+            {/* Expanded State: Full Tree with Inline Creation & DnD */}
+            {isExpanded && (
+              <>
 
           {/* Inline Folder Creation Form */}
           {isCreatingFolder && (
@@ -2126,7 +2227,10 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
               );
             })}
           </div>
-        </aside>
+        </>
+      )}
+    </aside>
+  </div>
 
         {/* ─── Right Area: Document Editor & Live Preview ─────────────────── */}
         <div className="flex-1 min-w-0 flex flex-col h-full bg-[var(--bg-canvas)] relative">

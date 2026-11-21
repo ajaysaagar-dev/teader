@@ -29,6 +29,9 @@ import {
   Layers,
   FileCode,
   Magnet,
+  PanelLeft,
+  PanelLeftClose,
+  Sidebar as SidebarIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -158,7 +161,28 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isJustSaved, setIsJustSaved] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('teader_charts_sidebar_pinned');
+      if (saved === 'true') setIsSidebarPinned(true);
+    } catch {}
+  }, []);
+
+  const toggleSidebarPin = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsSidebarPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('teader_charts_sidebar_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const isSidebarExpanded = isSidebarPinned || isSidebarHovered;
   const [searchQuery, setSearchQuery] = useState('');
   const [newChartTitle, setNewChartTitle] = useState('');
   const [renamingChartId, setRenamingChartId] = useState<string | null>(null);
@@ -2001,12 +2025,25 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       <div className="h-10 bg-[#000000] border-0 bg-[var(--bg-main)] flex items-center justify-between px-2 shrink-0 z-20 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x">
         {/* Tab Switcher */}
         <div className="flex items-center gap-1 min-w-0 overflow-x-auto no-scrollbar">
+          {/* File Explorer Toggle */}
+          <button
+            onClick={() => toggleSidebarPin()}
+            className={`p-1.5 rounded text-xs transition-colors shrink-0 cursor-pointer ${
+              isSidebarPinned ? 'bg-white/20 text-white' : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
+            }`}
+            title={isSidebarPinned ? 'Unpin Diagrams Sidebar (auto-compact on hover out)' : 'Pin Diagrams Sidebar open'}
+          >
+            <SidebarIcon size={14} />
+          </button>
+
+          <div className="w-[1px] h-4 bg-white/10 mx-0.5 shrink-0" />
+
           {openChartIds.length === 0 ? (
             <div className="text-xs text-[var(--text-muted)] px-2 flex items-center gap-2">
               <span>No open diagram tabs</span>
               <button
                 onClick={() => {
-                  setIsSidebarOpen(true);
+                  setIsSidebarPinned(true);
                   handleCreateChart();
                 }}
                 className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1D1D1D] hover:bg-[#2A2A2A] text-white text-[11px] transition-colors"
@@ -2079,29 +2116,50 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
 
       {/* ── Main Workspace Body ── */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
-        {/* ── Left Sidebar: File Explorer ── */}
-        <AnimatePresence initial={false}>
-          {isSidebarOpen && (
-            <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 260, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="h-full bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 overflow-hidden z-10"
-            >
-              {/* Sidebar Header & New Chart Button */}
-              <div className="p-3 border-b border-[#232323] space-y-2">
+        {/* ── Left Sidebar: File Explorer (Expandable on hover like main sidebar) ── */}
+        <div
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+            isSidebarPinned ? 'w-64' : 'w-12'
+          }`}
+          onMouseEnter={() => setIsSidebarHovered(true)}
+          onMouseLeave={() => setIsSidebarHovered(false)}
+        >
+          <aside
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+              isSidebarExpanded
+                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
+                : 'w-12 shadow-none'
+            }`}
+          >
+            {/* Sidebar Header & New Chart Button */}
+            {isSidebarExpanded ? (
+              <div className="p-3 border-b border-[#232323] space-y-2 shrink-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                    Diagram Files ({charts.length})
-                  </span>
-                  <button
-                    onClick={() => handleCreateChart()}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-white text-black hover:bg-[#FFFFFF] text-black font-semibold text-xs shadow-sm transition-colors"
-                  >
-                    <Plus size={12} />
-                    <span>New Chart</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Workflow size={13} className="text-white shrink-0" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] truncate">
+                      Diagram Files ({charts.length})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleCreateChart()}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-white text-black hover:bg-[#FFFFFF] text-black font-semibold text-xs shadow-sm transition-colors cursor-pointer"
+                      title="Create New Diagram"
+                    >
+                      <Plus size={12} />
+                      <span>New</span>
+                    </button>
+                    <button
+                      onClick={toggleSidebarPin}
+                      className={`p-1 rounded hover:bg-white/10 transition-colors ${
+                        isSidebarPinned ? 'text-white bg-white/10' : 'text-[var(--text-muted)] hover:text-white'
+                      }`}
+                      title={isSidebarPinned ? 'Unpin sidebar (auto-compact on hover out)' : 'Pin sidebar open'}
+                    >
+                      {isSidebarPinned ? <PanelLeftClose size={12} /> : <PanelLeft size={12} />}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Search */}
@@ -2116,9 +2174,21 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   />
                 </div>
               </div>
+            ) : (
+              <div className="h-10 border-b border-[#232323] flex items-center justify-center shrink-0">
+                <button
+                  onClick={toggleSidebarPin}
+                  className="p-1.5 rounded hover:bg-white/10 text-white transition-colors"
+                  title={`Diagram Files (${charts.length}) - Hover to expand, click to pin`}
+                >
+                  <Workflow size={14} />
+                </button>
+              </div>
+            )}
 
-              {/* Diagram File List */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {/* Diagram File List */}
+            {isSidebarExpanded ? (
+              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                 {filteredCharts.length === 0 ? (
                   <div className="text-center py-8 text-xs text-[#666666]">
                     {searchQuery ? 'No matching diagrams' : 'No diagram files yet'}
@@ -2198,9 +2268,39 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                   })
                 )}
               </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-1.5 space-y-1 flex flex-col items-center custom-scrollbar">
+                {filteredCharts.map((chart) => {
+                  const isActive = chart.id === activeChartId;
+                  return (
+                    <button
+                      key={chart.id}
+                      onClick={() => handleSelectChart(chart.id)}
+                      className={`p-2 rounded-lg transition-colors relative group flex items-center justify-center w-8 h-8 ${
+                        isActive
+                          ? 'bg-[#202020] text-white border border-[#343434]'
+                          : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
+                      }`}
+                      title={chart.title}
+                    >
+                      <Workflow size={14} className={isActive ? 'text-white' : 'text-[#666666] group-hover:text-white'} />
+                      {isActive && (
+                        <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-white rounded-r" />
+                      )}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => handleCreateChart()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+                  title="New Diagram"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            )}
+          </aside>
+        </div>
 
         {/* ── Canvas Central Area ── */}
         <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-[#1e1e1e]">

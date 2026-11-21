@@ -62,6 +62,8 @@ import {
   Smile,
   Tag,
   LayoutTemplate,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -217,7 +219,28 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
   });
 
   // ── UI States ──
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('teader_board_sidebar_pinned');
+      if (saved === 'true') setIsSidebarPinned(true);
+    } catch {}
+  }, []);
+
+  const toggleSidebarPin = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsSidebarPinned((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('teader_board_sidebar_pinned', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const isSidebarExpanded = isSidebarPinned || isSidebarHovered;
   const [searchQuery, setSearchQuery] = useState('');
   const [editingTitleBoardId, setEditingTitleBoardId] = useState<string | null>(null);
   const [renamingTitle, setRenamingTitle] = useState('');
@@ -2705,11 +2728,11 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar h-full">
           {/* File Explorer Toggle */}
           <button
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
+            onClick={() => toggleSidebarPin()}
             className={`p-1.5 rounded text-xs transition-colors shrink-0 cursor-pointer ${
-              isSidebarOpen ? 'bg-white/20 text-white' : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
+              isSidebarPinned ? 'bg-white/20 text-white' : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
             }`}
-            title="Toggle Boards Explorer"
+            title={isSidebarPinned ? 'Unpin Boards Sidebar (auto-compact on hover out)' : 'Pin Boards Sidebar open'}
           >
             <SidebarIcon size={14} />
           </button>
@@ -2805,28 +2828,50 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
       {/* ── Workspace Body: Optional File Explorer Sidebar + Canvas ── */}
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
-        {/* Left Sidebar: Boards File Explorer */}
-        <AnimatePresence initial={false}>
-          {isSidebarOpen && (
-            <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 250, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="h-full bg-[#141414] border-r border-white/10 flex flex-col shrink-0 overflow-hidden z-20"
-            >
-              <div className="p-3 border-b border-white/10 space-y-2">
+        {/* Left Sidebar: Boards File Explorer (Expandable on hover like main sidebar) */}
+        <div
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+            isSidebarPinned ? 'w-64' : 'w-12'
+          }`}
+          onMouseEnter={() => setIsSidebarHovered(true)}
+          onMouseLeave={() => setIsSidebarHovered(false)}
+        >
+          <aside
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#141414] border-r border-white/10 flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+              isSidebarExpanded
+                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
+                : 'w-12 shadow-none'
+            }`}
+          >
+            {/* Sidebar Header */}
+            {isSidebarExpanded ? (
+              <div className="p-3 border-b border-white/10 space-y-2 shrink-0">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
-                    Boards ({boards.length})
-                  </span>
-                  <button
-                    onClick={() => handleCreateBoard()}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded bg-white text-black hover:bg-white/90 text-[11px] font-medium transition-colors cursor-pointer"
-                  >
-                    <Plus size={11} />
-                    <span>New Board</span>
-                  </button>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Layers size={13} className="text-white shrink-0" />
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)] truncate">
+                      Boards ({boards.length})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => handleCreateBoard()}
+                      className="flex items-center gap-1 px-2 py-0.5 rounded bg-white text-black hover:bg-white/90 text-[11px] font-medium transition-colors cursor-pointer"
+                      title="Create New Board"
+                    >
+                      <Plus size={11} />
+                      <span>New</span>
+                    </button>
+                    <button
+                      onClick={toggleSidebarPin}
+                      className={`p-1 rounded hover:bg-white/10 transition-colors ${
+                        isSidebarPinned ? 'text-white bg-white/10' : 'text-[var(--text-muted)] hover:text-white'
+                      }`}
+                      title={isSidebarPinned ? 'Unpin sidebar (auto-compact on hover out)' : 'Pin sidebar open'}
+                    >
+                      {isSidebarPinned ? <PanelLeftClose size={12} /> : <PanelLeft size={12} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="relative">
@@ -2840,9 +2885,21 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   />
                 </div>
               </div>
+            ) : (
+              <div className="h-10 border-b border-white/10 flex items-center justify-center shrink-0">
+                <button
+                  onClick={toggleSidebarPin}
+                  className="p-1.5 rounded hover:bg-white/10 text-white transition-colors"
+                  title={`Boards (${boards.length}) - Hover to expand, click to pin`}
+                >
+                  <Layers size={14} />
+                </button>
+              </div>
+            )}
 
-              {/* Board Files List */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {/* Board Files List */}
+            {isSidebarExpanded ? (
+              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                 {filteredBoards.map((b) => {
                   const isActive = b.id === activeBoardId;
                   const isRenaming = editingTitleBoardId === b.id;
@@ -2910,9 +2967,39 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                   );
                 })}
               </div>
-            </motion.aside>
-          )}
-        </AnimatePresence>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-1.5 space-y-1 flex flex-col items-center custom-scrollbar">
+                {filteredBoards.map((b) => {
+                  const isActive = b.id === activeBoardId;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => handleSelectBoard(b.id)}
+                      className={`p-2 rounded-lg transition-colors relative group flex items-center justify-center w-8 h-8 ${
+                        isActive
+                          ? 'bg-white/15 text-white'
+                          : 'text-[var(--text-muted)] hover:text-white hover:bg-white/5'
+                      }`}
+                      title={b.title}
+                    >
+                      <Layers size={14} className={isActive ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-white'} />
+                      {isActive && (
+                        <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-white rounded-r" />
+                      )}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => handleCreateBoard()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+                  title="New Board"
+                >
+                  <Plus size={13} />
+                </button>
+              </div>
+            )}
+          </aside>
+        </div>
 
         {/* ── Main Canvas Viewport ── */}
         <div
