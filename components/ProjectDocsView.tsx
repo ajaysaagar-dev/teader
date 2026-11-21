@@ -45,8 +45,12 @@ import {
   Users,
   X,
   PanelLeft,
-  PanelLeftClose
+  PanelLeftClose,
+  Globe,
+  Share2,
+  CheckCheck
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { toast } from 'sonner';
 import { CustomDropdown } from '@/components/ui/CustomDropdown';
@@ -203,6 +207,84 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   } | null>(null);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── Public Doc Share State ──
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [activeShare, setActiveShare] = useState<{
+    id: string;
+    docId: string;
+    projectId: number;
+    token: string;
+    createdBy?: number;
+    expiresAt?: string | null;
+    createdAt: string;
+  } | null>(null);
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false);
+  const [shareExpiry, setShareExpiry] = useState<'never' | '1h' | '24h' | '7d' | '30d'>('never');
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // ── Share Link Management ──
+  const fetchActiveShare = useCallback(async (docId?: string) => {
+    const targetDocId = docId || selectedDocIdCurrentRef.current;
+    if (!targetDocId) return;
+    try {
+      const res = await authFetch(`/api/projects/${projectId}/docs/${targetDocId}/share`);
+      if (res.ok) {
+        const json = await res.json();
+        setActiveShare(json.share);
+      }
+    } catch {}
+  }, [projectId]);
+
+  const handleOpenShareModal = () => {
+    if (!selectedDoc) return;
+    setIsShareModalOpen(true);
+    setCopiedLink(false);
+    fetchActiveShare(String(selectedDoc.id));
+  };
+
+  const handleGenerateShare = async () => {
+    if (!selectedDoc) return;
+    try {
+      setIsGeneratingShare(true);
+      const res = await authFetch(`/api/projects/${projectId}/docs/${selectedDoc.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expiry: shareExpiry }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setActiveShare(json.share);
+        toast.success('Public document share link generated');
+      } else {
+        toast.error('Failed to generate public link');
+      }
+    } catch (err) {
+      toast.error('Failed to generate public link');
+    } finally {
+      setIsGeneratingShare(false);
+    }
+  };
+
+  const handleRevokeShare = async () => {
+    if (!selectedDoc) return;
+    try {
+      await authFetch(`/api/projects/${projectId}/docs/${selectedDoc.id}/share`, { method: 'DELETE' });
+      setActiveShare(null);
+      toast.info('Public link revoked');
+    } catch {
+      toast.error('Failed to revoke link');
+    }
+  };
+
+  const handleCopyShareLink = () => {
+    if (!activeShare) return;
+    const shareUrl = `${window.location.origin}/share/doc/${activeShare.token}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    toast.success('Copied share link to clipboard');
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
   // Refs for scrolling and autosave
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -234,6 +316,14 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
   useEffect(() => {
     docsRef.current = docs;
   }, [docs]);
+
+  useEffect(() => {
+    if (selectedDocId) {
+      fetchActiveShare(selectedDocId);
+    } else {
+      setActiveShare(null);
+    }
+  }, [selectedDocId, fetchActiveShare]);
 
   useEffect(() => {
     activeContentRef.current = activeContent;
@@ -2434,6 +2524,21 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     </button>
                   </div>
                 </div>
+
+                {/* Right Action: Public Share Button */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleOpenShareModal}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                    title="Share document via public view-only link"
+                  >
+                    <Globe size={13} className="text-white/80" />
+                    <span>Share</span>
+                    {activeShare && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse ml-0.5" title="Public link active" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Workspace Content: Editor + Synchronized Live Preview */}
@@ -2592,6 +2697,148 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
           </button>
         </div>
       )}
+
+      {/* ── Public Document Share Modal ── */}
+      <AnimatePresence>
+        {isShareModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md bg-[#141414] border border-white/15 rounded-xl shadow-2xl p-5 space-y-4 font-sans text-white"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white">
+                    <Globe size={14} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Share Document via Public Link</h3>
+                    <p className="text-[11px] text-[var(--text-muted)] font-mono truncate max-w-[280px]">
+                      {selectedDoc?.title || selectedDoc?.fileName}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsShareModalOpen(false)}
+                  className="p-1 rounded hover:bg-white/10 text-[var(--text-muted)] hover:text-white cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Expiry Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[var(--text-secondary)]">Link Expiration</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'never', label: 'No Expiry' },
+                    { id: '1h', label: '1 Hour' },
+                    { id: '24h', label: '24 Hours' },
+                    { id: '7d', label: '7 Days' },
+                    { id: '30d', label: '30 Days' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setShareExpiry(opt.id as any)}
+                      className={`px-2.5 py-1.5 rounded text-xs transition-colors cursor-pointer text-center ${
+                        shareExpiry === opt.id
+                          ? 'bg-white text-black font-semibold'
+                          : 'bg-[#1F1F1F] text-[var(--text-secondary)] hover:text-white hover:bg-[#2A2A2A]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Share Link Display */}
+              {activeShare ? (
+                <div className="space-y-3 pt-2">
+                  <div className="p-3 bg-[#1A1A1A] rounded-lg border border-white/10 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)]">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        <span>Public Link Ready</span>
+                      </span>
+                      <span className="text-white/80">
+                        {activeShare.expiresAt
+                          ? `Expires: ${new Date(activeShare.expiresAt).toLocaleDateString()} ${new Date(
+                              activeShare.expiresAt
+                            ).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : 'Never expires'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        readOnly
+                        value={
+                          typeof window !== 'undefined'
+                            ? `${window.location.origin}/share/doc/${activeShare.token}`
+                            : ''
+                        }
+                        className="flex-1 px-2.5 py-1.5 bg-black/60 border border-white/15 rounded text-xs text-white font-mono outline-none truncate"
+                      />
+                      <button
+                        onClick={handleCopyShareLink}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded bg-white text-black hover:bg-white/90 text-xs font-semibold shrink-0 cursor-pointer"
+                      >
+                        {copiedLink ? <CheckCheck size={13} /> : <Copy size={13} />}
+                        <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <a
+                      href={`/share/doc/${activeShare.token}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-xs text-white/70 hover:text-white underline cursor-pointer"
+                    >
+                      <span>Open live preview</span>
+                      <ExternalLink size={11} />
+                    </a>
+
+                    <button
+                      onClick={handleRevokeShare}
+                      className="text-xs text-white/60 hover:text-white hover:underline transition-colors cursor-pointer"
+                    >
+                      Revoke Public Link
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-2">
+                  <button
+                    onClick={handleGenerateShare}
+                    disabled={isGeneratingShare}
+                    className="w-full py-2 px-4 rounded-lg bg-white text-black hover:bg-white/90 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {isGeneratingShare ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Generating Public Link...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Globe size={13} />
+                        <span>Create View-Only Public Link</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

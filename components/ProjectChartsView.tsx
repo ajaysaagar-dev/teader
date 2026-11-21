@@ -22,6 +22,7 @@ import {
   Type,
   MousePointer,
   ArrowRight,
+  Hand,
   Check,
   Loader2,
   Workflow,
@@ -2069,7 +2070,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
                       handleCloseTab(tabId, e);
                     }
                   }}
-                  className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[200px] sm:max-w-[240px] ${
+                  className={`group relative flex items-center gap-2 px-3 h-8 rounded-t-lg text-xs font-mono cursor-pointer transition-all border-t-2 shrink-0 max-w-[260px] sm:max-w-[340px] ${
                     isActive
                       ? 'bg-[#181818] text-white border-t-[#FFFFFF] border-x border-x-[#2A2A2A] border-b border-b-[#181818] font-semibold shadow-sm'
                       : 'bg-[#000000] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:bg-[#161616] border-t-transparent border-x border-x-transparent'
@@ -2118,8 +2119,8 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         {/* ── Left Sidebar: File Explorer (Expandable on hover like main sidebar) ── */}
         <div
-          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out ${
-            isSidebarExpanded ? 'z-50' : 'z-30'
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-40 ${
+            isSidebarExpanded ? 'z-50' : 'z-40'
           } ${
             isSidebarPinned ? 'w-64' : 'w-12'
           }`}
@@ -2127,10 +2128,10 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           onMouseLeave={() => setIsSidebarHovered(false)}
         >
           <aside
-            className={`h-full absolute top-0 left-0 bottom-0 bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden ${
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-50 ${
               isSidebarExpanded
-                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)] z-50'
-                : 'w-12 shadow-none z-30'
+                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
+                : 'w-12 shadow-none'
             }`}
           >
             {/* Sidebar Header & New Chart Button */}
@@ -2305,9 +2306,9 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
         </div>
 
         {/* ── Canvas Central Area ── */}
-        <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-[#1e1e1e]">
-          {/* Floating Shape Palette / Draggable Toolbar */}
-          <div className="absolute top-3 left-3 sm:left-4 z-20 max-w-[calc(100vw-1.5rem)] flex items-center gap-1 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
+        <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-[#1e1e1e] z-10">
+          {/* Floating Shape Palette / Draggable Toolbar - Centered horizontally at the top */}
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100%-2rem)] flex items-center gap-1 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
             {/* Mode tools: Select / Link / Pan */}
             <button
               onClick={() => setActiveTool('select')}
@@ -2345,7 +2346,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
               }`}
               title="Pan Tool (Hand / Middle click)"
             >
-              <div className="text-xs font-bold uppercase">Pan</div>
+              <Hand size={15} />
             </button>
 
             {/* Snap to Grid & Elements Options Button */}

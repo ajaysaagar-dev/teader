@@ -130,6 +130,7 @@ let memoryDocFoldersStore: any[] = [];
 let memoryProjectChartsStore: any[] = [];
 let memoryProjectBoardsStore: any[] = [];
 let memoryBoardSharesStore: any[] = [];
+let memoryDocSharesStore: any[] = [];
 
 export function generate30CharKey(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -396,6 +397,19 @@ export async function initDB(): Promise<void> {
           CREATE TABLE IF NOT EXISTS "board_shares" (
             "id" VARCHAR(64) PRIMARY KEY,
             "boardId" VARCHAR(64) NOT NULL REFERENCES "project_boards"("id") ON DELETE CASCADE,
+            "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+            "token" VARCHAR(128) UNIQUE NOT NULL,
+            "createdBy" INT DEFAULT 1,
+            "expiresAt" TIMESTAMP WITH TIME ZONE,
+            "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+        // 9f. Create Doc Shares Table (Public Shareable Links for Docs)
+        await p.query(`
+          CREATE TABLE IF NOT EXISTS "doc_shares" (
+            "id" VARCHAR(64) PRIMARY KEY,
+            "docId" VARCHAR(64) NOT NULL REFERENCES "project_docs"("id") ON DELETE CASCADE,
             "projectId" INT NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
             "token" VARCHAR(128) UNIQUE NOT NULL,
             "createdBy" INT DEFAULT 1,
@@ -3580,6 +3594,205 @@ export async function revokeBoardShareDB(boardId: string): Promise<boolean> {
     if (fs.existsSync(sharesFile)) {
       let allShares: BoardShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
       allShares = allShares.filter((s) => s.boardId !== boardId);
+      fs.writeFileSync(sharesFile, JSON.stringify(allShares, null, 2), 'utf-8');
+    }
+  } catch {}
+  return true;
+}
+
+// ==========================================
+// Public Document Shares
+// ==========================================
+
+export interface DocShareRecord {
+  id: string;
+  docId: string;
+  projectId: number;
+  token: string;
+  createdBy?: number;
+  expiresAt?: string | null;
+  createdAt: string;
+}
+
+export function readDocContentOnDiskOrDB(doc: ProjectDocRecord): string {
+  const DOCS_DIR = path.join(process.cwd(), 'data', 'docs');
+  const localPath = path.join(DOCS_DIR, doc.fileName);
+  let content = '';
+
+  if (fs.existsSync(localPath)) {
+    try {
+      content = fs.readFileSync(localPath, 'utf-8');
+    } catch {}
+  }
+
+  if (!content && doc.filePath && fs.existsSync(doc.filePath)) {
+    try {
+      content = fs.readFileSync(doc.filePath, 'utf-8');
+      if (content && !fs.existsSync(localPath)) {
+        try {
+          fs.writeFileSync(localPath, content, 'utf-8');
+        } catch {}
+      }
+    } catch {}
+  }
+
+  if (!content && doc.content && typeof doc.content === 'string') {
+    content = doc.content;
+    try {
+      if (!fs.existsSync(localPath)) {
+        fs.writeFileSync(localPath, content, 'utf-8');
+      }
+    } catch {}
+  }
+
+  if (!content) {
+    content = `# ${doc.title}\n\nDocument initialized.`;
+  }
+
+  return content;
+}
+
+export async function createDocShareDB(data: {
+  id?: string;
+  docId: string;
+  projectId: number | string;
+  token?: string;
+  createdBy?: number | string;
+  expiresAt?: string | null;
+}): Promise<DocShareRecord> {
+  await initDB();
+  const numProjId = Number(data.projectId) || 1;
+  const numUserId = Number(data.createdBy) || 1;
+  const now = new Date().toISOString();
+  const id = data.id || `dshare_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const token = data.token || crypto.randomBytes(24).toString('base64url');
+
+  const record: DocShareRecord = {
+    id,
+    docId: data.docId,
+    projectId: numProjId,
+    token,
+    createdBy: numUserId,
+    expiresAt: data.expiresAt || null,
+    createdAt: now,
+  };
+
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM "doc_shares" WHERE "docId" = $1`, [data.docId]);
+    await p.query(
+      `INSERT INTO "doc_shares" ("id", "docId", "projectId", "token", "createdBy", "expiresAt", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [record.id, record.docId, record.projectId, record.token, record.createdBy, record.expiresAt, record.createdAt]
+    );
+  } catch {}
+
+  memoryDocSharesStore = memoryDocSharesStore.filter((s) => s.docId !== data.docId);
+  memoryDocSharesStore.unshift(record);
+
+  // Backup share record to disk
+  try {
+    const sharesDir = path.join(process.cwd(), 'data', 'docs');
+    if (!fs.existsSync(sharesDir)) fs.mkdirSync(sharesDir, { recursive: true });
+    const sharesFile = path.join(sharesDir, 'shares.json');
+    let allShares: DocShareRecord[] = [];
+    if (fs.existsSync(sharesFile)) {
+      try {
+        allShares = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      } catch {}
+    }
+    allShares = allShares.filter((s) => s.docId !== data.docId && s.token !== record.token);
+    allShares.unshift(record);
+    fs.writeFileSync(sharesFile, JSON.stringify(allShares, null, 2), 'utf-8');
+  } catch {}
+
+  return record;
+}
+
+export async function getActiveDocShareDB(docId: string): Promise<DocShareRecord | null> {
+  await initDB();
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT * FROM "doc_shares" WHERE "docId" = $1 LIMIT 1`,
+      [docId]
+    );
+    if (result.rows && result.rows[0]) {
+      return result.rows[0];
+    }
+  } catch {}
+
+  const mem = memoryDocSharesStore.find((s) => s.docId === docId);
+  if (mem) return mem;
+
+  // Check disk backup
+  try {
+    const sharesFile = path.join(process.cwd(), 'data', 'docs', 'shares.json');
+    if (fs.existsSync(sharesFile)) {
+      const allShares: DocShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      const found = allShares.find((s) => s.docId === docId);
+      if (found) {
+        if (!memoryDocSharesStore.some((s) => s.id === found.id)) {
+          memoryDocSharesStore.push(found);
+        }
+        return found;
+      }
+    }
+  } catch {}
+
+  return null;
+}
+
+export async function getDocShareByTokenDB(token: string): Promise<{ share: DocShareRecord; doc: ProjectDocRecord; content: string } | null> {
+  await initDB();
+  let share: DocShareRecord | null = null;
+  try {
+    const p = getPool();
+    const result = await p.query(
+      `SELECT * FROM "doc_shares" WHERE "token" = $1 LIMIT 1`,
+      [token]
+    );
+    if (result.rows && result.rows[0]) {
+      share = result.rows[0];
+    }
+  } catch {}
+
+  if (!share) {
+    share = memoryDocSharesStore.find((s) => s.token === token) || null;
+  }
+
+  if (!share) {
+    try {
+      const sharesFile = path.join(process.cwd(), 'data', 'docs', 'shares.json');
+      if (fs.existsSync(sharesFile)) {
+        const allShares: DocShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+        share = allShares.find((s) => s.token === token) || null;
+      }
+    } catch {}
+  }
+
+  if (!share) return null;
+
+  const doc = await getProjectDocByIdDB(share.docId);
+  if (!doc) return null;
+
+  const content = readDocContentOnDiskOrDB(doc);
+
+  return { share, doc, content };
+}
+
+export async function revokeDocShareDB(docId: string): Promise<boolean> {
+  await initDB();
+  try {
+    const p = getPool();
+    await p.query(`DELETE FROM "doc_shares" WHERE "docId" = $1`, [docId]);
+  } catch {}
+  memoryDocSharesStore = memoryDocSharesStore.filter((s) => s.docId !== docId);
+  try {
+    const sharesFile = path.join(process.cwd(), 'data', 'docs', 'shares.json');
+    if (fs.existsSync(sharesFile)) {
+      let allShares: DocShareRecord[] = JSON.parse(fs.readFileSync(sharesFile, 'utf-8'));
+      allShares = allShares.filter((s) => s.docId !== docId);
       fs.writeFileSync(sharesFile, JSON.stringify(allShares, null, 2), 'utf-8');
     }
   } catch {}
