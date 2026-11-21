@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist, Geist_Mono, Space_Grotesk, Sora } from "next/font/google";
+import { Inter, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ConsoleBranding } from "@/components/ConsoleBranding";
@@ -29,18 +29,6 @@ const geist = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
-
-const sora = Sora({
-  variable: "--font-sora",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const viewport: Viewport = {
@@ -139,9 +127,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geist.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${sora.variable} h-full h-[100dvh] w-full overflow-hidden overscroll-none antialiased dark`}
+      className={`${inter.variable} ${geist.variable} ${geistMono.variable} h-full h-[100dvh] w-full overflow-hidden overscroll-none antialiased dark`}
     >
       <head>
+        {/* Google Fonts: Space Grotesk & Sora loaded client-side to prevent CI/build failures */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap"
+          rel="stylesheet"
+        />
+
         {/* Structured Data JSON-LD */}
         <script
           type="application/ld+json"

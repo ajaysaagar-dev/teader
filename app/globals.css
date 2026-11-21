@@ -116,6 +116,8 @@
   --border-accent-strong: var(--theme-accent);
 
   /* ===== Typography / Foreground ===== */
+  --font-space-grotesk: 'Space Grotesk', var(--font-inter), sans-serif;
+  --font-sora: 'Sora', var(--font-inter), sans-serif;
   --text-white: #FFFFFF;
   --text-primary: var(--theme-text-primary);
   --text-secondary: var(--theme-text-secondary);

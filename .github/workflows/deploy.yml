@@ -86,6 +86,9 @@ jobs:
             echo "📦 Installing production dependencies..."
             npm install --legacy-peer-deps
 
+            # Clean previous build cache to prevent stale font/turbopack artifacts
+            rm -rf .next
+
             # Compile production build
             echo "⚡ Building Next.js application..."
             npm run build
