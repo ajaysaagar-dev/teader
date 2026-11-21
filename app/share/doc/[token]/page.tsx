@@ -1,25 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import {
-  FileText,
-  Copy,
-  Check,
-  AlertCircle,
-  ExternalLink,
-  Printer,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Calendar,
-  Folder,
-  Eye,
-  CheckCheck,
-  Share2,
-} from 'lucide-react';
+import { Minus, Plus, AlertCircle, FileText } from 'lucide-react';
 import { renderGithubMarkdown } from '@/components/ui/MarkdownRenderer';
-import { toast } from 'sonner';
 
 interface SharedDocData {
   id: string;
@@ -31,11 +15,6 @@ interface SharedDocData {
   updatedAt?: string;
 }
 
-interface SharedDocMeta {
-  expiresAt: string | null;
-  createdAt: string;
-}
-
 export default function PublicDocSharePage() {
   const params = useParams();
   const token = params?.token as string;
@@ -43,10 +22,21 @@ export default function PublicDocSharePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [doc, setDoc] = useState<SharedDocData | null>(null);
-  const [shareMeta, setShareMeta] = useState<SharedDocMeta | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedContent, setCopiedContent] = useState(false);
   const [previewZoom, setPreviewZoom] = useState<number>(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Initialize zoom from localStorage if available
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('teader_public_doc_zoom');
+      if (saved) {
+        const parsed = parseFloat(saved);
+        if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 2.5) {
+          setPreviewZoom(parsed);
+        }
+      }
+    } catch {}
+  }, []);
 
   // Fetch shared document data
   useEffect(() => {
@@ -71,7 +61,6 @@ export default function PublicDocSharePage() {
         const data = await res.json();
         if (isMounted) {
           setDoc(data.doc);
-          setShareMeta(data.share);
         }
       } catch (err: any) {
         if (isMounted) {
@@ -92,50 +81,52 @@ export default function PublicDocSharePage() {
   }, [token]);
 
   // Handle zoom changes
-  const updateZoom = useCallback((delta: number | ((prev: number) => number)) => {
+  const updatePreviewZoom = useCallback((updater: number | ((prev: number) => number)) => {
     setPreviewZoom((prev) => {
-      const next = typeof delta === 'function' ? delta(prev) : prev + delta;
-      return Math.min(2.0, Math.max(0.6, Number(next.toFixed(2))));
+      const target = typeof updater === 'function' ? updater(prev) : updater;
+      const clamped = Math.min(2.5, Math.max(0.5, Number(target.toFixed(2))));
+      try {
+        localStorage.setItem('teader_public_doc_zoom', String(clamped));
+      } catch {}
+      return clamped;
     });
   }, []);
 
-  // Copy share link
-  const handleCopyLink = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    toast.success('Link copied to clipboard');
-    setTimeout(() => setCopiedLink(false), 2000);
-  }, []);
+  // Control + Mouse Wheel Zoom In / Out and Keyboard Shortcuts
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Negative deltaY: wheel up (zoom in); Positive deltaY: wheel down (zoom out)
+        const step = e.deltaY < 0 ? 0.08 : -0.08;
+        updatePreviewZoom((prev) => prev + step);
+      }
+    };
 
-  // Copy raw markdown
-  const handleCopyMarkdown = useCallback(() => {
-    if (!doc?.content) return;
-    navigator.clipboard.writeText(doc.content);
-    setCopiedContent(true);
-    toast.success('Document markdown copied');
-    setTimeout(() => setCopiedContent(false), 2000);
-  }, [doc]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+') {
+          e.preventDefault();
+          updatePreviewZoom((prev) => prev + 0.1);
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          updatePreviewZoom((prev) => prev - 0.1);
+        } else if (e.key === '0') {
+          e.preventDefault();
+          updatePreviewZoom(1);
+        }
+      }
+    };
 
-  // Print document
-  const handlePrint = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    window.print();
-  }, []);
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
 
-  // Formatted date string
-  const formattedUpdated = useMemo(() => {
-    if (!doc?.updatedAt) return null;
-    try {
-      return new Date(doc.updatedAt).toLocaleDateString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return null;
-    }
-  }, [doc?.updatedAt]);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [updatePreviewZoom]);
 
   // Render markdown content
   const renderedContent = useMemo(() => {
@@ -144,178 +135,72 @@ export default function PublicDocSharePage() {
   }, [doc?.content]);
 
   return (
-    <div className="min-h-screen w-full bg-[#0E0E0E] text-[var(--text-primary)] flex flex-col font-sans select-text">
-      {/* ── Top Header Navigation Bar ─────────────────────────────── */}
-      <header className="sticky top-0 left-0 right-0 h-13 px-4 sm:px-6 bg-[#141414]/95 backdrop-blur-md border-b border-white/10 z-30 flex items-center justify-between shrink-0">
-        {/* Left: Teader Logo + Document Title */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-6 h-6 rounded bg-white text-black font-mono font-bold text-xs flex items-center justify-center shadow shrink-0">
-            T
+    <div
+      ref={containerRef}
+      className="min-h-screen w-full bg-[#0E0E0E] text-[var(--text-primary)] flex flex-col font-sans select-text relative overflow-x-hidden"
+    >
+      {loading ? (
+        <div className="min-h-screen w-full flex flex-col items-center justify-center p-8 space-y-4 bg-[#0E0E0E]">
+          <div className="w-10 h-10 rounded-xl bg-white/10 animate-pulse flex items-center justify-center text-white">
+            <FileText size={20} />
           </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-xs sm:text-sm font-semibold text-white truncate max-w-[220px] sm:max-w-md">
-              {doc?.title || 'Shared Document'}
-            </h1>
-            {doc?.folder && (
-              <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-[var(--text-muted)] border border-white/5">
-                <Folder size={10} />
-                <span>{doc.folder}</span>
-              </span>
-            )}
+          <div className="space-y-2 w-full max-w-md">
+            <div className="h-4 bg-white/10 rounded-md animate-pulse w-3/4 mx-auto" />
+            <div className="h-3 bg-white/5 rounded-md animate-pulse w-1/2 mx-auto" />
           </div>
         </div>
+      ) : error ? (
+        <div className="min-h-screen w-full flex items-center justify-center p-6 bg-[#0E0E0E]">
+          <div className="max-w-md w-full bg-[#161616] border border-white/15 rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto text-white">
+              <AlertCircle size={24} />
+            </div>
+            <h2 className="text-base font-semibold text-white">Document Unavailable</h2>
+            <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{error}</p>
+            <div className="pt-2 text-[10px] font-mono text-[var(--text-muted)]">
+              Teader Shared Documentation
+            </div>
+          </div>
+        </div>
+      ) : doc ? (
+        <main className="flex-1 w-full overflow-y-auto px-6 py-12 sm:px-12 custom-scrollbar">
+          <div
+            className="max-w-3xl mx-auto space-y-4 text-[var(--text-secondary)] font-sans origin-top transition-all duration-75"
+            style={{ zoom: previewZoom }}
+          >
+            <div className="py-2 text-[16px] leading-[1.7] text-[var(--text-secondary)]">
+              {renderedContent}
+            </div>
+          </div>
 
-        {/* Right: Actions & Read-Only Badge */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Zoom Controls */}
-          <div className="hidden sm:flex items-center gap-0.5 bg-[#1F1F1F] border border-white/10 rounded-lg p-0.5 text-xs font-mono">
+          {/* Floating Zoom Indicator & Controls Pill */}
+          <div className="fixed bottom-6 right-6 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#181818]/90 backdrop-blur-md border border-[var(--border-primary)] shadow-2xl text-xs font-mono select-none z-30">
             <button
-              onClick={() => updateZoom((z) => z - 0.1)}
-              className="p-1.5 rounded hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
-              title="Zoom Out"
+              onClick={() => updatePreviewZoom((z) => z - 0.1)}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Zoom Out (Ctrl + Wheel Down or Ctrl + -)"
             >
-              <ZoomOut size={12} />
+              <Minus size={11} />
             </button>
             <button
-              onClick={() => setPreviewZoom(1)}
-              className="px-1.5 py-0.5 rounded text-[11px] font-semibold text-white hover:bg-white/5 transition-colors cursor-pointer"
-              title="Reset Zoom (100%)"
+              onClick={() => updatePreviewZoom(1)}
+              className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-colors cursor-pointer ${
+                previewZoom !== 1 ? 'text-white hover:bg-white/5' : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+              title="Reset Zoom to 100% (Click or Ctrl + 0)"
             >
               {Math.round(previewZoom * 100)}%
             </button>
             <button
-              onClick={() => updateZoom((z) => z + 0.1)}
-              className="p-1.5 rounded hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
-              title="Zoom In"
+              onClick={() => updatePreviewZoom((z) => z + 0.1)}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="Zoom In (Ctrl + Wheel Up or Ctrl + +)"
             >
-              <ZoomIn size={12} />
+              <Plus size={11} />
             </button>
           </div>
-
-          {/* Copy Markdown */}
-          {doc && (
-            <button
-              onClick={handleCopyMarkdown}
-              className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-[var(--text-secondary)] hover:text-white transition-colors border border-white/10 cursor-pointer"
-              title="Copy Raw Markdown"
-            >
-              {copiedContent ? <Check size={13} className="text-white" /> : <Copy size={13} />}
-              <span className="text-[11px] font-medium">{copiedContent ? 'Copied' : 'Raw'}</span>
-            </button>
-          )}
-
-          {/* Print Document */}
-          {doc && (
-            <button
-              onClick={handlePrint}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[var(--text-muted)] hover:text-white transition-colors border border-white/10 cursor-pointer"
-              title="Print / Save to PDF"
-            >
-              <Printer size={14} />
-            </button>
-          )}
-
-          {/* Copy Link */}
-          <button
-            onClick={handleCopyLink}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white text-black hover:bg-white/90 text-xs font-semibold shadow-sm transition-all cursor-pointer"
-            title="Copy Share Link"
-          >
-            {copiedLink ? <CheckCheck size={13} /> : <Share2 size={13} />}
-            <span>{copiedLink ? 'Copied Link' : 'Copy Link'}</span>
-          </button>
-
-          {/* Read Only Pill */}
-          <div className="px-2.5 py-1 rounded-md bg-white/10 text-white text-[11px] font-mono border border-white/10">
-            Read-Only
-          </div>
-        </div>
-      </header>
-
-      {/* ── Main View Area ────────────────────────────────────────── */}
-      <main className="flex-1 min-h-0 flex flex-col overflow-y-auto">
-        {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
-            <div className="w-10 h-10 rounded-xl bg-white/10 animate-pulse flex items-center justify-center text-white">
-              <FileText size={20} />
-            </div>
-            <div className="space-y-2 w-full max-w-md">
-              <div className="h-4 bg-white/10 rounded-md animate-pulse w-3/4 mx-auto" />
-              <div className="h-3 bg-white/5 rounded-md animate-pulse w-1/2 mx-auto" />
-            </div>
-          </div>
-        ) : error ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="max-w-md w-full bg-[#161616] border border-white/15 rounded-2xl p-6 text-center space-y-4 shadow-2xl">
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mx-auto text-white">
-                <AlertCircle size={24} />
-              </div>
-              <h2 className="text-base font-semibold text-white">Document Unavailable</h2>
-              <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{error}</p>
-              <div className="pt-2 text-[10px] font-mono text-[var(--text-muted)]">
-                Teader Shared Documentation
-              </div>
-            </div>
-          </div>
-        ) : doc ? (
-          <div className="flex-1 flex flex-col items-center w-full py-8 px-4 sm:px-8">
-            <article
-              className="w-full max-w-4xl bg-[#121212] border border-white/10 rounded-2xl p-6 sm:p-12 shadow-2xl transition-transform origin-top"
-              style={{
-                transform: previewZoom !== 1 ? `scale(${previewZoom})` : undefined,
-              }}
-            >
-              {/* Document Metadata Header */}
-              <header className="border-b border-white/10 pb-6 mb-8 space-y-2">
-                <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-[var(--text-muted)]">
-                  {doc.folder && (
-                    <span className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded text-white/80">
-                      <Folder size={11} />
-                      <span>{doc.folder}</span>
-                    </span>
-                  )}
-                  {formattedUpdated && (
-                    <span className="flex items-center gap-1">
-                      <Calendar size={11} />
-                      <span>Updated {formattedUpdated}</span>
-                    </span>
-                  )}
-                  <span className="text-white/40">•</span>
-                  <span className="text-white/60">Public Document</span>
-                  {shareMeta?.expiresAt && (
-                    <>
-                      <span className="text-white/40">•</span>
-                      <span className="text-white/80">
-                        Expires {new Date(shareMeta.expiresAt).toLocaleDateString()}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight pt-1">
-                  {doc.title}
-                </h1>
-              </header>
-
-              {/* Rendered Markdown Body */}
-              <div className="markdown-body text-sm leading-relaxed text-[var(--text-primary)]">
-                {renderedContent}
-              </div>
-
-              {/* Document Footer */}
-              <footer className="mt-16 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-mono text-[var(--text-muted)] select-none">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded bg-white text-black font-mono font-bold text-[9px] flex items-center justify-center">
-                    T
-                  </div>
-                  <span>Published with Teader Documentation</span>
-                </div>
-                <div>{doc.fileName}</div>
-              </footer>
-            </article>
-          </div>
-        ) : null}
-      </main>
+        </main>
+      ) : null}
     </div>
   );
 }
