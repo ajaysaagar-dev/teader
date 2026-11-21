@@ -1741,17 +1741,19 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       <div className="flex-1 min-h-0 flex overflow-hidden">
         {/* ─── Left Sidebar: Folders & Markdown Files (Expandable on hover like main sidebar) ─────── */}
         <div
-          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out ${
+            isExpanded ? 'z-50' : 'z-30'
+          } ${
             isPinned ? 'w-72 sm:w-80' : 'w-12'
           }`}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           <aside
-            className={`h-full absolute top-0 left-0 bottom-0 bg-[#101010] border-r border-[#141414] text-[var(--text-secondary)] flex flex-col select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#101010] border-r border-[#141414] text-[var(--text-secondary)] flex flex-col select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden ${
               isExpanded
-                ? 'w-72 sm:w-80 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
-                : 'w-12 shadow-none'
+                ? 'w-72 sm:w-80 shadow-[4px_0_24px_rgba(0,0,0,0.6)] z-50'
+                : 'w-12 shadow-none z-30'
             }`}
           >
             {/* Header & Actions */}
@@ -2499,7 +2501,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
                     </div>
 
                     {/* Floating Zoom Indicator & Controls Pill */}
-                    <div className="sticky bottom-4 right-4 ml-auto w-fit flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#181818]/90 backdrop-blur-md border border-[var(--border-primary)] shadow-2xl text-xs font-mono select-none z-30">
+                    <div className="sticky bottom-4 right-4 ml-auto w-fit flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#181818]/90 backdrop-blur-md border border-[var(--border-primary)] shadow-2xl text-xs font-mono select-none z-20">
                       <button
                         onClick={() => updatePreviewZoom((z) => z - 0.1)}
                         className="p-1 rounded text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
@@ -2556,7 +2558,7 @@ export const ProjectDocsView: React.FC<ProjectDocsViewProps> = ({
       {tabContextMenu && (
         <div
           style={{ top: tabContextMenu.y, left: tabContextMenu.x }}
-          className="fixed z-50 min-w-[170px] bg-[#191919] border border-[var(--border-primary)] rounded-xl shadow-2xl py-1 text-xs font-sans select-none"
+          className="fixed z-[100] min-w-[170px] bg-[#191919] border border-[var(--border-primary)] rounded-xl shadow-2xl py-1 text-xs font-sans select-none"
           onClick={(e) => e.stopPropagation()}
         >
           <button

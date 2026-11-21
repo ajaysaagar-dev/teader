@@ -2118,17 +2118,19 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         {/* ── Left Sidebar: File Explorer (Expandable on hover like main sidebar) ── */}
         <div
-          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out ${
+            isSidebarExpanded ? 'z-50' : 'z-30'
+          } ${
             isSidebarPinned ? 'w-64' : 'w-12'
           }`}
           onMouseEnter={() => setIsSidebarHovered(true)}
           onMouseLeave={() => setIsSidebarHovered(false)}
         >
           <aside
-            className={`h-full absolute top-0 left-0 bottom-0 bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#151515] border-r border-[#232323] flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden ${
               isSidebarExpanded
-                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
-                : 'w-12 shadow-none'
+                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)] z-50'
+                : 'w-12 shadow-none z-30'
             }`}
           >
             {/* Sidebar Header & New Chart Button */}
@@ -2305,7 +2307,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
         {/* ── Canvas Central Area ── */}
         <div className="flex-1 flex flex-col h-full min-h-0 relative overflow-hidden bg-[#1e1e1e]">
           {/* Floating Shape Palette / Draggable Toolbar */}
-          <div className="absolute top-3 left-3 sm:left-4 z-30 max-w-[calc(100vw-1.5rem)] flex items-center gap-1 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
+          <div className="absolute top-3 left-3 sm:left-4 z-20 max-w-[calc(100vw-1.5rem)] flex items-center gap-1 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl overflow-x-auto custom-scrollbar no-scrollbar overscroll-x-contain touch-pan-x">
             {/* Mode tools: Select / Link / Pan */}
             <button
               onClick={() => setActiveTool('select')}
@@ -2513,7 +2515,7 @@ export const ProjectChartsView: React.FC<ProjectChartsViewProps> = ({
           </div>
 
           {/* Bottom Zoom & History Bar */}
-          <div className="absolute bottom-4 right-4 z-30 flex items-center gap-1.5 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl">
+          <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-[#181818]/95 backdrop-blur border border-[#2E2E2E] p-1 rounded-xl shadow-2xl">
             <button
               onClick={handleUndo}
               className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-[#262626] transition-colors"

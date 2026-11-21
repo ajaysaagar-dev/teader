@@ -103,17 +103,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div
-      className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-30 ${
+      className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out ${
+        isExpanded ? 'z-[60]' : 'z-30'
+      } ${
         isPinned ? 'w-60' : 'w-14'
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <aside
-        className={`h-full absolute top-0 left-0 bottom-0 bg-[var(--bg-sidebar)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden text-xs font-sans border-r border-[var(--border-primary)] z-40 ${
+        className={`h-full absolute top-0 left-0 bottom-0 bg-[var(--bg-sidebar)] text-[var(--text-secondary)] flex flex-col justify-between select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden text-xs font-sans border-r border-[var(--border-primary)] ${
           isExpanded
-            ? 'w-60 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
-            : 'w-14 shadow-none'
+            ? 'w-60 shadow-[4px_0_24px_rgba(0,0,0,0.6)] z-[60]'
+            : 'w-14 shadow-none z-30'
         }`}
       >
         {/* Top Brand Header */}

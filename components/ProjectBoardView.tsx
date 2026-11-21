@@ -2830,17 +2830,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       <div className="flex-1 flex min-h-0 relative overflow-hidden">
         {/* Left Sidebar: Boards File Explorer (Expandable on hover like main sidebar) */}
         <div
-          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out z-20 ${
+          className={`h-full relative shrink-0 transition-[width] duration-200 ease-in-out ${
+            isSidebarExpanded ? 'z-50' : 'z-30'
+          } ${
             isSidebarPinned ? 'w-64' : 'w-12'
           }`}
           onMouseEnter={() => setIsSidebarHovered(true)}
           onMouseLeave={() => setIsSidebarHovered(false)}
         >
           <aside
-            className={`h-full absolute top-0 left-0 bottom-0 bg-[#141414] border-r border-white/10 flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden z-30 ${
+            className={`h-full absolute top-0 left-0 bottom-0 bg-[#141414] border-r border-white/10 flex flex-col shrink-0 select-none transition-[width,box-shadow] duration-200 ease-in-out overflow-hidden ${
               isSidebarExpanded
-                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)]'
-                : 'w-12 shadow-none'
+                ? 'w-64 shadow-[4px_0_24px_rgba(0,0,0,0.6)] z-50'
+                : 'w-12 shadow-none z-30'
             }`}
           >
             {/* Sidebar Header */}
@@ -3717,7 +3719,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           </div>
 
           {/* Floating Miro Top Tools Bar */}
-          <div className="absolute top-3 left-4 z-40 flex items-center gap-1 p-1 bg-[#171717]/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
+          <div className="absolute top-3 left-4 z-20 flex items-center gap-1 p-1 bg-[#171717]/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
             <button
               onClick={() => setActiveTool('pointer')}
               className={`p-2 rounded-md transition-colors ${
@@ -3892,7 +3894,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
+                className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
               >
                 <div className="flex items-center gap-1.5 mr-2">
                   <Layers size={13} className="text-[#8400FF]" />
@@ -3942,7 +3944,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
+                className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-lg shadow-2xl text-xs text-white"
               >
                 <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1">
                   {selectedIds.size} selected
@@ -4195,7 +4197,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           </AnimatePresence>
 
           {/* Floating Bottom Left: Optimization & Culling Telemetry */}
-          <div className="absolute bottom-4 left-4 z-40 flex items-center gap-2">
+          <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
             <div className="px-2.5 py-1 rounded-md bg-[#171717]/85 backdrop-blur-md border border-white/10 text-[11px] font-mono text-[var(--text-muted)] flex items-center gap-2 shadow-lg">
               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
               <span>
@@ -4211,7 +4213,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
           {/* Interactive Minimap Radar */}
           {isMinimapOpen && (
-            <div className="absolute bottom-16 right-4 z-40 p-2.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-xl shadow-2xl flex flex-col gap-1.5 select-none">
+            <div className="absolute bottom-16 right-4 z-20 p-2.5 bg-[#171717]/95 backdrop-blur-md border border-white/15 rounded-xl shadow-2xl flex flex-col gap-1.5 select-none">
               <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] border-b border-white/10 pb-1">
                 <span>Minimap Radar</span>
                 <button
@@ -4303,7 +4305,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           )}
 
           {/* Floating Bottom Right: Zoom & Navigation Controls */}
-          <div className="absolute bottom-4 right-4 z-40 flex items-center gap-1 p-1 bg-[#171717]/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
+          <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1 p-1 bg-[#171717]/90 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl">
             <button
               onClick={() => setViewport((prev) => ({ ...prev, zoom: Math.max(0.15, prev.zoom - 0.15) }))}
               className="p-1.5 rounded hover:bg-white/10 text-white transition-colors cursor-pointer"
@@ -4350,7 +4352,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
       {/* ── Public Share Modal / Popover ── */}
       <AnimatePresence>
         {isShareModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
