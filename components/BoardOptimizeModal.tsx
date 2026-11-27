@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Gauge,
   SlidersHorizontal,
-  Info,
 } from 'lucide-react';
 import { BoardElement } from '@/types/board';
 import {
@@ -127,7 +126,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-amber-400">
+            <div className="p-2 rounded-xl bg-white/10 border border-white/20 text-white">
               <Sparkles size={18} />
             </div>
             <div>
@@ -162,7 +161,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col items-center text-center">
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1">
-                    <Layers size={13} className="text-purple-400" />
+                    <Layers size={13} className="text-white/80" />
                     <span>Total Images</span>
                   </div>
                   <span className="text-xl font-bold font-mono text-white">
@@ -172,20 +171,20 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
 
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col items-center text-center">
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1">
-                    <CheckCircle2 size={13} className="text-emerald-400" />
+                    <CheckCircle2 size={13} className="text-white/80" />
                     <span>Optimized</span>
                   </div>
-                  <span className="text-xl font-bold font-mono text-emerald-400">
+                  <span className="text-xl font-bold font-mono text-white">
                     {alreadyOptimizedCount}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 flex flex-col items-center text-center">
                   <div className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] mb-1">
-                    <Gauge size={13} className="text-amber-400" />
+                    <Gauge size={13} className="text-white/80" />
                     <span>To Process</span>
                   </div>
-                  <span className="text-xl font-bold font-mono text-amber-400">
+                  <span className="text-xl font-bold font-mono text-white">
                     {imageElements.length}
                   </span>
                 </div>
@@ -194,7 +193,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
               {/* Technique Explanation Card */}
               <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/10 text-xs space-y-2 text-white/80">
                 <div className="flex items-center gap-1.5 font-medium text-white text-[13px]">
-                  <SlidersHorizontal size={14} className="text-amber-400" />
+                  <SlidersHorizontal size={14} className="text-white/80" />
                   <span>Optimization Technique</span>
                 </div>
                 <ul className="space-y-1.5 text-[11px] text-[var(--text-muted)] list-disc list-inside">
@@ -249,7 +248,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
                       type="checkbox"
                       checked={generateThumbnails}
                       onChange={(e) => setGenerateThumbnails(e.target.checked)}
-                      className="rounded border-white/20 bg-black/60 text-amber-500 focus:ring-0 cursor-pointer"
+                      className="rounded border-white/20 bg-black/60 text-white focus:ring-0 cursor-pointer accent-white"
                     />
                     <label
                       htmlFor="opt-generate-thumbs"
@@ -272,7 +271,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
               <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
                 <div className="absolute inset-0 rounded-full border-4 border-white/10" />
                 <div
-                  className="absolute inset-0 rounded-full border-4 border-amber-400 border-t-transparent animate-spin"
+                  className="absolute inset-0 rounded-full border-4 border-white border-t-transparent animate-spin"
                 />
                 <span className="text-sm font-bold font-mono text-white">
                   {progress.percent}%
@@ -291,13 +290,13 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
               {/* Progress Bar */}
               <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                 <div
-                  className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full transition-all duration-300"
+                  className="bg-white h-full transition-all duration-300"
                   style={{ width: `${progress.percent}%` }}
                 />
               </div>
 
               {progress.savedBytes > 0 && (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-mono">
                   <HardDrive size={12} />
                   <span>Saved {formatBytes(progress.savedBytes)} so far</span>
                 </div>
@@ -308,7 +307,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
           {/* STATE 3: COMPLETED */}
           {status === 'done' && result && (
             <div className="py-4 space-y-5 text-center">
-              <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+              <div className="w-14 h-14 mx-auto rounded-full bg-white/10 border border-white/20 text-white flex items-center justify-center">
                 <CheckCircle2 size={28} />
               </div>
 
@@ -340,13 +339,13 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
                   <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block">
                     Optimized
                   </span>
-                  <span className="text-sm font-bold font-mono text-emerald-400">
+                  <span className="text-sm font-bold font-mono text-white">
                     {formatBytes(result.totalOptimizedBytes)}
                   </span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium flex items-center justify-center gap-2">
+              <div className="p-3 rounded-lg bg-white/10 border border-white/20 text-white text-xs font-medium flex items-center justify-center gap-2">
                 <Sparkles size={14} />
                 <span>
                   Saved {formatBytes(result.totalSavedBytes)} (
@@ -362,7 +361,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
           {/* STATE 4: ERROR */}
           {status === 'error' && (
             <div className="py-6 text-center space-y-3">
-              <div className="w-12 h-12 mx-auto rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/30">
+              <div className="w-12 h-12 mx-auto rounded-full bg-white/10 text-white flex items-center justify-center border border-white/20">
                 <X size={24} />
               </div>
               <p className="text-sm font-medium text-white">
@@ -390,7 +389,7 @@ export const BoardOptimizeModal: React.FC<BoardOptimizeModalProps> = ({
                 type="button"
                 onClick={handleStartOptimization}
                 disabled={imageElements.length === 0}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black text-xs font-semibold shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-white hover:bg-white/90 text-black text-xs font-semibold shadow-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
               >
                 <Sparkles size={13} />
                 <span>Optimize {imageElements.length} Images</span>

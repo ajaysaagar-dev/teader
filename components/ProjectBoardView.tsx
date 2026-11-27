@@ -2863,10 +2863,10 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
           <button
             onClick={() => setIsOptimizeModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-xs font-medium border border-white/15 shadow-sm transition-all cursor-pointer hover:border-amber-400/40"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-xs font-medium border border-white/15 shadow-sm transition-all cursor-pointer hover:border-white/30"
             title="Optimize all images on this board (Convert to HD & compress to reduce size)"
           >
-            <Sparkles size={12} className="text-amber-400" />
+            <Sparkles size={12} className="text-white/80" />
             <span>Optimize</span>
           </button>
 

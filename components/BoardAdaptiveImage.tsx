@@ -123,11 +123,11 @@ export const BoardAdaptiveImage: React.FC<BoardAdaptiveImageProps> = ({
         {/* Adaptive LOD Resolution Pill on hover */}
         <div className="opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-white/15 text-[10px] font-mono text-white/80 shadow">
           {isHdMode ? (
-            <span className="text-emerald-400 font-semibold">HD</span>
+            <span className="text-white font-semibold">HD</span>
           ) : (
-            <span className="text-sky-400 font-semibold">LOD</span>
+            <span className="text-white/70 font-semibold">LOD</span>
           )}
-          {isOptimized && <Sparkles size={10} className="text-amber-400" />}
+          {isOptimized && <Sparkles size={10} className="text-white/80" />}
         </div>
       </div>
 
