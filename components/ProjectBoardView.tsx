@@ -64,6 +64,7 @@ import {
   LayoutTemplate,
   PanelLeft,
   PanelLeftClose,
+  Sparkles,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -81,8 +82,15 @@ import { isElementInViewport, computeSnapAlignment, computeResizeSnapAlignment, 
 import { getLocalCache, setLocalCache } from '@/lib/client-cache';
 import { useRealtimeSubscription, publishClientRealtimeEvent } from '@/lib/useRealtime';
 import { authFetch } from '@/lib/api-client';
-import { optimizeImageForBoard } from '@/lib/image-optimizer';
+import {
+  optimizeImageForBoard,
+  generateBoardImageVariants,
+  uploadOptimizedFile,
+  isImageOptimizable,
+} from '@/lib/image-optimizer';
 import { BoardImageFocusModal } from '@/components/BoardImageFocusModal';
+import { BoardAdaptiveImage } from '@/components/BoardAdaptiveImage';
+import { BoardOptimizeModal } from '@/components/BoardOptimizeModal';
 
 interface ProjectBoardViewProps {
   projectId: number | string;
@@ -256,6 +264,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
 
   // ── Share Modal States ──
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isOptimizeModalOpen, setIsOptimizeModalOpen] = useState(false);
   const [shareExpiry, setShareExpiry] = useState<'never' | '1h' | '24h' | '7d' | '30d'>('never');
   const [activeShare, setActiveShare] = useState<BoardShareRecord | null>(null);
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
@@ -1113,24 +1122,57 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
     previewUrl: string
   ) => {
     try {
-      // 1. Optimize oversized raster images client-side before network transmission
-      const optimizedFile = file.type.startsWith('image/')
-        ? await optimizeImageForBoard(file)
-        : file;
+      let uploadedHdUrl = '';
+      let uploadedThumbUrl = '';
+      let uploadedFilename = file.name;
+      let finalFileSize = file.size;
 
-      const formData = new FormData();
-      formData.append('file', optimizedFile);
-
-      const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        throw new Error('Upload failed');
+      // 1. Optimize raster images: generate HD master and 480px LOD thumbnail
+      if (file.type.startsWith('image/') && isImageOptimizable(file.name, file.type)) {
+        try {
+          const variants = await generateBoardImageVariants(file, file.name, 3840, 0.88, 480, 0.70);
+          if (variants) {
+            const [uploadedHd, uploadedThumb] = await Promise.all([
+              uploadOptimizedFile(projectId, variants.hdFile),
+              uploadOptimizedFile(projectId, variants.thumbFile),
+            ]);
+            if (uploadedHd) {
+              uploadedHdUrl = uploadedHd.url;
+              uploadedFilename = variants.hdFile.name;
+              finalFileSize = uploadedHd.size;
+            }
+            if (uploadedThumb) {
+              uploadedThumbUrl = uploadedThumb.url;
+            }
+          }
+        } catch (variantErr) {
+          console.warn('[processAndUploadFile] Variant generation skipped, falling back to direct upload:', variantErr);
+        }
       }
 
-      const uploaded = await res.json();
+      // Fallback for non-image or if dual-variant generation was skipped
+      if (!uploadedHdUrl) {
+        const optimizedFile = file.type.startsWith('image/')
+          ? await optimizeImageForBoard(file)
+          : file;
+
+        const formData = new FormData();
+        formData.append('file', optimizedFile);
+
+        const res = await authFetch(`/api/projects/${projectId}/boards/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const uploaded = await res.json();
+        uploadedHdUrl = uploaded.url;
+        uploadedFilename = file.name;
+        finalFileSize = uploaded.size || file.size;
+      }
 
       // Revoke temporary blob URL
       if (previewUrl && previewUrl.startsWith('blob:')) {
@@ -1140,18 +1182,22 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
         localBlobUrlsRef.current.delete(previewUrl);
       }
 
-      // Update element to permanent server URL
+      // Update element to permanent server URL and thumbnail
       setElements((prev) => {
         const updated = prev.map((el) => {
           if (el.id === tempId) {
             return {
               ...el,
-              url: uploaded.url,
+              url: uploadedHdUrl,
+              thumbnailUrl: uploadedThumbUrl || el.thumbnailUrl,
               isUploading: false,
               metadata: {
                 ...el.metadata,
-                url: uploaded.url,
-                filename: file.name,
+                url: uploadedHdUrl,
+                thumbnailUrl: uploadedThumbUrl || el.thumbnailUrl,
+                filename: uploadedFilename,
+                filesize: finalFileSize,
+                optimized: true,
               },
             };
           }
@@ -2792,7 +2838,7 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           </button>
         </div>
 
-        {/* Right: Save Status & Public Link Share Button */}
+        {/* Right: Save Status, Optimize & Public Link Share Button */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => {
@@ -2813,6 +2859,15 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
             <span className="text-[11px] font-mono">
               {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save *' : 'Saved'}
             </span>
+          </button>
+
+          <button
+            onClick={() => setIsOptimizeModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 hover:bg-white/15 text-white text-xs font-medium border border-white/15 shadow-sm transition-all cursor-pointer hover:border-amber-400/40"
+            title="Optimize all images on this board (Convert to HD & compress to reduce size)"
+          >
+            <Sparkles size={12} className="text-amber-400" />
+            <span>Optimize</span>
           </button>
 
           <button
@@ -3474,82 +3529,21 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
                     </div>
                   )}
 
-                  {/* 3. IMAGE CARD */}
+                  {/* 3. IMAGE CARD WITH ADAPTIVE ZOOM LOD & HD FOCUS */}
                   {element.type === 'image' && (
-                    <div
-                      onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        handleFocusElement(element);
+                    <BoardAdaptiveImage
+                      element={element}
+                      currentZoom={viewport.zoom}
+                      isUploading={element.isUploading}
+                      onFocusHD={() => {
+                        setFocusedImage({
+                          url: element.url || (element.metadata as any)?.dataUrl || '',
+                          title: element.title || 'Image',
+                          element,
+                        });
                       }}
-                      className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg relative group/img cursor-pointer"
-                    >
-                      {/* Action buttons on hover: HD Focus (lightbox) & Frame camera */}
-                      <div className="absolute top-2 left-2 z-20 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/85 backdrop-blur-md rounded-lg p-1 border border-white/15 shadow-xl">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setFocusedImage({
-                              url: element.url || (element.metadata as any)?.dataUrl || '',
-                              title: element.title || 'Image',
-                              element,
-                            });
-                          }}
-                          className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
-                          title="Open HD Lightbox (inspect pixels up to 500%)"
-                        >
-                          <Maximize2 size={12} />
-                          <span>HD Focus</span>
-                        </button>
-                        <div className="w-[1px] h-3 bg-white/20" />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleFocusElement(element);
-                          }}
-                          className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
-                          title="Center & frame on board viewport"
-                        >
-                          <Crosshair size={12} />
-                          <span>Frame</span>
-                        </button>
-                      </div>
-
-                      {element.isUploading && (
-                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-white/20 text-[10px] text-white shadow-lg pointer-events-none select-none animate-pulse">
-                          <span className="w-2 h-2 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                          <span className="font-mono text-[9px] uppercase tracking-wider">Syncing</span>
-                        </div>
-                      )}
-                      <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center p-1">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={element.url || (element.metadata as any)?.dataUrl || ''}
-                          alt={element.title || 'Image'}
-                          loading="eager"
-                          style={{
-                            imageRendering: '-webkit-optimize-contrast',
-                          }}
-                          className="w-full h-full object-contain select-none pointer-events-none"
-                          onError={(e) => {
-                            const fallback = (element.metadata as any)?.dataUrl;
-                            if (fallback && e.currentTarget.src !== fallback) {
-                              e.currentTarget.src = fallback;
-                            } else {
-                              e.currentTarget.style.display = 'none';
-                              const placeholder = e.currentTarget.parentElement?.querySelector('.img-error-placeholder');
-                              if (placeholder) (placeholder as HTMLElement).style.display = 'flex';
-                            }
-                          }}
-                        />
-                        <div className="img-error-placeholder hidden flex-col items-center justify-center text-center p-3 text-white/50 w-full h-full">
-                          <ImageIcon size={26} className="mb-2 text-white/40" />
-                          <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
-                          <span className="text-[10px] text-white/40 mt-1">Image preview unavailable</span>
-                        </div>
-                      </div>
-                    </div>
+                      onFrameCanvas={() => handleFocusElement(element)}
+                    />
                   )}
 
                   {/* 4. AUDIO PLAYER CARD */}
@@ -4489,6 +4483,19 @@ export const ProjectBoardView: React.FC<ProjectBoardViewProps> = ({
           }}
         />
       )}
+
+      {/* Board Images Batch Optimizer Modal */}
+      <BoardOptimizeModal
+        isOpen={isOptimizeModalOpen}
+        onClose={() => setIsOptimizeModalOpen(false)}
+        projectId={projectId}
+        boardTitle={boards.find((b) => b.id === activeBoardId)?.title || 'Current Board'}
+        elements={elements}
+        onApplyOptimized={async (updatedElements) => {
+          setElements(updatedElements);
+          await saveCurrentBoard(updatedElements);
+        }}
+      />
     </div>
   );
 };

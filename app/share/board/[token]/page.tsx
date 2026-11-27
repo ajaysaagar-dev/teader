@@ -21,6 +21,7 @@ import {
 import { BoardElement, BoardGroup, BoardConnection, BoardViewport, BoardData } from '@/types/board';
 import { isElementInViewport, getGroupBoundingBox } from '@/lib/board-snap';
 import { BoardImageFocusModal } from '@/components/BoardImageFocusModal';
+import { BoardAdaptiveImage } from '@/components/BoardAdaptiveImage';
 
 export default function PublicBoardSharePage() {
   const params = useParams();
@@ -671,76 +672,20 @@ export default function PublicBoardSharePage() {
               </div>
             )}
 
-            {/* Image Card */}
+            {/* Image Card With Adaptive Zoom LOD */}
             {element.type === 'image' && (
-              <div
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  handleFocusElement(element);
+              <BoardAdaptiveImage
+                element={element}
+                currentZoom={viewport.zoom}
+                onFocusHD={() => {
+                  setFocusedImage({
+                    url: element.url || (element.metadata as any)?.dataUrl || '',
+                    title: element.title || 'Image',
+                    element,
+                  });
                 }}
-                className="w-full h-full rounded-lg overflow-hidden bg-[#171717] border border-white/10 flex flex-col shadow-lg group/img relative cursor-pointer"
-              >
-                {/* Action buttons on hover: HD Focus (lightbox) & Frame camera */}
-                <div className="absolute top-2 left-2 z-20 flex items-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/85 backdrop-blur-md rounded-lg p-1 border border-white/15 shadow-xl">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFocusedImage({
-                        url: element.url || (element.metadata as any)?.dataUrl || '',
-                        title: element.title || 'Image',
-                        element,
-                      });
-                    }}
-                    className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
-                    title="Open HD Lightbox (inspect pixels up to 500%)"
-                  >
-                    <Maximize2 size={12} />
-                    <span>HD Focus</span>
-                  </button>
-                  <div className="w-[1px] h-3 bg-white/20" />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFocusElement(element);
-                    }}
-                    className="px-2 py-1 flex items-center gap-1 rounded text-[11px] font-medium text-white hover:bg-white/20 transition-colors"
-                    title="Center & frame on board viewport"
-                  >
-                    <Crosshair size={12} />
-                    <span>Frame</span>
-                  </button>
-                </div>
-
-                <div className="flex-1 w-full h-full relative overflow-hidden bg-black/40 flex items-center justify-center p-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={element.url || (element.metadata as any)?.dataUrl || ''}
-                    alt={element.title || 'Image'}
-                    loading="eager"
-                    style={{
-                      imageRendering: '-webkit-optimize-contrast',
-                    }}
-                    className="w-full h-full object-contain select-none pointer-events-none"
-                    onError={(e) => {
-                      const fallback = (element.metadata as any)?.dataUrl;
-                      if (fallback && e.currentTarget.src !== fallback) {
-                        e.currentTarget.src = fallback;
-                      } else {
-                        e.currentTarget.style.display = 'none';
-                        const placeholder = e.currentTarget.parentElement?.querySelector('.img-error-placeholder');
-                        if (placeholder) (placeholder as HTMLElement).style.display = 'flex';
-                      }
-                    }}
-                  />
-                  <div className="img-error-placeholder hidden flex-col items-center justify-center text-center p-3 text-white/50 w-full h-full">
-                    <ImageIcon size={26} className="mb-2 text-white/40" />
-                    <span className="text-xs font-mono text-white/70 truncate max-w-[90%]">{element.title || 'Image'}</span>
-                    <span className="text-[10px] text-white/40 mt-1">Image unavailable</span>
-                  </div>
-                </div>
-              </div>
+                onFrameCanvas={() => handleFocusElement(element)}
+              />
             )}
 
             {/* Audio Card */}
